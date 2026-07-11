@@ -2,7 +2,10 @@ name: Deploy sur GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # La branche claude/* est encore la branche par défaut du repo et
+    # l'environnement github-pages n'accepte que celle-ci ; une fois main
+    # passée par défaut dans Settings → General, on pourra la retirer.
+    branches: [main, claude/magic-farm-game-q66bw4]
   workflow_dispatch:
 
 permissions:
