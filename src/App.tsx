@@ -5,7 +5,7 @@ import { Ambient } from './components/Ambient'
 import { Toast } from './components/Toast'
 
 export default function App() {
-  const [gameId, setGameId] = useState<string | null>(null)
+  const [session, setSession] = useState<{ id: string; duel: boolean } | null>(null)
 
   useEffect(() => {
     // Empêche le zoom double-tap sur tablette
@@ -23,9 +23,9 @@ export default function App() {
     <>
       <Ambient />
       <div id="app">
-        {gameId
-          ? <GameHost gameId={gameId} onHome={() => setGameId(null)} />
-          : <Home onPlay={setGameId} />}
+        {session
+          ? <GameHost key={session.id + (session.duel ? ':duel' : '')} gameId={session.id} duel={session.duel} onHome={() => setSession(null)} />
+          : <Home onPlay={(id, duel) => setSession({ id, duel })} />}
       </div>
       <Toast />
     </>

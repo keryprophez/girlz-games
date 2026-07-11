@@ -18,7 +18,7 @@ interface FermeState {
   updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'age'>>): void
   toggleSound(): void
   /** Ajoute les étoiles gagnées et débloque éventuellement un sticker. Renvoie le sticker débloqué. */
-  reward(gameId: string, starsEarned: number, stars: number): string | null
+  reward(gameId: string, starsEarned: number, stars: number, profileId?: string): string | null
 }
 
 const emptyProgress = (): Progress => ({ stars: 0, stickers: [], bestStars: {} })
@@ -57,9 +57,9 @@ export const useFerme = create<FermeState>()(
         setSound(on)
         set({ sound: on })
       },
-      reward(gameId, starsEarned, stars) {
+      reward(gameId, starsEarned, stars, profileId) {
         const s = get()
-        const id = s.currentId
+        const id = profileId || s.currentId
         const prog = s.progress[id] || emptyProgress()
         let newSticker: string | null = null
         const stickers = [...prog.stickers]

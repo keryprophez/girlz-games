@@ -14,6 +14,8 @@ function nextQuestion() {
   if (!quiz.running) return
   if (quiz.lives <= 0 || quiz.asked >= quiz.max) return finish()
   const q: any = ctx.byTier<() => any>(makeEasy, makeMedium, makeExpert)()
+  quiz.current = q
+  ctx.say(q.prompt)
   $('qPrompt').textContent = q.prompt
   $('qScene').textContent = q.scene || ''
   $('qProgress').textContent = `Question ${quiz.asked + 1}/${quiz.max}`
@@ -99,12 +101,14 @@ export const quizGame: GameDef = {
         <div class="chip" id="quizScore">⭐ 0</div>
       </div>
       <div class="panel qbox">
+        <button class="saybtn" id="qSay">🔊</button>
         <div class="qprompt" id="qPrompt"></div>
         <div class="qscene" id="qScene"></div>
         <div class="qopts" id="qOpts"></div>
         <div class="qfoot"><span id="qProgress"></span><span class="streak" id="qStreak"></span></div>
       </div>`
     quiz = { score: 0, lives: 3, streak: 0, best: 0, asked: 0, max: c.byTier(8, 10, 10), running: true }
+    ;($('qSay') as HTMLButtonElement).onclick = () => quiz.current && c.say(quiz.current.prompt)
     renderHearts()
     nextQuestion()
     return () => { quiz.running = false }

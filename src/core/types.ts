@@ -15,9 +15,11 @@ export interface GameContext {
   byTier<T>(e: T, m: T, x: T): T
   finish(p: FinishPayload): void
   toast(msg: string): void
+  /** Lit un texte à voix haute (consignes, questions) — essentiel pour les non-lectrices. */
+  say(text: string): void
 }
 
-export type GameCategory = 'reflexion' | 'memoire' | 'action'
+export type GameCategory = 'reflexion' | 'memoire' | 'action' | 'creatif'
 
 export interface GameDef {
   id: string

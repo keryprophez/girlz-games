@@ -35,7 +35,9 @@ function load() {
   const members = shuffle([...cat.maj]).slice(0, Math.min(size - 1, cat.maj.length))
   const intruderE = pick(cat.intr.filter(e => !members.includes(e)))
   const items = shuffle([...members.map(e => ({ e, intruder: false })), { e: intruderE, intruder: true }])
-  $('intQ').textContent = cat.q
+  $('intQ').textContent = cat.q + ' 🔊'
+  ctx.say(cat.q)
+  ;($('intQ') as HTMLElement).onclick = () => ctx.say(cat.q)
   const grid = $('intGrid')
   const n = items.length, cols = n <= 4 ? 2 : n <= 6 ? 3 : 4
   grid.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`
@@ -110,7 +112,7 @@ export const intrus: GameDef = {
         <div class="chip" id="intRound">1/6</div>
         <div class="chip" id="intScore">⭐ 0</div>
       </div>
-      <div class="gsub" id="intQ"></div>
+      <div class="gsub saytext" id="intQ"></div>
       <div class="tbar" style="max-width:420px"><div class="tfill" id="intTimer"></div></div>
       <div class="igrid" id="intGrid"></div>`
     intr = { round: 0, total: 6, score: 0, streak: 0, lock: false, tInt: null, running: true }

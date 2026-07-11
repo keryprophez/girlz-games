@@ -9,9 +9,10 @@ import type { Tier } from '../core/types'
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
 const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
 
-export function Home({ onPlay }: { onPlay: (id: string) => void }) {
+export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }) {
   const store = useFerme()
   const [albumOpen, setAlbumOpen] = useState(false)
+  const [duel, setDuel] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const photoTarget = useRef<string>('')
 
@@ -74,6 +75,10 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
       </div>
       <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
 
+      <button className={'dueltoggle' + (duel ? ' on' : '')} onClick={() => { setDuel(d => !d); sFlip() }}>
+        ⚔️ Défi à deux {duel ? '· activé ! Choisissez un jeu' : ''}
+      </button>
+
       <div className="statrow">
         <div className="stat">⭐ {prog.stars}</div>
         <div className="stat"><button onClick={() => setAlbumOpen(true)}>📔 {prog.stickers.length}/{COLLECT.length}</button></div>
@@ -88,7 +93,7 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
               {GAMES.filter(g => g.cat === cat.id).map(g => {
                 const best = prog.bestStars[g.id] || 0
                 return (
-                  <button className="gc" key={g.id} onClick={() => onPlay(g.id)}>
+                  <button className="gc" key={g.id} onClick={() => onPlay(g.id, duel)}>
                     <span className={'sq ' + g.sq}>{g.icon}</span>
                     <span className="nm">{g.name}</span>
                     <span className="gc-stars">{'★'.repeat(best)}{'☆'.repeat(3 - best)}</span>

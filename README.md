@@ -1,11 +1,14 @@
 # 🐤 La Ferme Magique
 
-Les jeux de **Joyce** et **Jade** — une webapp de 15 mini-jeux (et bientôt 20 !) pensée pour jouer sur tablette ou téléphone, même sans connexion.
+Les jeux de **Joyce** et **Jade** — une webapp de 14 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
 
 ## ✨ Ce qu'il y a dedans
 
-- **15 mini-jeux** répartis en 3 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡
-- **Profils avec photos** : chaque fille a sa carte, on ajoute sa photo (bouton 📷) et sa tête apparaît dans les jeux (Poussin Volant, Course, Attrape…) et dans le **Puzzle Photo** 🤳
+- **14 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
+- **Zéro lecture obligatoire** : les consignes et questions sont lues à voix haute (synthèse vocale française du navigateur, hors-ligne, aucun asset)
+- **⚔️ Défi à deux** : les sœurs jouent le même jeu tour à tour, écran de résultat commun et bienveillant, bouton Revanche
+- **Profils avec photos** : chaque fille a sa carte, on ajoute sa photo (bouton 📷) et sa tête apparaît dans les jeux (Poussin Volant, Course, Attrape, Habille-toi…) et dans le **Puzzle Photo** 🤳 (glisser-déposer avec image fantôme pour guider)
+- **Jeux créatifs sans score** : Coloriage magique (3 scènes SVG) et Habille ton avatar
 - **Progression séparée** par joueuse : étoiles, album de 24 animaux à collectionner, meilleurs scores par jeu
 - **3 niveaux de difficulté** par profil (🌱 Douce / 🌿 Normale / 🔥 Expert), réglables d'un tap
 - **PWA hors-ligne** : installable sur l'écran d'accueil, polices auto-hébergées, aucun réseau requis après la première visite
@@ -43,12 +46,9 @@ npm run preview   # sert le build
 2. Merger sur `main` : le workflow `deploy.yml` construit et publie automatiquement
 3. Le jeu est servi sur `https://<user>.github.io/girlz-games/` — à ajouter à l'écran d'accueil de la tablette
 
-## 🗺 Roadmap vers 20 jeux
+## 🗺 Prochaines idées
 
-Idées prêtes à brancher sur l'architecture actuelle :
-
-- 🎨 **Coloriage magique** (canvas + palette)
-- 🔤 **Chasse aux lettres** (retrouver les lettres de son prénom)
-- 🧦 **Paires de chaussettes** (tri contre la montre)
-- 👗 **Habille l'avatar** (avec la photo !)
 - 🎹 **Petit piano** (mode libre + mélodies à répéter)
+- 🧦 **Paires de chaussettes** (tri contre la montre)
+- 🤝 Mode **coopération** (les deux jouent en même temps sur le même écran)
+- 🖼 Les dessins des filles (scannés) comme fonds de niveaux
