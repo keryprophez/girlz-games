@@ -13,12 +13,14 @@ import { photoPuzzle } from './puzzle'
 import { letters } from './letters'
 import { coloring } from './coloring'
 import { dressup } from './dressup'
+import { piano } from './piano'
+import { socks } from './socks'
 
 export const GAMES: GameDef[] = [
-  quizGame, intrus, letters, photoPuzzle,
+  quizGame, intrus, letters, photoPuzzle, socks,
   memory, simonGame,
   catchGame, moleGame, runGame, fishGame, ninja, flappy,
-  coloring, dressup
+  coloring, dressup, piano
 ]
 
 export const CATEGORIES: { id: GameCategory; label: string; icon: string }[] = [

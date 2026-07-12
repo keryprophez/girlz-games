@@ -426,3 +426,39 @@ button.chip:active{transform:scale(.92);}
 .duelstars{font-size:20px;letter-spacing:2px;}
 .duel-next{display:flex;align-items:center;gap:12px;justify-content:center;margin:14px 0;}
 .duel-next-txt{font-size:17px;font-weight:600;}
+
+/* ============================================================
+   PETIT PIANO
+   ============================================================ */
+#pnKeys{display:flex;gap:clamp(4px,1vmin,8px);width:100%;max-width:560px;justify-content:center;}
+.pkey{flex:1;max-width:64px;height:clamp(150px,26vh,220px);border:none;cursor:pointer;
+  border-radius:0 0 16px 16px;position:relative;
+  background:linear-gradient(180deg,#FFFDF8 0%,#FFF8EC 68%,var(--kc) 68%);
+  border:1px solid var(--line);border-top:4px solid var(--kc);
+  box-shadow:var(--e1), inset 0 -5px 8px rgba(69,54,42,.12);
+  transition:transform .12s var(--spring),filter .12s;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px;}
+.pkey:active,.pkey.play{transform:translateY(4px) scale(.97);filter:brightness(1.06);}
+.pkname{font-family:'Baloo 2';font-weight:800;font-size:clamp(12px,2.6vmin,16px);color:#fff;
+  text-shadow:0 1px 2px rgba(69,54,42,.3);}
+.pkey.pulse{animation:pkpulse .9s ease-in-out infinite;}
+@keyframes pkpulse{50%{filter:brightness(1.22);transform:translateY(-5px);box-shadow:var(--e2),0 0 0 4px rgba(255,206,60,.55);}}
+.pkey.oops{animation:lgshake .3s ease;}
+.pn-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
+
+/* ============================================================
+   CHAUSSETTES
+   ============================================================ */
+#skArea{position:relative;width:100%;max-width:560px;height:min(56vh,480px);
+  background:linear-gradient(180deg,#EAF6FE,#F6FDF3);border:1px solid var(--line);
+  border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--e2);touch-action:manipulation;}
+.sk-line{position:absolute;top:10px;left:0;width:100%;height:30px;z-index:1;}
+.sock{position:absolute;border:none;background:transparent;cursor:pointer;padding:2px;z-index:2;
+  transform:rotate(var(--rot,0deg));
+  transition:left .5s var(--spring),top .5s var(--spring),transform .25s var(--spring);
+  filter:drop-shadow(0 3px 3px rgba(69,54,42,.22));}
+.sock:active{transform:rotate(var(--rot,0deg)) scale(.92);}
+.sock.lifted{transform:rotate(0deg) scale(1.18);z-index:5;
+  filter:drop-shadow(0 8px 10px rgba(69,54,42,.3));}
+.sock.pinned{cursor:default;z-index:3;transform:rotate(var(--rot,0deg)) scale(.8);}
+.sock.shake{animation:lgshake .3s ease;}
