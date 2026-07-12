@@ -1,5 +1,6 @@
 import type { GameDef } from '../core/types'
-import { $, faceSprite, pick } from '../core/utils'
+import { $, pick } from '../core/utils'
+import { basketSVG } from '../core/character'
 import { sCatch, sNope, sPower, sWin } from '../core/audio'
 import { FX, JUICE } from '../core/fx'
 
@@ -136,7 +137,7 @@ export const catchGame: GameDef = {
         <div class="powerbadge" id="powerBadge"></div>
         <div class="combo" id="comboMsg"></div>
         <div class="wavemsg" id="waveMsg"></div>
-        <div id="basket">${faceSprite(ctx.avatar, '🧺', 46)}${ctx.avatar ? '<span class="basket-under">🧺</span>' : ''}</div>
+        <div id="basket">${basketSVG(ctx.avatar, ctx.look, 74)}</div>
       </div>`
     const area = $('catchArea')
     const cfg = ctx.byTier(

@@ -1,5 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, faceSprite, pick } from '../core/utils'
+import { $, pick } from '../core/utils'
+import { tractorSVG } from '../core/character'
 import { sJump, sNope, sWin } from '../core/audio'
 import { FX } from '../core/fx'
 
@@ -66,7 +67,6 @@ export const runGame: GameDef = {
   subtitle: 'Tape ou ESPACE pour sauter les obstacles',
   mount(c) {
     ctx = c
-    const rider = c.avatar ? `<span class="rider">${faceSprite(c.avatar, '', 26)}</span>` : ''
     c.root.innerHTML = `
       <div class="topbar">
         <div class="hearts" id="runHearts">❤️❤️❤️</div>
@@ -74,7 +74,7 @@ export const runGame: GameDef = {
       </div>
       <div id="runArea">
         <div class="rundist" id="runDist">0 m</div>
-        <div id="tractor">${rider}🚜</div>
+        <div id="tractor" style="transform:none">${tractorSVG(c.avatar, c.look, 82)}</div>
       </div>`
     const area = $('runArea')
     const cfg = c.byTier(

@@ -362,23 +362,29 @@ button.chip:active{transform:scale(.92);}
 .cscene-btn.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
 
 /* ============================================================
-   HABILLE-TOI
+   HABILLE-TOI (personnage illustré)
    ============================================================ */
-.du-stage{position:relative;width:100%;max-width:380px;height:240px;border-radius:var(--r-xl);
-  border:1px solid var(--line);box-shadow:var(--e2);overflow:hidden;margin-bottom:12px;}
-.du-doll{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);text-align:center;}
-.du-face{display:block;font-size:96px;line-height:1;}
-.du-slot{position:absolute;pointer-events:none;filter:drop-shadow(0 3px 3px rgba(69,54,42,.25));}
-.du-hat{top:-46px;left:50%;transform:translateX(-50%);font-size:52px;}
-.du-glasses{top:26px;left:50%;transform:translateX(-50%);font-size:44px;}
-.du-held{right:-58px;bottom:-6px;font-size:44px;}
-.du-friend{left:-64px;bottom:-10px;font-size:48px;}
-.du-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;justify-content:center;}
-.du-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;width:76px;text-align:right;}
-.du-item{width:46px;height:46px;border-radius:14px;border:2px solid var(--line);background:var(--card);
-  cursor:pointer;font-size:24px;box-shadow:var(--e1);transition:transform .2s var(--spring),border-color .2s;}
-.du-item.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.08);}
-.du-item:active{transform:scale(.9);}
+.du-stage{position:relative;width:100%;max-width:380px;height:260px;border-radius:var(--r-xl);
+  border:1px solid var(--line);box-shadow:var(--e2);overflow:hidden;margin-bottom:10px;}
+.du-doll{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
+  filter:drop-shadow(0 6px 6px rgba(69,54,42,.22));}
+.du-doll svg{display:block;}
+.du-rows{display:flex;flex-direction:column;gap:7px;width:100%;max-width:420px;}
+.du-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;}
+.du-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;width:70px;text-align:right;flex-shrink:0;}
+.du-opt{min-width:42px;height:42px;border-radius:13px;border:2px solid var(--line);background:var(--card);
+  cursor:pointer;box-shadow:var(--e1);transition:transform .2s var(--spring),border-color .2s;
+  display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;}
+.du-opt.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.1);}
+.du-opt:active{transform:scale(.9);}
+.du-opt.du-color{min-width:30px;width:30px;height:30px;border-radius:50%;border:3px solid #fff;
+  box-shadow:var(--e1);padding:0;}
+.du-opt.du-color.sel{box-shadow:0 0 0 3px var(--mango), var(--e1);border-color:#fff;}
+
+/* ---- Personnage dans les jeux d'action ---- */
+.wing{transform-origin:44px 84px;animation:wingflap .5s ease-in-out infinite alternate;}
+@keyframes wingflap{from{transform:rotate(6deg);}to{transform:rotate(-24deg);}}
+#basket svg,.fl-chick svg,#tractor svg{display:block;filter:drop-shadow(0 4px 4px rgba(69,54,42,.25));}
 
 /* ============================================================
    CHASSE AUX LETTRES

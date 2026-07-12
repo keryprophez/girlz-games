@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Profile, Progress, Tier } from './types'
+import type { Look } from './character'
 import { COLLECT } from './utils'
 import { setSound } from './audio'
 
@@ -16,6 +17,7 @@ interface FermeState {
   setAvatar(id: string, dataUrl: string | null): void
   setTier(id: string, tier: Tier): void
   updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'age'>>): void
+  setLook(id: string, look: Look): void
   toggleSound(): void
   /** Ajoute les étoiles gagnées et débloque éventuellement un sticker. Renvoie le sticker débloqué. */
   reward(gameId: string, starsEarned: number, stars: number, profileId?: string): string | null
@@ -51,6 +53,9 @@ export const useFerme = create<FermeState>()(
       },
       updateProfile(id, patch) {
         set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, ...patch } : p)) }))
+      },
+      setLook(id, look) {
+        set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, look } : p)) }))
       },
       toggleSound() {
         const on = !get().sound

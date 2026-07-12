@@ -48,6 +48,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
       tier: p.tier,
       playerName: p.name,
       avatar: p.avatar,
+      look: p.look || null,
       byTier: (e, m, x) => (p.tier === 'easy' ? e : p.tier === 'med' ? m : x),
       toast,
       say,

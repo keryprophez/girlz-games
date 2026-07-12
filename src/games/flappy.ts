@@ -1,5 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, faceSprite } from '../core/utils'
+import { $ } from '../core/utils'
+import { chickSVG } from '../core/character'
 import { sCatch, sJump, sNope, sWin } from '../core/audio'
 import { FX } from '../core/fx'
 
@@ -103,7 +104,7 @@ export const flappy: GameDef = {
       </div>
       <div id="flArea" class="arena fl-arena">
         <div class="fl-ground"></div>
-        <div class="fl-chick" id="flChick">${faceSprite(c.avatar, '🐤', 36)}</div>
+        <div class="fl-chick" id="flChick">${chickSVG(c.avatar, c.look, 56)}</div>
         <div class="fl-start" id="flStart">Tape pour voler !</div>
       </div>`
     const area = $('flArea')

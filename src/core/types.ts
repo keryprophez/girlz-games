@@ -7,11 +7,15 @@ export interface FinishPayload {
   starsEarned: number
 }
 
+import type { Look } from './character'
+
 export interface GameContext {
   root: HTMLElement
   tier: Tier
   playerName: string
   avatar: string | null
+  /** Look choisi dans Habille-toi — suit la joueuse dans les autres jeux. */
+  look: Look | null
   byTier<T>(e: T, m: T, x: T): T
   finish(p: FinishPayload): void
   toast(msg: string): void
@@ -38,6 +42,7 @@ export interface Profile {
   age: number
   avatar: string | null // dataURL
   tier: Tier
+  look?: Look
 }
 
 export interface Progress {
