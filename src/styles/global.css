@@ -553,3 +553,15 @@ button.chip:active{transform:scale(.92);}
 .bb-cell.now{box-shadow:0 0 0 2.5px var(--mango);}
 .bb-cell.on.now{transform:scale(1.12);}
 .bb-presets{display:flex;gap:8px;margin-top:10px;}
+
+/* ---- Labyrinthe : modes brouillard et 3D ---- */
+.mz-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
+.mz-fog{position:absolute;inset:0;pointer-events:none;z-index:3;transition:background .18s linear;}
+#mz3dCv{display:block;border-radius:var(--r-lg);}
+#mzMap{position:absolute;top:8px;right:8px;border-radius:12px;border:2px solid #fff;
+  box-shadow:var(--e1);z-index:4;}
+.mz3d-btns{position:absolute;bottom:8px;left:0;right:0;display:flex;gap:12px;justify-content:center;z-index:4;}
+.mz3d-btn{width:58px;height:58px;border-radius:50%;border:2px solid rgba(255,255,255,.8);cursor:pointer;
+  background:rgba(255,249,240,.85);backdrop-filter:blur(6px);font-size:24px;box-shadow:var(--e1);
+  transition:transform .15s var(--spring);}
+.mz3d-btn:active{transform:scale(.88);}

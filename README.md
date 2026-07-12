@@ -11,7 +11,7 @@ Les jeux de **Joyce** et **Jade** — une webapp de 22 mini-jeux pensée pour jo
 - **Personnage illustré** : la photo devient le visage d'un personnage SVG dessiné (cheveux, corps, habits) ; le look choisi dans Habille-toi suit la joueuse dans Poussin Volant, Course et Attrape
 - **Jeux créatifs sans score** : Coloriage magique, Habille ton avatar, Petit Piano (mode libre + mélodies guidées « suis les lumières »)
 - **Chaussettes** : paires de chaussettes dessinées en SVG à trier sur le fil à linge, contre la montre
-- **Apprentissages** : Suites logiques (formes SVG), Quelle heure ? (horloge à aiguilles), Grand Tableau des multiplications 10×10 (Explore / Trouve la case / Remplis ta table), Labyrinthe généré (toujours solvable)
+- **Apprentissages** : Suites logiques (formes SVG), Quelle heure ? (horloge à aiguilles), Grand Tableau des multiplications 10×10 (Explore / Trouve la case / Remplis ta table), Labyrinthe généré (toujours solvable) avec 4 modes : 🐤 classique, 🌫 brouillard (lampe-torche), 🧊 glace (on glisse jusqu'au mur), 🕶 3D première personne (raycasting canvas + mini-carte)
 - **Pop-corn !** : les grains tremblent quand ils sont chauds — tape dessus, POP, le pop-corn saute dans le carton
 - **Boîte à Rythme de la ferme** : séquenceur 8 pas × 4 animaux dessinés, sons synthétisés, 3 tempos, presets
 - **Puzzle avec n'importe quelle photo** : bouton 📷 dans le Puzzle pour charger une photo (papa, mamie, le chat…), gardée pour la prochaine fois
