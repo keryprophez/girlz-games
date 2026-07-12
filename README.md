@@ -1,16 +1,21 @@
 # 🐤 La Ferme Magique
 
-Les jeux de **Joyce** et **Jade** — une webapp de 16 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
+Les jeux de **Joyce** et **Jade** — une webapp de 22 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
 
 ## ✨ Ce qu'il y a dedans
 
-- **16 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
+- **22 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
 - **Zéro lecture obligatoire** : les consignes et questions sont lues à voix haute (synthèse vocale française du navigateur, hors-ligne, aucun asset)
 - **⚔️ Défi à deux** : les sœurs jouent le même jeu tour à tour, écran de résultat commun et bienveillant, bouton Revanche
 - **Profils avec photos** : chaque fille a sa carte, on ajoute sa photo (bouton 📷) et sa tête apparaît dans les jeux (Poussin Volant, Course, Attrape, Habille-toi…) et dans le **Puzzle Photo** 🤳 (glisser-déposer avec image fantôme pour guider)
 - **Personnage illustré** : la photo devient le visage d'un personnage SVG dessiné (cheveux, corps, habits) ; le look choisi dans Habille-toi suit la joueuse dans Poussin Volant, Course et Attrape
 - **Jeux créatifs sans score** : Coloriage magique, Habille ton avatar, Petit Piano (mode libre + mélodies guidées « suis les lumières »)
 - **Chaussettes** : paires de chaussettes dessinées en SVG à trier sur le fil à linge, contre la montre
+- **Apprentissages** : Suites logiques (formes SVG), Quelle heure ? (horloge à aiguilles), Grand Tableau des multiplications 10×10 (Explore / Trouve la case / Remplis ta table), Labyrinthe généré (toujours solvable)
+- **Pop-corn !** : les grains tremblent quand ils sont chauds — tape dessus, POP, le pop-corn saute dans le carton
+- **Boîte à Rythme de la ferme** : séquenceur 8 pas × 4 animaux dessinés, sons synthétisés, 3 tempos, presets
+- **Puzzle avec n'importe quelle photo** : bouton 📷 dans le Puzzle pour charger une photo (papa, mamie, le chat…), gardée pour la prochaine fois
+- **Aucune mécanique d'addiction** : pas de monnaie, pas de boutique, pas de zones à débloquer — juste des étoiles et un album
 - **Progression séparée** par joueuse : étoiles, album de 24 animaux à collectionner, meilleurs scores par jeu
 - **3 niveaux de difficulté** par profil (🌱 Douce / 🌿 Normale / 🔥 Expert), réglables d'un tap
 - **PWA hors-ligne** : installable sur l'écran d'accueil, polices auto-hébergées, aucun réseau requis après la première visite

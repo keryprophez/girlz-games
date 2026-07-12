@@ -15,12 +15,18 @@ import { coloring } from './coloring'
 import { dressup } from './dressup'
 import { piano } from './piano'
 import { socks } from './socks'
+import { patterns } from './patterns'
+import { clock } from './clock'
+import { tables } from './tables'
+import { maze } from './maze'
+import { popcorn } from './popcorn'
+import { beatbox } from './beatbox'
 
 export const GAMES: GameDef[] = [
-  quizGame, intrus, letters, photoPuzzle, socks,
+  quizGame, intrus, letters, photoPuzzle, socks, patterns, clock, tables, maze,
   memory, simonGame,
-  catchGame, moleGame, runGame, fishGame, ninja, flappy,
-  coloring, dressup, piano
+  catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn,
+  coloring, dressup, piano, beatbox
 ]
 
 export const CATEGORIES: { id: GameCategory; label: string; icon: string }[] = [

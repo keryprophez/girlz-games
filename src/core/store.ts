@@ -18,6 +18,9 @@ interface FermeState {
   setTier(id: string, tier: Tier): void
   updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'age'>>): void
   setLook(id: string, look: Look): void
+  /** Dernière photo choisie pour le Puzzle (indépendante de l'avatar). */
+  puzzleImgs: Record<string, string>
+  setPuzzleImg(id: string, img: string): void
   toggleSound(): void
   /** Ajoute les étoiles gagnées et débloque éventuellement un sticker. Renvoie le sticker débloqué. */
   reward(gameId: string, starsEarned: number, stars: number, profileId?: string): string | null
@@ -56,6 +59,10 @@ export const useFerme = create<FermeState>()(
       },
       setLook(id, look) {
         set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, look } : p)) }))
+      },
+      puzzleImgs: {},
+      setPuzzleImg(id, img) {
+        set(s => ({ puzzleImgs: { ...s.puzzleImgs, [id]: img } }))
       },
       toggleSound() {
         const on = !get().sound
