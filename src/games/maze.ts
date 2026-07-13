@@ -64,12 +64,67 @@ function sizesFor(mode: string): number[] {
   return ctx.byTier([5, 6, 7], [8, 10, 12], [12, 14, 16])
 }
 
+/* La glace ne permet pas de s'arrêter en plein couloir : certaines grilles
+   sont ingagnables en glissant. On vérifie par un parcours en "coups de
+   glisse" que la sortie est atteignable (y compris en passant dessus). */
+function iceSolvable(g: Cell[][], n: number): boolean {
+  const D = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+  const seen = new Set(['0:0'])
+  const stack: [number, number][] = [[0, 0]]
+  while (stack.length) {
+    const [x, y] = stack.pop()!
+    if (x === n - 1 && y === n - 1) return true
+    for (let d = 0; d < 4; d++) {
+      let cx = x, cy = y
+      while (!g[cy][cx].walls[d]) {
+        cx += D[d][0]; cy += D[d][1]
+        if (cx === n - 1 && cy === n - 1) return true
+      }
+      const k = cx + ':' + cy
+      if ((cx !== x || cy !== y) && !seen.has(k)) { seen.add(k); stack.push([cx, cy]) }
+    }
+  }
+  return false
+}
+
+/* Ouvre quelques murs intérieurs : la glace respire mieux et devient
+   presque toujours gagnable. */
+function braid(g: Cell[][], n: number, ratio: number) {
+  const target = Math.floor(n * n * ratio)
+  for (let k = 0; k < target; k++) {
+    const x = 1 + Math.floor(Math.random() * (n - 2))
+    const y = 1 + Math.floor(Math.random() * (n - 2))
+    const d = Math.random() < 0.5 ? 1 : 2 // droite ou bas
+    if (g[y][x].walls[d]) {
+      g[y][x].walls[d] = false
+      if (d === 1) g[y][x + 1].walls[3] = false
+      else g[y + 1][x].walls[0] = false
+    }
+  }
+}
+
+function makeGrid(n: number): Cell[][] {
+  if (mz.mode !== 'ice') return generate(n)
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const g = generate(n)
+    braid(g, n, 0.18)
+    if (iceSolvable(g, n)) return g
+  }
+  // Dernier recours : grilles très aérées jusqu'à en trouver une gagnable
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const g = generate(n)
+    braid(g, n, 0.5)
+    if (iceSolvable(g, n)) return g
+  }
+  return generate(n) // improbable : mieux vaut une grille jouable pas à pas que rien
+}
+
 /* ============ Modes 2D (classique, brouillard, glace) ============ */
 
 function load2D() {
   const n = mz.sizes[mz.round]
   mz.n = n
-  mz.grid = generate(n)
+  mz.grid = makeGrid(n)
   mz.px = boardSize(380)
   mz.cell = mz.px / n
   mz.pos = { x: 0, y: 0 }

@@ -1,123 +1,144 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd } from '../core/utils'
 import { sNope, sPower, sSlice, sWin } from '../core/audio'
-import { FX } from '../core/fx'
+// PixiJS est chargé à la demande (code-splitting) : il ne pèse rien tant
+// qu'on n'ouvre pas le Ninja, puis reste en cache hors-ligne (PWA).
+let PIXI: any = null
 
-const NJ_FRUITS: [string, string][] = [['🍉', '#FF6B81'], ['🍎', '#FF8787'], ['🍊', '#FFA94D'], ['🍋', '#FFE066'], ['🍇', '#B197FC'], ['🍓', '#FF8FA3'], ['🥝', '#94D82D'], ['🍑', '#FFC9C9']]
+/* Ninja du Verger — pilote « vrai jeu » : rendu WebGL (PixiJS), fruits
+   texturés qui tournent, moitiés qui montrent la CHAIR du fruit, jus en
+   particules, lame lumineuse, tremblé d'écran. La logique de jeu (combos,
+   hérisson, chrono) reste celle validée. */
 
 let nj: any = null
 let ctx: GameContext
 
-function updateScore() { $('njScore').textContent = '🥷 ' + nj.score }
-function updateBlade() {
-  const pts = nj.bladePoints.map((p: any) => p.x + ',' + p.y).join(' ')
-  const l1 = document.getElementById('njLine')
-  const l2 = document.getElementById('njLine2')
-  if (l1) l1.setAttribute('points', pts)
-  if (l2) l2.setAttribute('points', pts)
+interface Fruit {
+  sp: any
+  x: number; y: number; vx: number; vy: number; g: number
+  rot: number; vr: number; r: number
+  bad: boolean; half: boolean; sliced: boolean
+  juice: number; inner?: any
 }
 
-function spawnWave() {
+function spawnWave(T: any) {
   const n = rnd(nj.cfg.min, nj.cfg.max)
   for (let i = 0; i < n; i++) {
     const bad = Math.random() < nj.cfg.hedge
-    const [emoji, color] = bad ? ['🦔', '#8A7A6B'] : pick(NJ_FRUITS)
+    const art: any = bad ? null : pick(T.fruits as any[])
+    const sp = new PIXI.Sprite(bad ? T.hedgehog : art!.whole)
+    sp.anchor.set(0.5)
+    const scale = (nj.W < 500 ? 0.62 : 0.78) * (0.9 + Math.random() * 0.25)
+    sp.scale.set(scale)
     const x = nj.W * (0.12 + Math.random() * 0.76)
-    const peak = nj.H * (0.5 + Math.random() * 0.3)
+    const peak = nj.H * (0.55 + Math.random() * 0.3)
     const g = 0.0016
-    const el = document.createElement('div')
-    el.className = 'nj-fruit'; el.textContent = emoji
-    nj.area.appendChild(el)
+    nj.stage.addChild(sp)
     nj.fruits.push({
-      el, emoji, color, bad, x, y: nj.H + 30,
+      sp, x, y: nj.H + 60,
       vx: ((nj.W / 2 - x) / nj.W) * 0.16 + (Math.random() - 0.5) * 0.1,
-      vy: -Math.sqrt(2 * g * peak), g, r: 28, rot: Math.random() * 60, vr: (Math.random() - 0.5) * 0.4,
-      sliced: false, half: false
-    })
+      vy: -Math.sqrt(2 * g * peak), g,
+      rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.004,
+      r: 52 * scale, bad, half: false, sliced: false,
+      juice: art ? art.juice : 0x8a7a6b, inner: art?.inner
+    } as Fruit)
   }
 }
 
-function sliceCheck(a: any, b: any) {
-  if (!nj) return
-  for (const f of nj.fruits) {
-    if (f.sliced) continue
+function burst(x: number, y: number, color: number, count: number, T: any) {
+  for (let i = 0; i < count; i++) {
+    const p = new PIXI.Sprite(T.particle)
+    p.anchor.set(0.5)
+    p.tint = color
+    const s = 0.6 + Math.random() * 1.6
+    p.scale.set(s)
+    nj.stage.addChild(p)
+    const a = Math.random() * Math.PI * 2
+    const v = 0.08 + Math.random() * 0.28
+    nj.parts.push({ sp: p, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.12, life: 1 })
+  }
+}
+
+function floatText(x: number, y: number, txt: string, color: number) {
+  const t = new PIXI.Text(txt, {
+    fontFamily: 'Baloo 2, sans-serif', fontWeight: '800', fontSize: 26,
+    fill: color, stroke: 0xffffff, strokeThickness: 4
+  })
+  t.anchor.set(0.5)
+  t.x = x; t.y = y
+  nj.stage.addChild(t)
+  nj.floats.push({ sp: t, y, life: 1 })
+}
+
+function updateScore() { $('njScore').textContent = '🥷 ' + nj.score }
+
+function sliceCheck(a: { x: number; y: number }, b: { x: number; y: number }, T: any) {
+  for (const f of [...nj.fruits] as Fruit[]) {
+    if (f.sliced || f.half) continue
     const dx = b.x - a.x, dy = b.y - a.y
     const len2 = dx * dx + dy * dy || 1
     let t = ((f.x - a.x) * dx + (f.y - a.y) * dy) / len2
     t = Math.max(0, Math.min(1, t))
     const px = a.x + t * dx, py = a.y + t * dy
-    if ((f.x - px) ** 2 + (f.y - py) ** 2 < f.r * f.r * 2.2) {
-      f.sliced = true
-      if (f.bad) {
-        nj.score = Math.max(0, nj.score - 3); sNope(); FX.shake(8)
-        $('njFlash').classList.add('on')
-        setTimeout(() => $('njFlash')?.classList.remove('on'), 200)
-        njFloat(f.x, f.y - 20, 'Aïe ! -3', '#FF7B6B')
-      } else {
-        nj.score++; nj.swipeHits++; sSlice()
-        njSplash(f.x, f.y, f.color)
-        njFloat(f.x, f.y - 20, '+1', '#fff')
-        // Deux VRAIES moitiés : le fruit est coupé le long du trait de sabre
-        const sliceDeg = (Math.atan2(dy, dx) * 180) / Math.PI
-        for (const s of [-1, 1]) {
-          const hel = document.createElement('div')
-          hel.className = 'nj-fruit half'
-          // Le fruit est tourné pour aligner la coupe, puis on n'affiche qu'une moitié
-          hel.innerHTML = `<span class="nj-halfclip" style="transform:rotate(${sliceDeg}deg);clip-path:inset(${s === -1 ? '0 0 50% 0' : '50% 0 0 0'})">${f.emoji}</span>`
-          nj.area.appendChild(hel)
-          const ang = Math.atan2(dy, dx) + Math.PI / 2
-          nj.fruits.push({
-            el: hel, emoji: f.emoji, color: f.color, bad: false, half: true, sliced: true,
-            x: f.x, y: f.y, vx: f.vx + Math.cos(ang) * 0.14 * s, vy: f.vy + Math.sin(ang) * 0.14 * s - 0.06,
-            g: f.g, r: 20, rot: f.rot, vr: 0.45 * s
-          })
-        }
-      }
-      f.el.remove(); updateScore()
+    if ((f.x - px) ** 2 + (f.y - py) ** 2 > f.r * f.r * 1.4) continue
+    f.sliced = true
+    if (f.bad) {
+      nj.score = Math.max(0, nj.score - 3); sNope()
+      nj.shake = 14
+      nj.flash = 1
+      floatText(f.x, f.y - 30, 'Aïe ! -3', 0xff5a4d)
+    } else {
+      nj.score++; nj.swipeHits++
+      sSlice()
+      burst(f.x, f.y, f.juice, 14, T)
+      floatText(f.x, f.y - 30, '+1', 0x45362a)
+      // Deux vraies moitiés : la face coupée (chair) alignée sur le coup de sabre
+      const ang = Math.atan2(dy, dx)
+      const base = f.inner!.baseTexture
+      const w = base.width, h = base.height
+      const tex = [
+        new PIXI.Texture(base, new PIXI.Rectangle(0, 0, w, h / 2)),
+        new PIXI.Texture(base, new PIXI.Rectangle(0, h / 2, w, h / 2))
+      ]
+      tex.forEach((tx, k) => {
+        const s = k === 0 ? -1 : 1
+        const half = new PIXI.Sprite(tx)
+        half.anchor.set(0.5, k === 0 ? 1 : 0) // ancré sur le bord coupé
+        half.scale.set(f.sp.scale.x)
+        half.rotation = ang
+        nj.stage.addChild(half)
+        const na = ang + Math.PI / 2
+        nj.fruits.push({
+          sp: half, x: f.x, y: f.y,
+          vx: f.vx + Math.cos(na) * 0.12 * s, vy: f.vy + Math.sin(na) * 0.12 * s - 0.05,
+          g: f.g, rot: ang, vr: 0.002 * s, r: f.r,
+          bad: false, half: true, sliced: true, juice: f.juice
+        } as Fruit)
+      })
     }
-  }
-  nj.fruits = nj.fruits.filter((f: any) => !f.sliced || f.half)
-}
-
-function njSplash(x: number, y: number, color: string) {
-  for (let i = 0; i < 8; i++) {
-    const d = document.createElement('div')
-    d.className = 'nj-splash'
-    d.style.background = color
-    d.style.left = x + 'px'; d.style.top = y + 'px'
-    nj.area.appendChild(d)
-    const ang = Math.random() * Math.PI * 2, v = 2 + Math.random() * 3
-    let vx = Math.cos(ang) * v, vy = Math.sin(ang) * v - 1.5, life = 1, px = x, py = y
-    ;(function tick() {
-      life -= 0.045; vy += 0.12; px += vx; py += vy
-      if (life <= 0 || !nj) { d.remove(); return }
-      d.style.transform = `translate(${px - x}px,${py - y}px) scale(${life})`
-      d.style.opacity = String(life)
-      requestAnimationFrame(tick)
-    })()
+    f.sp.destroy()
+    nj.fruits.splice(nj.fruits.indexOf(f), 1)
+    updateScore()
   }
 }
 
-function njFloat(x: number, y: number, txt: string, color?: string) {
-  const d = document.createElement('div')
-  d.className = 'nj-pts'; d.textContent = txt
-  d.style.left = x + 'px'; d.style.top = y + 'px'; d.style.color = color || '#fff'
-  nj.area.appendChild(d)
-  setTimeout(() => d.remove(), 650)
-}
-
-function loop(t: number) {
-  if (!nj || !nj.running) return
-  const dt = Math.min(40, t - nj.lastT); nj.lastT = t
-  nj.since += dt
-  if (nj.since >= nj.cfg.spawn) { nj.since = 0; spawnWave() }
-  for (let i = nj.fruits.length - 1; i >= 0; i--) {
-    const f = nj.fruits[i]
-    f.x += f.vx * dt; f.y += f.vy * dt; f.vy += f.g * dt; f.rot += f.vr * dt * 0.05
-    if (f.y > nj.H + 70) { f.el.remove(); nj.fruits.splice(i, 1); continue }
-    f.el.style.transform = `translate(${f.x - 26}px,${f.y - 26}px) rotate(${f.rot}deg)`
+function drawBlade() {
+  const g = nj.blade
+  g.clear()
+  const pts = nj.bladePts
+  if (pts.length < 2) return
+  for (let i = 1; i < pts.length; i++) {
+    const k = i / pts.length
+    g.lineStyle({ width: 12 * k, color: 0x4fb8e7, alpha: 0.35 * k, cap: 'round' as any })
+    g.moveTo(pts[i - 1].x, pts[i - 1].y)
+    g.lineTo(pts[i].x, pts[i].y)
   }
-  requestAnimationFrame(loop)
+  for (let i = 1; i < pts.length; i++) {
+    const k = i / pts.length
+    g.lineStyle({ width: 4 * k, color: 0xffffff, alpha: 0.9 * k, cap: 'round' as any })
+    g.moveTo(pts[i - 1].x, pts[i - 1].y)
+    g.lineTo(pts[i].x, pts[i].y)
+  }
 }
 
 function finish() {
@@ -139,10 +160,7 @@ export const ninja: GameDef = {
         <div class="chip" id="njBest">Combo ×1</div>
       </div>
       <div class="tbar" style="max-width:560px"><div class="tfill" id="njTimer"></div></div>
-      <div id="njArea" class="arena nj-arena">
-        <div class="nj-blade" id="njBlade"></div>
-        <div class="nj-flash" id="njFlash"></div>
-      </div>`
+      <div id="njArea" class="arena nj-arena"><div class="nj-loading">🥷…</div></div>`
     const area = $('njArea')
     const W = area.clientWidth || 400, H = area.clientHeight || 360
     const cfg = c.byTier(
@@ -150,67 +168,132 @@ export const ninja: GameDef = {
       { spawn: 1200, min: 1, max: 3, hedge: 0.16 },
       { spawn: 950, min: 2, max: 4, hedge: 0.22 }
     )
-    nj = {
-      area, W, H, cfg, fruits: [], score: 0, bestCombo: 1, timeLeft: 60, running: true,
-      lastT: performance.now(), since: 900, down: false, swipeHits: 0, lastPt: null,
-      bladePoints: []
-    }
-    $('njBlade').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"><polyline id="njLine" fill="none" stroke="rgba(79,184,231,.5)" stroke-width="10" stroke-linecap="round"/><polyline id="njLine2" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="3" stroke-linecap="round"/></svg>'
-    const pos = (e: any) => {
-      const r = area.getBoundingClientRect()
-      const cx = e.touches ? e.touches[0].clientX : e.clientX
-      const cy = e.touches ? e.touches[0].clientY : e.clientY
-      return { x: cx - r.left, y: cy - r.top }
-    }
-    const pd = (e: any) => {
-      e.preventDefault(); if (!nj || !nj.running) return
-      nj.down = true; nj.swipeHits = 0; nj.bladePoints = []
-      nj.lastPt = pos(e)
-      nj.bladePoints.push(nj.lastPt)
-    }
-    const pm = (e: any) => {
-      if (!nj || !nj.down || !nj.running) return
-      const p = pos(e)
-      nj.bladePoints.push(p)
-      if (nj.bladePoints.length > 20) nj.bladePoints.shift()
-      updateBlade()
-      sliceCheck(nj.lastPt, p)
-      nj.lastPt = p
-    }
-    const pu = () => {
-      if (!nj) return
-      nj.down = false; nj.bladePoints = []; updateBlade()
-      if (nj.swipeHits >= 3) {
-        nj.score += nj.swipeHits
-        if (nj.swipeHits > nj.bestCombo) {
-          nj.bestCombo = nj.swipeHits
-          $('njBest').textContent = 'Combo ×' + nj.bestCombo
-        }
-        njFloat(nj.W / 2, nj.H * 0.3, 'COMBO ×' + nj.swipeHits + ' !', '#FF7B6B')
-        sPower(); updateScore()
+    let dead = false
+    let app: any = null
+    let timer: any = null
+    const listeners: [string, any][] = []
+
+    ;(async () => {
+      PIXI = PIXI || await import('pixi.js')
+      const { loadNinjaTextures } = await import('./ninjaArt')
+      const T = await loadNinjaTextures()
+      if (dead) return
+      app = new PIXI.Application({
+        width: W, height: H, backgroundAlpha: 0, antialias: true,
+        resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true
+      })
+      area.querySelector('.nj-loading')?.remove()
+      area.appendChild(app.view as HTMLCanvasElement)
+
+      const stage = new PIXI.Container()
+      app.stage.addChild(stage)
+      const blade = new PIXI.Graphics()
+      app.stage.addChild(blade)
+      const flash = new PIXI.Graphics()
+      flash.beginFill(0xff5a4d).drawRect(0, 0, W, H).endFill()
+      flash.alpha = 0
+      app.stage.addChild(flash)
+
+      nj = {
+        stage, blade, flashG: flash, W, H, cfg,
+        fruits: [] as Fruit[], parts: [] as any[], floats: [] as any[],
+        score: 0, bestCombo: 1, timeLeft: 60, running: true,
+        since: 900, down: false, swipeHits: 0, lastPt: null, bladePts: [],
+        shake: 0, flash: 0
       }
-    }
-    const tm = (e: TouchEvent) => { e.preventDefault(); pm(e) }
-    area.addEventListener('pointerdown', pd)
-    area.addEventListener('pointermove', pm)
-    area.addEventListener('pointerup', pu)
-    area.addEventListener('pointerleave', pu)
-    area.addEventListener('touchmove', tm, { passive: false })
-    const timer = setInterval(() => {
-      if (!nj || !nj.running) return
-      nj.timeLeft--
-      $('njTimer').style.width = (nj.timeLeft / 60) * 100 + '%'
-      if (nj.timeLeft <= 0) finish()
-    }, 1000)
-    requestAnimationFrame(loop)
+
+      const pos = (e: PointerEvent) => {
+        const r = area.getBoundingClientRect()
+        return { x: e.clientX - r.left, y: e.clientY - r.top }
+      }
+      const pd = (e: PointerEvent) => {
+        e.preventDefault()
+        if (!nj || !nj.running) return
+        nj.down = true; nj.swipeHits = 0
+        nj.lastPt = pos(e)
+        nj.bladePts = [nj.lastPt]
+      }
+      const pm = (e: PointerEvent) => {
+        if (!nj || !nj.down || !nj.running) return
+        const p = pos(e)
+        nj.bladePts.push(p)
+        if (nj.bladePts.length > 16) nj.bladePts.shift()
+        sliceCheck(nj.lastPt, p, T)
+        nj.lastPt = p
+      }
+      const pu = () => {
+        if (!nj) return
+        nj.down = false
+        if (nj.swipeHits >= 3) {
+          nj.score += nj.swipeHits
+          if (nj.swipeHits > nj.bestCombo) {
+            nj.bestCombo = nj.swipeHits
+            $('njBest').textContent = 'Combo ×' + nj.bestCombo
+          }
+          floatText(nj.W / 2, nj.H * 0.25, 'COMBO ×' + nj.swipeHits + ' !', 0xff7b6b)
+          sPower(); updateScore()
+        }
+      }
+      area.addEventListener('pointerdown', pd); listeners.push(['pointerdown', pd])
+      area.addEventListener('pointermove', pm); listeners.push(['pointermove', pm])
+      area.addEventListener('pointerup', pu); listeners.push(['pointerup', pu])
+      area.addEventListener('pointerleave', pu); listeners.push(['pointerleave', pu])
+
+      timer = setInterval(() => {
+        if (!nj || !nj.running) return
+        nj.timeLeft--
+        $('njTimer').style.width = (nj.timeLeft / 60) * 100 + '%'
+        if (nj.timeLeft <= 0) finish()
+      }, 1000)
+
+      app.ticker.add(() => {
+        if (!nj || !nj.running || !app) return
+        const dt = Math.min(40, app.ticker.deltaMS)
+        nj.since += dt
+        if (nj.since >= nj.cfg.spawn) { nj.since = 0; spawnWave(T) }
+
+        for (let i = nj.fruits.length - 1; i >= 0; i--) {
+          const f = nj.fruits[i] as Fruit
+          f.x += f.vx * dt; f.y += f.vy * dt; f.vy += f.g * dt
+          f.rot += f.vr * dt
+          if (f.y > nj.H + 90) { f.sp.destroy(); nj.fruits.splice(i, 1); continue }
+          f.sp.x = f.x; f.sp.y = f.y
+          f.sp.rotation = f.half ? f.rot : f.rot
+        }
+        for (let i = nj.parts.length - 1; i >= 0; i--) {
+          const p = nj.parts[i]
+          p.life -= 0.03 * (dt / 16.7)
+          p.vy += 0.012 * (dt / 16.7)
+          p.x += p.vx * dt; p.y += p.vy * dt
+          if (p.life <= 0) { p.sp.destroy(); nj.parts.splice(i, 1); continue }
+          p.sp.x = p.x; p.sp.y = p.y; p.sp.alpha = p.life
+        }
+        for (let i = nj.floats.length - 1; i >= 0; i--) {
+          const t = nj.floats[i]
+          t.life -= 0.022 * (dt / 16.7)
+          t.y -= 0.05 * dt
+          if (t.life <= 0) { t.sp.destroy(); nj.floats.splice(i, 1); continue }
+          t.sp.y = t.y; t.sp.alpha = t.life
+        }
+        // Traînée de lame qui s'évanouit même sans bouger
+        if (!nj.down && nj.bladePts.length) nj.bladePts.shift()
+        drawBlade()
+        // Secousse et flash quand on touche le hérisson
+        if (nj.shake > 0) {
+          nj.shake -= dt * 0.05
+          nj.stage.x = (Math.random() - 0.5) * nj.shake
+          nj.stage.y = (Math.random() - 0.5) * nj.shake
+        } else { nj.stage.x = 0; nj.stage.y = 0 }
+        if (nj.flash > 0) { nj.flash -= dt * 0.004; nj.flashG.alpha = Math.max(0, nj.flash) * 0.4 }
+      })
+    })()
+
     return () => {
-      if (nj) { nj.running = false; nj.fruits.forEach((f: any) => f.el && f.el.remove()); nj = null }
+      dead = true
+      if (nj) { nj.running = false; nj = null }
       clearInterval(timer)
-      area.removeEventListener('pointerdown', pd)
-      area.removeEventListener('pointermove', pm)
-      area.removeEventListener('pointerup', pu)
-      area.removeEventListener('pointerleave', pu)
-      area.removeEventListener('touchmove', tm)
+      listeners.forEach(([ev, fn]) => area.removeEventListener(ev, fn))
+      if (app) { app.destroy(true, { children: true, texture: false, baseTexture: false }); app = null }
     }
   }
 }
