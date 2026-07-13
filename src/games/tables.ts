@@ -148,8 +148,9 @@ function nextType() {
   cell.classList.add('want')
   $('tbPrompt').innerHTML = `⌨️ <b class="tb-target">${t} × ${c} = <span id="tbTyped">…</span></b> <span class="tb-sub">(${tb.q + 1}/${tb.totalQ})</span>`
   const box = $('tbOpts')
-  box.innerHTML = `<div class="tb-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✔']
-    .map(k => `<button class="tb-key${k === '✔' ? ' ok' : ''}" data-k="${k}">${k}</button>`).join('')}</div>`
+  // Réglette horizontale : une seule ligne, la grille reste visible dessous
+  box.innerHTML = `<div class="tb-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 0, '⌫']
+    .map(k => `<button class="tb-key${k === '⌫' ? ' del' : ''}" data-k="${k}">${k}</button>`).join('')}</div>`
   box.querySelectorAll<HTMLElement>('.tb-key').forEach(b => {
     b.onclick = () => typeKey(b.dataset.k!)
   })
