@@ -1,4 +1,5 @@
 import { Texture } from 'pixi.js'
+import { particleTex, texFromSVG } from './pixiKit'
 
 /* Les fruits du Ninja — art vectoriel riche (dégradés, brillances) rendu en
    textures WebGL. Chaque fruit a une texture ENTIÈRE (peau) et une texture
@@ -113,19 +114,6 @@ export const HEDGEHOG = wrap(G('hh', [['0', '#A98866'], ['100', '#6B5138']]),
    <circle cx="50" cy="66" r="4" fill="#2B1F12"/><circle cx="70" cy="66" r="4" fill="#2B1F12"/>
    <ellipse cx="60" cy="78" rx="6" ry="4.6" fill="#3B2A20"/>`)
 
-async function texFromSVG(svg: string, px = 144): Promise<Texture> {
-  const img = new Image()
-  await new Promise<void>((res, rej) => {
-    img.onload = () => res()
-    img.onerror = () => rej(new Error('svg'))
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)))
-  })
-  const cv = document.createElement('canvas')
-  cv.width = cv.height = px
-  cv.getContext('2d')!.drawImage(img, 0, 0, px, px)
-  return Texture.from(cv)
-}
-
 export interface NinjaTextures {
   fruits: { key: string; whole: Texture; inner: Texture; juice: number }[]
   hedgehog: Texture
@@ -143,17 +131,6 @@ export async function loadNinjaTextures(): Promise<NinjaTextures> {
     juice: f.juice
   })))
   const hedgehog = await texFromSVG(HEDGEHOG)
-  // Petite goutte ronde pour les particules de jus
-  const cv = document.createElement('canvas')
-  cv.width = cv.height = 16
-  const g = cv.getContext('2d')!
-  const grad = g.createRadialGradient(6, 6, 1, 8, 8, 8)
-  grad.addColorStop(0, 'rgba(255,255,255,.95)')
-  grad.addColorStop(0.35, 'rgba(255,255,255,.8)')
-  grad.addColorStop(1, 'rgba(255,255,255,0)')
-  g.fillStyle = grad
-  g.fillRect(0, 0, 16, 16)
-  const particle = Texture.from(cv)
-  cache = { fruits, hedgehog, particle }
+  cache = { fruits, hedgehog, particle: particleTex() }
   return cache
 }

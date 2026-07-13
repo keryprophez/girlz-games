@@ -17,7 +17,10 @@ import { piano } from './piano'
 import { socks } from './socks'
 import { patterns } from './patterns'
 import { clock } from './clock'
-import { tables } from './tables'
+import { tables, additions } from './tables'
+import { mirror } from './mirror'
+import { market } from './market'
+import { battleship } from './battleship'
 import { maze } from './maze'
 import { popcorn } from './popcorn'
 import { beatbox } from './beatbox'
@@ -26,7 +29,7 @@ import { balloon } from './balloon'
 import { connect4 } from './connect4'
 
 export const GAMES: GameDef[] = [
-  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, clock, tables, maze, connect4,
+  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, clock, tables, additions, market, maze, connect4, battleship,
   memory, simonGame,
   catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon,
   coloring, dressup, piano, beatbox

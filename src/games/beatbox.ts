@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, } from '../core/utils'
-import { sWin, tone } from '../core/audio'
+import { sMoo, sWin, tone } from '../core/audio'
 
 /* Boîte à Rythme de la Ferme — une grille de 8 temps × 4 animaux :
    on allume des cases, on appuie sur play, la ferme fait de la musique. */
@@ -14,7 +14,7 @@ const ROWS = [
       <circle cx="17" cy="27" r="1.6" fill="#B26E78"/><circle cx="23" cy="27" r="1.6" fill="#B26E78"/>
       <path d="M6,10 Q3,5 8,5 M34,10 Q37,5 32,5" stroke="#C9B497" stroke-width="3" fill="none" stroke-linecap="round"/>
       <circle cx="14" cy="18" r="1.8" fill="#45362A"/><circle cx="26" cy="18" r="1.8" fill="#45362A"/></svg>`,
-    play() { tone(98, 0.3, 'sawtooth', 0.14); tone(65, 0.34, 'sine', 0.16) }
+    play() { sMoo() }
   },
   {
     key: 'cochon', color: '#F58FB8',

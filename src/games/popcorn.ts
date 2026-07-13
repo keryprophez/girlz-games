@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, rnd } from '../core/utils'
-import { sNope, sPop, sPower, sWin, tone } from '../core/audio'
+import { sNope, sPopReal as sPop, sPower, sWin, tone } from '../core/audio'
 import { FX, JUICE } from '../core/fx'
 
 /* Pop-corn ! — des grains de maïs chauffent : quand un grain tremble,

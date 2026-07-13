@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
-import { sWin, tone } from '../core/audio'
+import { sBoomReal, sWin, tone } from '../core/audio'
 import { FX } from '../core/fx'
 
 /* Gonfle le Ballon ! — tapote le plus vite possible : le ballon gonfle,
@@ -33,11 +33,7 @@ let bl: any = null
 let ctx: GameContext
 
 function sPump(k: number) { tone(220 + k * 4, 0.06, 'triangle', 0.14) }
-function sBoom() {
-  tone(70, 0.35, 'sawtooth', 0.3)
-  setTimeout(() => tone(50, 0.4, 'square', 0.22), 40)
-  setTimeout(() => tone(900, 0.08, 'triangle', 0.12), 60)
-}
+const sBoom = sBoomReal
 
 function loadBalloon() {
   const [c, cd] = COLORS[bl.round % COLORS.length]

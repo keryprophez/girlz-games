@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
-import { sGood, sNope, sWin } from '../core/audio'
+import { sGood, sNope, sSplash, sWin } from '../core/audio'
 import { fxAt, JUICE } from '../core/fx'
 
 const FISHES = ['🐟', '🐠', '🐡', '🦐', '🦀', '🐙', '🦞']
@@ -40,7 +40,7 @@ function hookAttempt() {
     fish.speed *= 1.07
     fish.zoneW = Math.max(0.08, fish.zoneW * 0.90)
   } else {
-    fish.lives--; sNope()
+    fish.lives--; sSplash()
     face.textContent = '💧'
     $('fishHearts').textContent = '❤️'.repeat(fish.lives) + '🖤'.repeat(3 - fish.lives)
     if (fish.lives <= 0) { setTimeout(finish, 500); return }

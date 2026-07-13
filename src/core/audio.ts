@@ -32,3 +32,77 @@ export const sBonk = () => { tone(300, 0.06, 'square', 0.16); setTimeout(() => t
 export const sJump = () => tone(500, 0.1, 'triangle', 0.12)
 export const sPop = () => { tone(880, 0.05, 'triangle', 0.14); setTimeout(() => tone(1240, 0.07, 'sine', 0.1), 35) }
 export const sSlice = () => { tone(900, 0.05, 'sawtooth', 0.06); setTimeout(() => tone(420, 0.08, 'sawtooth', 0.05), 25) }
+
+/* ---- Bruitages v2 : souffle blanc filtré + enveloppes = sons « réels » ---- */
+let noiseBuf: AudioBuffer | null = null
+function getCtx(): AudioContext | null {
+  try {
+    actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)()
+    return actx
+  } catch { return null }
+}
+function noiseBurst(dur: number, freq: number, opts: {
+  q?: number; vol?: number; type?: BiquadFilterType; sweepTo?: number; delay?: number
+} = {}) {
+  if (!soundOn) return
+  const ac = getCtx()
+  if (!ac) return
+  const { q = 1, vol = 0.25, type = 'lowpass', sweepTo, delay = 0 } = opts
+  if (!noiseBuf) {
+    noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate)
+    const d = noiseBuf.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+  }
+  const t0 = ac.currentTime + delay
+  const src = ac.createBufferSource()
+  src.buffer = noiseBuf
+  src.loop = true
+  const f = ac.createBiquadFilter()
+  f.type = type; f.frequency.setValueAtTime(freq, t0); f.Q.value = q
+  if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t0 + dur)
+  const g = ac.createGain()
+  g.gain.setValueAtTime(vol, t0)
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+  src.connect(f); f.connect(g); g.connect(ac.destination)
+  src.start(t0); src.stop(t0 + dur + 0.05)
+}
+/** Plouf dans l'eau : gros souffle grave + goutte qui remonte. */
+export const sSplash = () => {
+  noiseBurst(0.4, 900, { vol: 0.3, sweepTo: 250 })
+  setTimeout(() => tone(300, 0.12, 'sine', 0.12), 60)
+  setTimeout(() => tone(520, 0.1, 'sine', 0.09), 160)
+}
+/** Explosion charnue (ballon, boum). */
+export const sBoomReal = () => {
+  noiseBurst(0.5, 2500, { vol: 0.4, sweepTo: 120 })
+  tone(65, 0.4, 'sine', 0.3)
+  setTimeout(() => tone(48, 0.35, 'sine', 0.2), 50)
+}
+/** Pop sec et satisfaisant (bulle, pop-corn). */
+export const sPopReal = () => {
+  noiseBurst(0.07, 1800, { vol: 0.22, type: 'highpass' })
+  tone(620, 0.05, 'sine', 0.16)
+}
+/** Impact touché (bataille navale). */
+export const sHit = () => {
+  noiseBurst(0.22, 1400, { vol: 0.3, sweepTo: 300 })
+  tone(180, 0.15, 'square', 0.14)
+}
+/** Meuh : basse en dents de scie avec glissando. */
+export const sMoo = () => {
+  if (!soundOn) return
+  const ac = getCtx()
+  if (!ac) return
+  try {
+    const o = ac.createOscillator(), g = ac.createGain()
+    o.type = 'sawtooth'
+    const t0 = ac.currentTime
+    o.frequency.setValueAtTime(140, t0)
+    o.frequency.exponentialRampToValueAtTime(85, t0 + 0.35)
+    o.frequency.exponentialRampToValueAtTime(70, t0 + 0.55)
+    g.gain.setValueAtTime(0.16, t0)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6)
+    o.connect(g); g.connect(ac.destination)
+    o.start(t0); o.stop(t0 + 0.65)
+  } catch { /* rien */ }
+}

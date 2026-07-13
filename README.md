@@ -1,17 +1,18 @@
 # 🐤 La Ferme Magique
 
-Les jeux de **Joyce** et **Jade** — une webapp de 22 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
+Les jeux de **Joyce** et **Jade** — une webapp de 29 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
 
 ## ✨ Ce qu'il y a dedans
 
-- **22 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
-- **Voix discrète** : la synthèse vocale ne sert qu'à lire les multiplications dans le Grand Tableau (« 3 fois 7, 21 ») — aucune annonce de consignes
-- **⚔️ Défi à deux** : les sœurs jouent le même jeu tour à tour, écran de résultat commun et bienveillant, bouton Revanche
+- **29 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
+- **Voix discrète** : la synthèse vocale ne sert qu'à lire le contenu à apprendre — multiplications, additions, heures, valeurs des pièces — jamais les consignes
+- **🎙 Voix de la famille** : papa/maman enregistrent « Bravo ! » et « Presque ! » pour chaque fille (bouton 🎙 sur l'accueil) ; le vrai clip est joué à la fin des parties
+- **⚔️ Défi à deux** : les sœurs jouent le même jeu tour à tour, écran de résultat commun et bienveillant, bouton Revanche — plus deux vrais jeux à deux sur la même tablette : **Puissance 4** (avec leurs têtes en jetons) et **Cache-Cache Pré** (bataille navale des animaux, on se passe la tablette)
 - **Profils avec photos** : chaque fille a sa carte, on ajoute sa photo (bouton 📷) et sa tête apparaît dans les jeux (Poussin Volant, Course, Attrape, Habille-toi…) et dans le **Puzzle Photo** 🤳 (glisser-déposer avec image fantôme pour guider)
 - **Personnage illustré** : la photo devient le visage d'un personnage SVG dessiné (cheveux, corps, habits) ; le look choisi dans Habille-toi suit la joueuse dans Poussin Volant, Course et Attrape
 - **Jeux créatifs sans score** : Coloriage magique, Habille ton avatar, Petit Piano (mode libre + mélodies guidées « suis les lumières »)
 - **Chaussettes** : paires de chaussettes dessinées en SVG à trier sur le fil à linge, contre la montre
-- **Apprentissages** : Suites logiques (formes SVG), Quelle heure ? (5 modes didactiques : Découvre en manipulant, Les heures, Les minutes avec anneau, Quiz, Règle l'horloge en déplaçant les aiguilles), Grand Tableau des multiplications 10×10 (Explore / Trouve la case / Remplis ta table), Labyrinthe généré (toujours solvable) avec 4 modes : 🐤 classique, 🌫 brouillard (lampe-torche), 🧊 glace (on glisse jusqu'au mur), 🕶 3D première personne (raycasting canvas + mini-carte)
+- **Apprentissages** : Suites logiques (formes SVG), Quelle heure ? (5 modes didactiques : Découvre en manipulant, Les heures, Les minutes avec anneau, Quiz, Règle l'horloge en déplaçant les aiguilles), Grand Tableau des multiplications ET des additions 10×10 (Explore / Trouve la case / Remplis / Tape le résultat au clavier), Le Marché (vraies pièces en euros dessinées : Découvre, Paye le prix exact, Rends la monnaie), Le Miroir (complète la symétrie d'un motif de pixels), Labyrinthe généré (toujours solvable) avec 4 modes : 🐤 classique, 🌫 brouillard (lampe-torche), 🧊 glace (on glisse jusqu'au mur), 🕶 3D première personne (raycasting canvas + mini-carte)
 - **Pop-corn !** : les grains tremblent quand ils sont chauds — tape dessus, POP, le pop-corn saute dans le carton
 - **Boîte à Rythme de la ferme** : séquenceur 8 pas × 4 animaux dessinés, sons synthétisés, 3 tempos, presets
 - **Puzzle avec n'importe quelle photo** : bouton 📷 dans le Puzzle pour charger une photo (papa, mamie, le chat…), gardée pour la prochaine fois
@@ -19,7 +20,8 @@ Les jeux de **Joyce** et **Jade** — une webapp de 22 mini-jeux pensée pour jo
 - **Progression séparée** par joueuse : étoiles, album de 24 animaux à collectionner, meilleurs scores par jeu
 - **3 niveaux de difficulté** par profil (🌱 Douce / 🌿 Normale / 🔥 Expert), réglables d'un tap
 - **PWA hors-ligne** : installable sur l'écran d'accueil, polices auto-hébergées, aucun réseau requis après la première visite
-- **Sons synthétisés** en Web Audio (aucun fichier audio), particules, confettis, écrans de récompense
+- **Sons synthétisés** en Web Audio (aucun fichier audio) : jingles, et de vrais bruitages sculptés au bruit blanc filtré (plouf 💦, explosion 🎈, pop sec 🍿, meuh 🐮)
+- **Rendu WebGL (PixiJS)** pour les jeux d'action rapides — Ninja Verger, Attrape et Poussin Volant : fruits et légumes vectoriels texturés, particules, chargé à la demande (le reste de l'app reste léger)
 
 ## 🛠 Stack
 
