@@ -574,3 +574,13 @@ button.chip:active{transform:scale(.92);}
 .adj-canvas:active{cursor:grabbing;}
 .adj-zoomrow{display:flex;align-items:center;gap:10px;justify-content:center;margin:12px 0 16px;font-size:18px;}
 .adj-slider{width:200px;accent-color:var(--coral);height:26px;}
+
+/* ---- Grand Tableau : mode ⌨️ Tape ---- */
+.tb-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-width:230px;margin:0 auto;}
+.tb-key{border:1px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;
+  font-family:'Baloo 2';font-weight:800;font-size:clamp(19px,4.2vmin,24px);padding:11px 0;
+  box-shadow:var(--e1);transition:transform .15s var(--spring),background .15s;}
+.tb-key:active{transform:scale(.88);}
+.tb-key.ok{background:linear-gradient(140deg,#6ED88B,var(--meadow));color:#fff;border:none;}
+.tb-target.shake{display:inline-block;animation:lgshake .3s ease;}
+#tbTyped{color:var(--lagoon);min-width:1.2em;display:inline-block;}

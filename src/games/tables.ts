@@ -45,6 +45,11 @@ function buildGrid() {
   }
 }
 
+/** « une fois huit », pas « un fois huit » */
+function fois(a: number, b: number, v: number): string {
+  return `${a === 1 ? 'une' : a} fois ${b}, ${v}`
+}
+
 function revealCell(b: any, ...cls: string[]) {
   b.textContent = String(b._r * b._c)
   b.classList.add('shown', ...cls)
@@ -61,6 +66,8 @@ function setMode(mode: string) {
   tb.mode = mode
   document.querySelectorAll<HTMLElement>('.tb-mode').forEach(x => x.classList.toggle('sel', x.dataset.m === mode))
   resetCells()
+  $('tbOpts').innerHTML = ''
+  $('tbDone').style.display = mode === 'explore' ? '' : 'none'
   tb.lock = false
   if (mode === 'explore') {
     tb.explored = 0
@@ -69,6 +76,10 @@ function setMode(mode: string) {
   if (mode === 'find') {
     tb.q = 0; tb.score = 0; tb.totalQ = 8
     nextFind()
+  }
+  if (mode === 'type') {
+    tb.q = 0; tb.score = 0; tb.mistakes = 0; tb.totalQ = 8
+    nextType()
   }
   if (mode === 'fill') {
     const t = pick(allowedTables().filter(t => t > 1))
@@ -114,7 +125,7 @@ function nextFill() {
       if (!tb || !tb.running || tb.lock) return
       if (v === answer) {
         revealCell(cell, 'good'); sGood(); fxAt(cell, JUICE.green, 8)
-        ctx.say(`${tb.table} fois ${tb.col}, ${answer}`)
+        ctx.say(fois(tb.table, tb.col, answer))
         tb.col++
         box.innerHTML = ''
         setTimeout(() => tb && tb.running && tb.mode === 'fill' && nextFill(), 600)
@@ -126,13 +137,74 @@ function nextFill() {
   })
 }
 
+function nextType() {
+  document.querySelectorAll('.tb-cell.want').forEach(x => x.classList.remove('want'))
+  if (tb.q >= tb.totalQ) return finishType()
+  const t = pick(allowedTables())
+  const c = rnd(1, 10)
+  tb.typeAnswer = t * c
+  tb.typeT = t; tb.typeC = c
+  tb.typed = ''
+  const cell = tb.cells[t + ':' + c]
+  cell.classList.add('want')
+  $('tbPrompt').innerHTML = `⌨️ <b class="tb-target">${t} × ${c} = <span id="tbTyped">…</span></b> <span class="tb-sub">(${tb.q + 1}/${tb.totalQ})</span>`
+  const box = $('tbOpts')
+  box.innerHTML = `<div class="tb-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✔']
+    .map(k => `<button class="tb-key${k === '✔' ? ' ok' : ''}" data-k="${k}">${k}</button>`).join('')}</div>`
+  box.querySelectorAll<HTMLElement>('.tb-key').forEach(b => {
+    b.onclick = () => typeKey(b.dataset.k!)
+  })
+}
+
+function typeKey(k: string) {
+  if (!tb || !tb.running || tb.mode !== 'type' || tb.lock) return
+  const disp = document.getElementById('tbTyped')
+  if (!disp) return
+  if (k === '⌫') { tb.typed = tb.typed.slice(0, -1) }
+  else if (k === '✔') { if (tb.typed) checkTyped(); return }
+  else if (tb.typed.length < 3) tb.typed += k
+  disp.textContent = tb.typed || '…'
+  // Validation automatique quand on a tapé autant de chiffres que la réponse
+  if (tb.typed.length === String(tb.typeAnswer).length) checkTyped()
+}
+
+function checkTyped() {
+  const cell = tb.cells[tb.typeT + ':' + tb.typeC]
+  if (parseInt(tb.typed) === tb.typeAnswer) {
+    tb.lock = true
+    revealCell(cell, 'good'); tb.score++; sGood(); fxAt(cell, JUICE.green, 10)
+    ctx.say(fois(tb.typeT, tb.typeC, tb.typeAnswer))
+    tb.q++
+    setTimeout(() => { if (tb && tb.running && tb.mode === 'type') { tb.lock = false; nextType() } }, 900)
+  } else {
+    tb.mistakes++; sNope()
+    tb.typed = ''
+    const disp = document.getElementById('tbTyped')
+    if (disp) {
+      disp.textContent = '…'
+      const target = disp.closest('.tb-target') as HTMLElement
+      if (target) { target.classList.remove('shake'); void target.offsetWidth; target.classList.add('shake') }
+    }
+  }
+}
+
+function finishType() {
+  sWin()
+  const stars = tb.mistakes <= 1 ? 3 : tb.mistakes <= 4 ? 2 : 1
+  ctx.finish({
+    title: 'Championne du calcul !',
+    msg: `${ctx.playerName} a tapé ${tb.score} résultats (${tb.mistakes} erreur${tb.mistakes > 1 ? 's' : ''}) ⌨️`,
+    stars, starsEarned: stars
+  })
+}
+
 function tapCell(b: any) {
   if (!tb || !tb.running || tb.lock) return
   const v = b._r * b._c
   if (tb.mode === 'explore') {
-    if (b.classList.contains('shown')) { ctx.say(`${b._r} fois ${b._c}, ${v}`); return }
+    if (b.classList.contains('shown')) { ctx.say(fois(b._r, b._c, v)); return }
     revealCell(b); sPop(); fxAt(b, JUICE.warm, 6)
-    ctx.say(`${b._r} fois ${b._c}, ${v}`)
+    ctx.say(fois(b._r, b._c, v))
     tb.explored++
     if (tb.explored === 100) { sWin(); ctx.toast('Tout le tableau découvert ! 🌈') }
     return
@@ -141,7 +213,7 @@ function tapCell(b: any) {
     tb.lock = true
     if (v === tb.target) {
       revealCell(b, 'good'); tb.score++; sGood(); fxAt(b, JUICE.green, 10)
-      ctx.say(`Oui ! ${b._r} fois ${b._c}, ${v}`)
+      ctx.say('Oui ! ' + fois(b._r, b._c, v))
     } else {
       revealCell(b, 'bad'); sNope()
       ctx.say(`Non, cette case fait ${v}`)
@@ -172,6 +244,7 @@ export const tables: GameDef = {
         <button class="chip tb-mode sel" data-m="explore">🔎 Explore</button>
         <button class="chip tb-mode" data-m="find">🎯 Trouve</button>
         <button class="chip tb-mode" data-m="fill">✏️ Remplis</button>
+        <button class="chip tb-mode" data-m="type">⌨️ Tape</button>
       </div>
       <div class="gsub" id="tbPrompt"></div>
       <div id="tbGrid"></div>
@@ -192,7 +265,17 @@ export const tables: GameDef = {
         stars: 3, starsEarned: 3
       })
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (!tb || !tb.running || tb.mode !== 'type') return
+      if (/^[0-9]$/.test(e.key)) typeKey(e.key)
+      else if (e.key === 'Backspace') typeKey('⌫')
+      else if (e.key === 'Enter') typeKey('✔')
+    }
+    window.addEventListener('keydown', onKey)
     setMode('explore')
-    return () => { if (tb) { tb.running = false; tb = null } }
+    return () => {
+      if (tb) { tb.running = false; tb = null }
+      window.removeEventListener('keydown', onKey)
+    }
   }
 }
