@@ -94,7 +94,6 @@ function load() {
     opts.appendChild(b)
   })
   pt.lock = false
-  ctx.say('Qu\'est-ce qui vient après ?')
 }
 
 function answer(b: HTMLButtonElement, o: Item) {

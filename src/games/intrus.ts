@@ -35,9 +35,7 @@ function load() {
   const members = shuffle([...cat.maj]).slice(0, Math.min(size - 1, cat.maj.length))
   const intruderE = pick(cat.intr.filter(e => !members.includes(e)))
   const items = shuffle([...members.map(e => ({ e, intruder: false })), { e: intruderE, intruder: true }])
-  $('intQ').textContent = cat.q + ' 🔊'
-  ctx.say(cat.q)
-  ;($('intQ') as HTMLElement).onclick = () => ctx.say(cat.q)
+  $('intQ').textContent = cat.q
   const grid = $('intGrid')
   const n = items.length, cols = n <= 4 ? 2 : n <= 6 ? 3 : 4
   grid.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`

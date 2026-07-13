@@ -37,7 +37,6 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   }
   const profile = playersRef.current[Math.min(turn, playersRef.current.length - 1)]
 
-  useEffect(() => { say(game.subtitle) }, [gameId])
 
   useEffect(() => {
     if (!rootRef.current) return
@@ -81,7 +80,6 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const startSecondTurn = () => {
     setInterstitial(null)
     setTurn(1)
-    say(`À toi, ${playersRef.current[1].name} !`)
   }
 
   const restartDuel = () => {

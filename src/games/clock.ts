@@ -49,7 +49,6 @@ function load() {
   ck.h = h; ck.m = m
   $('ckRound').textContent = `${ck.round + 1}/${ck.total}`
   $('ckFace').innerHTML = clockSVG(h, m, Math.min(240, window.innerWidth * 0.55))
-  ctx.say('Quelle heure est-il ?')
   const opts = new Set<string>([digital(h, m)])
   let guard = 0
   while (opts.size < 4 && guard++ < 60) {
@@ -74,11 +73,9 @@ function answer(b: HTMLButtonElement, t: string) {
   const good = digital(ck.h, ck.m)
   if (t === good) {
     b.classList.add('good'); ck.score++; sGood(); fxAt(b, JUICE.warm, 12)
-    ctx.say(`Oui ! Il est ${timeSpoken(ck.h, ck.m)}`)
   } else {
     b.classList.add('bad'); sNope()
     document.querySelectorAll<HTMLButtonElement>('.qopt').forEach(x => { if (x.textContent === good) x.classList.add('good') })
-    ctx.say(`Il était ${timeSpoken(ck.h, ck.m)}`)
   }
   $('ckScore').textContent = '⭐ ' + ck.score
   ck.round++

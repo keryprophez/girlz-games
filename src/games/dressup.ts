@@ -42,7 +42,6 @@ function finish() {
   sWin(); confetti()
   // Le look est persisté : elle le portera dans les autres jeux
   useFerme.getState().setLook(du.profileId, { ...du.look })
-  ctx.say('Superbe ! Tu porteras ce look dans les autres jeux !')
   ctx.finish({
     title: 'Superbe look !',
     msg: `${ctx.playerName} portera ce look dans les autres jeux ✨`,

@@ -21,7 +21,6 @@ function loadWord() {
   lg.word = word
   lg.pos = 0
   $('lgRound').textContent = `Mot ${lg.round + 1}/${lg.words.length}`
-  ctx.say(word === ctx.playerName.toUpperCase() ? 'Trouve les lettres de ton prénom !' : `Trouve les lettres du mot ${word.toLowerCase()}`)
 
   // Les cases du mot à remplir
   const slots = $('lgWord')
@@ -58,7 +57,7 @@ function tapLetter(b: HTMLButtonElement, ch: string) {
     const nextSlot = document.querySelector(`.lg-slot[data-i="${lg.pos}"]`)
     if (nextSlot) nextSlot.classList.add('next')
     if (lg.pos === lg.word.length) {
-      sGood(); ctx.say(lg.word.toLowerCase()); ctx.toast('Bravo ! 🎉')
+      sGood(); ctx.toast('Bravo ! 🎉')
       lg.round++
       if (lg.round < lg.words.length) setTimeout(() => lg && lg.running && loadWord(), 1200)
       else setTimeout(() => lg && lg.running && finish(), 1200)

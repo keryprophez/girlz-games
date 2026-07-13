@@ -314,7 +314,6 @@ function setMode(mode: string) {
     d3: 'Tu ES le poussin ! Avance et tourne pour trouver la sortie dorée'
   }
   $('mzSub').textContent = subs[mode]
-  ctx.say(subs[mode])
   if (mode === 'd3') load3D()
   else load2D()
 }

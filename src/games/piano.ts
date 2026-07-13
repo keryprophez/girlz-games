@@ -61,7 +61,6 @@ function startSong(si: number) {
   pn.idx = 0
   document.querySelectorAll('.pn-mode').forEach((b, k) => b.classList.toggle('sel', k === si + 1))
   setStatus(`${pn.song.icon} ${pn.song.name} — suis la touche qui brille !`)
-  ctx.say('Suis la touche qui brille !')
   pulseTarget()
 }
 

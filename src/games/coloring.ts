@@ -75,7 +75,6 @@ function loadScene(sceneId: string) {
       if (col.painted.size === col.total && !col.celebrated) {
         col.celebrated = true
         confetti()
-        ctx.say('Magnifique !')
         ctx.toast('Tout colorié ! 🎨')
       }
     })

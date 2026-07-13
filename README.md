@@ -5,7 +5,7 @@ Les jeux de **Joyce** et **Jade** — une webapp de 22 mini-jeux pensée pour jo
 ## ✨ Ce qu'il y a dedans
 
 - **22 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
-- **Zéro lecture obligatoire** : les consignes et questions sont lues à voix haute (synthèse vocale française du navigateur, hors-ligne, aucun asset)
+- **Voix discrète** : la synthèse vocale ne sert qu'à lire les multiplications dans le Grand Tableau (« 3 fois 7, 21 ») — aucune annonce de consignes
 - **⚔️ Défi à deux** : les sœurs jouent le même jeu tour à tour, écran de résultat commun et bienveillant, bouton Revanche
 - **Profils avec photos** : chaque fille a sa carte, on ajoute sa photo (bouton 📷) et sa tête apparaît dans les jeux (Poussin Volant, Course, Attrape, Habille-toi…) et dans le **Puzzle Photo** 🤳 (glisser-déposer avec image fantôme pour guider)
 - **Personnage illustré** : la photo devient le visage d'un personnage SVG dessiné (cheveux, corps, habits) ; le look choisi dans Habille-toi suit la joueuse dans Poussin Volant, Course et Attrape

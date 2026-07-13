@@ -65,7 +65,6 @@ function setMode(mode: string) {
   if (mode === 'explore') {
     tb.explored = 0
     $('tbPrompt').textContent = 'Tape une case pour la découvrir 🔎'
-    ctx.say('Tape les cases pour découvrir les multiplications !')
   }
   if (mode === 'find') {
     tb.q = 0; tb.score = 0; tb.totalQ = 8
@@ -75,7 +74,6 @@ function setMode(mode: string) {
     const t = pick(allowedTables().filter(t => t > 1))
     tb.table = t; tb.col = 1; tb.mistakes = 0
     $('tbPrompt').textContent = `✏️ Remplis la table de ${t} !`
-    ctx.say(`Remplis la table de ${t} !`)
     nextFill()
   }
 }
@@ -86,7 +84,6 @@ function nextFind() {
   const c = rnd(1, 10)
   tb.target = t * c
   $('tbPrompt').innerHTML = `🎯 Trouve une case qui fait <b class="tb-target">${tb.target}</b> <span class="tb-sub">(${tb.q + 1}/${tb.totalQ})</span>`
-  ctx.say(`Trouve une case qui fait ${tb.target}`)
   tb.lock = false
 }
 
