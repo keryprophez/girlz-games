@@ -57,6 +57,10 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
                 {!p.avatar && '👧'}
                 <span className="pcam">📷</span>
               </button>
+              {p.avatar && (
+                <button className="pdel" title="Enlever la photo"
+                  onClick={e => { e.stopPropagation(); store.setAvatar(p.id, null) }}>✖</button>
+              )}
               <div className="pname">{p.name}</div>
               <div className="pmeta">⭐ {pProg.stars}</div>
               {sel && (

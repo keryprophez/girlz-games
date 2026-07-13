@@ -120,6 +120,7 @@ export const photoPuzzle: GameDef = {
         <div class="chip" id="pzLeft">🧩</div>
         ${c.avatar ? '<button class="chip" id="pzMe">🤳 Ta tête</button>' : ''}
         <button class="chip" id="pzPhoto">📷 Autre photo</button>
+        <button class="chip" id="pzDefault" title="Image de base">🌻</button>
       </div>
       <div id="pzWrap"></div>
       <input type="file" accept="image/*" id="pzFile" style="display:none">`
@@ -127,6 +128,13 @@ export const photoPuzzle: GameDef = {
 
     const meBtn = document.getElementById('pzMe') as HTMLButtonElement | null
     if (meBtn) meBtn.onclick = () => { if (pz) { pz.running = false }; build(c.avatar!) }
+    ;($('pzDefault') as HTMLButtonElement).onclick = () => {
+      // Retour à l'image de base : on oublie aussi la photo mémorisée
+      useFerme.getState().setPuzzleImg(useFerme.getState().currentId, '')
+      if (pz) pz.running = false
+      build(FALLBACK)
+      ctx.toast('Image de base 🌻')
+    }
     const fileInput = $('pzFile') as HTMLInputElement
     ;($('pzPhoto') as HTMLButtonElement).onclick = () => fileInput.click()
     fileInput.onchange = () => {

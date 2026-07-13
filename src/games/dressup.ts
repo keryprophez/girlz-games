@@ -64,6 +64,7 @@ export const dressup: GameDef = {
       <div class="topbar">
         ${BGS.map((b, i) => `<button class="chip du-bg${i === 0 ? ' sel' : ''}" data-i="${i}">${b.icon}</button>`).join('')}
         <button class="chip" id="duRandom">🎲</button>
+        <button class="chip" id="duReset" title="Look de base">↺</button>
       </div>
       <div class="du-stage" id="duStage" style="background:${BGS[0].css}">
         <div class="du-doll" id="duDoll"></div>
@@ -110,6 +111,13 @@ export const dressup: GameDef = {
         hat: pick(HATS), glasses: pick(GLASSES), held: pick(HELD)
       }
       $('duStage').style.background = pick(BGS).css
+      sPop(); render()
+    }
+    ;($('duReset') as HTMLButtonElement).onclick = () => {
+      if (!du || !du.running) return
+      du.look = defaultLook()
+      $('duStage').style.background = BGS[0].css
+      document.querySelectorAll('.du-bg').forEach((x, i) => x.classList.toggle('sel', i === 0))
       sPop(); render()
     }
     ;($('duDone') as HTMLButtonElement).onclick = () => du && du.running && finish()

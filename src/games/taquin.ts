@@ -129,12 +129,14 @@ export const taquin: GameDef = {
     ctx = c
     const st = useFerme.getState()
     const customImg = st.puzzleImgs[st.currentId] || null
-    const img = customImg || c.avatar || FALLBACK
+    let img = customImg || c.avatar || FALLBACK
     mode = 'image'
     c.root.innerHTML = `
       <div class="topbar">
         <button class="chip tq-mode sel" data-m="image">🖼</button>
         <button class="chip tq-mode" data-m="num">🔢</button>
+        ${c.avatar ? '<button class="chip" id="tqMe" title="Ta tête">🤳</button>' : ''}
+        <button class="chip" id="tqDefault" title="Image de base">🌻</button>
         <div class="chip" id="tqMoves">Coups : 0</div>
         <div class="chip tq2-mini" id="tqMini"></div>
         <button class="chip" id="tqRestart">↻</button>
@@ -148,6 +150,12 @@ export const taquin: GameDef = {
         build(img)
       }
     })
+    const tqMe = document.getElementById('tqMe') as HTMLButtonElement | null
+    if (tqMe) tqMe.onclick = () => { img = c.avatar!; mode = 'image'; syncModeChips(); if (tq) tq.running = false; build(img) }
+    ;($('tqDefault') as HTMLButtonElement).onclick = () => { img = FALLBACK; if (tq) tq.running = false; build(img) }
+    function syncModeChips() {
+      document.querySelectorAll<HTMLElement>('.tq-mode').forEach(x => x.classList.toggle('sel', x.dataset.m === mode))
+    }
     build(img)
     ;($('tqRestart') as HTMLButtonElement).onclick = () => { if (tq) tq.running = false; build(img) }
     return () => { if (tq) { tq.running = false; tq = null } }
