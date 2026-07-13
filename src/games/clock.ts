@@ -1,5 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, rnd, shuffle } from '../core/utils'
+import { $, boardSize, rnd, shuffle } from '../core/utils'
 import { sGood, sNope, sPop, sWin } from '../core/audio'
 import { fxAt, JUICE } from '../core/fx'
 
@@ -70,7 +70,7 @@ const MODE_SUBS: Record<string, string> = {
 let ck: any = null
 let ctx: GameContext
 
-function facePx() { return Math.min(250, window.innerWidth * 0.58) }
+function facePx() { return boardSize(250) }
 
 function renderFace(o: FaceOpts = {}) {
   $('ckFace').innerHTML = clockSVG(ck.h, ck.m, facePx(), o)

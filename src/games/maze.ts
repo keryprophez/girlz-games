@@ -1,5 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, shuffle } from '../core/utils'
+import { $, boardSize, shuffle } from '../core/utils'
 import { sGood, sJump, sPop, sWin } from '../core/audio'
 
 /* Labyrinthe — 4 façons de se perdre :
@@ -70,7 +70,7 @@ function load2D() {
   const n = mz.sizes[mz.round]
   mz.n = n
   mz.grid = generate(n)
-  mz.px = Math.min(380, window.innerWidth - 44)
+  mz.px = boardSize(380)
   mz.cell = mz.px / n
   mz.pos = { x: 0, y: 0 }
   $('mzRound').textContent = `Labyrinthe ${mz.round + 1}/${mz.sizes.length}`
@@ -169,7 +169,7 @@ function load3D() {
   const gx = 2 * (n - 1) + 1, gy = 2 * (n - 1) + 1
   mz.gold = new Set([`${gx + 1}:${gy}`, `${gx - 1}:${gy}`, `${gx}:${gy + 1}`, `${gx}:${gy - 1}`])
   const area = $('mzArea')
-  const px = Math.min(380, window.innerWidth - 44)
+  const px = boardSize(380)
   area.style.width = px + 'px'
   area.style.height = Math.round(px * 0.72) + 'px'
   area.innerHTML = `

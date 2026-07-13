@@ -615,3 +615,35 @@ button.chip:active{transform:scale(.92);}
 .tq2-t:active{filter:brightness(1.08);}
 .tq2-mini{padding:4px 8px;}
 .tq2-mini img{width:34px;height:34px;border-radius:8px;display:block;}
+
+/* ============================================================
+   MODE GRAND ÉCRAN (body.bigplay) — les surfaces de jeu s'étendent
+   ============================================================ */
+body.bigplay .screen{max-width:1100px;}
+body.bigplay .gsub{display:none;}
+body.bigplay .ghostbar{margin-bottom:2px;}
+body.bigplay .halo,body.bigplay .critter{display:none;}
+body.bigplay #catchArea,body.bigplay #pcArea,body.bigplay #runArea,
+body.bigplay #skArea,body.bigplay .arena{
+  max-width:min(96vw,960px);height:calc(100vh - 200px);max-height:none;}
+body.bigplay .fl-chick{left:26%;}
+body.bigplay .board{max-width:min(92vw,78vh) !important;}
+body.bigplay .igrid{max-width:min(92vw,74vh) !important;}
+body.bigplay #simonWrap{max-width:min(84vw,66vh);}
+body.bigplay #moleGrid{max-width:min(88vw,72vh);}
+body.bigplay .qbox{max-width:780px;}
+body.bigplay .lg-grid{max-width:min(90vw,60vh) !important;}
+body.bigplay .lg-slot{width:clamp(40px,6vmin,60px);height:clamp(50px,7.5vmin,72px);}
+body.bigplay .colpanel{max-width:780px;}
+body.bigplay #pnKeys{max-width:900px;}
+body.bigplay .pkey{max-width:100px;height:min(38vh,320px);}
+body.bigplay #bbGrid{max-width:760px;}
+body.bigplay .bb-cell{max-width:70px;border-radius:14px;}
+body.bigplay .bb-animal{width:58px;height:58px;}
+body.bigplay #fishPond{max-width:720px;}
+body.bigplay .du-stage{max-width:600px;height:min(52vh,420px);}
+body.bigplay .du-doll{transform:translateX(-50%) scale(1.4);transform-origin:bottom center;}
+body.bigplay .pt-box,body.bigplay .ck-box{max-width:720px;}
+body.bigplay #tbGrid{max-width:min(92vw,66vh);}
+body.bigplay .tbar{max-width:800px !important;}
+body.bigplay #mzMap{width:140px;height:140px;}

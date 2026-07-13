@@ -1,5 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick } from '../core/utils'
+import { $, boardSize, pick } from '../core/utils'
 import { sFlip, sWin } from '../core/audio'
 import { confetti } from '../core/fx'
 import { useFerme } from '../core/store'
@@ -61,7 +61,7 @@ function finish() {
 function build(img: string) {
   const size = ctx.byTier(3, 3, 4)
   const shuffleMoves = ctx.byTier(10, 45, 110)
-  const boardPx = Math.min(340, window.innerWidth - 48)
+  const boardPx = boardSize(340)
   const gap = 3, pad = 6
   const cell = (boardPx - pad * 2 - gap * (size - 1)) / size
   const n = size * size

@@ -25,8 +25,26 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const [turn, setTurn] = useState(0)
   const [interstitial, setInterstitial] = useState<Result | null>(null)
   const [duelDone, setDuelDone] = useState<Result[] | null>(null)
+  const [big, setBig] = useState(false)
   const duelResults = useRef<Result[]>([])
   const store = useFerme()
+
+  // Mode grand écran : les surfaces de jeu s'étendent et le jeu se remonte
+  // pour prendre les nouvelles dimensions
+  const toggleBig = () => {
+    const next = !big
+    setBig(next)
+    document.body.classList.toggle('bigplay', next)
+    try {
+      if (next) document.documentElement.requestFullscreen?.()
+      else if (document.fullscreenElement) document.exitFullscreen?.()
+    } catch { /* plein écran indisponible (iOS) : l'agrandissement CSS suffit */ }
+    setRunId(r => r + 1)
+  }
+  useEffect(() => () => {
+    document.body.classList.remove('bigplay')
+    try { if (document.fullscreenElement) document.exitFullscreen?.() } catch { /* rien */ }
+  }, [])
 
   // En duel, l'ordre est figé au montage : la joueuse sélectionnée commence
   const playersRef = useRef<Profile[]>([])
@@ -105,7 +123,10 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
           {duel && <span className="duel-tag">⚔️ {profile.name} · </span>}
           {game.name} {game.icon}
         </div>
-        <button className="chip" onClick={() => setRunId(r => r + 1)}>↻</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="chip" onClick={toggleBig} title="Grand écran">{big ? '🗕' : '⛶'}</button>
+          <button className="chip" onClick={() => setRunId(r => r + 1)}>↻</button>
+        </div>
       </div>
       <div className="gsub">{game.subtitle}</div>
       <div className="gameroot" ref={rootRef} key={gameId + ':' + runId + ':' + turn} />

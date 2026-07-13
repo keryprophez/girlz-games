@@ -1,5 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, shuffle } from '../core/utils'
+import { $, boardSize, shuffle } from '../core/utils'
 import { sGood, sPop, sWin } from '../core/audio'
 import { fxAt, JUICE } from '../core/fx'
 import { useFerme } from '../core/store'
@@ -33,7 +33,7 @@ function finish() {
 function build(img: string) {
   const size = ctx.byTier(3, 3, 4)
   const snapR = ctx.byTier(48, 38, 30)
-  const boardPx = Math.min(340, window.innerWidth - 48)
+  const boardPx = boardSize(340)
   const cell = boardPx / size
   const trayH = Math.ceil((size * size) / 5) * 74 + 12
 
