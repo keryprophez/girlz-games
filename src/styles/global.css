@@ -584,3 +584,18 @@ button.chip:active{transform:scale(.92);}
 .tb-key.ok{background:linear-gradient(140deg,#6ED88B,var(--meadow));color:#fff;border:none;}
 .tb-target.shake{display:inline-block;animation:lgshake .3s ease;}
 #tbTyped{color:var(--lagoon);min-width:1.2em;display:inline-block;}
+
+/* ---- Quelle heure ? : modes didactiques ---- */
+.ck-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
+.ck-digital{font-family:'Baloo 2';font-weight:800;font-size:clamp(26px,6vmin,36px);
+  color:var(--lagoon);margin-bottom:6px;min-height:1.2em;letter-spacing:1px;}
+.ck-opts{margin-top:14px;}
+.ck-btn{border:1px solid var(--line);border-radius:99px;background:var(--paper);cursor:pointer;
+  font-family:'Baloo 2';font-weight:700;font-size:clamp(15px,3.4vmin,18px);padding:13px 18px;
+  box-shadow:var(--e1);transition:transform .18s var(--spring);}
+.ck-btn:active{transform:scale(.92);}
+.ck-btn-min{color:var(--coral);}
+.ck-check{background:linear-gradient(140deg,#6ED88B,var(--meadow));color:#fff;border:none;}
+#ckFace{display:flex;justify-content:center;margin-bottom:4px;touch-action:none;}
+#ckFace svg{filter:drop-shadow(0 4px 8px rgba(69,54,42,.15));}
+#ckFace.shake{animation:lgshake .3s ease;}
