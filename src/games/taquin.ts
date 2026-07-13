@@ -11,6 +11,8 @@ import { useFerme } from '../core/store'
 
 let tq: any = null
 let ctx: GameContext
+let mode: 'image' | 'num' = 'image'
+const TQ_COLORS = ['#FF9C8F', '#FFC06B', '#7BD494', '#6FC2EE', '#C0A0F2', '#F58FB8', '#8FD7CE', '#F2B58F']
 
 const FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360">
 <rect width="360" height="360" fill="#BDE3FA"/><rect y="230" width="360" height="130" fill="#A5DB93"/>
@@ -52,7 +54,7 @@ function finish() {
   sWin()
   const stars = tq.moves <= tq.par * 1.6 ? 3 : tq.moves <= tq.par * 3 ? 2 : 1
   ctx.finish({
-    title: 'Image reconstituée !',
+    title: mode === 'image' ? 'Image reconstituée !' : 'Nombres remis en ordre !',
     msg: `${ctx.playerName} a réussi en ${tq.moves} coups 🖼`,
     stars, starsEarned: stars
   })
@@ -92,19 +94,27 @@ function build(img: string) {
   board.classList.remove('done')
   board.style.width = boardPx + 'px'
   board.style.height = boardPx + 'px'
-  // L'image fantôme en fond : on voit où chaque morceau doit aller
-  board.innerHTML = `<div class="tq2-ghost" style="background-image:url('${img}')"></div>`
+  // En mode image : image fantôme en fond pour se guider
+  board.innerHTML = mode === 'image' ? `<div class="tq2-ghost" style="background-image:url('${img}')"></div>` : ''
+  $('tqMini').style.display = mode === 'image' ? '' : 'none'
   const inner = boardPx - pad * 2
   cells.forEach(v => {
     if (v === 0) return
     const t = document.createElement('button')
     t.className = 'tq2-t'
-    const sr = Math.floor((v - 1) / size), sc = (v - 1) % size
     t.style.width = cell + 'px'
     t.style.height = cell + 'px'
-    t.style.backgroundImage = `url('${img}')`
-    t.style.backgroundSize = `${inner}px ${inner}px`
-    t.style.backgroundPosition = `-${sc * (cell + gap)}px -${sr * (cell + gap)}px`
+    if (mode === 'image') {
+      const sr = Math.floor((v - 1) / size), sc = (v - 1) % size
+      t.style.backgroundImage = `url('${img}')`
+      t.style.backgroundSize = `${inner}px ${inner}px`
+      t.style.backgroundPosition = `-${sc * (cell + gap)}px -${sr * (cell + gap)}px`
+    } else {
+      t.classList.add('num')
+      t.textContent = String(v)
+      t.style.fontSize = cell * 0.4 + 'px'
+      t.style.background = `linear-gradient(150deg,${TQ_COLORS[(v - 1) % TQ_COLORS.length]},${TQ_COLORS[v % TQ_COLORS.length]})`
+    }
     t.onclick = () => slide(v)
     board.appendChild(t)
     tq.tiles[v] = t
@@ -120,13 +130,24 @@ export const taquin: GameDef = {
     const st = useFerme.getState()
     const customImg = st.puzzleImgs[st.currentId] || null
     const img = customImg || c.avatar || FALLBACK
+    mode = 'image'
     c.root.innerHTML = `
       <div class="topbar">
+        <button class="chip tq-mode sel" data-m="image">🖼</button>
+        <button class="chip tq-mode" data-m="num">🔢</button>
         <div class="chip" id="tqMoves">Coups : 0</div>
         <div class="chip tq2-mini" id="tqMini"></div>
-        <button class="chip" id="tqRestart">↻ Mélange</button>
+        <button class="chip" id="tqRestart">↻</button>
       </div>
       <div id="tqBoard"></div>`
+    document.querySelectorAll<HTMLElement>('.tq-mode').forEach(b => {
+      b.onclick = () => {
+        mode = b.dataset.m as 'image' | 'num'
+        document.querySelectorAll('.tq-mode').forEach(x => x.classList.toggle('sel', x === b))
+        if (tq) tq.running = false
+        build(img)
+      }
+    })
     build(img)
     ;($('tqRestart') as HTMLButtonElement).onclick = () => { if (tq) tq.running = false; build(img) }
     return () => { if (tq) { tq.running = false; tq = null } }

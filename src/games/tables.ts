@@ -112,7 +112,6 @@ function nextFill() {
   }
   const cell = tb.cells[tb.table + ':' + tb.col]
   cell.classList.add('want')
-  cell.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
   const answer = tb.table * tb.col
   const opts = uniqueNumbers(answer, Math.max(1, answer - 12), answer + 12, 4)
   const box = $('tbOpts')
@@ -247,8 +246,8 @@ export const tables: GameDef = {
         <button class="chip tb-mode" data-m="type">⌨️ Tape</button>
       </div>
       <div class="gsub" id="tbPrompt"></div>
-      <div id="tbGrid"></div>
       <div class="tb-optsrow" id="tbOpts"></div>
+      <div id="tbGrid"></div>
       <button class="bigbtn primary" id="tbDone" style="margin-top:10px">✨ J'ai fini d'explorer</button>`
     tb = { mode: 'explore', explored: 0, lock: false, running: true }
     buildGrid()
