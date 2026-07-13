@@ -21,9 +21,10 @@ import { tables } from './tables'
 import { maze } from './maze'
 import { popcorn } from './popcorn'
 import { beatbox } from './beatbox'
+import { taquin } from './taquin'
 
 export const GAMES: GameDef[] = [
-  quizGame, intrus, letters, photoPuzzle, socks, patterns, clock, tables, maze,
+  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, clock, tables, maze,
   memory, simonGame,
   catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn,
   coloring, dressup, piano, beatbox

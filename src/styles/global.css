@@ -599,3 +599,19 @@ button.chip:active{transform:scale(.92);}
 #ckFace{display:flex;justify-content:center;margin-bottom:4px;touch-action:none;}
 #ckFace svg{filter:drop-shadow(0 4px 8px rgba(69,54,42,.15));}
 #ckFace.shake{animation:lgshake .3s ease;}
+
+/* ============================================================
+   TAQUIN (image)
+   ============================================================ */
+#tqBoard{position:relative;border:1px solid var(--line);background:var(--card);border-radius:var(--r-lg);
+  box-shadow:var(--e2);overflow:hidden;}
+.tq2-ghost{position:absolute;inset:6px;border-radius:12px;background-size:cover;background-position:center;
+  opacity:.13;transition:opacity .7s;}
+#tqBoard.done .tq2-ghost{opacity:1;}
+#tqBoard.done .tq2-t{opacity:0;transition:opacity .7s;}
+.tq2-t{position:absolute;left:0;top:0;border:2px solid #fff;cursor:pointer;border-radius:12px;padding:0;
+  background-repeat:no-repeat;box-shadow:var(--e1);
+  transition:transform .18s var(--spring);will-change:transform;}
+.tq2-t:active{filter:brightness(1.08);}
+.tq2-mini{padding:4px 8px;}
+.tq2-mini img{width:34px;height:34px;border-radius:8px;display:block;}
