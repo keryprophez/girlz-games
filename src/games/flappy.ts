@@ -9,7 +9,9 @@ let ctx: GameContext
 
 function spawnPipe() {
   const gap = fl.H * fl.cfg.gap
-  const gy = fl.H * 0.10 + Math.random() * (fl.H * 0.68 - gap - fl.groundH)
+  // Le passage peut être n'importe où entre le ciel et le sol
+  const groundTop = fl.H - fl.groundH
+  const gy = fl.H * 0.06 + Math.random() * (groundTop - gap - fl.H * 0.12)
   const topEl = document.createElement('div')
   topEl.className = 'fl-pipe top'
   topEl.innerHTML = `<div class="fl-pipe-body" style="flex:1"></div><div class="fl-pipe-cap"></div>`
@@ -33,15 +35,17 @@ function loop(t: number) {
   const { W, H, groundH, cfg, chick } = fl
   const cx = W * 0.22, r = 18
 
+  // fl.y est mesuré DEPUIS LE HAUT : la gravité augmente y (le poussin tombe),
+  // battre des ailes le diminue (il monte)
   if (fl.started) { fl.vy += 0.0014 * dt; fl.y += fl.vy * dt }
   else fl.y = H * 0.45 + Math.sin(t * 0.004) * 8
 
-  if (fl.y < r) { fl.y = r; fl.vy = 0 }
-  const floor = groundH + r + 4
-  if (fl.y > H - floor) { fl.y = H - floor; if (fl.started) hit(); if (fl) fl.vy = -0.25 }
+  if (fl.y < r) { fl.y = r; fl.vy = 0 } // plafond
+  const groundTop = H - groundH
+  if (fl.y > groundTop - r) { fl.y = groundTop - r; if (fl.started) hit(); if (fl) fl.vy = -0.30 }
   if (!fl) return
 
-  chick.style.bottom = fl.y - r + 'px'
+  chick.style.top = fl.y - r + 'px'
   chick.style.transform = 'rotate(' + Math.max(-30, Math.min(50, (fl.vy || 0) * 90)) + 'deg)'
   if (fl.invuln > 0) { fl.invuln -= dt; chick.style.opacity = Math.floor(t / 90) % 2 ? '0.35' : '1' }
   else chick.style.opacity = '1'
@@ -59,9 +63,9 @@ function loop(t: number) {
       p.counted = true; fl.score++; sCatch()
       $('flScore').textContent = '🐤 ' + fl.score
     }
-    const chickY = H - fl.y
+    // fl.y est déjà mesuré depuis le haut, comme gy/gap des tuyaux
     if (fl.invuln <= 0 && p.x < cx + r && p.x + pw > cx - r) {
-      if (chickY - r < p.gy || chickY + r > p.gy + p.gap) hit()
+      if (fl.y - r < p.gy || fl.y + r > p.gy + p.gap) hit()
       if (!fl) return
     }
     if (p.x < -70) { p.topEl.remove(); p.botEl.remove(); fl.pipes.splice(i, 1) }
@@ -121,7 +125,7 @@ export const flappy: GameDef = {
       area, chick, W, H, groundH, cfg, y: H * 0.45, vy: 0, score: 0, lives: 3,
       running: true, started: false, pipes: [], lastT: performance.now(), invuln: 0
     }
-    chick.style.bottom = H * 0.45 + 'px'
+    chick.style.top = H * 0.45 + 'px'
     chick.style.transform = 'rotate(0deg)'
     for (let i = 0; i < 4; i++) {
       const cl = document.createElement('div')

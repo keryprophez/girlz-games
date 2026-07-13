@@ -57,15 +57,19 @@ function sliceCheck(a: any, b: any) {
         nj.score++; nj.swipeHits++; sSlice()
         njSplash(f.x, f.y, f.color)
         njFloat(f.x, f.y - 20, '+1', '#fff')
+        // Deux VRAIES moitiés : le fruit est coupé le long du trait de sabre
+        const sliceDeg = (Math.atan2(dy, dx) * 180) / Math.PI
         for (const s of [-1, 1]) {
           const hel = document.createElement('div')
-          hel.className = 'nj-fruit half'; hel.textContent = f.emoji
+          hel.className = 'nj-fruit half'
+          // Le fruit est tourné pour aligner la coupe, puis on n'affiche qu'une moitié
+          hel.innerHTML = `<span class="nj-halfclip" style="transform:rotate(${sliceDeg}deg);clip-path:inset(${s === -1 ? '0 0 50% 0' : '50% 0 0 0'})">${f.emoji}</span>`
           nj.area.appendChild(hel)
           const ang = Math.atan2(dy, dx) + Math.PI / 2
           nj.fruits.push({
             el: hel, emoji: f.emoji, color: f.color, bad: false, half: true, sliced: true,
             x: f.x, y: f.y, vx: f.vx + Math.cos(ang) * 0.14 * s, vy: f.vy + Math.sin(ang) * 0.14 * s - 0.06,
-            g: f.g, r: 20, rot: f.rot, vr: 0.6 * s
+            g: f.g, r: 20, rot: f.rot, vr: 0.45 * s
           })
         }
       }

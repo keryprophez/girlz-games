@@ -13,7 +13,9 @@ const KEY_COLORS = ['#FF6B81', '#FFA94D', '#FFE066', '#94D82D', '#5EC97B', '#4FB
 const SONGS: { name: string; icon: string; seq: number[] }[] = [
   { name: 'Au clair de la lune', icon: '🌙', seq: [0, 0, 0, 1, 2, 1, 0, 2, 1, 1, 0] },
   { name: 'Frère Jacques', icon: '🔔', seq: [0, 1, 2, 0, 0, 1, 2, 0, 2, 3, 4, 2, 3, 4] },
-  { name: 'Ah ! vous dirai-je maman', icon: '⭐', seq: [0, 0, 4, 4, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0] }
+  { name: 'Ah ! vous dirai-je maman', icon: '⭐', seq: [0, 0, 4, 4, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0] },
+  { name: 'Joyeux anniversaire', icon: '🎂', seq: [0, 0, 1, 0, 3, 2, 0, 0, 1, 0, 4, 3, 0, 0, 7, 5, 3, 2, 1, 6, 6, 5, 3, 4, 3] },
+  { name: 'Le lion est mort ce soir', icon: '🦁', seq: [2, 3, 4, 4, 5, 5, 4, 3, 2, 3, 4, 3, 2, 1, 0] }
 ]
 
 let pn: any = null
