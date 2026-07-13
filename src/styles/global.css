@@ -669,3 +669,39 @@ body.bigplay .tb-key{max-width:56px;font-size:26px !important;}
   border:none;background:#fff;color:var(--ink-soft);cursor:pointer;font-size:11px;
   box-shadow:var(--e1);line-height:1;z-index:2;transition:transform .2s var(--spring);}
 .pdel:active{transform:scale(.85);}
+
+/* ============================================================
+   GONFLE LE BALLON
+   ============================================================ */
+#blArea{position:relative;width:100%;max-width:520px;height:min(56vh,460px);
+  background:linear-gradient(180deg,#E9F6FE,#FDF0F4);border:1px solid var(--line);
+  border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--e2);touch-action:manipulation;cursor:pointer;}
+.bl-balloon{position:absolute;left:50%;bottom:6%;transform:translateX(-50%) scale(.25);
+  transform-origin:bottom center;pointer-events:none;will-change:transform;
+  transition:transform .12s cubic-bezier(.3,1.6,.5,1);filter:drop-shadow(0 8px 10px rgba(69,54,42,.2));}
+.bl-balloon.puff{transition:transform .09s cubic-bezier(.2,2.2,.5,1);}
+.bl-balloon.strain{animation:blstrain .12s linear infinite;}
+@keyframes blstrain{0%{margin-left:-3px;}50%{margin-left:3px;}100%{margin-left:-3px;}}
+
+/* ============================================================
+   PUISSANCE 4 DES SŒURS
+   ============================================================ */
+.c4-banner{display:flex;align-items:center;gap:10px;justify-content:center;
+  font-size:clamp(16px,3.6vmin,20px);font-weight:600;margin-bottom:12px;min-height:44px;
+  font-family:'Fredoka';}
+.c4-banner b{font-family:'Baloo 2';}
+#c4Board{position:relative;background:linear-gradient(160deg,#6FC2EE,#4FA3D8);
+  border-radius:var(--r-lg);box-shadow:var(--e2);border:1px solid rgba(51,145,191,.5);}
+.c4-hole{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.c4-hole::before{content:"";width:82%;height:82%;border-radius:50%;background:var(--paper);
+  box-shadow:inset 0 3px 6px rgba(69,54,42,.18);}
+.c4-col{position:absolute;top:0;border:none;background:transparent;cursor:pointer;z-index:3;padding:0;}
+.c4-col:hover{background:rgba(255,255,255,.12);border-radius:12px;}
+.c4-token{position:absolute;display:flex;align-items:center;justify-content:center;z-index:2;
+  transition:top .4s cubic-bezier(.4,0,.7,1.4);pointer-events:none;}
+.c4-face{width:80%;height:80%;border-radius:50%;background-size:cover;background-position:center;
+  border:3.5px solid;box-shadow:0 2px 5px rgba(69,54,42,.3);display:flex;align-items:center;justify-content:center;
+  background-color:#fff;overflow:hidden;}
+.c4-face.c4-drawn{padding:4%;}
+.c4-token.c4-win{animation:c4win .5s ease-in-out infinite alternate;z-index:4;}
+@keyframes c4win{from{transform:scale(1);filter:brightness(1);}to{transform:scale(1.14);filter:brightness(1.25);}}
