@@ -21,6 +21,9 @@ interface FermeState {
   /** Dernière photo choisie pour le Puzzle (indépendante de l'avatar). */
   puzzleImgs: Record<string, string>
   setPuzzleImg(id: string, img: string): void
+  /** Encouragements enregistrés par la famille (clé profil:slot → dataURL audio). */
+  voiceClips: Record<string, string>
+  setVoiceClip(key: string, dataUrl: string): void
   toggleSound(): void
   /** Ajoute les étoiles gagnées et débloque éventuellement un sticker. Renvoie le sticker débloqué. */
   reward(gameId: string, starsEarned: number, stars: number, profileId?: string): string | null
@@ -63,6 +66,15 @@ export const useFerme = create<FermeState>()(
       puzzleImgs: {},
       setPuzzleImg(id, img) {
         set(s => ({ puzzleImgs: { ...s.puzzleImgs, [id]: img } }))
+      },
+      voiceClips: {},
+      setVoiceClip(key, dataUrl) {
+        set(s => {
+          const voiceClips = { ...s.voiceClips }
+          if (dataUrl) voiceClips[key] = dataUrl
+          else delete voiceClips[key]
+          return { voiceClips }
+        })
       },
       toggleSound() {
         const on = !get().sound

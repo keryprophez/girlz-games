@@ -705,3 +705,13 @@ body.bigplay .tb-key{max-width:56px;font-size:26px !important;}
 .c4-face.c4-drawn{padding:4%;}
 .c4-token.c4-win{animation:c4win .5s ease-in-out infinite alternate;z-index:4;}
 @keyframes c4win{from{transform:scale(1);filter:brightness(1);}to{transform:scale(1.14);filter:brightness(1.25);}}
+
+/* ---- Studio des voix de la famille ---- */
+.vs-block{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:10px 12px;margin-bottom:10px;text-align:left;}
+.vs-name{font-family:'Baloo 2';font-weight:800;font-size:17px;margin-bottom:6px;}
+.vs-row{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap;}
+.vs-label{flex:1;min-width:150px;font-size:13.5px;color:var(--ink-soft);font-weight:600;}
+.vs-rec.on{background:linear-gradient(135deg,#FF6B81,#E04E63);color:#fff;animation:lgpulse 1s ease-in-out infinite;}
+.vs-error{background:#FFE5E1;border:1px solid var(--coral);border-radius:var(--r-md);
+  padding:8px 12px;font-size:13px;margin-bottom:10px;}

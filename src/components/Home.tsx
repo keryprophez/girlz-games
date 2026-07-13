@@ -4,6 +4,7 @@ import { CATEGORIES, GAMES } from '../games'
 import { COLLECT } from '../core/utils'
 import { sFlip } from '../core/audio'
 import { Album } from './Album'
+import { VoiceStudio } from './VoiceStudio'
 import type { Tier } from '../core/types'
 
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
@@ -12,6 +13,7 @@ const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
 export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }) {
   const store = useFerme()
   const [albumOpen, setAlbumOpen] = useState(false)
+  const [voicesOpen, setVoicesOpen] = useState(false)
   const [duel, setDuel] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const photoTarget = useRef<string>('')
@@ -82,6 +84,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <div className="stat">⭐ {prog.stars}</div>
         <div className="stat"><button onClick={() => setAlbumOpen(true)}>📔 {prog.stickers.length}/{COLLECT.length}</button></div>
         <div className="stat"><button onClick={() => store.toggleSound()}>{store.sound ? '🔊' : '🔇'}</button></div>
+        <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille">🎙</button></div>
       </div>
 
       <div className="cats">
@@ -106,6 +109,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
       <div className="footnote">Hors-ligne · la collection de chacune est gardée d'une fois sur l'autre 🌟</div>
 
       {albumOpen && <Album onClose={() => setAlbumOpen(false)} />}
+      {voicesOpen && <VoiceStudio onClose={() => setVoicesOpen(false)} />}
       {adjust && (
         <PhotoAdjust img={adjust.img}
           onCancel={() => { URL.revokeObjectURL(adjust.img.src); setAdjust(null) }}

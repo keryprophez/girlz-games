@@ -5,6 +5,7 @@ import type { FinishPayload, GameContext, Profile } from '../core/types'
 import { toast } from '../core/utils'
 import { confetti, FX } from '../core/fx'
 import { say, shutUp } from '../core/voice'
+import { playClip } from '../core/clips'
 
 interface Result extends FinishPayload {
   newSticker: string | null
@@ -76,6 +77,8 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         const res: Result = { ...payload, newSticker }
         confetti()
         FX.fireworks()
+        // La vraie voix de la famille, après le jingle
+        setTimeout(() => playClip(p.id, payload.stars >= 2 ? 'bravo' : 'retry'), 800)
         if (!duel) { setResult(res); return }
         duelResults.current = [...duelResults.current.slice(0, turn), res]
         if (turn === 0) setInterstitial(res)
