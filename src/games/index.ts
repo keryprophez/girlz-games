@@ -27,12 +27,15 @@ import { beatbox } from './beatbox'
 import { taquin } from './taquin'
 import { balloon } from './balloon'
 import { connect4 } from './connect4'
+import { snowman } from './snowman'
+import { igloo } from './igloo'
+import { pizza } from './pizza'
 
 export const GAMES: GameDef[] = [
-  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, clock, tables, additions, market, maze, connect4, battleship,
+  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, clock, tables, additions, market, maze, igloo, connect4, battleship,
   memory, simonGame,
   catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon,
-  coloring, dressup, piano, beatbox
+  coloring, dressup, snowman, pizza, piano, beatbox
 ]
 
 export const CATEGORIES: { id: GameCategory; label: string; icon: string }[] = [
