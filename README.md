@@ -1,10 +1,11 @@
 # 🐤 La Ferme Magique
 
-Les jeux de **Joyce** et **Jade** — une webapp de 33 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
+Les jeux de **Joyce** et **Jade** — une webapp de 34 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
 
 ## ✨ Ce qu'il y a dedans
 
-- **33 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
+- **34 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
+- **🚀 Voyage dans l'Espace** : la joueuse devient astronaute (sa photo dans le hublot de la fusée) et explore le système solaire dessiné à la main — Soleil, 8 planètes vivantes (anneaux de Saturne, tempête de Jupiter, Terre bleue…), une merveille racontée à voix haute à chaque visite, passeport à remplir et diplôme d'astronaute à la fin. Découverte pure, sans quiz
 - **🔍 La Loupe Magique** : comprendre l'emboîtement **continent ⊃ pays ⊃ région ⊃ ville** sans quiz ni lecture — un petit animal veut rentrer chez lui, on zoome (vraie caméra) du plus grand au plus petit, les mots sont lus à voix haute et codés par couleur, et un récapitulatif emboîté conclut chaque tour
 - **⛄ Hiver & cuisine** : Bonhomme de neige (tape les boules pour changer leur taille, choisis leur forme et décore-le), L'Igloo (pose le bloc de glace de la bonne taille rangée par rangée — sans chrono en Douce, avant la tempête sinon), La Pizzeria (pâte, aplatissage, sauce tomate ou crème, ingrédients, cuisson au four à surveiller… puis on la croque !)
 - **Voix discrète** : la synthèse vocale ne sert qu'à lire le contenu à apprendre — multiplications, additions, heures, valeurs des pièces — jamais les consignes

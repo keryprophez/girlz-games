@@ -31,9 +31,10 @@ import { snowman } from './snowman'
 import { igloo } from './igloo'
 import { pizza } from './pizza'
 import { geoGame } from './geo'
+import { space } from './space'
 
 export const GAMES: GameDef[] = [
-  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, geoGame, clock, tables, additions, market, maze, igloo, connect4, battleship,
+  quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, geoGame, space, clock, tables, additions, market, maze, igloo, connect4, battleship,
   memory, simonGame,
   catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon,
   coloring, dressup, snowman, pizza, piano, beatbox
