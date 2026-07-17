@@ -857,6 +857,71 @@ body.bigplay .ig-pile{padding:16px 22px 10px;font-size:15px;}
 body.bigplay .ig-pile-stack{transform:scale(1.25);transform-origin:bottom center;margin-top:8px;}
 
 /* ============================================================
+   LA LOUPE MAGIQUE (continent → pays → région → ville)
+   ============================================================ */
+.geo-steps{display:flex;align-items:center;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;}
+.geo-dot{display:flex;align-items:center;gap:5px;font-family:'Baloo 2';font-weight:800;font-size:12.5px;
+  color:var(--ink-soft);background:var(--card);border:2px solid var(--line);border-radius:999px;
+  padding:5px 11px;box-shadow:var(--e1);opacity:.55;transition:all .25s var(--spring);}
+.geo-dot span{font-size:15px;}
+.geo-dot.now{opacity:1;transform:scale(1.08);border-color:var(--mango);background:#FFF4D6;}
+.geo-dot.done{opacity:1;border-color:var(--meadow);background:#E3F7E8;}
+.geo-arrow{color:var(--ink-soft);font-weight:800;opacity:.5;}
+.geo-say{text-align:center;font-family:'Fredoka';font-size:clamp(14px,3vmin,17px);line-height:1.35;
+  min-height:3.4em;margin-bottom:8px;color:var(--ink);}
+.geo-say b{font-family:'Baloo 2';}
+.w-cont{color:var(--lilac);}.w-pays{color:var(--coral);}.w-region{color:var(--meadow);}.w-ville{color:var(--lagoon);}
+#geoArea{position:relative;width:100%;max-width:480px;border:1px solid var(--line);
+  background:linear-gradient(180deg,#EDE3FD,#F3EEFC 60%,#FFFFFF);
+  border-radius:var(--r-xl);box-shadow:var(--e2);overflow:hidden;}
+#geoSvg{display:block;width:100%;height:auto;}
+#geoZoom{transition:transform .6s cubic-bezier(.5,.1,.3,1);transform-origin:0 0;}
+.geo-continent{font-family:'Baloo 2';font-weight:800;font-size:15px;fill:#7A5BB0;}
+.geo-colabel{font-family:'Baloo 2';font-weight:800;font-size:12px;fill:#8A6A5A;}
+.geo-tclabel{fill:#C24B41;}
+.geo-rlabel{font-family:'Baloo 2';font-weight:800;font-size:9px;fill:#4a6b52;opacity:0;transition:opacity .4s;}
+.geo-clabel{font-family:'Baloo 2';font-weight:700;font-size:7px;fill:#45362A;opacity:0;transition:opacity .4s;}
+#geoArea.phase-region .geo-rlabel,#geoArea.phase-city .geo-rlabel,
+#geoArea.phase-city .geo-region.focus .geo-clabel{opacity:1;}
+.geo-char{font-size:20px;filter:drop-shadow(0 2px 2px rgba(69,54,42,.3));pointer-events:none;
+  transform-box:fill-box;transform-origin:center bottom;animation:geoBob 1.6s ease-in-out infinite;}
+@keyframes geoBob{50%{transform:translateY(-2px);}}
+.geo-char.cheer{animation:geoCheer .5s var(--spring) 2;}
+@keyframes geoCheer{50%{transform:translateY(-8px) scale(1.15);}}
+/* Régions cachées tant qu'on n'est pas entré dans le pays */
+.geo-inside{opacity:0;transition:opacity .5s;pointer-events:none;}
+.geo-inside.show{opacity:1;pointer-events:auto;}
+/* Cibles cliquables selon la phase */
+.geo-contHit{pointer-events:none;}
+#geoArea.phase-continent .geo-contHit{pointer-events:auto;cursor:pointer;}
+#geoArea.phase-continent .geo-country-blob{cursor:pointer;}
+.geo-country-blob{pointer-events:none;transition:opacity .4s;}
+#geoArea.phase-pays .geo-country-blob{pointer-events:auto;cursor:pointer;}
+#geoArea.phase-pays .geo-country-blob{animation:geoInvite 1.4s ease-in-out infinite;}
+.geo-region-blob{pointer-events:none;transition:opacity .4s;}
+#geoArea.phase-region .geo-region-blob{pointer-events:auto;cursor:pointer;animation:geoInvite 1.4s ease-in-out infinite;}
+.geo-city{pointer-events:none;transition:opacity .4s;}
+#geoArea.phase-city .geo-region.focus .geo-city{pointer-events:auto;cursor:pointer;}
+@keyframes geoInvite{50%{filter:brightness(1.06);}}
+.geo-region.dim,.geo-country-other.dim{opacity:.14;pointer-events:none;transition:opacity .5s;}
+.geo-boop{animation:geoBoop .5s var(--spring);}
+@keyframes geoBoop{40%{transform:scale(1.03);}}
+.shake{animation:lgshake .3s ease;}
+/* Récapitulatif emboîté */
+.geo-recap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;background:rgba(255,249,240,.9);backdrop-filter:blur(4px);animation:enter .35s var(--spring);padding:14px;}
+.geo-nest{border:3px solid;border-radius:16px;padding:9px 10px 10px;width:100%;text-align:center;position:relative;}
+.geo-nest b{font-family:'Baloo 2';font-size:clamp(14px,3.4vmin,18px);display:block;line-height:1.1;}
+.geo-nlabel{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.75;}
+.geo-n-cont{border-color:var(--lilac);background:#F3ECFD;max-width:360px;}
+.geo-n-pays{border-color:var(--coral);background:#FFEEEB;margin-top:7px;}
+.geo-n-region{border-color:var(--meadow);background:#E9F8ED;margin-top:7px;}
+.geo-n-ville{border-color:var(--lagoon);background:#E6F3FB;margin-top:7px;}
+.geo-recap-char{font-size:26px;display:inline-block;margin-left:4px;vertical-align:middle;animation:geoBob 1.4s ease-in-out infinite;}
+body.bigplay #geoArea{max-width:720px;}
+body.bigplay .geo-say{font-size:19px;}
+
+/* ============================================================
    LA PIZZERIA
    ============================================================ */
 .pi-panel{width:100%;max-width:520px;padding:18px 14px;display:flex;flex-direction:column;
