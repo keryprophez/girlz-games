@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Profile } from '../core/types'
@@ -26,25 +26,43 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const [turn, setTurn] = useState(0)
   const [interstitial, setInterstitial] = useState<Result | null>(null)
   const [duelDone, setDuelDone] = useState<Result[] | null>(null)
-  const [big, setBig] = useState(false)
+  const [crashed, setCrashed] = useState(false)
   const duelResults = useRef<Result[]>([])
   const store = useFerme()
 
-  // Mode grand écran : les surfaces de jeu s'étendent et le jeu se remonte
-  // pour prendre les nouvelles dimensions
+  // Mode grand écran : préférence mémorisée — chaque jeu se monte directement
+  // à la bonne taille, plus besoin de basculer (et relancer) en pleine partie
+  const big = store.bigplay
+  useLayoutEffect(() => {
+    document.body.classList.toggle('bigplay', big)
+  }, [big])
   const toggleBig = () => {
-    const next = !big
-    setBig(next)
-    document.body.classList.toggle('bigplay', next)
+    store.toggleBigplay()
     try {
-      if (next) document.documentElement.requestFullscreen?.()
-      else if (document.fullscreenElement) document.exitFullscreen?.()
+      if (!big) document.documentElement.requestFullscreen?.()?.catch?.(() => { /* rien */ })
+      else if (document.fullscreenElement) document.exitFullscreen?.()?.catch?.(() => { /* rien */ })
     } catch { /* plein écran indisponible (iOS) : l'agrandissement CSS suffit */ }
     setRunId(r => r + 1)
   }
   useEffect(() => () => {
     document.body.classList.remove('bigplay')
-    try { if (document.fullscreenElement) document.exitFullscreen?.() } catch { /* rien */ }
+    try { if (document.fullscreenElement) document.exitFullscreen?.()?.catch?.(() => { /* rien */ }) } catch { /* rien */ }
+  }, [])
+
+  // Filet anti-crash : une exception dans un timer ou un handler d'un jeu
+  // affiche un écran « Oups » au lieu de laisser un plateau figé
+  const safeCleanup = () => {
+    try { cleanupRef.current?.() } catch (err) { console.error(err) }
+    cleanupRef.current = null
+  }
+  useEffect(() => {
+    const onErr = () => {
+      safeCleanup()
+      setCrashed(true)
+    }
+    window.addEventListener('error', onErr)
+    return () => window.removeEventListener('error', onErr)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // En duel, l'ordre est figé au montage : la joueuse sélectionnée commence
@@ -60,6 +78,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   useEffect(() => {
     if (!rootRef.current) return
     setResult(null)
+    setCrashed(false)
     const p = profile
     const ctx: GameContext = {
       root: rootRef.current,
@@ -87,12 +106,16 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     }
     // Monté après le rendu pour que les dimensions soient mesurables
     const raf = requestAnimationFrame(() => {
-      cleanupRef.current = game.mount(ctx)
+      try {
+        cleanupRef.current = game.mount(ctx)
+      } catch (err) {
+        console.error(err)
+        setCrashed(true)
+      }
     })
     return () => {
       cancelAnimationFrame(raf)
-      cleanupRef.current?.()
-      cleanupRef.current = null
+      safeCleanup()
       shutUp()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,6 +156,19 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
       </div>
       <div className="gsub">{game.subtitle}</div>
       <div className="gameroot" ref={rootRef} key={gameId + ':' + runId + ':' + turn} />
+
+      {crashed && (
+        <div id="result" className="show">
+          <div className="modal">
+            <h2>Oups ! 🐮</h2>
+            <p>Le jeu a eu un petit pépin… Ce n'est pas de ta faute !</p>
+            <div className="rbtns">
+              <button className="bigbtn primary" onClick={() => { setCrashed(false); setRunId(r => r + 1) }}>↻ Réessayer</button>
+              <button className="bigbtn ghost" onClick={onHome}>🏠 Menu</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {result && !duel && (
         <div id="result" className="show">

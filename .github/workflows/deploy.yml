@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Smoke test : chaque jeu doit se monter sans erreur avant de déployer
+      - run: npm run test:smoke
       - uses: actions/configure-pages@v5
         with:
           enablement: true

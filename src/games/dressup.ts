@@ -50,7 +50,7 @@ function finish() {
 }
 
 export const dressup: GameDef = {
-  id: 'dressup', name: 'Habille-toi', icon: '👗', sq: 'sq-lilac', cat: 'creatif',
+  id: 'dressup', name: 'Habille-toi', icon: '👗', sq: 'sq-lilac', cat: 'creatif', duel: false,
   subtitle: 'Compose ton look — tu le porteras dans les autres jeux !',
   mount(c) {
     ctx = c

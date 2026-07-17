@@ -3,29 +3,29 @@ import { Home } from './components/Home'
 import { GameHost } from './components/GameHost'
 import { Ambient } from './components/Ambient'
 import { Toast } from './components/Toast'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 export default function App() {
   const [session, setSession] = useState<{ id: string; duel: boolean } | null>(null)
 
+  // Le zoom double-tap est neutralisé par `touch-action: manipulation` en CSS :
+  // pas de preventDefault global, qui avalait un tap sur deux dans les jeux rapides.
+
+  // Pendant un jeu, les halos d'ambiance se figent (économie GPU sur tablette)
   useEffect(() => {
-    // Empêche le zoom double-tap sur tablette
-    let lastTouch = 0
-    const onTouchEnd = (e: TouchEvent) => {
-      const now = Date.now()
-      if (now - lastTouch < 350) e.preventDefault()
-      lastTouch = now
-    }
-    document.addEventListener('touchend', onTouchEnd, { passive: false })
-    return () => document.removeEventListener('touchend', onTouchEnd)
-  }, [])
+    document.body.classList.toggle('ingame', !!session)
+    return () => document.body.classList.remove('ingame')
+  }, [session])
 
   return (
     <>
       <Ambient />
       <div id="app">
-        {session
-          ? <GameHost key={session.id + (session.duel ? ':duel' : '')} gameId={session.id} duel={session.duel} onHome={() => setSession(null)} />
-          : <Home onPlay={(id, duel) => setSession({ id, duel })} />}
+        <ErrorBoundary onReset={() => setSession(null)}>
+          {session
+            ? <GameHost key={session.id + (session.duel ? ':duel' : '')} gameId={session.id} duel={session.duel} onHome={() => setSession(null)} />
+            : <Home onPlay={(id, duel) => setSession({ id, duel })} />}
+        </ErrorBoundary>
       </div>
       <Toast />
     </>

@@ -174,7 +174,7 @@ function finish() {
 }
 
 export const snowman: GameDef = {
-  id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif',
+  id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', duel: false,
   subtitle: 'Tape les boules pour changer leur taille, puis décore-le !',
   mount(c) {
     ctx = c

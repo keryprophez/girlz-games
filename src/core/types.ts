@@ -32,6 +32,8 @@ export interface GameDef {
   sq: string
   cat: GameCategory
   subtitle: string
+  /** false = pas de Défi à deux (jeux créatifs sans score : comparer n'a pas de sens). */
+  duel?: boolean
   /** Monte le jeu dans root et renvoie une fonction de nettoyage idempotente. */
   mount(ctx: GameContext): () => void
 }

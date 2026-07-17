@@ -97,7 +97,7 @@ function finish() {
 }
 
 export const beatbox: GameDef = {
-  id: 'beatbox', name: 'Boîte à Rythme', icon: '🥁', sq: 'sq-pink', cat: 'creatif',
+  id: 'beatbox', name: 'Boîte à Rythme', icon: '🥁', sq: 'sq-pink', cat: 'creatif', duel: false,
   subtitle: 'Allume des cases, appuie sur Joue : la ferme fait de la musique !',
   mount(c) {
     ctx = c

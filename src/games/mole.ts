@@ -63,7 +63,7 @@ export const moleGame: GameDef = {
       b.className = 'hole'
       b.innerHTML = `<div class="peep"></div><div class="dirt"></div><div class="pow">💥</div>`
       b._busy = false
-      b.onclick = () => whack(b)
+      b.onpointerdown = () => whack(b) // pointerdown : zéro latence, aucun tap rapide perdu
       grid.appendChild(b); mole.holes.push(b)
     }
     const timer = setInterval(() => {

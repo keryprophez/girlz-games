@@ -10,6 +10,9 @@ interface FermeState {
   currentId: string
   progress: Record<string, Progress>
   sound: boolean
+  /** Mode grand écran mémorisé : chaque jeu se monte directement à la bonne taille. */
+  bigplay: boolean
+  toggleBigplay(): void
 
   current(): Profile
   progressOf(id?: string): Progress
@@ -41,6 +44,8 @@ export const useFerme = create<FermeState>()(
       currentId: 'jade',
       progress: { jade: emptyProgress(), joyce: emptyProgress() },
       sound: true,
+      bigplay: false,
+      toggleBigplay() { set(s => ({ bigplay: !s.bigplay })) },
 
       current() {
         const s = get()

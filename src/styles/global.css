@@ -20,7 +20,9 @@
   --r-xl:28px; --r-lg:22px; --r-md:16px;
   --spring:cubic-bezier(.34,1.56,.5,1);
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+/* touch-action:manipulation supprime le délai/zoom double-tap sans avaler de clics
+   (les surfaces de jeu qui veulent tout gérer gardent leur touch-action:none). */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 html,body,#root{height:100%;}
 body{
   font-family:'Fredoka',sans-serif;color:var(--ink);
@@ -45,6 +47,10 @@ button{font-family:inherit;color:inherit;}
 @keyframes henWalk{0%{transform:translateX(-6vw) scaleX(1);}48%{transform:translateX(96vw) scaleX(1);}
   50%{transform:translateX(96vw) scaleX(-1);}98%{transform:translateX(-6vw) scaleX(-1);}100%{transform:translateX(-6vw) scaleX(1);}}
 @media(prefers-reduced-motion:reduce){.halo,.critter{animation:none;}}
+/* Pendant un jeu : halos figés et bestioles cachées — le GPU des vieilles
+   tablettes est réservé au plateau de jeu. */
+body.ingame .halo{animation-play-state:paused;}
+body.ingame .critter{display:none;}
 
 /* ---- Coquille ---- */
 #app{position:relative;z-index:2;height:100%;overflow-y:auto;overflow-x:hidden;
@@ -107,6 +113,8 @@ button{font-family:inherit;color:inherit;}
   box-shadow:inset 0 -3px 6px rgba(69,54,42,.08), inset 0 2px 4px rgba(255,255,255,.7);}
 .gc .nm{font-family:'Baloo 2';font-weight:700;font-size:clamp(12.5px,2.8vmin,15px);line-height:1.1;text-align:center;}
 .gc-stars{font-size:11px;color:var(--mango);letter-spacing:1px;}
+/* Jeu créatif sans score : grisé quand le Défi à deux est activé */
+.gc.gc-solo{opacity:.35;filter:grayscale(.7);transform:none;box-shadow:var(--e1);}
 .sq-pink{background:#FFE3E0;}.sq-mint{background:#DDF5E4;}.sq-sky{background:#DDEFFC;}
 .sq-sun{background:#FFF0CC;}.sq-lilac{background:#EDE3FD;}.sq-peach{background:#FFE8D6;}
 .footnote{margin:14px 0 6px;font-size:11.5px;color:var(--ink-soft);text-align:center;}

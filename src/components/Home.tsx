@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
 import { CATEGORIES, GAMES } from '../games'
 import { COLLECT } from '../core/utils'
-import { sFlip } from '../core/audio'
+import { sFlip, sNope } from '../core/audio'
 import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import type { Tier } from '../core/types'
@@ -94,8 +94,11 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
             <div className="grid">
               {GAMES.filter(g => g.cat === cat.id).map(g => {
                 const best = prog.bestStars[g.id] || 0
+                // Les jeux créatifs sans score n'ont pas de sens en Défi à deux
+                const noDuel = duel && g.duel === false
                 return (
-                  <button className="gc" key={g.id} onClick={() => onPlay(g.id, duel)}>
+                  <button className={'gc' + (noDuel ? ' gc-solo' : '')} key={g.id}
+                    onClick={() => { if (noDuel) { sNope(); return } onPlay(g.id, duel) }}>
                     <span className={'sq ' + g.sq}>{g.icon}</span>
                     <span className="nm">{g.name}</span>
                     <span className="gc-stars">{'★'.repeat(best)}{'☆'.repeat(3 - best)}</span>

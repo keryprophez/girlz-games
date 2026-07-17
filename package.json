@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "pixi.js": "^7.4.3",

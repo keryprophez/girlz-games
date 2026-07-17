@@ -53,7 +53,7 @@ function spawnKernel() {
       setTimeout(() => el.remove(), 500)
     }, pc.cfg.window)
   }, rnd(400, pc.cfg.heat))
-  el.onclick = () => tapKernel(k)
+  el.onpointerdown = () => tapKernel(k) // pointerdown : zéro latence, aucun tap rapide perdu
 }
 
 function tapKernel(k: any) {

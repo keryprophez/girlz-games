@@ -17,7 +17,8 @@ export default defineConfig({
         theme_color: '#FFF9F0',
         background_color: '#FFF9F0',
         display: 'standalone',
-        orientation: 'portrait',
+        // Pas de verrou portrait : le mode grand écran ⛶ est pensé pour le paysage
+        orientation: 'any',
         lang: 'fr',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
