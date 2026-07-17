@@ -1,11 +1,12 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick } from '../core/utils'
-import { sPop, sWin } from '../core/audio'
-import { confetti } from '../core/fx'
+import { $, pick, rnd } from '../core/utils'
+import { sGood, sPop, sWin, tone } from '../core/audio'
+import { confetti, FX } from '../core/fx'
 
-/* Bonhomme de neige — sculpte tes trois boules : tape une boule pour changer
-   sa taille, choisis leur forme, puis décore : chapeau, écharpe, nez carotte…
-   Jeu créatif sans score, comme Habille-toi. */
+/* Bonhomme de neige — d'abord on ROULE ses trois boules soi-même (tape la
+   boule : elle grossit, pose-la quand tu veux — chaque bonhomme est unique),
+   puis on GLISSE les habits directement dessus : chapeau, écharpe, balai…
+   Jeu créatif sans score. */
 
 const BGS = [
   { icon: '☀️', css: 'linear-gradient(180deg,#BDE3FA,#EAF6FE 70%,#FFFFFF)' },
@@ -13,38 +14,49 @@ const BGS = [
   { icon: '🌙', css: 'linear-gradient(180deg,#2E3A67,#5C6FA8 68%,#B9C8E8)' },
   { icon: '🌈', css: 'linear-gradient(180deg,#7FE0D4,#B9A7F2 55%,#F6D8F0)' }
 ]
-// Rayons des boules (bas, milieu, tête) pour les 3 tailles S/M/L
-const RB = [26, 35, 44], RM = [19, 26, 33], RH = [13, 17, 22]
+const CAPS = [58, 44, 32]     // rayon maxi par boule (bas, milieu, tête)
+const START_R = 20            // taille de départ d'une boule
+const GROW = 3.4              // grossissement par tape
 const SCARF_COLORS = ['#E04E63', '#4FA3D8', '#5EC97B', '#FFB84D', '#B08CF0']
 const BTN_COLORS = ['#45362A', '#E04E63', '#4FA3D8', '#FFB84D']
-const SHAPES = ['round', 'oval', 'cube'] as const
-const HATS = ['none', 'tophat', 'bonnet', 'cap', 'crown'] as const
-const EYES = ['coal', 'button', 'star'] as const
-const NOSES = ['carrot', 'dot'] as const
-const ARMS = ['branch', 'mitten', 'none'] as const
-const EXTRAS = ['none', 'broom', 'sled', 'bird'] as const
 
 interface SnLook {
-  shape: string; sizes: number[]
-  hat: string; scarf: string; eyes: string; nose: string
-  arms: string; buttons: string; extra: string
+  shape: string; hat: string; scarf: string; eyes: string
+  nose: string; arms: string; buttons: string; extra: string
 }
+
+/* Les catégories d'habillage : un onglet = une rangée de gros choix. */
+const CATS: { id: keyof SnLook; icon: string; opts?: [string, string][]; colors?: string[] }[] = [
+  { id: 'hat', icon: '🎩', opts: [['none', '✖️'], ['tophat', '🎩'], ['bonnet', '🧶'], ['cap', '🧢'], ['crown', '👑']] },
+  { id: 'scarf', icon: '🧣', colors: SCARF_COLORS },
+  { id: 'eyes', icon: '👀', opts: [['coal', '⚫'], ['button', '🔵'], ['star', '✨']] },
+  { id: 'nose', icon: '🥕', opts: [['carrot', '🥕'], ['dot', '🔴']] },
+  { id: 'arms', icon: '💪', opts: [['branch', '🌿'], ['mitten', '🧤'], ['none', '✖️']] },
+  { id: 'buttons', icon: '🔘', colors: BTN_COLORS },
+  { id: 'extra', icon: '🎁', opts: [['none', '✖️'], ['broom', '🧹'], ['sled', '🛷'], ['bird', '🐦']] }
+]
 
 let sn: any = null
 let ctx: GameContext
 
 function defLook(): SnLook {
   return {
-    shape: 'round', sizes: [1, 1, 1], hat: 'tophat', scarf: SCARF_COLORS[0],
-    eyes: 'coal', nose: 'carrot', arms: 'branch', buttons: BTN_COLORS[0], extra: 'none'
+    shape: 'round', hat: 'none', scarf: 'none', eyes: 'coal',
+    nose: 'carrot', arms: 'branch', buttons: '#45362A', extra: 'none'
   }
 }
 
-function ballShape(cx: number, cy: number, r: number, shape: string): string {
-  const s = 'fill="#FFFFFF" stroke="#C9DDEC" stroke-width="3"'
-  if (shape === 'oval') return `<ellipse cx="${cx}" cy="${cy}" rx="${r * 1.16}" ry="${r * 0.86}" ${s}/>`
-  if (shape === 'cube') return `<rect x="${cx - r * 0.92}" y="${cy - r * 0.87}" width="${r * 1.84}" height="${r * 1.74}" rx="${r * 0.34}" ${s}/>`
-  return `<circle cx="${cx}" cy="${cy}" r="${r}" ${s}/>`
+const GROUND = 300
+const C = 120
+
+function ballShape(cx: number, cy: number, r: number, shape: string, extraCls = ''): string {
+  const s = `fill="url(#snBG)" stroke="#C2D9EA" stroke-width="2.5" class="${extraCls}"`
+  // Petites étincelles de neige sur la boule
+  const spark = `<circle cx="${cx - r * 0.4}" cy="${cy - r * 0.45}" r="${Math.max(1.6, r * 0.06)}" fill="#FFF" opacity=".9"/>
+    <circle cx="${cx - r * 0.15}" cy="${cy - r * 0.6}" r="${Math.max(1.2, r * 0.04)}" fill="#FFF" opacity=".8"/>`
+  if (shape === 'oval') return `<ellipse cx="${cx}" cy="${cy}" rx="${r * 1.16}" ry="${r * 0.86}" ${s}/>${spark}`
+  if (shape === 'cube') return `<rect x="${cx - r * 0.92}" y="${cy - r * 0.87}" width="${r * 1.84}" height="${r * 1.74}" rx="${r * 0.34}" ${s}/>${spark}`
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" ${s}/>${spark}`
 }
 
 function hatSVG(hat: string, x: number, yTop: number, rH: number): string {
@@ -65,162 +77,320 @@ function hatSVG(hat: string, x: number, yTop: number, rH: number): string {
   return ''
 }
 
-function snowmanSVG(l: SnLook): string {
-  const C = 110
+/** Positions verticales des centres des boules posées (bas → tête). */
+function centers(balls: number[], shape: string): number[] {
+  const ry = (r: number) => (shape === 'round' ? r : r * 0.87)
+  const ys: number[] = []
+  let yPrev = 0
+  balls.forEach((r, i) => {
+    if (i === 0) yPrev = GROUND - ry(r)
+    else yPrev = yPrev - ry(balls[i - 1]) * 0.8 - ry(r) * 0.72
+    ys.push(yPrev)
+  })
+  return ys
+}
+
+function sceneDecor(): string {
+  return `
+    <defs>
+      <radialGradient id="snBG" cx="35%" cy="30%" r="85%">
+        <stop offset="0%" stop-color="#FFFFFF"/>
+        <stop offset="72%" stop-color="#F2F8FD"/>
+        <stop offset="100%" stop-color="#D3E5F2"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="30" cy="${GROUND + 4}" rx="120" ry="26" fill="rgba(255,255,255,.75)"/>
+    <ellipse cx="220" cy="${GROUND + 8}" rx="150" ry="30" fill="rgba(255,255,255,.85)"/>
+    <g opacity=".9">
+      <rect x="24" y="218" width="5" height="9" fill="#8A5A33"/>
+      <polygon points="12,220 41,220 26.5,196" fill="#2E7D57"/>
+      <polygon points="15,206 38,206 26.5,184" fill="#39905F"/>
+      <path d="M15,206 Q26.5,201 38,206" stroke="#FFF" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </g>
+    <ellipse cx="${C}" cy="${GROUND + 6}" rx="112" ry="13" fill="#FFFFFF" stroke="#DCE9F3" stroke-width="2"/>`
+}
+
+function snowmanSVG(): string {
+  const l: SnLook = sn.look
+  const balls: number[] = sn.balls
   const ry = (r: number) => (l.shape === 'round' ? r : r * 0.87)
-  const rB = RB[l.sizes[0]], rM = RM[l.sizes[1]], rH = RH[l.sizes[2]]
-  const yB = 236 - ry(rB)
-  const yM = yB - ry(rB) * 0.82 - ry(rM) * 0.72
-  const yH = yM - ry(rM) * 0.8 - ry(rH) * 0.68
-  const headTop = yH - ry(rH)
-  const pop = (i: number) => (sn && sn.pulse === i ? ' sn-pop' : '')
+  const ys = centers(balls, l.shape)
+  const pop = (i: number) => (sn.pulse === i ? ' sn-pop' : '')
 
-  // Visage
-  const eyeY = yH - ry(rH) * 0.22, eyeDx = rH * 0.4
-  let eyes = ''
-  if (l.eyes === 'coal') eyes = `<circle cx="${C - eyeDx}" cy="${eyeY}" r="2.6" fill="#3A3A3A"/><circle cx="${C + eyeDx}" cy="${eyeY}" r="2.6" fill="#3A3A3A"/>`
-  else if (l.eyes === 'button') eyes = `<circle cx="${C - eyeDx}" cy="${eyeY}" r="3.2" fill="#4FA3D8" stroke="#3E88B8" stroke-width="1.4"/><circle cx="${C + eyeDx}" cy="${eyeY}" r="3.2" fill="#4FA3D8" stroke="#3E88B8" stroke-width="1.4"/>`
-  else eyes = `<text x="${C - eyeDx}" y="${eyeY + 3}" font-size="9" text-anchor="middle" fill="#FFB84D">✦</text><text x="${C + eyeDx}" y="${eyeY + 3}" font-size="9" text-anchor="middle" fill="#FFB84D">✦</text>`
-  const nY = yH + ry(rH) * 0.12
-  const nose = l.nose === 'carrot'
-    ? `<polygon points="${C - 2},${nY - 3.4} ${C - 2},${nY + 3.4} ${C + rH * 0.95 + 5},${nY + 0.5}" fill="#FF8C42" stroke="#E0731F" stroke-width="1.6" stroke-linejoin="round"/>`
-    : `<circle cx="${C}" cy="${nY}" r="3.4" fill="#E8543F" stroke="#C43B2A" stroke-width="1.4"/>`
-  const mY = yH + ry(rH) * 0.52
-  const mouth = [-2, -1, 0, 1, 2].map(i =>
-    `<circle cx="${C + i * 4.4}" cy="${mY + (Math.abs(i) < 2 ? 1.6 : 0)}" r="1.4" fill="#3A3A3A"/>`).join('')
+  let body = ''
+  balls.forEach((r, i) => {
+    let deco = ''
+    if (i === 1 && balls.length > 1) {
+      // Boutons sur la boule du milieu
+      const btnR = Math.max(2.6, r * 0.12)
+      if (l.buttons !== 'none') deco = [-0.38, 0, 0.38].map(k =>
+        `<circle cx="${C}" cy="${ys[1] + ry(r) * k}" r="${btnR}" fill="${l.buttons}"/>`).join('')
+    }
+    body += `<g class="sn-hit${pop(i)}" data-b="${i}">${ballShape(C, ys[i], r, l.shape)}${deco}</g>`
+  })
 
-  // Écharpe : bande au cou + pan qui pend
-  const neckY = yM - ry(rM) * 0.82
-  const scarf = l.scarf === 'none' ? '' : `
-    <rect x="${C - rM * 0.74}" y="${neckY - 5}" width="${rM * 1.48}" height="10" rx="5" fill="${l.scarf}"/>
-    <rect x="${C + rM * 0.16}" y="${neckY + 1}" width="10" height="${ry(rM) * 0.95}" rx="5" fill="${l.scarf}"/>`
-
-  // Boutons sur la boule du milieu
-  const btnR = Math.max(2.6, rM * 0.12)
-  const buttons = l.buttons === 'none' ? '' : [-0.38, 0, 0.38].map(k =>
-    `<circle cx="${C}" cy="${yM + ry(rM) * k}" r="${btnR}" fill="${l.buttons}"/>`).join('')
-
-  // Bras
-  const ay = yM - ry(rM) * 0.25
+  // Bras sur la boule du milieu
   let arms = ''
-  if (l.arms === 'branch') {
-    const lx = C - rM * 0.92, rx = C + rM * 0.92
-    arms = `<g stroke="#8A5A33" stroke-width="4" stroke-linecap="round" fill="none">
-      <path d="M${lx},${ay} L${lx - 26},${ay - 15} M${lx - 17},${ay - 10} L${lx - 21},${ay - 22}"/>
-      <path d="M${rx},${ay} L${rx + 26},${ay - 15} M${rx + 17},${ay - 10} L${rx + 21},${ay - 22}"/></g>`
-  } else if (l.arms === 'mitten') {
-    const lx = C - rM * 0.92, rx = C + rM * 0.92
-    arms = `<g stroke="#8A5A33" stroke-width="4" stroke-linecap="round">
-      <path d="M${lx},${ay} L${lx - 22},${ay - 13}"/><path d="M${rx},${ay} L${rx + 22},${ay - 13}"/></g>
-      <circle cx="${C - rM * 0.92 - 26}" cy="${ay - 16}" r="6.5" fill="#E04E63" stroke="#C43B4E" stroke-width="1.6"/>
-      <circle cx="${C + rM * 0.92 + 26}" cy="${ay - 16}" r="6.5" fill="#E04E63" stroke="#C43B4E" stroke-width="1.6"/>`
+  if (balls.length >= 2 && l.arms !== 'none') {
+    const rM = balls[1], ay = ys[1] - ry(rM) * 0.25
+    const lx = C - rM * 0.95, rx = C + rM * 0.95
+    if (l.arms === 'branch') arms = `<g stroke="#8A5A33" stroke-width="4.5" stroke-linecap="round" fill="none">
+      <path d="M${lx},${ay} L${lx - 28},${ay - 16} M${lx - 18},${ay - 11} L${lx - 22},${ay - 24}"/>
+      <path d="M${rx},${ay} L${rx + 28},${ay - 16} M${rx + 18},${ay - 11} L${rx + 22},${ay - 24}"/></g>`
+    else arms = `<g stroke="#8A5A33" stroke-width="4.5" stroke-linecap="round">
+      <path d="M${lx},${ay} L${lx - 24},${ay - 14}"/><path d="M${rx},${ay} L${rx + 24},${ay - 14}"/></g>
+      <circle cx="${lx - 28}" cy="${ay - 17}" r="7" fill="#E04E63" stroke="#C43B4E" stroke-width="1.6"/>
+      <circle cx="${rx + 28}" cy="${ay - 17}" r="7" fill="#E04E63" stroke="#C43B4E" stroke-width="1.6"/>`
   }
+
+  // Visage + joues roses sur la tête
+  let face = ''
+  if (balls.length === 3) {
+    const rH = balls[2], yH = ys[2]
+    const eyeY = yH - ry(rH) * 0.22, eyeDx = rH * 0.4
+    if (l.eyes === 'coal') face += `<circle cx="${C - eyeDx}" cy="${eyeY}" r="${rH * 0.11}" fill="#3A3A3A"/><circle cx="${C + eyeDx}" cy="${eyeY}" r="${rH * 0.11}" fill="#3A3A3A"/>`
+    else if (l.eyes === 'button') face += `<circle cx="${C - eyeDx}" cy="${eyeY}" r="${rH * 0.14}" fill="#4FA3D8" stroke="#3E88B8" stroke-width="1.4"/><circle cx="${C + eyeDx}" cy="${eyeY}" r="${rH * 0.14}" fill="#4FA3D8" stroke="#3E88B8" stroke-width="1.4"/>`
+    else face += `<text x="${C - eyeDx}" y="${eyeY + rH * 0.14}" font-size="${rH * 0.42}" text-anchor="middle" fill="#FFB84D">✦</text><text x="${C + eyeDx}" y="${eyeY + rH * 0.14}" font-size="${rH * 0.42}" text-anchor="middle" fill="#FFB84D">✦</text>`
+    face += `<circle cx="${C - rH * 0.62}" cy="${yH + rH * 0.18}" r="${rH * 0.2}" fill="#FFC9CF" opacity=".7"/>
+      <circle cx="${C + rH * 0.62}" cy="${yH + rH * 0.18}" r="${rH * 0.2}" fill="#FFC9CF" opacity=".7"/>`
+    const nY = yH + ry(rH) * 0.12
+    face += l.nose === 'carrot'
+      ? `<polygon points="${C - 2},${nY - rH * 0.16} ${C - 2},${nY + rH * 0.16} ${C + rH * 0.95 + 6},${nY + 1}" fill="#FF8C42" stroke="#E0731F" stroke-width="1.6" stroke-linejoin="round"/>`
+      : `<circle cx="${C}" cy="${nY}" r="${rH * 0.16}" fill="#E8543F" stroke="#C43B2A" stroke-width="1.4"/>`
+    const mY = yH + ry(rH) * 0.52
+    face += [-2, -1, 0, 1, 2].map(i =>
+      `<circle cx="${C + i * rH * 0.2}" cy="${mY + (Math.abs(i) < 2 ? rH * 0.07 : 0)}" r="${rH * 0.06}" fill="#3A3A3A"/>`).join('')
+  }
+
+  // Écharpe au cou (entre tête et milieu)
+  let scarf = ''
+  if (balls.length === 3 && l.scarf !== 'none') {
+    const rM = balls[1]
+    const neckY = ys[1] - ry(rM) * 0.82
+    scarf = `<rect x="${C - rM * 0.74}" y="${neckY - 5}" width="${rM * 1.48}" height="11" rx="5.5" fill="${l.scarf}"/>
+      <rect x="${C + rM * 0.16}" y="${neckY + 2}" width="10" height="${ry(rM) * 0.95}" rx="5" fill="${l.scarf}"/>`
+  }
+
+  let hat = ''
+  if (balls.length === 3) hat = hatSVG(l.hat, C, ys[2] - ry(balls[2]), balls[2])
 
   // Déco à côté / sur la tête
   let extra = ''
+  const rB = balls[0] || 30
   if (l.extra === 'broom') {
-    const bx = C + rB + 18
-    extra = `<path d="M${bx},238 L${bx},170" stroke="#B07B45" stroke-width="4" stroke-linecap="round"/>
-      <polygon points="${bx - 9},240 ${bx + 9},240 ${bx + 5},214 ${bx - 5},214" fill="#E8C36A" stroke="#C99A3F" stroke-width="2" stroke-linejoin="round"/>`
+    const bx = C + rB + 22
+    extra = `<path d="M${bx},${GROUND + 2} L${bx},${GROUND - 74}" stroke="#B07B45" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="${bx - 10},${GROUND + 4} ${bx + 10},${GROUND + 4} ${bx + 6},${GROUND - 26} ${bx - 6},${GROUND - 26}" fill="#E8C36A" stroke="#C99A3F" stroke-width="2" stroke-linejoin="round"/>`
   } else if (l.extra === 'sled') {
-    extra = `<text x="${C - rB - 34}" y="238" font-size="30">🛷</text>`
-  } else if (l.extra === 'bird') {
-    const by = l.hat === 'none' ? headTop - 2 : headTop - rH * 1.2 - 8
-    extra = `<text x="${C + 2}" y="${by}" font-size="15">🐦</text>`
+    extra = `<text x="${C - rB - 40}" y="${GROUND + 2}" font-size="34">🛷</text>`
+  } else if (l.extra === 'bird' && balls.length === 3) {
+    const topYH = ys[2] - ry(balls[2])
+    const by = l.hat === 'none' ? topYH - 3 : topYH - balls[2] * 1.2 - 9
+    extra = `<text x="${C + 3}" y="${by}" font-size="17">🐦</text>`
   }
 
-  return `<svg viewBox="0 0 220 250">
-    <ellipse cx="110" cy="242" rx="102" ry="11" fill="#FFFFFF" stroke="#DCE9F3" stroke-width="2"/>
-    ${extra}
-    <g class="sn-hit${pop(0)}" data-b="0">${ballShape(C, yB, rB, l.shape)}</g>
-    <g class="sn-hit${pop(1)}" data-b="1">${ballShape(C, yM, rM, l.shape)}${buttons}</g>
-    ${arms}
-    <g class="sn-hit${pop(2)}" data-b="2">${ballShape(C, yH, rH, l.shape)}${eyes}${nose}${mouth}</g>
-    ${scarf}
-    ${hatSVG(l.hat, C, headTop, rH)}
-  </svg>`
+  return `<svg viewBox="0 0 240 320">${sceneDecor()}${extra}${body}${arms}${scarf}${face}${hat}</svg>`
 }
 
-function render() {
-  $('snSvg').innerHTML = snowmanSVG(sn.look)
-  sn.pulse = -1
-  document.querySelectorAll<HTMLElement>('#snSvg .sn-hit').forEach(g => {
-    g.onclick = () => {
-      if (!sn || !sn.running) return
-      const b = parseInt(g.dataset.b!)
-      sn.look.sizes[b] = (sn.look.sizes[b] + 1) % 3
-      sn.pulse = b
-      sPop(); render()
-    }
+/* ---- Phase 1 : rouler les boules ---- */
+function rollSVG(): string {
+  const shape = sn.look.shape
+  const ry = (r: number) => (shape === 'round' ? r : r * 0.87)
+  // La pile des boules déjà posées, décalée à gauche
+  const ys = centers(sn.balls, shape)
+  let stack = ''
+  sn.balls.forEach((r: number, i: number) => {
+    stack += ballShape(C - 45, ys[i], r, shape)
   })
+  const r = sn.r
+  const bx = 172, by = GROUND - ry(r)
+  // Contour appuyé + ombre : la boule à rouler doit bien se détacher de la neige
+  const roll = `<ellipse cx="${bx}" cy="${GROUND + 3}" rx="${r * 1.05}" ry="${r * 0.16}" fill="rgba(120,155,185,.22)"/>
+  <g class="sn-hit sn-roll${sn.pulse === 9 ? ' sn-pop' : ''}" data-b="9">
+    <circle cx="${bx}" cy="${by}" r="${r + 5}" fill="rgba(255,255,255,.01)"/>
+    ${ballShape(bx, by, r, shape).replace('stroke="#C2D9EA" stroke-width="2.5"', 'stroke="#8FB8D6" stroke-width="3.5"')}
+    <path d="M${bx - r * 0.55},${by} A${r * 0.55},${r * 0.5} 0 0 1 ${bx + r * 0.55},${by}" fill="none"
+      stroke="#BAD5E8" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
+    <path d="M${bx - r * 0.3},${by + r * 0.4} A${r * 0.35},${r * 0.3} 0 0 0 ${bx + r * 0.35},${by + r * 0.35}" fill="none"
+      stroke="#BAD5E8" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+  </g>
+  <text x="${bx}" y="${by - ry(r) - 14}" font-size="26" text-anchor="middle" class="sn-taphint">👆</text>`
+  return `<svg viewBox="0 0 240 320">${sceneDecor()}${stack}${roll}</svg>`
+}
+
+const BALL_NAMES = ['la grosse boule du bas', 'la boule du ventre', 'la boule de la tête']
+
+function attachRollHit() {
+  const hit = document.querySelector<HTMLElement>('#snSvg .sn-roll')
+  if (!hit) return
+  hit.onpointerdown = () => {
+    if (!sn || !sn.running || sn.phase !== 'roll') return
+    const cap = CAPS[sn.balls.length]
+    if (sn.r >= cap) {
+      $('snHint').textContent = 'Elle est GÉANTE ! Pose-la ! 😄'
+      tone(140, 0.08, 'square', 0.1)
+    } else {
+      sn.r = Math.min(cap, sn.r + GROW)
+      tone(160 + sn.r * 3, 0.05, 'triangle', 0.12); sPop()
+    }
+    sn.pulse = 9
+    $('snSvg').innerHTML = rollSVG()
+    sn.pulse = -1
+    attachRollHit()
+  }
+}
+
+function renderRoll() {
+  $('snSvg').innerHTML = rollSVG()
+  sn.pulse = -1
+  $('snHint').textContent = `Boule ${sn.balls.length + 1}/3 — tape ${BALL_NAMES[sn.balls.length]} pour la faire grossir !`
+  $('snControls').innerHTML = `
+    <button class="bigbtn primary" id="snPlace">✔ Je la pose !</button>`
+  attachRollHit()
+  ;($('snPlace') as HTMLButtonElement).onclick = () => {
+    if (!sn || !sn.running || sn.phase !== 'roll') return
+    sn.balls.push(sn.r)
+    sn.r = START_R
+    sGood()
+    const st = $('snStage').getBoundingClientRect()
+    FX.burst(st.left + st.width / 2, st.top + st.height * 0.7, { colors: ['#FFF', '#DCEFF9'], count: 10 })
+    if (sn.balls.length === 3) { sn.phase = 'deco'; renderDeco(); return }
+    renderRoll()
+  }
+}
+
+/* ---- Phase 2 : habiller en glissant ---- */
+function applyProp(k: string, v: string) {
+  if (!sn || !sn.running) return
+  sn.look[k] = v
+  sPop()
+  renderDecoSvg()
   document.querySelectorAll<HTMLElement>('.sn-opt').forEach(b => {
     b.classList.toggle('sel', sn.look[b.dataset.k!] === b.dataset.v)
   })
 }
 
-function setProp(k: string, v: string) {
-  if (!sn || !sn.running) return
-  sn.look[k] = v
-  sPop(); render()
+function renderDecoSvg() {
+  $('snSvg').innerHTML = snowmanSVG()
+  sn.pulse = -1
+  document.querySelectorAll<HTMLElement>('#snSvg .sn-hit').forEach(g => {
+    g.onpointerdown = () => { // toucher une boule : petit frétillement rigolo
+      if (!sn || !sn.running) return
+      sn.pulse = parseInt(g.dataset.b!)
+      tone(500 + sn.pulse * 120, 0.06, 'triangle', 0.1)
+      renderDecoSvg()
+    }
+  })
+}
+
+function optChips(cat: (typeof CATS)[number]): string {
+  if (cat.colors) {
+    return `<button class="du-opt sn-opt" data-k="${cat.id}" data-v="none">✖️</button>` + cat.colors.map(col =>
+      `<button class="du-opt du-color sn-opt" data-k="${cat.id}" data-v="${col}" style="background:${col}"></button>`).join('')
+  }
+  return cat.opts!.map(([v, icon]) =>
+    `<button class="du-opt sn-opt" data-k="${cat.id}" data-v="${v}">${icon}</button>`).join('')
+}
+
+function renderDeco() {
+  $('snHint').textContent = 'Glisse les habits sur ton bonhomme !'
+  $('snControls').innerHTML = `
+    <div class="sn-tabs">
+      ${CATS.map(cat => `<button class="chip sn-tab${cat.id === sn.cat ? ' sel' : ''}" data-c="${cat.id}">${cat.icon}</button>`).join('')}
+    </div>
+    <div class="du-row sn-optrow" id="snOpts"></div>
+    <button class="bigbtn primary" id="snDone" style="margin-top:10px">✨ Il est parfait !</button>`
+  renderDecoSvg()
+  renderOpts()
+  document.querySelectorAll<HTMLElement>('.sn-tab').forEach(b => {
+    b.onclick = () => {
+      if (!sn || !sn.running) return
+      sn.cat = b.dataset.c
+      document.querySelectorAll('.sn-tab').forEach(x => x.classList.remove('sel'))
+      b.classList.add('sel')
+      sPop(); renderOpts()
+    }
+  })
+  ;($('snDone') as HTMLButtonElement).onclick = () => sn && sn.running && finish()
+}
+
+function renderOpts() {
+  const cat = CATS.find(c => c.id === sn.cat)!
+  $('snOpts').innerHTML = optChips(cat)
+  document.querySelectorAll<HTMLElement>('.sn-opt').forEach(b => {
+    b.classList.toggle('sel', sn.look[b.dataset.k!] === b.dataset.v)
+    // Tap = applique. Glisser jusqu'au bonhomme = applique aussi (avec étincelles).
+    b.onpointerdown = e => {
+      if (!sn || !sn.running) return
+      e.preventDefault()
+      sn.dragOpt = { k: b.dataset.k!, v: b.dataset.v!, x0: e.clientX, y0: e.clientY, ghost: null, html: b.innerHTML, isColor: b.classList.contains('du-color'), bg: b.style.background }
+    }
+  })
+}
+
+function decoDragMove(e: PointerEvent) {
+  const d = sn && sn.dragOpt
+  if (!d) return
+  if (!d.ghost && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 8) {
+    d.ghost = document.createElement('div')
+    d.ghost.className = 'sn-ghost'
+    if (d.isColor) { d.ghost.style.background = d.bg; d.ghost.classList.add('sn-ghost-color') }
+    else d.ghost.innerHTML = d.html
+    document.body.appendChild(d.ghost)
+  }
+  if (d.ghost) {
+    d.ghost.style.left = e.clientX - 24 + 'px'
+    d.ghost.style.top = e.clientY - 24 + 'px'
+  }
+}
+
+function decoDragEnd(e: PointerEvent) {
+  const d = sn && sn.dragOpt
+  if (!d) return
+  sn.dragOpt = null
+  if (!d.ghost) { applyProp(d.k, d.v); return } // simple tap
+  d.ghost.remove()
+  const st = $('snStage').getBoundingClientRect()
+  if (e.clientX > st.left && e.clientX < st.right && e.clientY > st.top && e.clientY < st.bottom) {
+    FX.burst(e.clientX, e.clientY, { colors: ['#FFF', '#FFE08A', '#DCEFF9'], count: 8 })
+    applyProp(d.k, d.v)
+  }
 }
 
 function finish() {
   sWin(); confetti()
-  ctx.finish({
+  const svg = $('snSvg')
+  svg.classList.add('sn-dance')
+  sn.endT = setTimeout(() => sn && sn.running && ctx.finish({
     title: 'Quel bonhomme !',
-    msg: `${ctx.playerName} a sculpté un magnifique bonhomme de neige ⛄`,
+    msg: `${ctx.playerName} a roulé et décoré un bonhomme de neige unique ⛄`,
     stars: 3, starsEarned: 3
-  })
+  }), 900)
 }
 
 export const snowman: GameDef = {
   id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', duel: false,
-  subtitle: 'Tape les boules pour changer leur taille, puis décore-le !',
+  subtitle: 'Roule tes trois boules de neige, puis glisse les habits dessus !',
   mount(c) {
     ctx = c
-    sn = { look: defLook(), pulse: -1, running: true }
+    sn = { phase: 'roll', balls: [], r: START_R, look: defLook(), cat: 'hat', pulse: -1, dragOpt: null, running: true }
 
-    const opt = (k: string, v: string, html: string) =>
-      `<button class="du-opt sn-opt" data-k="${k}" data-v="${v}">${html}</button>`
-    const colorChips = (k: string, colors: string[]) => opt(k, 'none', '✖️') + colors.map(col =>
-      `<button class="du-opt du-color sn-opt" data-k="${k}" data-v="${col}" style="background:${col}"></button>`).join('')
-    const flakes = Array.from({ length: 12 }, (_, i) =>
+    const flakes = Array.from({ length: 12 }, () =>
       `<span class="sn-flake" style="left:${4 + Math.random() * 92}%;animation-duration:${5 + Math.random() * 6}s;animation-delay:${-Math.random() * 10}s;font-size:${9 + Math.random() * 8}px">❄</span>`).join('')
 
     c.root.innerHTML = `
-      <div class="topbar">
+      <div class="topbar" style="flex-wrap:wrap">
         ${BGS.map((b, i) => `<button class="chip sn-bg${i === 0 ? ' sel' : ''}" data-i="${i}">${b.icon}</button>`).join('')}
+        <button class="chip sn-shape" data-v="round">⚪</button>
+        <button class="chip sn-shape" data-v="oval">🥚</button>
+        <button class="chip sn-shape" data-v="cube">🧊</button>
         <button class="chip" id="snRandom">🎲</button>
         <button class="chip" id="snReset" title="Recommencer">↺</button>
       </div>
       <div class="sn-stage" id="snStage" style="background:${BGS[0].css}">${flakes}<div id="snSvg"></div></div>
-      <div class="du-rows">
-        <div class="du-row"><span class="du-label">Forme</span>
-          ${opt('shape', 'round', '⚪')}${opt('shape', 'oval', '🥚')}${opt('shape', 'cube', '🧊')}
-        </div>
-        <div class="du-row"><span class="du-label">Chapeau</span>
-          ${opt('hat', 'none', '✖️')}${opt('hat', 'tophat', '🎩')}${opt('hat', 'bonnet', '🧶')}${opt('hat', 'cap', '🧢')}${opt('hat', 'crown', '👑')}
-        </div>
-        <div class="du-row"><span class="du-label">Écharpe</span>${colorChips('scarf', SCARF_COLORS)}</div>
-        <div class="du-row"><span class="du-label">Yeux</span>
-          ${opt('eyes', 'coal', '⚫')}${opt('eyes', 'button', '🔵')}${opt('eyes', 'star', '✨')}
-        </div>
-        <div class="du-row"><span class="du-label">Nez</span>
-          ${opt('nose', 'carrot', '🥕')}${opt('nose', 'dot', '🔴')}
-        </div>
-        <div class="du-row"><span class="du-label">Bras</span>
-          ${opt('arms', 'branch', '🌿')}${opt('arms', 'mitten', '🧤')}${opt('arms', 'none', '✖️')}
-        </div>
-        <div class="du-row"><span class="du-label">Boutons</span>${colorChips('buttons', BTN_COLORS)}</div>
-        <div class="du-row"><span class="du-label">Déco</span>
-          ${opt('extra', 'none', '✖️')}${opt('extra', 'broom', '🧹')}${opt('extra', 'sled', '🛷')}${opt('extra', 'bird', '🐦')}
-        </div>
-      </div>
-      <button class="bigbtn primary" id="snDone" style="margin-top:12px">✨ Il est parfait !</button>`
+      <div class="hint" id="snHint" style="position:static;margin:4px 0 8px"></div>
+      <div id="snControls"></div>`
 
-    document.querySelectorAll<HTMLElement>('.sn-opt').forEach(b => {
-      b.onclick = () => setProp(b.dataset.k!, b.dataset.v!)
-    })
     document.querySelectorAll<HTMLElement>('.sn-bg').forEach(b => {
       b.onclick = () => {
         if (!sn || !sn.running) return
@@ -229,26 +399,54 @@ export const snowman: GameDef = {
         b.classList.add('sel'); sPop()
       }
     })
+    document.querySelectorAll<HTMLElement>('.sn-shape').forEach(b => {
+      b.onclick = () => {
+        if (!sn || !sn.running) return
+        sn.look.shape = b.dataset.v
+        sPop()
+        if (sn.phase === 'roll') renderRoll(); else renderDecoSvg()
+      }
+    })
     ;($('snRandom') as HTMLButtonElement).onclick = () => {
       if (!sn || !sn.running) return
+      // Surprise : trois boules toutes faites + look aléatoire
+      sn.balls = [rnd(34, CAPS[0]), rnd(26, CAPS[1]), rnd(18, CAPS[2])]
+      sn.phase = 'deco'
       sn.look = {
-        shape: pick([...SHAPES]), sizes: [pick([0, 1, 2]), pick([0, 1, 2]), pick([0, 1, 2])],
-        hat: pick([...HATS]), scarf: pick(['none', ...SCARF_COLORS]),
-        eyes: pick([...EYES]), nose: pick([...NOSES]), arms: pick([...ARMS]),
-        buttons: pick(['none', ...BTN_COLORS]), extra: pick([...EXTRAS])
+        shape: pick(['round', 'oval', 'cube']),
+        hat: pick(['none', 'tophat', 'bonnet', 'cap', 'crown']),
+        scarf: pick(['none', ...SCARF_COLORS]),
+        eyes: pick(['coal', 'button', 'star']), nose: pick(['carrot', 'dot']),
+        arms: pick(['branch', 'mitten', 'none']),
+        buttons: pick(['none', ...BTN_COLORS]),
+        extra: pick(['none', 'broom', 'sled', 'bird'])
       }
       $('snStage').style.background = pick(BGS).css
-      sPop(); render()
+      sPop(); renderDeco()
     }
     ;($('snReset') as HTMLButtonElement).onclick = () => {
       if (!sn || !sn.running) return
-      sn.look = defLook()
+      sn.phase = 'roll'; sn.balls = []; sn.r = START_R; sn.look = defLook(); sn.cat = 'hat'
       $('snStage').style.background = BGS[0].css
       document.querySelectorAll('.sn-bg').forEach((x, i) => x.classList.toggle('sel', i === 0))
-      sPop(); render()
+      sPop(); renderRoll()
     }
-    ;($('snDone') as HTMLButtonElement).onclick = () => sn && sn.running && finish()
-    render()
-    return () => { if (sn) { sn.running = false; sn = null } }
+
+    const onMove = (e: PointerEvent) => decoDragMove(e)
+    const onUp = (e: PointerEvent) => decoDragEnd(e)
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+
+    renderRoll()
+    return () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      if (sn) {
+        sn.running = false
+        clearTimeout(sn.endT)
+        if (sn.dragOpt?.ghost) sn.dragOpt.ghost.remove()
+        sn = null
+      }
+    }
   }
 }
