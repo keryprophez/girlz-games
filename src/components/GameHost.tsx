@@ -6,6 +6,8 @@ import { toast } from '../core/utils'
 import { confetti, FX } from '../core/fx'
 import { say, shutUp } from '../core/voice'
 import { playClip } from '../core/clips'
+import { iris } from '../core/juice'
+import { tone } from '../core/audio'
 
 interface Result extends FinishPayload {
   newSticker: string | null
@@ -75,10 +77,25 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const profile = playersRef.current[Math.min(turn, playersRef.current.length - 1)]
 
 
+  // Petite cérémonie des étoiles : chaque étoile gagnée sonne et étincelle
+  useEffect(() => {
+    if (!result) return
+    const ts: number[] = []
+    for (let i = 0; i < result.stars; i++) {
+      ts.push(window.setTimeout(() => {
+        tone(620 + i * 170, 0.18, 'sine', 0.13)
+        FX.burst(window.innerWidth / 2 + (i - 1) * 74, window.innerHeight * 0.36,
+          { colors: ['#FFD34D', '#FFF3B0', '#FF9E7A'], count: 9 })
+      }, 320 + i * 220))
+    }
+    return () => ts.forEach(clearTimeout)
+  }, [result])
+
   useEffect(() => {
     if (!rootRef.current) return
     setResult(null)
     setCrashed(false)
+    iris() // entrée de scène : le cercle s'ouvre sur le jeu
     const p = profile
     const ctx: GameContext = {
       root: rootRef.current,

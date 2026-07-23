@@ -929,6 +929,15 @@ body.bigplay #geoArea{max-width:720px;}
 body.bigplay .geo-say{font-size:19px;}
 
 /* ============================================================
+   JUICE — transition en iris
+   ============================================================ */
+.jc-iris{position:fixed;left:50%;top:44%;width:0;height:0;border-radius:50%;z-index:30;
+  pointer-events:none;transform:translate(-50%,-50%);
+  box-shadow:0 0 0 260vmax var(--paper);
+  transition-property:width,height;transition-timing-function:cubic-bezier(.4,0,.2,1);}
+.jc-iris.open{width:280vmax;height:280vmax;}
+
+/* ============================================================
    MINUTEUR PARENTAL (⏳ + écran de pause + question de grand)
    ============================================================ */
 .pt-note{font-size:12px;color:var(--ink-soft);margin-top:12px;}
@@ -977,19 +986,10 @@ body.bigplay .geo-say{font-size:19px;}
   cursor:pointer;}
 .ct-bunting{position:absolute;top:-4px;left:0;right:0;text-align:center;font-size:17px;letter-spacing:6px;
   filter:drop-shadow(0 2px 2px rgba(69,54,42,.25));}
-.ct-shelf{position:absolute;left:6%;right:6%;top:52%;height:8px;background:linear-gradient(180deg,#B07B45,#8A5A33);
+.ct-shelf{position:absolute;left:50%;width:210px;margin-left:-105px;top:52%;height:8px;background:linear-gradient(180deg,#B07B45,#8A5A33);
   border-radius:4px;box-shadow:0 3px 6px rgba(69,54,42,.3);}
-.ct-can{position:absolute;width:54px;height:62px;border-radius:7px;z-index:2;
-  background:linear-gradient(90deg,#D9E2EA 0%,#FDFEFF 30%,#C4D1DC 70%,#AEBECC 100%);
-  border:2px solid #93A5B4;display:flex;align-items:center;justify-content:center;font-size:30px;
-  box-shadow:0 3px 6px rgba(69,54,42,.25);transition:transform .5s ease,opacity .5s;}
-.ct-can::before{content:"";position:absolute;top:3px;left:4px;right:4px;height:5px;border-radius:3px;
-  background:rgba(255,255,255,.75);}
-.ct-fall-l{transform:rotate(-100deg) translate(-46px,70px);opacity:0;}
-.ct-fall-r{transform:rotate(105deg) translate(46px,70px);opacity:0;}
-.ct-ball{position:absolute;width:30px;height:30px;border-radius:50%;z-index:3;transform:translateX(-50%);
-  background:radial-gradient(circle at 34% 30%,#FFE9C0,#E8A13F 60%,#B06A1E);
-  border:2px solid #8A5A33;box-shadow:0 3px 6px rgba(69,54,42,.35);}
+#ctCanvas{position:absolute;inset:0;z-index:2;touch-action:none;cursor:grab;}
+#ctCanvas:active{cursor:grabbing;}
 body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
 
 /* ============================================================
