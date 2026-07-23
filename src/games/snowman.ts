@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd } from '../core/utils'
-import { sGood, sPop, sWin, tone } from '../core/audio'
+import { sCrunch, sGood, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
 
 /* Bonhomme de neige — d'abord on ROULE ses trois boules soi-même (tape la
@@ -231,7 +231,7 @@ function attachRollHit() {
       tone(140, 0.08, 'square', 0.1)
     } else {
       sn.r = Math.min(cap, sn.r + GROW)
-      tone(160 + sn.r * 3, 0.05, 'triangle', 0.12); sPop()
+      sCrunch(); tone(160 + sn.r * 3, 0.05, 'triangle', 0.1)
     }
     sn.pulse = 9
     $('snSvg').innerHTML = rollSVG()
@@ -369,7 +369,7 @@ function finish() {
 }
 
 export const snowman: GameDef = {
-  id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', duel: false,
+  id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', duel: false, music: 'winter',
   subtitle: 'Roule tes trois boules de neige, puis glisse les habits dessus !',
   mount(c) {
     ctx = c

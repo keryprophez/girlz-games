@@ -323,7 +323,7 @@ function finish() {
 }
 
 export const geoGame: GameDef = {
-  id: 'geo', name: 'La Loupe Magique', icon: '🔍', sq: 'sq-lilac', cat: 'reflexion',
+  id: 'geo', name: 'La Loupe Magique', icon: '🔍', sq: 'sq-lilac', cat: 'reflexion', music: 'meadow',
   subtitle: 'Zoome du continent à la ville pour ramener le petit animal chez lui !',
   mount(c) {
     ctx = c

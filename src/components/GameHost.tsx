@@ -8,6 +8,7 @@ import { say, shutUp } from '../core/voice'
 import { playClip } from '../core/clips'
 import { iris } from '../core/juice'
 import { tone } from '../core/audio'
+import { playMusic, stopMusic } from '../core/music'
 
 interface Result extends FinishPayload {
   newSticker: string | null
@@ -96,6 +97,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     setResult(null)
     setCrashed(false)
     iris() // entrée de scène : le cercle s'ouvre sur le jeu
+    if (game.music) playMusic(game.music)
     const p = profile
     const ctx: GameContext = {
       root: rootRef.current,
@@ -132,6 +134,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     return () => {
       cancelAnimationFrame(raf)
       safeCleanup()
+      stopMusic()
       shutUp()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

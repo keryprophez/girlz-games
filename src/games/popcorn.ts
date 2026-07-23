@@ -98,7 +98,7 @@ function finish() {
 }
 
 export const popcorn: GameDef = {
-  id: 'popcorn', name: 'Pop-corn !', icon: '🍿', sq: 'sq-sun', cat: 'action',
+  id: 'popcorn', name: 'Pop-corn !', icon: '🍿', sq: 'sq-sun', cat: 'action', music: 'fair',
   subtitle: 'Quand un grain tremble, tape dessus : POP !',
   mount(c) {
     ctx = c

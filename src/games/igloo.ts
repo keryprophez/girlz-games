@@ -194,7 +194,7 @@ function finish(storm: boolean) {
 }
 
 export const igloo: GameDef = {
-  id: 'igloo', name: "L'Igloo", icon: '🧊', sq: 'sq-mint', cat: 'reflexion',
+  id: 'igloo', name: "L'Igloo", icon: '🧊', sq: 'sq-mint', cat: 'reflexion', music: 'winter',
   subtitle: 'Attrape un bloc de glace et glisse-le sur la case qui brille !',
   mount(c) {
     ctx = c

@@ -27,7 +27,8 @@ Les jeux de **Joyce** et **Jade** — une webapp de 37 mini-jeux pensée pour jo
 - **Progression séparée** par joueuse : étoiles, album de 24 animaux à collectionner, meilleurs scores par jeu
 - **3 niveaux de difficulté** par profil (🌱 Douce / 🌿 Normale / 🔥 Expert), réglables d'un tap
 - **PWA hors-ligne** : installable sur l'écran d'accueil, polices auto-hébergées, aucun réseau requis après la première visite
-- **Sons synthétisés** en Web Audio (aucun fichier audio) : jingles, et de vrais bruitages sculptés au bruit blanc filtré (plouf 💦, explosion 🎈, pop sec 🍿, meuh 🐮)
+- **Sons synthétisés** en Web Audio (aucun fichier audio) : jingles, et de vrais bruitages sculptés au bruit blanc filtré (plouf 💦, explosion 🎈, pop sec 🍿, meuh 🐮, crounch de neige ❄️, woosh de lancer 🎾)
+- **🎼 Musique d'ambiance GÉNÉRATIVE** (`core/music.ts`, toujours zéro fichier) : chaque univers a son thème — boîte à musique d'hiver, grand pad spatial, orgue de fête foraine, valse de trattoria, prairie douce, nuit calme — et la mélodie est improvisée en marche aléatoire sur la gamme : elle ne se répète jamais exactement. Volume discret, liée au bouton 🔊
 - **Rendu WebGL (PixiJS)** pour les jeux d'action rapides — Ninja Verger, Attrape et Poussin Volant : fruits et légumes vectoriels texturés, particules, chargé à la demande (le reste de l'app reste léger)
 
 ## 🛠 Stack

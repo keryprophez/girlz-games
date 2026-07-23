@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, shuffle } from '../core/utils'
-import { sBonk, sHit, sMoo, sNope, sWin, tone } from '../core/audio'
+import { sBonk, sHit, sMoo, sNope, sWin, sWoosh, tone } from '../core/audio'
 import { FX } from '../core/fx'
 import { shake } from '../core/juice'
 
@@ -184,7 +184,7 @@ function finish() {
 }
 
 export const chamboule: GameDef = {
-  id: 'chamboule', name: 'Chamboule-Tout', icon: '🎪', sq: 'sq-sun', cat: 'action',
+  id: 'chamboule', name: 'Chamboule-Tout', icon: '🎪', sq: 'sq-sun', cat: 'action', music: 'fair',
   subtitle: 'Tire la balle en arrière comme un lance-pierre, et vise !',
   mount(c) {
     ctx = c
@@ -305,7 +305,7 @@ export const chamboule: GameDef = {
         M.Body.setAngularVelocity(ct.ball, vx * 0.02)
         ct.thrown = true
         ct.throwSim = ct.simMs
-        tone(340, 0.12, 'triangle', 0.1); tone(560, 0.1, 'sine', 0.08)
+        sWoosh()
       }
     })()
 

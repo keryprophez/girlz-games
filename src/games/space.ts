@@ -274,7 +274,7 @@ function finale() {
 }
 
 export const space: GameDef = {
-  id: 'space', name: 'Voyage dans l\'Espace', icon: '🚀', sq: 'sq-lilac', cat: 'reflexion',
+  id: 'space', name: 'Voyage dans l\'Espace', icon: '🚀', sq: 'sq-lilac', cat: 'reflexion', music: 'space',
   subtitle: 'Deviens astronaute et visite les planètes du système solaire !',
   mount(c) {
     ctx = c

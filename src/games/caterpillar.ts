@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd } from '../core/utils'
-import { sNope, sPop, sWin, tone } from '../core/audio'
+import { sCrunch, sNope, sWin, tone } from '../core/audio'
 import { FX } from '../core/fx'
 
 /* La Chenille qui grandit — un snake tout doux : glisse le doigt pour guider
@@ -85,7 +85,7 @@ function step() {
   cp.snake.unshift({ x: nx, y: ny })
   if (nx === cp.fruit.x && ny === cp.fruit.y) {
     cp.eaten++
-    sPop(); tone(520 + cp.eaten * 22, 0.09, 'triangle', 0.12)
+    sCrunch(); tone(520 + cp.eaten * 22, 0.09, 'triangle', 0.12)
     const r = cp.canvas.getBoundingClientRect()
     FX.burst(r.left + (nx + 0.5) * (r.width / cp.cols), r.top + (ny + 0.5) * (r.height / cp.rows),
       { colors: ['#FFE08A', '#8FCB74', '#FF9E7A'], count: 8 })
@@ -120,7 +120,7 @@ function finish() {
 }
 
 export const caterpillar: GameDef = {
-  id: 'caterpillar', name: 'La Chenille', icon: '🐛', sq: 'sq-mint', cat: 'action',
+  id: 'caterpillar', name: 'La Chenille', icon: '🐛', sq: 'sq-mint', cat: 'action', music: 'meadow',
   subtitle: 'Glisse ton doigt pour guider la chenille vers les fruits !',
   mount(c) {
     ctx = c

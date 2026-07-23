@@ -40,9 +40,11 @@ export const sSlice = () => { tone(900, 0.05, 'sawtooth', 0.06); setTimeout(() =
 
 /* ---- Bruitages v2 : souffle blanc filtré + enveloppes = sons « réels » ---- */
 let noiseBuf: AudioBuffer | null = null
-function getCtx(): AudioContext | null {
+/** Contexte audio partagé (un seul pour toute l'app — sons ET musique). */
+export function getCtx(): AudioContext | null {
   try {
     actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)()
+    if (actx.state === 'suspended') actx.resume().catch(() => { /* rien */ })
     return actx
   } catch { return null }
 }
@@ -93,6 +95,13 @@ export const sHit = () => {
   noiseBurst(0.22, 1400, { vol: 0.3, sweepTo: 300 })
   tone(180, 0.15, 'square', 0.14)
 }
+/** Crounch (neige, bouchée croustillante). */
+export const sCrunch = () => {
+  noiseBurst(0.09, 950, { vol: 0.26, type: 'bandpass', q: 1.4, sweepTo: 480 })
+  noiseBurst(0.05, 2400, { vol: 0.1, type: 'highpass', delay: 0.02 })
+}
+/** Woosh d'objet lancé. */
+export const sWoosh = () => noiseBurst(0.26, 320, { vol: 0.16, type: 'bandpass', q: 0.8, sweepTo: 1700 })
 /** Meuh : basse en dents de scie avec glissando. */
 export const sMoo = () => {
   if (!soundOn) return

@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
-import { sBonk, sHit, sNope, sPop, sPower, sWin, tone } from '../core/audio'
+import { sBonk, sCrunch, sNope, sPop, sPower, sWin, tone } from '../core/audio'
 import { confetti } from '../core/fx'
 
 /* La Pizzeria — comme les vieux jeux flash : choisis ta pâte, aplatis-la en
@@ -257,7 +257,7 @@ function stepEat() {
     if (len > R + 26) return
     const k = Math.min(len, R * 0.94) / len
     pi.bites.push({ x: 110 + (p.x - 110) * k, y: 110 + (p.y - 110) * k, r: 24 + Math.random() * 10 })
-    sHit()
+    sCrunch()
     stage.innerHTML = pizzaSVG(225)
     if (pi.bites.length >= BITES) {
       $('piMsg').textContent = 'Tout mangé… Miam ! 😋'
@@ -283,7 +283,7 @@ function finish() {
 }
 
 export const pizza: GameDef = {
-  id: 'pizza', name: 'La Pizzeria', icon: '🍕', sq: 'sq-peach', cat: 'creatif',
+  id: 'pizza', name: 'La Pizzeria', icon: '🍕', sq: 'sq-peach', cat: 'creatif', music: 'kitchen',
   subtitle: 'Pâte, sauce, ingrédients, cuisson… puis on la dévore !',
   mount(c) {
     ctx = c
