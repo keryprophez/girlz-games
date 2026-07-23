@@ -107,7 +107,14 @@ body.ingame .critter{display:none;}
   padding:14px 8px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--e1);
   transition:transform .25s var(--spring),box-shadow .25s;}
 .gc:hover{transform:translateY(-4px) scale(1.02);box-shadow:var(--e2);}
+.gc:hover .sq{animation:rbob 1s ease-in-out infinite;}
 .gc:active{transform:scale(.95);}
+/* Entrée en cascade des cartes de jeux */
+.cat .grid .gc{animation:enter .4s var(--spring) backwards;}
+.cat .grid .gc:nth-child(2){animation-delay:.04s;}.cat .grid .gc:nth-child(3){animation-delay:.08s;}
+.cat .grid .gc:nth-child(4){animation-delay:.12s;}.cat .grid .gc:nth-child(5){animation-delay:.16s;}
+.cat .grid .gc:nth-child(6){animation-delay:.2s;}.cat .grid .gc:nth-child(7){animation-delay:.24s;}
+.cat .grid .gc:nth-child(n+8){animation-delay:.28s;}
 .gc .sq{width:clamp(46px,10vmin,58px);height:clamp(46px,10vmin,58px);border-radius:38%;
   display:flex;align-items:center;justify-content:center;font-size:clamp(24px,5.6vmin,32px);
   box-shadow:inset 0 -3px 6px rgba(69,54,42,.08), inset 0 2px 4px rgba(255,255,255,.7);}
@@ -920,6 +927,70 @@ body.bigplay .ig-pile-stack{transform:scale(1.25);transform-origin:bottom center
 .geo-recap-char{font-size:26px;display:inline-block;margin-left:4px;vertical-align:middle;animation:geoBob 1.4s ease-in-out infinite;}
 body.bigplay #geoArea{max-width:720px;}
 body.bigplay .geo-say{font-size:19px;}
+
+/* ============================================================
+   MINUTEUR PARENTAL (⏳ + écran de pause + question de grand)
+   ============================================================ */
+.pt-note{font-size:12px;color:var(--ink-soft);margin-top:12px;}
+.pt-stepper{display:flex;align-items:center;gap:14px;justify-content:center;margin:14px 0 18px;}
+.pt-step{width:54px;height:54px;border-radius:50%;border:2px solid var(--line);background:var(--card);
+  font-family:'Baloo 2';font-weight:800;font-size:28px;cursor:pointer;box-shadow:var(--e1);
+  transition:transform .15s var(--spring);}
+.pt-step:active{transform:scale(.88);}
+.pt-mins{font-family:'Baloo 2';font-weight:800;font-size:44px;min-width:110px;color:var(--coral);}
+.pt-mins span{font-size:18px;color:var(--ink-soft);}
+.pt-gate{text-align:center;}
+.pt-gate-title{font-family:'Baloo 2';font-weight:800;font-size:22px;margin-bottom:6px;}
+.pt-gate-op{font-family:'Baloo 2';font-weight:800;font-size:32px;margin:8px 0 4px;}
+.pt-gate-typed{color:var(--lagoon);display:inline-block;min-width:1.4em;}
+.pt-gate-oops{color:var(--coral);font-weight:600;font-size:13.5px;margin-bottom:4px;}
+.pt-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-width:220px;margin:12px auto 0;}
+.pt-key{aspect-ratio:auto;height:52px;font-size:22px !important;}
+.pt-ok{background:linear-gradient(140deg,#6ED88B,var(--meadow));color:#fff;border:none;}
+.pt-lock{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;padding:24px;text-align:center;
+  background:linear-gradient(180deg,#1B1440 0%,#2E2260 55%,#4A3680 100%);animation:enter .5s var(--spring);}
+.pt-lock-sky{position:absolute;inset:0;pointer-events:none;}
+.pt-lock-star{position:absolute;color:#FFE8A3;font-size:13px;animation:spTwinkle 3s ease-in-out infinite;}
+.pt-lock-moon{font-size:74px;filter:drop-shadow(0 0 30px rgba(255,240,180,.5));animation:rbob 3s ease-in-out infinite;}
+.pt-lock-title{font-family:'Baloo 2';font-weight:800;font-size:clamp(26px,6.4vmin,38px);color:#fff;}
+.pt-lock-sub{color:#D8CFF5;font-size:clamp(15px,3.4vmin,18px);line-height:1.5;}
+.pt-lock-animals{font-size:26px;letter-spacing:6px;margin:8px 0 18px;}
+.pt-parentbtn{border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#D8CFF5;
+  border-radius:99px;padding:10px 20px;font-family:'Baloo 2';font-weight:700;font-size:14px;cursor:pointer;
+  transition:transform .2s var(--spring);}
+.pt-parentbtn:active{transform:scale(.93);}
+.pt-lock-modal{animation:enter .3s var(--spring);}
+
+/* ============================================================
+   LA CHENILLE / FEU D'ARTIFICE / CHAMBOULE-TOUT
+   ============================================================ */
+.cp-arena{background:linear-gradient(180deg,#EAF8E4,#D8F0CC);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;}
+#cpCanvas{max-width:100%;max-height:100%;}
+.fw-arena{background:linear-gradient(180deg,#0E0A22,#241A4A 70%,#3A2C66);cursor:pointer;}
+#fwCanvas{position:absolute;inset:0;width:100%;height:100%;}
+.fw-hint{color:#D8CFF5;z-index:3;}
+.fw-town{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:22px;letter-spacing:2px;
+  filter:brightness(.55) saturate(.7);pointer-events:none;z-index:2;}
+.ct-arena{background:linear-gradient(180deg,#CBEBFD 0%,#E8F6FF 48%,#C22E3F 48.3%,#A82433 62%,#F5DFA8 62.3%,#EBC983 100%);
+  cursor:pointer;}
+.ct-bunting{position:absolute;top:-4px;left:0;right:0;text-align:center;font-size:17px;letter-spacing:6px;
+  filter:drop-shadow(0 2px 2px rgba(69,54,42,.25));}
+.ct-shelf{position:absolute;left:6%;right:6%;top:52%;height:8px;background:linear-gradient(180deg,#B07B45,#8A5A33);
+  border-radius:4px;box-shadow:0 3px 6px rgba(69,54,42,.3);}
+.ct-can{position:absolute;width:54px;height:62px;border-radius:7px;z-index:2;
+  background:linear-gradient(90deg,#D9E2EA 0%,#FDFEFF 30%,#C4D1DC 70%,#AEBECC 100%);
+  border:2px solid #93A5B4;display:flex;align-items:center;justify-content:center;font-size:30px;
+  box-shadow:0 3px 6px rgba(69,54,42,.25);transition:transform .5s ease,opacity .5s;}
+.ct-can::before{content:"";position:absolute;top:3px;left:4px;right:4px;height:5px;border-radius:3px;
+  background:rgba(255,255,255,.75);}
+.ct-fall-l{transform:rotate(-100deg) translate(-46px,70px);opacity:0;}
+.ct-fall-r{transform:rotate(105deg) translate(46px,70px);opacity:0;}
+.ct-ball{position:absolute;width:30px;height:30px;border-radius:50%;z-index:3;transform:translateX(-50%);
+  background:radial-gradient(circle at 34% 30%,#FFE9C0,#E8A13F 60%,#B06A1E);
+  border:2px solid #8A5A33;box-shadow:0 3px 6px rgba(69,54,42,.35);}
+body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
 
 /* ============================================================
    VOYAGE DANS L'ESPACE

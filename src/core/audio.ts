@@ -5,6 +5,11 @@ let soundOn = true
 export function setSound(on: boolean) { soundOn = on }
 export function isSoundOn() { return soundOn }
 
+/** Petite vibration tactile (tablettes Android) — silencieuse ailleurs. */
+export function buzz(pattern: number | number[]) {
+  try { if (soundOn && navigator.vibrate) navigator.vibrate(pattern) } catch { /* rien */ }
+}
+
 export function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.15) {
   if (!soundOn) return
   try {
@@ -22,9 +27,9 @@ export function tone(freq: number, dur: number, type: OscillatorType = 'sine', v
   } catch { /* audio indisponible : on joue en silence */ }
 }
 
-export const sGood = () => { tone(660, 0.12); setTimeout(() => tone(880, 0.14), 85) }
-export const sWin = () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.18), i * 110)) }
-export const sNope = () => tone(170, 0.18, 'square', 0.12)
+export const sGood = () => { buzz(12); tone(660, 0.12); setTimeout(() => tone(880, 0.14), 85) }
+export const sWin = () => { buzz([25, 50, 25]); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.18), i * 110)) }
+export const sNope = () => { buzz(45); tone(170, 0.18, 'square', 0.12) }
 export const sFlip = () => tone(440, 0.07, 'triangle', 0.1)
 export const sCatch = () => tone(760, 0.08, 'triangle')
 export const sPower = () => { [700, 900, 1200].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'square', 0.12), i * 60)) }

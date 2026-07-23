@@ -90,8 +90,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
       toast,
       say,
       finish(payload) {
-        cleanupRef.current?.()
-        cleanupRef.current = null
+        safeCleanup()
         const newSticker = useFerme.getState().reward(gameId, payload.starsEarned, payload.stars, p.id)
         const res: Result = { ...payload, newSticker }
         confetti()

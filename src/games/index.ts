@@ -32,12 +32,15 @@ import { igloo } from './igloo'
 import { pizza } from './pizza'
 import { geoGame } from './geo'
 import { space } from './space'
+import { caterpillar } from './caterpillar'
+import { fireworks } from './fireworks'
+import { chamboule } from './chamboule'
 
 export const GAMES: GameDef[] = [
   quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, geoGame, space, clock, tables, additions, market, maze, igloo, connect4, battleship,
   memory, simonGame,
-  catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon,
-  coloring, dressup, snowman, pizza, piano, beatbox
+  catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon, caterpillar, chamboule,
+  coloring, dressup, snowman, pizza, piano, beatbox, fireworks
 ]
 
 export const CATEGORIES: { id: GameCategory; label: string; icon: string }[] = [

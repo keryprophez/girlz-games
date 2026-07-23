@@ -4,6 +4,7 @@ import { GameHost } from './components/GameHost'
 import { Ambient } from './components/Ambient'
 import { Toast } from './components/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { PlayGuard } from './components/PlayTimer'
 
 export default function App() {
   const [session, setSession] = useState<{ id: string; duel: boolean } | null>(null)
@@ -27,6 +28,7 @@ export default function App() {
             : <Home onPlay={(id, duel) => setSession({ id, duel })} />}
         </ErrorBoundary>
       </div>
+      <PlayGuard onExpire={() => setSession(null)} />
       <Toast />
     </>
   )

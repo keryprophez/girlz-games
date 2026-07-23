@@ -13,6 +13,9 @@ interface FermeState {
   /** Mode grand écran mémorisé : chaque jeu se monte directement à la bonne taille. */
   bigplay: boolean
   toggleBigplay(): void
+  /** Minuteur parental : timestamp de fin de jeu (null = pas de minuteur). */
+  timerEnd: number | null
+  setTimerEnd(t: number | null): void
 
   current(): Profile
   progressOf(id?: string): Progress
@@ -46,6 +49,8 @@ export const useFerme = create<FermeState>()(
       sound: true,
       bigplay: false,
       toggleBigplay() { set(s => ({ bigplay: !s.bigplay })) },
+      timerEnd: null,
+      setTimerEnd(t) { set({ timerEnd: t }) },
 
       current() {
         const s = get()

@@ -5,6 +5,7 @@ import { COLLECT } from '../core/utils'
 import { sFlip, sNope } from '../core/audio'
 import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
+import { TimerButton } from './PlayTimer'
 import type { Tier } from '../core/types'
 
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
@@ -85,6 +86,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <div className="stat"><button onClick={() => setAlbumOpen(true)}>📔 {prog.stickers.length}/{COLLECT.length}</button></div>
         <div className="stat"><button onClick={() => store.toggleSound()}>{store.sound ? '🔊' : '🔇'}</button></div>
         <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille">🎙</button></div>
+        <TimerButton />
       </div>
 
       <div className="cats">

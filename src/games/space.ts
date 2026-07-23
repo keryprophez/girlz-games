@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
-import { sGood, sPop, sPower, sWin, tone } from '../core/audio'
+import { sGood, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
 
 /* Mon Voyage dans l'Espace — la joueuse devient astronaute (sa photo dans le
