@@ -1161,3 +1161,11 @@ body.bigplay .pi-stage svg{transform:scale(1.25);}
 .hub-lean .pcard{padding:9px 18px 9px;}
 .hub-lean .pavatar{width:clamp(46px,9vmin,60px);height:clamp(46px,9vmin,60px);}
 .hub-lean .brand{margin-top:0;}
+
+/* ============================================================
+   LE STAND 3D (Three.js + cannon-es)
+   ============================================================ */
+.s3-arena{background:linear-gradient(180deg,#BFE3F5,#DCEFF9);cursor:grab;touch-action:none;}
+.s3-arena:active{cursor:grabbing;}
+.s3-arena canvas{display:block;width:100%;height:100%;}
+.s3-hint{z-index:3;color:#45362A;text-shadow:0 1px 4px rgba(255,255,255,.8);}

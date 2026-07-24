@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
 import { CATEGORIES, GAMES } from '../games'
-import { sFlip, sPop, sWin } from '../core/audio'
-import { toast } from '../core/utils'
-import { FX } from '../core/fx'
+import { sFlip, sPop } from '../core/audio'
 import type { GameCategory } from '../core/types'
 
-/* La Ferme Vivante — l'accueil n'est plus une grille de cartes, c'est un
-   MONDE. Les filles se promènent dedans, le ciel suit l'heure réelle, et
-   chaque étoile gagnée CONSTRUIT quelque chose de visible : un pommier, la
-   mare, le moulin, la serre, la montgolfière, l'arc-en-ciel, le château.
-   On touche un lieu pour ouvrir ses jeux. */
+/* La Ferme — un décor d'accueil, pas un système de récompense. Les filles s'y
+   promènent, le ciel suit l'heure réelle, et TOUT le décor est là dès la
+   première seconde : aucun palier, rien à « débloquer », rien qui pousse à
+   rejouer. On touche un lieu pour ouvrir ses jeux, c'est tout. */
 
 const VW = 1000, VH = 600
 
@@ -126,17 +123,17 @@ const PLACE_ART: Record<GameCategory, string> = {
   reflexion: schoolSVG(), memoire: barnSVG(), action: meadowSVG(), creatif: studioSVG()
 }
 
-/* ---------- Ce que les étoiles construisent ---------- */
-interface Build { at: number; id: string; name: string; svg: string }
+/* ---------- Le décor de la ferme (tout est là, rien à « débloquer ») ---------- */
+interface Build { id: string; name: string; svg: string }
 const BUILDS: Build[] = [
   {
-    at: 10, id: 'pommier', name: 'un pommier 🍎',
+    id: 'pommier', name: 'un pommier 🍎',
     svg: `<g transform="translate(628,470)">${tree(0, 0, 1.15)}
       <circle cx="-14" cy="-46" r="5" fill="#E8503F"/><circle cx="16" cy="-34" r="5" fill="#E8503F"/>
       <circle cx="2" cy="-58" r="5" fill="#E8503F"/></g>`
   },
   {
-    at: 25, id: 'mare', name: 'la mare aux canards 🦆',
+    id: 'mare', name: 'la mare aux canards 🦆',
     svg: `<g transform="translate(694,454)">
       <ellipse cx="0" cy="0" rx="70" ry="23" fill="#7FC6E8" stroke="#5AA6CC" stroke-width="3"/>
       <ellipse cx="-22" cy="-6" rx="30" ry="8" fill="#A9DCF2" opacity=".8"/>
@@ -146,7 +143,7 @@ const BUILDS: Build[] = [
       ${[-70, -40, 62].map(dx => `<path d="M${dx},6 q4,-16 0,-26" stroke="#5CBB80" stroke-width="3.5" fill="none" stroke-linecap="round"/>`).join('')}</g>`
   },
   {
-    at: 50, id: 'moulin', name: 'le moulin 🌾',
+    id: 'moulin', name: 'le moulin 🌾',
     svg: `<g transform="translate(918,396)">
       <path d="M-30,0 L-22,-84 L22,-84 L30,0 Z" fill="#FDF3E0" stroke="#C9A97B" stroke-width="3"/>
       <path d="M-24,-84 L0,-104 L24,-84 Z" fill="#D5453F" stroke="#A32F2C" stroke-width="3" stroke-linejoin="round"/>
@@ -158,7 +155,7 @@ const BUILDS: Build[] = [
       </g><circle cx="0" cy="0" r="6" fill="#8A5A33"/></g></g>`
   },
   {
-    at: 80, id: 'serre', name: 'la serre à fleurs 🌷',
+    id: 'serre', name: 'la serre à fleurs 🌷',
     svg: `<g transform="translate(112,512)">
       <rect x="-52" y="-52" width="104" height="52" rx="5" fill="rgba(190,235,250,.75)" stroke="#8FBBD4" stroke-width="3"/>
       <path d="M-58,-52 L0,-84 L58,-52 Z" fill="rgba(190,235,250,.9)" stroke="#8FBBD4" stroke-width="3" stroke-linejoin="round"/>
@@ -167,7 +164,7 @@ const BUILDS: Build[] = [
       ${flower(14, -6, '#B9A7F2', 0.9)}${flower(34, -4, '#FF7B6B', 0.9)}</g>`
   },
   {
-    at: 120, id: 'ballon', name: 'la montgolfière 🎈',
+    id: 'ballon', name: 'la montgolfière 🎈',
     svg: `<g transform="translate(806,146)" class="hub-float">
       <path d="M0,-52 C34,-52 46,-24 40,-2 C36,14 14,30 0,44 C-14,30 -36,14 -40,-2 C-46,-24 -34,-52 0,-52 Z"
         fill="#FF8FA3" stroke="#D96C81" stroke-width="3"/>
@@ -177,14 +174,14 @@ const BUILDS: Build[] = [
       <rect x="-13" y="56" width="26" height="18" rx="4" fill="#C89A63" stroke="#8A5A33" stroke-width="2.5"/></g>`
   },
   {
-    at: 175, id: 'arcenciel', name: "l'arc-en-ciel 🌈",
+    id: 'arcenciel', name: "l'arc-en-ciel 🌈",
     svg: `<g transform="translate(430,352)" opacity=".85" class="hub-rainbow">
       ${['#FF7B6B', '#FFB84D', '#FFE08A', '#7BDD97', '#7FB8E4', '#B9A7F2'].map((c, i) =>
         `<path d="M-250,0 A250,250 0 0 1 250,0" fill="none" stroke="${c}" stroke-width="13"
           transform="scale(${1 - i * 0.055})"/>`).join('')}</g>`
   },
   {
-    at: 250, id: 'chateau', name: 'le château 🏰',
+    id: 'chateau', name: 'le château 🏰',
     svg: `<g transform="translate(66,352)">
       <rect x="-42" y="-64" width="84" height="64" rx="4" fill="#E6DCF5" stroke="#A895CE" stroke-width="3"/>
       <rect x="-56" y="-88" width="26" height="88" rx="4" fill="#EFE7FA" stroke="#A895CE" stroke-width="3"/>
@@ -199,9 +196,9 @@ const BUILDS: Build[] = [
 ]
 
 /* ---------- La scène complète ---------- */
-function sceneSVG(stars: number, stickers: string[], hour: number): string {
+function sceneSVG(stickers: string[], hour: number): string {
   const sky = skyOf(hour)
-  const unlocked = BUILDS.filter(b => stars >= b.at)
+  const unlocked = BUILDS
   const nightStars = sky.night
     ? Array.from({ length: 30 }, (_, i) => {
         const x = ((i * 137) % 97) / 97 * VW, y = ((i * 79) % 53) / 53 * 300
@@ -274,28 +271,8 @@ export function FarmHub({ onPlay, duel }: { onPlay: (id: string, duel: boolean) 
   const hostRef = useRef<HTMLDivElement>(null)
   const hour = useMemo(() => new Date().getHours(), [])
 
-  const svg = useMemo(
-    () => sceneSVG(prog.stars, prog.stickers, hour),
-    [prog.stars, prog.stickers, hour]
-  )
+  const svg = useMemo(() => sceneSVG(prog.stickers, hour), [prog.stickers, hour])
 
-  // Fête quand une nouvelle construction apparaît
-  const seen = store.seenStars[cur.id] ?? prog.stars
-  useEffect(() => {
-    const fresh = BUILDS.filter(b => prog.stars >= b.at && seen < b.at)
-    if (fresh.length) {
-      const b = fresh[fresh.length - 1]
-      setTimeout(() => {
-        sWin()
-        FX.fireworks()
-        toast(`🏗️ Ta ferme s'agrandit : ${b.name} !`)
-      }, 500)
-    }
-    if (prog.stars !== seen) store.markSeen(cur.id, prog.stars)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prog.stars, cur.id])
-
-  const next = BUILDS.find(b => prog.stars < b.at)
   const games = open ? GAMES.filter(g => g.cat === open) : []
   const catDef = open ? CATEGORIES.find(c => c.id === open)! : null
 
@@ -323,16 +300,6 @@ export function FarmHub({ onPlay, duel }: { onPlay: (id: string, duel: boolean) 
         ))}
       </div>
 
-      {next && (
-        <div className="hub-next">
-          <div className="hub-next-txt">
-            Prochaine construction : <b>{next.name}</b>
-          </div>
-          <div className="hub-bar"><div className="hub-fill" style={{ width: Math.min(100, (prog.stars / next.at) * 100) + '%' }} /></div>
-          <div className="hub-next-sub">⭐ {prog.stars} / {next.at}</div>
-        </div>
-      )}
-      {!next && <div className="hub-next"><div className="hub-next-txt">🏆 Ta ferme est <b>complète</b> ! Bravo {cur.name} !</div></div>}
 
       {open && catDef && (
         <div id="album" className="show" onPointerDown={e => { if (e.target === e.currentTarget) setOpen(null) }}>
