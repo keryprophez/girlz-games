@@ -16,6 +16,12 @@ interface FermeState {
   /** Minuteur parental : timestamp de fin de jeu (null = pas de minuteur). */
   timerEnd: number | null
   setTimerEnd(t: number | null): void
+  /** Étoiles déjà « vues » sur la ferme — sert à fêter les nouvelles constructions. */
+  seenStars: Record<string, number>
+  markSeen(id: string, n: number): void
+  /** Vue d'accueil : la ferme vivante ou la liste des jeux. */
+  hubView: 'farm' | 'list'
+  setHubView(v: 'farm' | 'list'): void
 
   current(): Profile
   progressOf(id?: string): Progress
@@ -51,6 +57,10 @@ export const useFerme = create<FermeState>()(
       toggleBigplay() { set(s => ({ bigplay: !s.bigplay })) },
       timerEnd: null,
       setTimerEnd(t) { set({ timerEnd: t }) },
+      seenStars: {},
+      markSeen(id, n) { set(s => ({ seenStars: { ...s.seenStars, [id]: n } })) },
+      hubView: 'farm',
+      setHubView(v) { set({ hubView: v }) },
 
       current() {
         const s = get()

@@ -36,8 +36,15 @@ const page = await browser.newPage({ viewport: { width: 480, height: 860 } })
 const pageErrors = []
 page.on('pageerror', e => pageErrors.push(e.message))
 
+// L'accueil est la ferme vivante : on bascule en vue liste pour énumérer les jeux
+async function toList() {
+  const btn = page.locator('.hub-toggle')
+  if (await btn.count() && (await btn.textContent() || '').includes('tous les jeux')) await btn.click()
+  await page.waitForSelector('.gc', { timeout: 10000 })
+}
+
 await page.goto(URL)
-await page.waitForSelector('.gc', { timeout: 10000 })
+await toList()
 const games = await page.$$eval('.gc', els => els.map(el => el.querySelector('.nm')?.textContent || '?'))
 console.log(`${games.length} jeux à vérifier…`)
 
@@ -45,7 +52,7 @@ const failures = []
 for (let i = 0; i < games.length; i++) {
   pageErrors.length = 0
   await page.goto(URL)
-  await page.waitForSelector('.gc')
+  await toList()
   await page.locator('.gc').nth(i).click()
   // Laisse le temps au jeu de se monter (les jeux WebGL chargent PixiJS à la demande)
   await page.waitForTimeout(1600)

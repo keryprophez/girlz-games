@@ -929,6 +929,67 @@ body.bigplay #geoArea{max-width:720px;}
 body.bigplay .geo-say{font-size:19px;}
 
 /* ============================================================
+   LA FERME VIVANTE (accueil)
+   ============================================================ */
+.hub-toggle{margin:10px 0 8px;border:2px solid var(--line);background:var(--card);border-radius:99px;
+  cursor:pointer;font-family:'Baloo 2';font-weight:700;font-size:14.5px;padding:9px 18px;
+  box-shadow:var(--e1);transition:transform .2s var(--spring);}
+.hub-toggle:active{transform:scale(.94);}
+.hub-wrap{position:relative;width:100%;border-radius:var(--r-xl);overflow:hidden;
+  box-shadow:var(--e2);border:1px solid var(--line);}
+.hub-svg{display:block;width:100%;height:auto;}
+.hub-place{cursor:pointer;transform-box:fill-box;transform-origin:center bottom;
+  transition:transform .25s var(--spring);}
+.hub-place:hover{transform:translateY(-4px) scale(1.02);}
+.hub-place:active{transform:scale(.97);}
+.hub-hit{cursor:pointer;}
+.hub-sign{font-family:'Baloo 2';font-weight:800;font-size:19px;fill:var(--ink);}
+.hub-count{font-family:'Baloo 2';font-weight:800;font-size:15px;fill:#fff;
+  paint-order:stroke;stroke:var(--coral);stroke-width:11px;stroke-linejoin:round;}
+.hub-sun{animation:hubSun 9s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
+@keyframes hubSun{50%{filter:brightness(1.12);}}
+.hub-cloud{animation:hubDrift linear infinite;}
+@keyframes hubDrift{from{transform:translateX(-180px) scale(var(--s,1));}to{transform:translateX(1180px) scale(var(--s,1));}}
+.hub-sway{transform-box:fill-box;transform-origin:center bottom;animation:hubSway 4.5s ease-in-out infinite;}
+@keyframes hubSway{50%{transform:rotate(2deg);}}
+.hub-mill{transform-box:fill-box;transform-origin:center;animation:hubSpin 9s linear infinite;}
+@keyframes hubSpin{to{transform:rotate(360deg);}}
+.hub-float{animation:hubFloat 7s ease-in-out infinite;}
+@keyframes hubFloat{50%{transform:translate(806px,120px);}}
+.hub-bob{animation:rbob 2.4s ease-in-out infinite;}
+.hub-twinkle{animation:spTwinkle 3.4s ease-in-out infinite;}
+.hub-rainbow{animation:hubRainbow 6s ease-in-out infinite;}
+@keyframes hubRainbow{50%{opacity:.62;}}
+.hub-roam{animation:hubRoam 22s ease-in-out infinite;}
+@keyframes hubRoam{0%,100%{transform:translateX(0);}25%{transform:translate(48px,-6px);}
+  50%{transform:translateX(96px) scaleX(-1);}75%{transform:translate(40px,-4px) scaleX(-1);}}
+.hub-walker{position:absolute;bottom:1.5%;display:flex;flex-direction:column;align-items:center;gap:2px;
+  pointer-events:none;filter:drop-shadow(0 3px 4px rgba(69,54,42,.3));}
+.hub-walker.w0{animation:hubWalkA 34s ease-in-out infinite;}
+.hub-walker.w1{animation:hubWalkB 40s ease-in-out infinite;}
+@keyframes hubWalkA{0%{left:8%;}24%{left:62%;}26%{left:62%;}50%{left:26%;}52%{left:26%;}76%{left:78%;}100%{left:8%;}}
+@keyframes hubWalkB{0%{left:70%;}22%{left:22%;}48%{left:86%;}72%{left:44%;}100%{left:70%;}}
+.hub-wname{font-family:'Baloo 2';font-weight:800;font-size:11px;background:rgba(255,249,240,.92);
+  border-radius:99px;padding:1px 8px;box-shadow:var(--e1);white-space:nowrap;}
+.hub-next{width:100%;max-width:460px;margin:12px auto 0;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:11px 16px;box-shadow:var(--e1);text-align:center;}
+.hub-next-txt{font-size:14px;font-weight:600;}
+.hub-next-txt b{font-family:'Baloo 2';color:var(--coral);}
+.hub-next-sub{font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:3px;}
+.hub-bar{height:9px;background:var(--paper);border:1px solid var(--line);border-radius:99px;
+  overflow:hidden;margin:7px 0 2px;}
+.hub-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mango),var(--coral));
+  transition:width .8s var(--spring);}
+.hub-sheet{max-width:620px;width:92%;max-height:86vh;overflow:auto;}
+.hub-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:6px;}
+@media(max-width:640px){.hub-grid{grid-template-columns:repeat(3,1fr);gap:7px;}}
+@media(prefers-reduced-motion:reduce){
+  .hub-cloud,.hub-sway,.hub-mill,.hub-float,.hub-roam,.hub-walker,.hub-rainbow,.hub-sun{animation:none;}
+  .hub-walker.w0{left:20%;}.hub-walker.w1{left:64%;}
+}
+body.bigplay .hub-wrap{max-width:1100px;}
+
+/* ============================================================
    JUICE — transition en iris
    ============================================================ */
 .jc-iris{position:fixed;left:50%;top:44%;width:0;height:0;border-radius:50%;z-index:30;
@@ -1095,3 +1156,8 @@ body.bigplay #spArea,body.bigplay .sp-passport{max-width:680px;}
   box-shadow:0 0 0 2.5px #fff;will-change:left;}
 body.bigplay .pi-panel{max-width:760px;min-height:min(60vh,520px);}
 body.bigplay .pi-stage svg{transform:scale(1.25);}
+
+/* Vue ferme : cartes profil compactes pour que le monde tienne à l'écran */
+.hub-lean .pcard{padding:9px 18px 9px;}
+.hub-lean .pavatar{width:clamp(46px,9vmin,60px);height:clamp(46px,9vmin,60px);}
+.hub-lean .brand{margin-top:0;}

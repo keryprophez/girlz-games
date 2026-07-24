@@ -6,6 +6,7 @@ import { sFlip, sNope } from '../core/audio'
 import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
+import { FarmHub } from './FarmHub'
 import type { Tier } from '../core/types'
 
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
@@ -41,13 +42,13 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
   }
 
   return (
-    <section className="screen active">
+    <section className={'screen active' + (store.hubView === 'farm' ? ' hub-lean' : '')}>
       <div className="brand">
         <h1>La Ferme Magique</h1>
         <div className="tag">{GAMES.length} jeux pour rêver, jouer et apprendre ✨</div>
       </div>
 
-      <div className="seg-label">Qui joue ?</div>
+      {store.hubView === 'list' && <div className="seg-label">Qui joue ?</div>}
       <div className="profiles">
         {store.profiles.map(p => {
           const pProg = store.progress[p.id] || { stars: 0, stickers: [], bestStars: {} }
@@ -77,10 +78,6 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
       </div>
       <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
 
-      <button className={'dueltoggle' + (duel ? ' on' : '')} onClick={() => { setDuel(d => !d); sFlip() }}>
-        ⚔️ Défi à deux {duel ? '· activé ! Choisissez un jeu' : ''}
-      </button>
-
       <div className="statrow">
         <div className="stat">⭐ {prog.stars}</div>
         <div className="stat"><button onClick={() => setAlbumOpen(true)}>📔 {prog.stickers.length}/{COLLECT.length}</button></div>
@@ -89,7 +86,17 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <TimerButton />
       </div>
 
-      <div className="cats">
+      <button className="hub-toggle" onClick={() => { sFlip(); store.setHubView(store.hubView === 'farm' ? 'list' : 'farm') }}>
+        {store.hubView === 'farm' ? '📋 Voir tous les jeux' : '🌾 Retour à la ferme'}
+      </button>
+
+      {store.hubView === 'farm' && <FarmHub onPlay={onPlay} duel={duel} />}
+
+      <button className={'dueltoggle' + (duel ? ' on' : '')} onClick={() => { setDuel(d => !d); sFlip() }}>
+        ⚔️ Défi à deux {duel ? '· activé ! Choisissez un jeu' : ''}
+      </button>
+
+      {store.hubView === 'list' && <div className="cats">
         {CATEGORIES.map(cat => (
           <div className="cat" key={cat.id}>
             <div className="eyebrow">{cat.icon} {cat.label}</div>
@@ -110,7 +117,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
             </div>
           </div>
         ))}
-      </div>
+      </div>}
       <div className="footnote">Hors-ligne · la collection de chacune est gardée d'une fois sur l'autre 🌟</div>
 
       {albumOpen && <Album onClose={() => setAlbumOpen(false)} />}
