@@ -1,451 +1,706 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick, rnd } from '../core/utils'
-import { sCrunch, sGood, sPop, sWin, tone } from '../core/audio'
-import { confetti, FX } from '../core/fx'
+import { $, pick } from '../core/utils'
+import { sCrunch, sPop, sWin, tone } from '../core/audio'
+import { confetti } from '../core/fx'
+import {
+  createStage, loadPhysics, loader, fixedStep, orbitCam, snowTex, bumpyNormal, disposeTree,
+  type Stage, type Orbit, type Cannon
+} from '../core/three3d'
 
-/* Bonhomme de neige — d'abord on ROULE ses trois boules soi-même (tape la
-   boule : elle grossit, pose-la quand tu veux — chaque bonhomme est unique),
-   puis on GLISSE les habits directement dessus : chapeau, écharpe, balai…
-   Jeu créatif sans score. */
+/* ⛄ Bonhomme de neige 3D — on ROULE vraiment une boule dans la neige : elle
+   creuse un sillon, elle grossit, et quand elle est belle on la POSE : elle
+   tombe et s'écrase sur la pile avec la physique. Trois boules, puis on
+   habille le bonhomme en 3D et on tourne autour.
+   Jeu créatif : aucun échec, aucun chrono. */
 
-const BGS = [
-  { icon: '☀️', css: 'linear-gradient(180deg,#BDE3FA,#EAF6FE 70%,#FFFFFF)' },
-  { icon: '🌅', css: 'linear-gradient(180deg,#FFB98A,#FFE0CB 62%,#FFF3E6)' },
-  { icon: '🌙', css: 'linear-gradient(180deg,#2E3A67,#5C6FA8 68%,#B9C8E8)' },
-  { icon: '🌈', css: 'linear-gradient(180deg,#7FE0D4,#B9A7F2 55%,#F6D8F0)' }
-]
-const CAPS = [58, 44, 32]     // rayon maxi par boule (bas, milieu, tête)
-const START_R = 20            // taille de départ d'une boule
-const GROW = 3.4              // grossissement par tape
-const SCARF_COLORS = ['#E04E63', '#4FA3D8', '#5EC97B', '#FFB84D', '#B08CF0']
-const BTN_COLORS = ['#45362A', '#E04E63', '#4FA3D8', '#FFB84D']
+/* ---------- Réglages ---------- */
+const FIELD = 4.6            // demi-largeur du champ de neige jouable
+const CAPS = [0.62, 0.46, 0.34]
+const R0 = 0.17
+const GROW = 0.055           // rayon gagné par unité de distance roulée
+const G = 9.82
 
-interface SnLook {
-  shape: string; hat: string; scarf: string; eyes: string
-  nose: string; arms: string; buttons: string; extra: string
-}
+const SCARVES = ['#E04E63', '#4FA3D8', '#5EC97B', '#FFB84D', '#B08CF0']
+const BTNCOLS = ['#332A22', '#E04E63', '#4FA3D8', '#FFB84D']
 
-/* Les catégories d'habillage : un onglet = une rangée de gros choix. */
-const CATS: { id: keyof SnLook; icon: string; opts?: [string, string][]; colors?: string[] }[] = [
-  { id: 'hat', icon: '🎩', opts: [['none', '✖️'], ['tophat', '🎩'], ['bonnet', '🧶'], ['cap', '🧢'], ['crown', '👑']] },
-  { id: 'scarf', icon: '🧣', colors: SCARF_COLORS },
+type CatId = 'hat' | 'scarf' | 'eyes' | 'nose' | 'arms' | 'buttons'
+interface Look { hat: string; scarf: string; eyes: string; nose: string; arms: string; buttons: string }
+
+const CATS: { id: CatId; icon: string; opts: [string, string][] }[] = [
+  { id: 'hat', icon: '🎩', opts: [['none', '✖️'], ['tophat', '🎩'], ['bonnet', '🧶'], ['crown', '👑']] },
+  { id: 'scarf', icon: '🧣', opts: [['none', '✖️'], ...SCARVES.map(c => [c, '●'] as [string, string])] },
   { id: 'eyes', icon: '👀', opts: [['coal', '⚫'], ['button', '🔵'], ['star', '✨']] },
   { id: 'nose', icon: '🥕', opts: [['carrot', '🥕'], ['dot', '🔴']] },
   { id: 'arms', icon: '💪', opts: [['branch', '🌿'], ['mitten', '🧤'], ['none', '✖️']] },
-  { id: 'buttons', icon: '🔘', colors: BTN_COLORS },
-  { id: 'extra', icon: '🎁', opts: [['none', '✖️'], ['broom', '🧹'], ['sled', '🛷'], ['bird', '🐦']] }
+  { id: 'buttons', icon: '🔘', opts: [['none', '✖️'], ...BTNCOLS.map(c => [c, '●'] as [string, string])] }
 ]
 
-let sn: any = null
+const defLook = (): Look => ({ hat: 'none', scarf: 'none', eyes: 'coal', nose: 'carrot', arms: 'branch', buttons: '#332A22' })
+
 let ctx: GameContext
+let S: any = null
 
-function defLook(): SnLook {
+/* ---------- Le sillon creusé dans la neige ---------- */
+function makeTrail(T: any) {
+  const c = document.createElement('canvas')
+  c.width = c.height = 512
+  const g = c.getContext('2d')!
+  g.clearRect(0, 0, 512, 512)
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return { canvas: c, g, tex: t }
+}
+
+/** Creuse un rond de neige à la position monde (x,z) — la glace bleutée apparaît. */
+function digAt(x: number, z: number, r: number) {
+  const { g, tex } = S.trail
+  const px = ((x + FIELD) / (FIELD * 2)) * 512
+  const py = ((z + FIELD) / (FIELD * 2)) * 512
+  const pr = (r / (FIELD * 2)) * 512
+  const grad = g.createRadialGradient(px, py, pr * 0.2, px, py, pr)
+  grad.addColorStop(0, 'rgba(150,190,220,.85)')
+  grad.addColorStop(0.7, 'rgba(178,210,235,.6)')
+  grad.addColorStop(1, 'rgba(200,225,245,0)')
+  g.fillStyle = grad
+  g.beginPath(); g.arc(px, py, pr, 0, 7); g.fill()
+  tex.needsUpdate = true
+}
+
+/* ---------- Décor ---------- */
+function addTrees(T: any, scene: any) {
+  const trunkGeo = new T.CylinderGeometry(0.09, 0.13, 0.6, 8)
+  const trunkMat = new T.MeshStandardMaterial({ color: 0x6B4A32, roughness: 0.9 })
+  const leafGeo = new T.ConeGeometry(0.62, 1.5, 9)
+  const leafMat = new T.MeshStandardMaterial({ color: 0x2F6B4A, roughness: 0.85 })
+  const capMat = new T.MeshStandardMaterial({ color: 0xF4FAFF, roughness: 0.75 })
+  const capGeo = new T.ConeGeometry(0.5, 0.55, 9)
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + Math.random() * 0.2
+    const d = FIELD + 1.4 + Math.random() * 5
+    const x = Math.sin(a) * d, z = Math.cos(a) * d
+    const s = 0.8 + Math.random() * 0.9
+    const g = new T.Group()
+    const tr = new T.Mesh(trunkGeo, trunkMat); tr.position.y = 0.3; tr.castShadow = true
+    const lv = new T.Mesh(leafGeo, leafMat); lv.position.y = 1.25; lv.castShadow = true
+    const cp = new T.Mesh(capGeo, capMat); cp.position.y = 1.62; cp.castShadow = true
+    g.add(tr, lv, cp)
+    g.position.set(x, 0, z)
+    g.scale.setScalar(s)
+    g.rotation.y = Math.random() * 3
+    scene.add(g)
+  }
+}
+
+/** Flocons qui tombent en continu — un nuage de points recyclé, ça ne coûte rien. */
+function addSnowfall(T: any, scene: any) {
+  const N = 700
+  const pos = new Float32Array(N * 3)
+  for (let i = 0; i < N; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 24
+    pos[i * 3 + 1] = Math.random() * 12
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 24
+  }
+  const geo = new T.BufferGeometry()
+  geo.setAttribute('position', new T.BufferAttribute(pos, 3))
+  const pts = new T.Points(geo, new T.PointsMaterial({
+    color: 0xFFFFFF, size: 0.07, transparent: true, opacity: 0.85, depthWrite: false
+  }))
+  scene.add(pts)
+  return { pts, pos, N }
+}
+
+/* ---------- Poudreuse projetée à l'impact ---------- */
+function puff(x: number, y: number, z: number, n = 26) {
+  const { T, scene } = S.stage
+  const geo = new T.SphereGeometry(0.045, 6, 5)
+  const mat = new T.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.9 })
+  const grp = new T.Group()
+  const parts: any[] = []
+  for (let i = 0; i < n; i++) {
+    const m = new T.Mesh(geo, mat)
+    m.position.set(x, y, z)
+    const a = Math.random() * Math.PI * 2
+    const sp = 0.9 + Math.random() * 1.7
+    parts.push({ m, vx: Math.cos(a) * sp, vy: 1.4 + Math.random() * 2.2, vz: Math.sin(a) * sp })
+    grp.add(m)
+  }
+  scene.add(grp)
+  S.puffs.push({ grp, geo, mat, parts, t: 0 })
+}
+
+function stepPuffs(dt: number) {
+  const { scene } = S.stage
+  for (let i = S.puffs.length - 1; i >= 0; i--) {
+    const p = S.puffs[i]
+    p.t += dt
+    for (const q of p.parts) {
+      q.vy -= 6 * dt
+      q.m.position.x += q.vx * dt
+      q.m.position.y += q.vy * dt
+      q.m.position.z += q.vz * dt
+      q.m.scale.setScalar(Math.max(0.05, 1 - p.t * 1.3))
+    }
+    p.mat.opacity = Math.max(0, 0.9 - p.t * 1.2)
+    if (p.t > 0.85) {
+      scene.remove(p.grp)
+      p.geo.dispose(); p.mat.dispose()
+      S.puffs.splice(i, 1)
+    }
+  }
+}
+
+/* ---------- Habillage 3D ---------- */
+function clearDeco() {
+  const { T, scene } = S.stage
+  if (S.deco) { disposeTree(T, S.deco); scene.remove(S.deco) }
+  S.deco = new T.Group()
+  scene.add(S.deco)
+}
+
+/** Rayons et hauteurs des trois boules empilées, mesurés sur la pile réelle. */
+function anatomy() {
+  const [b, m, h] = S.stack
   return {
-    shape: 'round', hat: 'none', scarf: 'none', eyes: 'coal',
-    nose: 'carrot', arms: 'branch', buttons: '#45362A', extra: 'none'
+    bodyR: m.r, headR: h.r, botR: b.r,
+    headY: h.mesh.position.y, bodyY: m.mesh.position.y, botY: b.mesh.position.y
   }
 }
 
-const GROUND = 300
-const C = 120
+function buildDeco() {
+  const { T } = S.stage
+  clearDeco()
+  const D = S.deco
+  const a = anatomy()
+  const L: Look = S.look
 
-function ballShape(cx: number, cy: number, r: number, shape: string, extraCls = ''): string {
-  const s = `fill="url(#snBG)" stroke="#C2D9EA" stroke-width="2.5" class="${extraCls}"`
-  // Petites étincelles de neige sur la boule
-  const spark = `<circle cx="${cx - r * 0.4}" cy="${cy - r * 0.45}" r="${Math.max(1.6, r * 0.06)}" fill="#FFF" opacity=".9"/>
-    <circle cx="${cx - r * 0.15}" cy="${cy - r * 0.6}" r="${Math.max(1.2, r * 0.04)}" fill="#FFF" opacity=".8"/>`
-  if (shape === 'oval') return `<ellipse cx="${cx}" cy="${cy}" rx="${r * 1.16}" ry="${r * 0.86}" ${s}/>${spark}`
-  if (shape === 'cube') return `<rect x="${cx - r * 0.92}" y="${cy - r * 0.87}" width="${r * 1.84}" height="${r * 1.74}" rx="${r * 0.34}" ${s}/>${spark}`
-  return `<circle cx="${cx}" cy="${cy}" r="${r}" ${s}/>${spark}`
-}
-
-function hatSVG(hat: string, x: number, yTop: number, rH: number): string {
-  if (hat === 'tophat') return `
-    <rect x="${x - rH * 1.15}" y="${yTop - 3}" width="${rH * 2.3}" height="6" rx="3" fill="#45362A"/>
-    <rect x="${x - rH * 0.72}" y="${yTop - 3 - rH * 1.15}" width="${rH * 1.44}" height="${rH * 1.15}" rx="3" fill="#45362A"/>
-    <rect x="${x - rH * 0.72}" y="${yTop - 3 - rH * 0.4}" width="${rH * 1.44}" height="5" fill="#E04E63"/>`
-  if (hat === 'bonnet') return `
-    <path d="M${x - rH * 0.95},${yTop + 5} Q${x},${yTop - rH * 1.3} ${x + rH * 0.95},${yTop + 5} Z" fill="#E04E63"/>
-    <rect x="${x - rH * 0.98}" y="${yTop + 1}" width="${rH * 1.96}" height="6" rx="3" fill="#FFF"/>
-    <circle cx="${x}" cy="${yTop - rH * 1.15}" r="4.5" fill="#FFF" stroke="#E9C8CE" stroke-width="1.5"/>`
-  if (hat === 'cap') return `
-    <path d="M${x - rH * 0.9},${yTop + 4} Q${x},${yTop - rH * 1.05} ${x + rH * 0.9},${yTop + 4} Z" fill="#4FA3D8"/>
-    <rect x="${x - 2}" y="${yTop}" width="${rH * 1.5}" height="5" rx="2.5" fill="#3E88B8"/>`
-  if (hat === 'crown') return `
-    <path d="M${x - rH * 0.7},${yTop + 3} L${x - rH * 0.7},${yTop - 9} L${x - rH * 0.32},${yTop - 3} L${x},${yTop - 12} L${x + rH * 0.32},${yTop - 3} L${x + rH * 0.7},${yTop - 9} L${x + rH * 0.7},${yTop + 3} Z"
-      fill="#FFD34D" stroke="#E0A722" stroke-width="2" stroke-linejoin="round"/>`
-  return ''
-}
-
-/** Positions verticales des centres des boules posées (bas → tête). */
-function centers(balls: number[], shape: string): number[] {
-  const ry = (r: number) => (shape === 'round' ? r : r * 0.87)
-  const ys: number[] = []
-  let yPrev = 0
-  balls.forEach((r, i) => {
-    if (i === 0) yPrev = GROUND - ry(r)
-    else yPrev = yPrev - ry(balls[i - 1]) * 0.8 - ry(r) * 0.72
-    ys.push(yPrev)
-  })
-  return ys
-}
-
-function sceneDecor(): string {
-  return `
-    <defs>
-      <radialGradient id="snBG" cx="35%" cy="30%" r="85%">
-        <stop offset="0%" stop-color="#FFFFFF"/>
-        <stop offset="72%" stop-color="#F2F8FD"/>
-        <stop offset="100%" stop-color="#D3E5F2"/>
-      </radialGradient>
-    </defs>
-    <ellipse cx="30" cy="${GROUND + 4}" rx="120" ry="26" fill="rgba(255,255,255,.75)"/>
-    <ellipse cx="220" cy="${GROUND + 8}" rx="150" ry="30" fill="rgba(255,255,255,.85)"/>
-    <g opacity=".9">
-      <rect x="24" y="218" width="5" height="9" fill="#8A5A33"/>
-      <polygon points="12,220 41,220 26.5,196" fill="#2E7D57"/>
-      <polygon points="15,206 38,206 26.5,184" fill="#39905F"/>
-      <path d="M15,206 Q26.5,201 38,206" stroke="#FFF" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-    </g>
-    <ellipse cx="${C}" cy="${GROUND + 6}" rx="112" ry="13" fill="#FFFFFF" stroke="#DCE9F3" stroke-width="2"/>`
-}
-
-function snowmanSVG(): string {
-  const l: SnLook = sn.look
-  const balls: number[] = sn.balls
-  const ry = (r: number) => (l.shape === 'round' ? r : r * 0.87)
-  const ys = centers(balls, l.shape)
-  const pop = (i: number) => (sn.pulse === i ? ' sn-pop' : '')
-
-  let body = ''
-  balls.forEach((r, i) => {
-    let deco = ''
-    if (i === 1 && balls.length > 1) {
-      // Boutons sur la boule du milieu
-      const btnR = Math.max(2.6, r * 0.12)
-      if (l.buttons !== 'none') deco = [-0.38, 0, 0.38].map(k =>
-        `<circle cx="${C}" cy="${ys[1] + ry(r) * k}" r="${btnR}" fill="${l.buttons}"/>`).join('')
+  /* Yeux */
+  if (L.eyes !== 'none') {
+    const col = L.eyes === 'button' ? 0x3F8FD0 : L.eyes === 'star' ? 0xFFD75E : 0x2A2320
+    const geo = L.eyes === 'star'
+      ? new T.OctahedronGeometry(a.headR * 0.16, 0)
+      : new T.SphereGeometry(a.headR * 0.13, 14, 12)
+    const mat = new T.MeshStandardMaterial({ color: col, roughness: 0.35, metalness: 0.15 })
+    for (const sx of [-1, 1]) {
+      const e = new T.Mesh(geo, mat)
+      e.position.set(sx * a.headR * 0.36, a.headY + a.headR * 0.22, a.headR * 0.86)
+      e.castShadow = true
+      D.add(e)
     }
-    body += `<g class="sn-hit${pop(i)}" data-b="${i}">${ballShape(C, ys[i], r, l.shape)}${deco}</g>`
-  })
-
-  // Bras sur la boule du milieu
-  let arms = ''
-  if (balls.length >= 2 && l.arms !== 'none') {
-    const rM = balls[1], ay = ys[1] - ry(rM) * 0.25
-    const lx = C - rM * 0.95, rx = C + rM * 0.95
-    if (l.arms === 'branch') arms = `<g stroke="#8A5A33" stroke-width="4.5" stroke-linecap="round" fill="none">
-      <path d="M${lx},${ay} L${lx - 28},${ay - 16} M${lx - 18},${ay - 11} L${lx - 22},${ay - 24}"/>
-      <path d="M${rx},${ay} L${rx + 28},${ay - 16} M${rx + 18},${ay - 11} L${rx + 22},${ay - 24}"/></g>`
-    else arms = `<g stroke="#8A5A33" stroke-width="4.5" stroke-linecap="round">
-      <path d="M${lx},${ay} L${lx - 24},${ay - 14}"/><path d="M${rx},${ay} L${rx + 24},${ay - 14}"/></g>
-      <circle cx="${lx - 28}" cy="${ay - 17}" r="7" fill="#E04E63" stroke="#C43B4E" stroke-width="1.6"/>
-      <circle cx="${rx + 28}" cy="${ay - 17}" r="7" fill="#E04E63" stroke="#C43B4E" stroke-width="1.6"/>`
   }
 
-  // Visage + joues roses sur la tête
-  let face = ''
-  if (balls.length === 3) {
-    const rH = balls[2], yH = ys[2]
-    const eyeY = yH - ry(rH) * 0.22, eyeDx = rH * 0.4
-    if (l.eyes === 'coal') face += `<circle cx="${C - eyeDx}" cy="${eyeY}" r="${rH * 0.11}" fill="#3A3A3A"/><circle cx="${C + eyeDx}" cy="${eyeY}" r="${rH * 0.11}" fill="#3A3A3A"/>`
-    else if (l.eyes === 'button') face += `<circle cx="${C - eyeDx}" cy="${eyeY}" r="${rH * 0.14}" fill="#4FA3D8" stroke="#3E88B8" stroke-width="1.4"/><circle cx="${C + eyeDx}" cy="${eyeY}" r="${rH * 0.14}" fill="#4FA3D8" stroke="#3E88B8" stroke-width="1.4"/>`
-    else face += `<text x="${C - eyeDx}" y="${eyeY + rH * 0.14}" font-size="${rH * 0.42}" text-anchor="middle" fill="#FFB84D">✦</text><text x="${C + eyeDx}" y="${eyeY + rH * 0.14}" font-size="${rH * 0.42}" text-anchor="middle" fill="#FFB84D">✦</text>`
-    face += `<circle cx="${C - rH * 0.62}" cy="${yH + rH * 0.18}" r="${rH * 0.2}" fill="#FFC9CF" opacity=".7"/>
-      <circle cx="${C + rH * 0.62}" cy="${yH + rH * 0.18}" r="${rH * 0.2}" fill="#FFC9CF" opacity=".7"/>`
-    const nY = yH + ry(rH) * 0.12
-    face += l.nose === 'carrot'
-      ? `<polygon points="${C - 2},${nY - rH * 0.16} ${C - 2},${nY + rH * 0.16} ${C + rH * 0.95 + 6},${nY + 1}" fill="#FF8C42" stroke="#E0731F" stroke-width="1.6" stroke-linejoin="round"/>`
-      : `<circle cx="${C}" cy="${nY}" r="${rH * 0.16}" fill="#E8543F" stroke="#C43B2A" stroke-width="1.4"/>`
-    const mY = yH + ry(rH) * 0.52
-    face += [-2, -1, 0, 1, 2].map(i =>
-      `<circle cx="${C + i * rH * 0.2}" cy="${mY + (Math.abs(i) < 2 ? rH * 0.07 : 0)}" r="${rH * 0.06}" fill="#3A3A3A"/>`).join('')
+  /* Nez */
+  if (L.nose === 'carrot') {
+    const n = new T.Mesh(
+      new T.ConeGeometry(a.headR * 0.19, a.headR * 0.95, 12),
+      new T.MeshStandardMaterial({ color: 0xF08A2E, roughness: 0.55 })
+    )
+    n.rotation.x = Math.PI / 2
+    n.position.set(0, a.headY, a.headR * 1.25)
+    n.castShadow = true
+    D.add(n)
+  } else {
+    const n = new T.Mesh(
+      new T.SphereGeometry(a.headR * 0.18, 16, 12),
+      new T.MeshStandardMaterial({ color: 0xE0504F, roughness: 0.4 })
+    )
+    n.position.set(0, a.headY, a.headR * 0.95)
+    n.castShadow = true
+    D.add(n)
   }
 
-  // Écharpe au cou (entre tête et milieu)
-  let scarf = ''
-  if (balls.length === 3 && l.scarf !== 'none') {
-    const rM = balls[1]
-    const neckY = ys[1] - ry(rM) * 0.82
-    scarf = `<rect x="${C - rM * 0.74}" y="${neckY - 5}" width="${rM * 1.48}" height="11" rx="5.5" fill="${l.scarf}"/>
-      <rect x="${C + rM * 0.16}" y="${neckY + 2}" width="10" height="${ry(rM) * 0.95}" rx="5" fill="${l.scarf}"/>`
+  /* Bouche : petits cailloux en arc — toujours là, ça donne le sourire */
+  const mGeo = new T.SphereGeometry(a.headR * 0.07, 10, 8)
+  const mMat = new T.MeshStandardMaterial({ color: 0x2A2320, roughness: 0.5 })
+  for (let i = -2; i <= 2; i++) {
+    const p = new T.Mesh(mGeo, mMat)
+    const ang = i * 0.30
+    p.position.set(Math.sin(ang) * a.headR * 0.6, a.headY - a.headR * 0.34 - Math.cos(ang) * a.headR * 0.06, a.headR * 0.83)
+    D.add(p)
   }
 
-  let hat = ''
-  if (balls.length === 3) hat = hatSVG(l.hat, C, ys[2] - ry(balls[2]), balls[2])
-
-  // Déco à côté / sur la tête
-  let extra = ''
-  const rB = balls[0] || 30
-  if (l.extra === 'broom') {
-    const bx = C + rB + 22
-    extra = `<path d="M${bx},${GROUND + 2} L${bx},${GROUND - 74}" stroke="#B07B45" stroke-width="5" stroke-linecap="round"/>
-      <polygon points="${bx - 10},${GROUND + 4} ${bx + 10},${GROUND + 4} ${bx + 6},${GROUND - 26} ${bx - 6},${GROUND - 26}" fill="#E8C36A" stroke="#C99A3F" stroke-width="2" stroke-linejoin="round"/>`
-  } else if (l.extra === 'sled') {
-    extra = `<text x="${C - rB - 40}" y="${GROUND + 2}" font-size="34">🛷</text>`
-  } else if (l.extra === 'bird' && balls.length === 3) {
-    const topYH = ys[2] - ry(balls[2])
-    const by = l.hat === 'none' ? topYH - 3 : topYH - balls[2] * 1.2 - 9
-    extra = `<text x="${C + 3}" y="${by}" font-size="17">🐦</text>`
-  }
-
-  return `<svg viewBox="0 0 240 320">${sceneDecor()}${extra}${body}${arms}${scarf}${face}${hat}</svg>`
-}
-
-/* ---- Phase 1 : rouler les boules ---- */
-function rollSVG(): string {
-  const shape = sn.look.shape
-  const ry = (r: number) => (shape === 'round' ? r : r * 0.87)
-  // La pile des boules déjà posées, décalée à gauche
-  const ys = centers(sn.balls, shape)
-  let stack = ''
-  sn.balls.forEach((r: number, i: number) => {
-    stack += ballShape(C - 45, ys[i], r, shape)
-  })
-  const r = sn.r
-  const bx = 172, by = GROUND - ry(r)
-  // Contour appuyé + ombre : la boule à rouler doit bien se détacher de la neige
-  const roll = `<ellipse cx="${bx}" cy="${GROUND + 3}" rx="${r * 1.05}" ry="${r * 0.16}" fill="rgba(120,155,185,.22)"/>
-  <g class="sn-hit sn-roll${sn.pulse === 9 ? ' sn-pop' : ''}" data-b="9">
-    <circle cx="${bx}" cy="${by}" r="${r + 5}" fill="rgba(255,255,255,.01)"/>
-    ${ballShape(bx, by, r, shape).replace('stroke="#C2D9EA" stroke-width="2.5"', 'stroke="#8FB8D6" stroke-width="3.5"')}
-    <path d="M${bx - r * 0.55},${by} A${r * 0.55},${r * 0.5} 0 0 1 ${bx + r * 0.55},${by}" fill="none"
-      stroke="#BAD5E8" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
-    <path d="M${bx - r * 0.3},${by + r * 0.4} A${r * 0.35},${r * 0.3} 0 0 0 ${bx + r * 0.35},${by + r * 0.35}" fill="none"
-      stroke="#BAD5E8" stroke-width="2" stroke-linecap="round" opacity=".8"/>
-  </g>
-  <text x="${bx}" y="${by - ry(r) - 14}" font-size="26" text-anchor="middle" class="sn-taphint">👆</text>`
-  return `<svg viewBox="0 0 240 320">${sceneDecor()}${stack}${roll}</svg>`
-}
-
-const BALL_NAMES = ['la grosse boule du bas', 'la boule du ventre', 'la boule de la tête']
-
-function attachRollHit() {
-  const hit = document.querySelector<HTMLElement>('#snSvg .sn-roll')
-  if (!hit) return
-  hit.onpointerdown = () => {
-    if (!sn || !sn.running || sn.phase !== 'roll') return
-    const cap = CAPS[sn.balls.length]
-    if (sn.r >= cap) {
-      $('snHint').textContent = 'Elle est GÉANTE ! Pose-la ! 😄'
-      tone(140, 0.08, 'square', 0.1)
-    } else {
-      sn.r = Math.min(cap, sn.r + GROW)
-      sCrunch(); tone(160 + sn.r * 3, 0.05, 'triangle', 0.1)
+  /* Chapeau */
+  if (L.hat === 'tophat') {
+    const mat = new T.MeshStandardMaterial({ color: 0x2A2733, roughness: 0.45, metalness: 0.1 })
+    const brim = new T.Mesh(new T.CylinderGeometry(a.headR * 1.15, a.headR * 1.15, a.headR * 0.09, 24), mat)
+    brim.position.y = a.headY + a.headR * 0.86
+    const top = new T.Mesh(new T.CylinderGeometry(a.headR * 0.72, a.headR * 0.72, a.headR * 1.15, 24), mat)
+    top.position.y = a.headY + a.headR * 1.45
+    const band = new T.Mesh(new T.CylinderGeometry(a.headR * 0.74, a.headR * 0.74, a.headR * 0.24, 24),
+      new T.MeshStandardMaterial({ color: 0xE04E63, roughness: 0.6 }))
+    band.position.y = a.headY + a.headR * 1.0
+    ;[brim, top, band].forEach(m => { m.castShadow = true; D.add(m) })
+  } else if (L.hat === 'bonnet') {
+    const mat = new T.MeshStandardMaterial({ color: 0x4FA3D8, roughness: 0.95 })
+    const cap = new T.Mesh(new T.SphereGeometry(a.headR * 1.03, 22, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat)
+    cap.position.y = a.headY + a.headR * 0.28
+    const rim = new T.Mesh(new T.TorusGeometry(a.headR * 1.0, a.headR * 0.13, 10, 24), mat)
+    rim.rotation.x = Math.PI / 2
+    rim.position.y = a.headY + a.headR * 0.3
+    const pom = new T.Mesh(new T.SphereGeometry(a.headR * 0.26, 14, 12),
+      new T.MeshStandardMaterial({ color: 0xFFF3E0, roughness: 1 }))
+    pom.position.y = a.headY + a.headR * 1.35
+    ;[cap, rim, pom].forEach(m => { m.castShadow = true; D.add(m) })
+  } else if (L.hat === 'crown') {
+    const mat = new T.MeshStandardMaterial({ color: 0xF0C24A, roughness: 0.28, metalness: 0.85 })
+    const band = new T.Mesh(new T.CylinderGeometry(a.headR * 0.8, a.headR * 0.8, a.headR * 0.4, 20, 1, true), mat)
+    band.position.y = a.headY + a.headR * 1.0
+    band.castShadow = true
+    D.add(band)
+    for (let i = 0; i < 6; i++) {
+      const sp = new T.Mesh(new T.ConeGeometry(a.headR * 0.16, a.headR * 0.42, 8), mat)
+      const ang = (i / 6) * Math.PI * 2
+      sp.position.set(Math.sin(ang) * a.headR * 0.8, a.headY + a.headR * 1.38, Math.cos(ang) * a.headR * 0.8)
+      sp.castShadow = true
+      D.add(sp)
     }
-    sn.pulse = 9
-    $('snSvg').innerHTML = rollSVG()
-    sn.pulse = -1
-    attachRollHit()
   }
-}
 
-function renderRoll() {
-  $('snSvg').innerHTML = rollSVG()
-  sn.pulse = -1
-  $('snHint').textContent = `Boule ${sn.balls.length + 1}/3 — tape ${BALL_NAMES[sn.balls.length]} pour la faire grossir !`
-  $('snControls').innerHTML = `
-    <button class="bigbtn primary" id="snPlace">✔ Je la pose !</button>`
-  attachRollHit()
-  ;($('snPlace') as HTMLButtonElement).onclick = () => {
-    if (!sn || !sn.running || sn.phase !== 'roll') return
-    sn.balls.push(sn.r)
-    sn.r = START_R
-    sGood()
-    const st = $('snStage').getBoundingClientRect()
-    FX.burst(st.left + st.width / 2, st.top + st.height * 0.7, { colors: ['#FFF', '#DCEFF9'], count: 10 })
-    if (sn.balls.length === 3) { sn.phase = 'deco'; renderDeco(); return }
-    renderRoll()
-  }
-}
-
-/* ---- Phase 2 : habiller en glissant ---- */
-function applyProp(k: string, v: string) {
-  if (!sn || !sn.running) return
-  sn.look[k] = v
-  sPop()
-  renderDecoSvg()
-  document.querySelectorAll<HTMLElement>('.sn-opt').forEach(b => {
-    b.classList.toggle('sel', sn.look[b.dataset.k!] === b.dataset.v)
-  })
-}
-
-function renderDecoSvg() {
-  $('snSvg').innerHTML = snowmanSVG()
-  sn.pulse = -1
-  document.querySelectorAll<HTMLElement>('#snSvg .sn-hit').forEach(g => {
-    g.onpointerdown = () => { // toucher une boule : petit frétillement rigolo
-      if (!sn || !sn.running) return
-      sn.pulse = parseInt(g.dataset.b!)
-      tone(500 + sn.pulse * 120, 0.06, 'triangle', 0.1)
-      renderDecoSvg()
+  /* Écharpe : un tore au cou + deux pans qui pendent */
+  if (L.scarf !== 'none') {
+    const col = new T.Color(L.scarf)
+    const mat = new T.MeshStandardMaterial({ color: col, roughness: 1 })
+    const neckY = (a.headY - a.headR * 0.82 + a.bodyY + a.bodyR * 0.82) / 2
+    const nr = Math.max(a.headR * 0.85, a.bodyR * 0.62)
+    const ring = new T.Mesh(new T.TorusGeometry(nr, nr * 0.22, 12, 26), mat)
+    ring.rotation.x = Math.PI / 2
+    ring.position.y = neckY
+    ring.castShadow = true
+    D.add(ring)
+    for (const sx of [-0.55, 0.35]) {
+      const tail = new T.Mesh(new T.BoxGeometry(nr * 0.5, nr * 1.5, nr * 0.2), mat)
+      tail.position.set(sx * nr, neckY - nr * 0.75, nr * 0.72)
+      tail.rotation.x = -0.25
+      tail.rotation.z = sx * 0.18
+      tail.castShadow = true
+      D.add(tail)
     }
-  })
-}
-
-function optChips(cat: (typeof CATS)[number]): string {
-  if (cat.colors) {
-    return `<button class="du-opt sn-opt" data-k="${cat.id}" data-v="none">✖️</button>` + cat.colors.map(col =>
-      `<button class="du-opt du-color sn-opt" data-k="${cat.id}" data-v="${col}" style="background:${col}"></button>`).join('')
   }
-  return cat.opts!.map(([v, icon]) =>
-    `<button class="du-opt sn-opt" data-k="${cat.id}" data-v="${v}">${icon}</button>`).join('')
+
+  /* Bras */
+  if (L.arms !== 'none') {
+    const woodMat = new T.MeshStandardMaterial({ color: 0x6B4A32, roughness: 0.9 })
+    const len = a.bodyR * 2.0
+    const armGeo = new T.CylinderGeometry(a.bodyR * 0.055, a.bodyR * 0.075, len, 8)
+    const TILT = 0.55 // radians au-dessus de l'horizontale
+    for (const sx of [-1, 1]) {
+      // Direction du bras : vers l'extérieur et vers le haut
+      const dx = sx * Math.cos(TILT), dy = Math.sin(TILT)
+      const shx = sx * a.bodyR * 0.8, shy = a.bodyY + a.bodyR * 0.3
+      const arm = new T.Mesh(armGeo, woodMat)
+      arm.position.set(shx + dx * len / 2, shy + dy * len / 2, 0)
+      arm.rotation.z = -sx * (Math.PI / 2 - TILT) // aligne le cylindre (+Y) sur la direction
+      arm.castShadow = true
+      D.add(arm)
+      const tipX = shx + dx * len, tipY = shy + dy * len
+      // Deux brindilles au bout, sinon ça fait un bâton
+      for (const k of [-1, 1]) {
+        const tw = new T.Mesh(new T.CylinderGeometry(a.bodyR * 0.03, a.bodyR * 0.04, a.bodyR * 0.5, 6), woodMat)
+        tw.position.set(tipX + dx * a.bodyR * 0.16, tipY + a.bodyR * 0.2, k * a.bodyR * 0.16)
+        tw.rotation.z = -sx * 0.9
+        tw.rotation.x = k * 0.5
+        tw.castShadow = true
+        D.add(tw)
+      }
+      if (L.arms === 'mitten') {
+        const mit = new T.Mesh(new T.SphereGeometry(a.bodyR * 0.2, 14, 12),
+          new T.MeshStandardMaterial({ color: 0xE04E63, roughness: 1 }))
+        mit.position.set(tipX, tipY, 0)
+        mit.scale.set(1, 1.25, 0.85)
+        mit.castShadow = true
+        D.add(mit)
+      }
+    }
+  }
+
+  /* Boutons */
+  if (L.buttons !== 'none') {
+    const mat = new T.MeshStandardMaterial({ color: new T.Color(L.buttons), roughness: 0.4, metalness: 0.2 })
+    const geo = new T.SphereGeometry(a.bodyR * 0.11, 14, 12)
+    for (let i = 0; i < 3; i++) {
+      const b = new T.Mesh(geo, mat)
+      const ang = 0.5 - i * 0.5
+      b.position.set(0, a.bodyY + Math.sin(ang) * a.bodyR * 0.86, Math.cos(ang) * a.bodyR * 0.94)
+      b.castShadow = true
+      D.add(b)
+    }
+  }
 }
 
-function renderDeco() {
-  $('snHint').textContent = 'Glisse les habits sur ton bonhomme !'
-  $('snControls').innerHTML = `
-    <div class="sn-tabs">
-      ${CATS.map(cat => `<button class="chip sn-tab${cat.id === sn.cat ? ' sel' : ''}" data-c="${cat.id}">${cat.icon}</button>`).join('')}
-    </div>
-    <div class="du-row sn-optrow" id="snOpts"></div>
-    <button class="bigbtn primary" id="snDone" style="margin-top:10px">✨ Il est parfait !</button>`
-  renderDecoSvg()
-  renderOpts()
-  document.querySelectorAll<HTMLElement>('.sn-tab').forEach(b => {
+/* ---------- Interface ---------- */
+function optionRow() {
+  const cat = CATS.find(c => c.id === S.cat)!
+  const cur = (S.look as any)[S.cat]
+  return cat.opts.map(([v, ic]) => {
+    const isCol = v.startsWith('#')
+    return `<button class="du-opt${isCol ? ' du-color' : ''}${cur === v ? ' sel' : ''}" data-v="${v}"
+      ${isCol ? `style="background:${v}"` : ''}>${isCol ? '' : ic}</button>`
+  }).join('')
+}
+
+function paintUI() {
+  const rolling = S.phase === 'roll'
+  $('snRoll').style.display = rolling ? '' : 'none'
+  $('snDeco').style.display = rolling ? 'none' : ''
+  if (rolling) {
+    const n = Math.min(2, S.stack.length)
+    const pct = Math.min(1, (S.r - R0) / (CAPS[n] - R0))
+    $('snGauge').style.width = (pct * 100).toFixed(0) + '%'
+    $('snBall').textContent = `⛄ Boule ${Math.min(3, S.stack.length + 1)}/3`
+    ;($('snPlace') as HTMLButtonElement).disabled = S.r < R0 * 1.35 || S.dropping
+    $('snPlace').classList.toggle('ready', pct > 0.75)
+  } else {
+    $('snTabs').innerHTML = CATS.map(c =>
+      `<button class="chip sn-tab${S.cat === c.id ? ' sel' : ''}" data-c="${c.id}">${c.icon}</button>`).join('')
+    $('snOpts').innerHTML = optionRow()
+    bindDeco()
+  }
+}
+
+function bindDeco() {
+  $('snTabs').querySelectorAll<HTMLElement>('.sn-tab').forEach(b => {
+    b.onclick = () => { if (!S) return; S.cat = b.dataset.c as CatId; sPop(); paintUI() }
+  })
+  $('snOpts').querySelectorAll<HTMLElement>('.du-opt').forEach(b => {
     b.onclick = () => {
-      if (!sn || !sn.running) return
-      sn.cat = b.dataset.c
-      document.querySelectorAll('.sn-tab').forEach(x => x.classList.remove('sel'))
-      b.classList.add('sel')
-      sPop(); renderOpts()
-    }
-  })
-  ;($('snDone') as HTMLButtonElement).onclick = () => sn && sn.running && finish()
-}
-
-function renderOpts() {
-  const cat = CATS.find(c => c.id === sn.cat)!
-  $('snOpts').innerHTML = optChips(cat)
-  document.querySelectorAll<HTMLElement>('.sn-opt').forEach(b => {
-    b.classList.toggle('sel', sn.look[b.dataset.k!] === b.dataset.v)
-    // Tap = applique. Glisser jusqu'au bonhomme = applique aussi (avec étincelles).
-    b.onpointerdown = e => {
-      if (!sn || !sn.running) return
-      e.preventDefault()
-      sn.dragOpt = { k: b.dataset.k!, v: b.dataset.v!, x0: e.clientX, y0: e.clientY, ghost: null, html: b.innerHTML, isColor: b.classList.contains('du-color'), bg: b.style.background }
+      if (!S) return
+      ;(S.look as any)[S.cat] = b.dataset.v
+      sPop()
+      buildDeco()
+      paintUI()
     }
   })
 }
 
-function decoDragMove(e: PointerEvent) {
-  const d = sn && sn.dragOpt
-  if (!d) return
-  if (!d.ghost && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 8) {
-    d.ghost = document.createElement('div')
-    d.ghost.className = 'sn-ghost'
-    if (d.isColor) { d.ghost.style.background = d.bg; d.ghost.classList.add('sn-ghost-color') }
-    else d.ghost.innerHTML = d.html
-    document.body.appendChild(d.ghost)
-  }
-  if (d.ghost) {
-    d.ghost.style.left = e.clientX - 24 + 'px'
-    d.ghost.style.top = e.clientY - 24 + 'px'
-  }
+/* ---------- Poser une boule ---------- */
+function placeBall() {
+  if (!S || S.dropping || S.phase !== 'roll') return
+  const CANNON: Cannon = S.CANNON
+  const r = S.r
+  const idx = S.stack.length
+  const topY = S.stack.length ? S.stack[S.stack.length - 1].topY : 0
+
+  // Détache la boule roulante : elle devient un corps dynamique lâché au-dessus de la pile
+  const mesh = S.ball
+  S.ball = null
+  // Un léger décalage donne du caractère, mais la boule tombe sur un RAIL vertical :
+  // une sphère sur une sphère finirait toujours par glisser, et le jeu se bloquerait.
+  const tx = (Math.random() - 0.5) * r * 0.14
+  const tz = (Math.random() - 0.5) * r * 0.14
+  mesh.position.set(tx, topY + r + 0.45, tz)
+
+  const body = new CANNON.Body({
+    mass: 1.2 + r,
+    material: S.matSnow,
+    shape: new CANNON.Sphere(r),
+    position: new CANNON.Vec3(tx, mesh.position.y, tz)
+  })
+  body.linearDamping = 0.2
+  body.angularDamping = 0.9
+  S.world.addBody(body)
+
+  const entry = { mesh, body, r, tx, tz, topY: 0, settled: false, t: 0, landed: false }
+  S.stack.push(entry)
+  S.dropping = true
+  ctx.toast(idx === 2 ? 'La tête est posée ! 🎉' : 'Et hop, une boule de plus !')
+  paintUI()
 }
 
-function decoDragEnd(e: PointerEvent) {
-  const d = sn && sn.dragOpt
-  if (!d) return
-  sn.dragOpt = null
-  if (!d.ghost) { applyProp(d.k, d.v); return } // simple tap
-  d.ghost.remove()
-  const st = $('snStage').getBoundingClientRect()
-  if (e.clientX > st.left && e.clientX < st.right && e.clientY > st.top && e.clientY < st.bottom) {
-    FX.burst(e.clientX, e.clientY, { colors: ['#FFF', '#FFE08A', '#DCEFF9'], count: 8 })
-    applyProp(d.k, d.v)
+/** Fige une boule posée : une sphère sur une sphère finirait toujours par rouler. */
+function settle(e: any) {
+  const CANNON: Cannon = S.CANNON
+  e.settled = true
+  e.body.velocity.setZero()
+  e.body.angularVelocity.setZero()
+  // mass = 0 AVANT le passage en statique : sinon invMass reste fini et la boule
+  // suivante « s'enfonce » dedans au lieu de rebondir (piège déjà vu en 2D).
+  e.body.mass = 0
+  e.body.type = CANNON.Body.STATIC
+  e.body.updateMassProperties()
+  e.topY = e.body.position.y + e.r
+  e.mesh.scale.setScalar(e.r)
+  S.dropping = false
+
+  if (S.stack.length >= 3) {
+    S.phase = 'deco'
+    S.orbit.look = [0, e.topY * 0.52, 0]
+    S.orbit.dist = Math.max(3.4, e.topY * 1.6 + 1.4)
+    S.orbit.height = e.topY * 0.3
+    S.orbit.auto = 0.16 // le bonhomme tourne doucement : on le voit sous tous les angles
+    buildDeco()
+    sWin()
+    ctx.toast('Ton bonhomme est né ! Habille-le 🎩')
+  } else {
+    newBall()
   }
+  paintUI()
 }
 
+function newBall() {
+  const { T, scene } = S.stage
+  S.r = R0
+  const m = new T.Mesh(S.ballGeo, S.snowMat)
+  m.castShadow = true; m.receiveShadow = true
+  m.scale.setScalar(R0)
+  // Toujours devant la caméra, bien visible : une petite ne doit rien chercher
+  m.position.set((Math.random() - 0.5) * 1.2, R0, 1.9)
+  scene.add(m)
+  S.ball = m
+}
+
+/* ---------- Fin ---------- */
 function finish() {
-  sWin(); confetti()
-  const svg = $('snSvg')
-  svg.classList.add('sn-dance')
-  sn.endT = setTimeout(() => sn && sn.running && ctx.finish({
-    title: 'Quel bonhomme !',
-    msg: `${ctx.playerName} a roulé et décoré un bonhomme de neige unique ⛄`,
+  if (!S || S.done) return
+  S.done = true
+  confetti()
+  sWin()
+  const names = ['génial', 'magnifique', 'trop beau', 'super rigolo']
+  ctx.finish({
+    title: 'Quel beau bonhomme ! ⛄',
+    msg: `${ctx.playerName} a roulé un bonhomme de neige ${pick(names)}`,
     stars: 3, starsEarned: 3
-  }), 900)
+  })
 }
 
 export const snowman: GameDef = {
   id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', duel: false, music: 'winter',
-  subtitle: 'Roule tes trois boules de neige, puis glisse les habits dessus !',
+  subtitle: 'Roule tes boules dans la vraie neige, empile-les, puis habille-le !',
   mount(c) {
     ctx = c
-    sn = { phase: 'roll', balls: [], r: START_R, look: defLook(), cat: 'hat', pulse: -1, dragOpt: null, running: true }
-
-    const flakes = Array.from({ length: 12 }, () =>
-      `<span class="sn-flake" style="left:${4 + Math.random() * 92}%;animation-duration:${5 + Math.random() * 6}s;animation-delay:${-Math.random() * 10}s;font-size:${9 + Math.random() * 8}px">❄</span>`).join('')
-
+    let dead = false
     c.root.innerHTML = `
-      <div class="topbar" style="flex-wrap:wrap">
-        ${BGS.map((b, i) => `<button class="chip sn-bg${i === 0 ? ' sel' : ''}" data-i="${i}">${b.icon}</button>`).join('')}
-        <button class="chip sn-shape" data-v="round">⚪</button>
-        <button class="chip sn-shape" data-v="oval">🥚</button>
-        <button class="chip sn-shape" data-v="cube">🧊</button>
-        <button class="chip" id="snRandom">🎲</button>
-        <button class="chip" id="snReset" title="Recommencer">↺</button>
+      <div class="topbar">
+        <div class="chip" id="snBall">⛄ Boule 1/3</div>
+        <button class="chip" id="snLeft">◀</button>
+        <button class="chip" id="snRight">▶</button>
       </div>
-      <div class="sn-stage" id="snStage" style="background:${BGS[0].css}">${flakes}<div id="snSvg"></div></div>
-      <div class="hint" id="snHint" style="position:static;margin:4px 0 8px"></div>
-      <div id="snControls"></div>`
+      <div class="arena g3-arena" id="snArena">
+        <div class="hint g3-hint" id="snHint">Glisse ton doigt : la boule roule et grossit ! ❄️</div>
+      </div>
+      <div class="g3-bar" id="snRoll">
+        <div class="g3-gauge"><i id="snGauge"></i></div>
+        <button class="g3-btn" id="snPlace">Poser la boule ⬇️</button>
+      </div>
+      <div class="g3-bar" id="snDeco" style="display:none">
+        <div class="g3-row" id="snTabs"></div>
+        <div class="g3-row sn-optrow" id="snOpts"></div>
+        <div class="g3-row">
+          <button class="g3-btn ghost" id="snAgain">🎲 Surprise</button>
+          <button class="g3-btn" id="snDone">C'est fini ! ✅</button>
+        </div>
+      </div>`
 
-    document.querySelectorAll<HTMLElement>('.sn-bg').forEach(b => {
-      b.onclick = () => {
-        if (!sn || !sn.running) return
-        $('snStage').style.background = BGS[parseInt(b.dataset.i!)].css
-        document.querySelectorAll('.sn-bg').forEach(x => x.classList.remove('sel'))
-        b.classList.add('sel'); sPop()
-      }
-    })
-    document.querySelectorAll<HTMLElement>('.sn-shape').forEach(b => {
-      b.onclick = () => {
-        if (!sn || !sn.running) return
-        sn.look.shape = b.dataset.v
-        sPop()
-        if (sn.phase === 'roll') renderRoll(); else renderDecoSvg()
-      }
-    })
-    ;($('snRandom') as HTMLButtonElement).onclick = () => {
-      if (!sn || !sn.running) return
-      // Surprise : trois boules toutes faites + look aléatoire
-      sn.balls = [rnd(34, CAPS[0]), rnd(26, CAPS[1]), rnd(18, CAPS[2])]
-      sn.phase = 'deco'
-      sn.look = {
-        shape: pick(['round', 'oval', 'cube']),
-        hat: pick(['none', 'tophat', 'bonnet', 'cap', 'crown']),
-        scarf: pick(['none', ...SCARF_COLORS]),
-        eyes: pick(['coal', 'button', 'star']), nose: pick(['carrot', 'dot']),
-        arms: pick(['branch', 'mitten', 'none']),
-        buttons: pick(['none', ...BTN_COLORS]),
-        extra: pick(['none', 'broom', 'sled', 'bird'])
-      }
-      $('snStage').style.background = pick(BGS).css
-      sPop(); renderDeco()
-    }
-    ;($('snReset') as HTMLButtonElement).onclick = () => {
-      if (!sn || !sn.running) return
-      sn.phase = 'roll'; sn.balls = []; sn.r = START_R; sn.look = defLook(); sn.cat = 'hat'
-      $('snStage').style.background = BGS[0].css
-      document.querySelectorAll('.sn-bg').forEach((x, i) => x.classList.toggle('sel', i === 0))
-      sPop(); renderRoll()
-    }
+    const arena = $('snArena')
+    const hideLoader = loader(arena, '⛄')
 
-    const onMove = (e: PointerEvent) => decoDragMove(e)
-    const onUp = (e: PointerEvent) => decoDragEnd(e)
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
+    ;(async () => {
+      const [, CANNON] = await loadPhysics()
+      if (dead) return
+      const stage: Stage = await createStage(arena, {
+        sky: '#AEDCF5',
+        fog: [12, 34], fogColor: '#D3EAF8',
+        cam: [0, 2.9, 6.1], target: [0, 0.85, 0], fov: 46,
+        hemi: ['#DDF0FF', '#9FBBD0', 1.15],
+        sun: { pos: [5.5, 8, 5], color: '#FFF4E0', intensity: 2.5, area: 8, far: 26 },
+        fill: 0.5, exposure: 1.08
+      })
+      if (dead) { stage.dispose(); return }
+      hideLoader()
+      const T = stage.T
+      const scene = stage.scene
 
-    renderRoll()
+      /* Sol de neige + calque de sillon */
+      const snowMap = stage.keep(snowTex(T, 9))
+      const snowNrm = stage.keep(bumpyNormal(T, 10, 9))
+      const ground = new T.Mesh(
+        new T.PlaneGeometry(60, 60),
+        new T.MeshStandardMaterial({ map: snowMap, normalMap: snowNrm, roughness: 0.86, metalness: 0 })
+      )
+      ground.rotation.x = -Math.PI / 2
+      ground.receiveShadow = true
+      scene.add(ground)
+
+      const trail = makeTrail(T)
+      const trailMesh = new T.Mesh(
+        new T.PlaneGeometry(FIELD * 2, FIELD * 2),
+        new T.MeshStandardMaterial({
+          map: trail.tex, transparent: true, roughness: 0.55, metalness: 0.05,
+          polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
+        })
+      )
+      trailMesh.rotation.x = -Math.PI / 2
+      trailMesh.position.y = 0.002
+      trailMesh.receiveShadow = true
+      scene.add(trailMesh)
+
+      addTrees(T, scene)
+      const fall = addSnowfall(T, scene)
+
+      /* Monde physique : ne sert qu'à la chute et à l'écrasement des boules */
+      const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) })
+      world.broadphase = new CANNON.SAPBroadphase(world)
+      ;(world.solver as any).iterations = 14
+      const matSnow = new CANNON.Material('snow')
+      world.addContactMaterial(new CANNON.ContactMaterial(matSnow, matSnow, { friction: 0.9, restitution: 0.02 }))
+      world.addBody(new CANNON.Body({
+        type: CANNON.Body.STATIC, material: matSnow, shape: new CANNON.Plane(),
+        quaternion: new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0)
+      }))
+
+      const snowMat = new T.MeshStandardMaterial({
+        color: 0xFAFDFF, map: snowMap, normalMap: snowNrm, roughness: 0.78, metalness: 0.02
+      })
+      const ballGeo = new T.SphereGeometry(1, 30, 22)
+
+      S = {
+        stage, CANNON, world, matSnow, snowMat, ballGeo, trail, fall,
+        phase: 'roll', stack: [], r: R0, ball: null, dropping: false, done: false,
+        look: defLook(), cat: 'hat' as CatId, deco: null, puffs: [],
+        orbit: orbitCam(stage, 5.6, 2.1, [0, 0.7, 0]),
+        step: fixedStep()
+      }
+      newBall()
+
+      /* --- Rouler la boule : glisser le doigt --- */
+      let dragging = false
+      let lastPt: { x: number; y: number } | null = null
+      const fwd = new T.Vector3(), right = new T.Vector3(), move = new T.Vector3()
+
+      const onDown = (e: PointerEvent) => {
+        if (!S || S.phase !== 'roll' || !S.ball) return
+        dragging = true
+        lastPt = { x: e.clientX, y: e.clientY }
+        $('snHint').style.opacity = '0'
+      }
+      const onMove = (e: PointerEvent) => {
+        if (!S || !dragging || !lastPt || !S.ball) return
+        const dx = e.clientX - lastPt.x, dy = e.clientY - lastPt.y
+        lastPt = { x: e.clientX, y: e.clientY }
+        // Le doigt pousse dans le repère de la caméra : « vers le haut » = « vers le fond »
+        stage.camera.getWorldDirection(fwd)
+        fwd.y = 0; fwd.normalize()
+        right.set(fwd.z, 0, -fwd.x)
+        move.copy(right).multiplyScalar(dx * 0.011).add(fwd.clone().multiplyScalar(-dy * 0.011))
+        const dist = move.length()
+        if (dist < 0.0004) return
+
+        const b = S.ball
+        const cap = CAPS[S.stack.length]
+        b.position.add(move)
+        // On reste dans le champ de neige
+        const lim = FIELD - S.r
+        b.position.x = Math.max(-lim, Math.min(lim, b.position.x))
+        b.position.z = Math.max(-lim, Math.min(lim, b.position.z))
+
+        if (S.r < cap) {
+          S.r = Math.min(cap, S.r + dist * GROW)
+          if (S.r >= cap) { ctx.toast('Elle est énorme ! Pose-la 👇'); tone(880, 0.12, 'triangle', 0.12) }
+        }
+        b.scale.setScalar(S.r)
+        b.position.y = S.r
+
+        // Rotation de roulement autour de l'axe perpendiculaire au déplacement
+        const axis = new T.Vector3(move.z, 0, -move.x).normalize()
+        b.rotateOnWorldAxis(axis, dist / S.r)
+
+        digAt(b.position.x, b.position.z, S.r * 1.15)
+        S.rolled = (S.rolled || 0) + dist
+        if (S.rolled > 0.55) { S.rolled = 0; sCrunch() }
+        paintUI()
+      }
+      const onUp = () => { dragging = false; lastPt = null }
+
+      stage.renderer.domElement.addEventListener('pointerdown', onDown)
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
+
+      /* --- Boutons --- */
+      ;($('snPlace') as HTMLButtonElement).onclick = () => placeBall()
+      $('snLeft').onclick = () => { S?.orbit.turn(-0.6); sPop() }
+      $('snRight').onclick = () => { S?.orbit.turn(0.6); sPop() }
+      $('snDone').onclick = () => finish()
+      $('snAgain').onclick = () => {
+        if (!S) return
+        S.look = {
+          hat: pick(['none', 'tophat', 'bonnet', 'crown']),
+          scarf: pick(['none', ...SCARVES]),
+          eyes: pick(['coal', 'button', 'star']),
+          nose: pick(['carrot', 'dot']),
+          arms: pick(['branch', 'mitten', 'none']),
+          buttons: pick(['none', ...BTNCOLS])
+        }
+        sPop(); buildDeco(); paintUI()
+      }
+      paintUI()
+
+      /* --- Boucle --- */
+      stage.start((dt) => {
+        if (!S) return
+        // Pendant le roulage la caméra suit la boule : elle ne sort jamais du cadre
+        if (S.phase === 'roll' && S.ball) {
+          S.orbit.look = [S.ball.position.x * 0.75, 0.7, S.ball.position.z * 0.75]
+        }
+        S.orbit.update(dt)
+
+        // Neige qui tombe : recyclage des flocons arrivés au sol
+        const p = fall.pos
+        for (let i = 0; i < fall.N; i++) {
+          p[i * 3 + 1] -= dt * (0.5 + (i % 7) * 0.09)
+          p[i * 3] += Math.sin((performance.now() / 1400) + i) * dt * 0.12
+          if (p[i * 3 + 1] < 0) { p[i * 3 + 1] = 11 + Math.random() * 2 }
+        }
+        fall.pts.geometry.attributes.position.needsUpdate = true
+
+        S.step(dt, () => {
+          world.step(1 / 60)
+          for (const e of S.stack) {
+            if (e.settled) continue
+            // Rail vertical : la chute est simulée, la dérive latérale ne l'est pas
+            e.body.position.x = e.tx
+            e.body.position.z = e.tz
+            e.body.velocity.x = 0
+            e.body.velocity.z = 0
+            e.t += 1 / 60
+          }
+        })
+        for (const e of S.stack) {
+          if (e.settled) continue
+          e.mesh.position.copy(e.body.position as any)
+          e.mesh.quaternion.copy(e.body.quaternion as any)
+          // Écrasement à l'impact : la boule s'aplatit puis retrouve sa forme
+          const rest = (S.stack.indexOf(e) ? S.stack[S.stack.indexOf(e) - 1].topY : 0) + e.r
+          if (!e.landed && e.body.position.y <= rest + 0.02) {
+            e.landed = true
+            e.squash = 1
+            puff(e.tx, e.body.position.y - e.r, e.tz, 18)
+            sCrunch()
+          }
+          if (e.squash > 0) {
+            e.squash = Math.max(0, e.squash - dt * 3.4)
+            const k = Math.sin(e.squash * Math.PI * 2.2) * e.squash * 0.22
+            e.mesh.scale.set(e.r * (1 + k), e.r * (1 - k), e.r * (1 + k))
+          } else e.mesh.scale.setScalar(e.r)
+          if (e.t > 0.3 && e.body.velocity.length() < 0.14) settle(e)
+          else if (e.t > 4) settle(e) // filet de sécurité : on ne bloque jamais le jeu
+        }
+        stepPuffs(dt)
+      })
+
+      S.cleanup = () => {
+        stage.renderer.domElement.removeEventListener('pointerdown', onDown)
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        trail.tex.dispose()
+        stage.dispose()
+      }
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+
     return () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      if (sn) {
-        sn.running = false
-        clearTimeout(sn.endT)
-        if (sn.dragOpt?.ghost) sn.dragOpt.ghost.remove()
-        sn = null
+      dead = true
+      if (S) {
+        try { S.cleanup?.() } catch { /* déjà démonté */ }
+        S = null
       }
     }
   }

@@ -1,312 +1,536 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick } from '../core/utils'
+import { $ } from '../core/utils'
 import { sGood, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
+import {
+  createStage, loader, orbitCam, dotTex, picker, type Stage
+} from '../core/three3d'
 
-/* Mon Voyage dans l'Espace — la joueuse devient astronaute (sa photo dans le
-   hublot de la fusée) et explore le système solaire. On touche une planète,
-   la fusée s'y envole, la planète s'affiche en grand toute belle et une
-   MERVEILLE est racontée à voix haute. Zéro quiz : découverte pure. Visiter
-   les 8 planètes → diplôme d'astronaute. */
+/* 🚀 Mon Voyage dans l'Espace, en 3D — un vrai système solaire : des sphères
+   texturées qui tournent autour d'un Soleil qui éclaire tout le monde, les
+   anneaux de Saturne en géométrie, et une fusée qui s'envole vers la planète
+   touchée pendant que la caméra la suit. Zéro quiz : découverte pure, et une
+   merveille racontée à voix haute à chaque arrivée. */
 
 interface Planet {
-  id: string; name: string; x: number; y: number; r: number
-  hi: string; lo: string
-  feat: (cx: number, cy: number, r: number) => string
-  ring?: [string, string]
+  id: string; name: string
+  orbit: number; radius: number; speed: number; tilt: number
+  base: string; bands: string[]; spot?: string
+  ring?: [number, number, string]
+  clouds?: boolean
+  moons?: number
   fact: string
-  extra?: string // petit bonus visuel dans la carte (emoji lunes, robot…)
-}
-
-/* ---------- Helpers de dessin ---------- */
-function bands(cx: number, cy: number, r: number, cols: string[]): string {
-  const n = cols.length
-  let s = ''
-  for (let i = 0; i < n; i++) {
-    const y = cy - r + (i / n) * 2 * r
-    s += `<rect x="${cx - r}" y="${y}" width="${2 * r}" height="${(2 * r) / n + 1}" fill="${cols[i]}" opacity=".6"/>`
-  }
-  return s
-}
-function craters(cx: number, cy: number, r: number, list: number[][]): string {
-  return list.map(([x, y, rr]) =>
-    `<circle cx="${cx + x * r}" cy="${cy + y * r}" r="${rr * r}" fill="rgba(70,56,42,.4)"/>
-     <circle cx="${cx + x * r - rr * r * .25}" cy="${cy + y * r - rr * r * .25}" r="${rr * r * .7}" fill="rgba(120,104,86,.35)"/>`).join('')
 }
 
 const PLANETS: Planet[] = [
   {
-    id: 'mercure', name: 'Mercure', x: 120, y: 400, r: 9, hi: '#D8CBB6', lo: '#6E5F4E',
-    feat: (cx, cy, r) => craters(cx, cy, r, [[-.3, -.2, .18], [.28, .12, .22], [.05, .42, .13], [.42, -.32, .11], [-.4, .28, .1]]),
+    id: 'mercure', name: 'Mercure', orbit: 2.4, radius: 0.23, speed: 0.30, tilt: 0.02,
+    base: '#9B8C79', bands: ['#7D705F', '#B4A794', '#6E6252'],
     fact: 'Mercure ! La plus petite planète, et la plus rapide autour du Soleil. Le jour il y fait super chaud, et la nuit super froid.'
   },
   {
-    id: 'venus', name: 'Vénus', x: 245, y: 360, r: 13, hi: '#F8E6AE', lo: '#C08A3E',
-    feat: (cx, cy, r) => `<path d="M${cx - r},${cy - r * .35} Q${cx},${cy - r * .6} ${cx + r},${cy - r * .3}" stroke="rgba(255,255,255,.35)" stroke-width="${r * .16}" fill="none"/>
-      <path d="M${cx - r},${cy} Q${cx},${cy + r * .25} ${cx + r},${cy - r * .05}" stroke="rgba(255,240,200,.5)" stroke-width="${r * .18}" fill="none"/>
-      <path d="M${cx - r},${cy + r * .45} Q${cx},${cy + r * .2} ${cx + r},${cy + r * .5}" stroke="rgba(200,150,80,.4)" stroke-width="${r * .16}" fill="none"/>`,
+    id: 'venus', name: 'Vénus', orbit: 3.1, radius: 0.34, speed: 0.23, tilt: 0.05,
+    base: '#E8C377', bands: ['#F8E6AE', '#C08A3E', '#FFF0C4', '#D9A44E'],
     fact: 'Vénus ! La planète la plus chaude de toutes, plus chaude qu\'un four, à cause de ses gros nuages tout épais.'
   },
   {
-    id: 'terre', name: 'la Terre', x: 108, y: 314, r: 15, hi: '#8FD0F2', lo: '#2E6BA8',
-    feat: (cx, cy, r) => `
-      <path d="M${cx - r * .5},${cy - r * .4} q${r * .3},-${r * .2} ${r * .5},${r * .1} q${r * .1},${r * .3} -${r * .2},${r * .35} q-${r * .3},0 -${r * .4},-${r * .25} Z" fill="#5CB86A"/>
-      <path d="M${cx + r * .1},${cy + r * .1} q${r * .3},-${r * .05} ${r * .4},${r * .25} q-${r * .05},${r * .25} -${r * .35},${r * .2} q-${r * .15},-${r * .2} -${r * .05},-${r * .45} Z" fill="#5CB86A"/>
-      <ellipse cx="${cx - r * .2}" cy="${cy - r * .55}" rx="${r * .4}" ry="${r * .16}" fill="rgba(255,255,255,.75)"/>
-      <ellipse cx="${cx + r * .35}" cy="${cy + r * .5}" rx="${r * .35}" ry="${r * .14}" fill="rgba(255,255,255,.7)"/>`,
-    fact: 'La Terre, c\'est chez nous ! La seule planète avec de l\'eau bleue, des nuages blancs et plein d\'animaux.',
-    extra: '🌈'
+    id: 'terre', name: 'la Terre', orbit: 3.9, radius: 0.38, speed: 0.19, tilt: 0.41,
+    base: '#2E6BA8', bands: [], clouds: true, moons: 1,
+    fact: 'La Terre, c\'est chez nous ! La seule planète avec de l\'eau bleue, des nuages blancs et plein d\'animaux.'
   },
   {
-    id: 'mars', name: 'Mars', x: 252, y: 272, r: 11, hi: '#EE9564', lo: '#A63B24',
-    feat: (cx, cy, r) => `${craters(cx, cy, r, [[-.35, .1, .14], [.3, -.15, .16], [.1, .4, .11]])}
-      <ellipse cx="${cx}" cy="${cy - r * .82}" rx="${r * .55}" ry="${r * .28}" fill="rgba(255,255,255,.85)"/>
-      <ellipse cx="${cx}" cy="${cy + r * .85}" rx="${r * .4}" ry="${r * .2}" fill="rgba(255,255,255,.7)"/>`,
-    fact: 'Mars, la planète rouge ! Elle est couverte de poussière rouge, et des petits robots s\'y promènent pour l\'explorer.',
-    extra: '🤖 🌑🌑'
+    id: 'mars', name: 'Mars', orbit: 4.7, radius: 0.29, speed: 0.16, tilt: 0.44, moons: 2,
+    base: '#B4502E', bands: ['#EE9564', '#8E3620', '#D2703F'],
+    fact: 'Mars, la planète rouge ! Elle est couverte de poussière rouge, et des petits robots s\'y promènent pour l\'explorer.'
   },
   {
-    id: 'jupiter', name: 'Jupiter', x: 150, y: 206, r: 30, hi: '#F2D9B4', lo: '#B07A48',
-    feat: (cx, cy, r) => bands(cx, cy, r, ['#E9CBA0', '#C89968', '#EAD3AC', '#B7844F', '#E3C79C', '#C99A6A', '#D9B98C']) +
-      `<ellipse cx="${cx + r * .34}" cy="${cy + r * .18}" rx="${r * .24}" ry="${r * .15}" fill="#C74B36"/>
-       <ellipse cx="${cx + r * .34}" cy="${cy + r * .18}" rx="${r * .13}" ry="${r * .08}" fill="#E27A5F"/>`,
+    id: 'jupiter', name: 'Jupiter', orbit: 6.0, radius: 0.88, speed: 0.10, tilt: 0.05,
+    base: '#D8B98C', bands: ['#F2D9B4', '#B07A48', '#E6CBA4', '#9C6A3E', '#F6E3C2'], spot: '#C4522F',
+    moons: 3,
     fact: 'Jupiter, la plus GROSSE planète ! Si grande qu\'elle pourrait avaler mille Terres. Elle a une tempête géante toute rouge.'
   },
   {
-    id: 'saturne', name: 'Saturne', x: 246, y: 140, r: 23, hi: '#F4E6BC', lo: '#C7A45A', ring: ['#EBDCAE', '#B89A5E'],
-    feat: (cx, cy, r) => bands(cx, cy, r, ['#F0E1B4', '#D8BE84', '#EDDDAC', '#CBAE72', '#E8D6A2']),
+    id: 'saturne', name: 'Saturne', orbit: 7.3, radius: 0.74, speed: 0.075, tilt: 0.47,
+    base: '#E2CE9C', bands: ['#F4E6BC', '#C7A45A', '#EFDDAE'], ring: [1.35, 2.35, '#E4D2A4'],
     fact: 'Saturne et ses magnifiques anneaux ! Ils sont faits de glace et de cailloux qui brillent dans la lumière du Soleil.'
   },
   {
-    id: 'uranus', name: 'Uranus', x: 112, y: 94, r: 18, hi: '#C4F0F0', lo: '#6BAEC4', ring: ['#BFE6EC', '#8FC3D0'],
-    feat: (cx, cy, r) => bands(cx, cy, r, ['#CFF1F1', '#A8DDE4', '#C2ECEC', '#9AD4DC']),
+    id: 'uranus', name: 'Uranus', orbit: 8.5, radius: 0.52, speed: 0.055, tilt: 1.71,
+    base: '#8FD4DC', bands: ['#C4F0F0', '#6BAEC4'], ring: [1.5, 1.9, '#BFE6EC'],
     fact: 'Uranus ! Elle est couchée sur le côté et roule comme une bille. Brrr, c\'est une planète toute bleue et très très froide.'
   },
   {
-    id: 'neptune', name: 'Neptune', x: 238, y: 46, r: 17, hi: '#6FA8F0', lo: '#243F86',
-    feat: (cx, cy, r) => bands(cx, cy, r, ['#7FB0F2', '#3E68C0', '#6B9CE8', '#2C4E9E', '#5A88DC']) +
-      `<ellipse cx="${cx - r * .28}" cy="${cy + r * .12}" rx="${r * .2}" ry="${r * .13}" fill="#16305e"/>
-       <path d="M${cx + r * .1},${cy - r * .3} q${r * .3},${r * .05} ${r * .5},-${r * .05}" stroke="rgba(255,255,255,.55)" stroke-width="${r * .08}" fill="none"/>`,
+    id: 'neptune', name: 'Neptune', orbit: 9.5, radius: 0.50, speed: 0.042, tilt: 0.5,
+    base: '#2A4FA0', bands: ['#6FA8F0', '#1D3570', '#4C7FD0'],
     fact: 'Neptune, la planète la plus loin du Soleil ! Elle est toute bleue, avec les vents les plus rapides de tout le système solaire.'
   }
 ]
 
-const SUN = { x: 180, y: 452, r: 40 }
-const ORDER = PLANETS.map(p => p.id)
+const SUN_FACT = 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.'
 
-let sp: any = null
 let ctx: GameContext
+let S: any = null
 
-function planetDefs(p: Planet, cx: number, cy: number, r: number, pre: string): string {
-  return `<radialGradient id="${pre}g_${p.id}" cx="36%" cy="32%" r="82%">
-      <stop offset="0" stop-color="${p.hi}"/><stop offset="1" stop-color="${p.lo}"/></radialGradient>
-    <clipPath id="${pre}c_${p.id}"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>`
-}
+/* ---------- Textures de planètes, dessinées à la volée ---------- */
+function planetTex(T: any, p: Planet) {
+  const c = document.createElement('canvas')
+  c.width = 512; c.height = 256
+  const g = c.getContext('2d')!
+  g.fillStyle = p.base; g.fillRect(0, 0, 512, 256)
 
-function planetBody(p: Planet, cx: number, cy: number, r: number, pre: string): string {
-  let back = '', front = ''
-  if (p.ring) {
-    const rx = r * 1.95, ry = r * 0.52
-    back = `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="${p.ring[0]}" stroke-width="${r * 0.46}" opacity=".92"/>
-      <ellipse cx="${cx}" cy="${cy}" rx="${rx * 0.82}" ry="${ry * 0.82}" fill="none" stroke="${p.ring[1]}" stroke-width="${r * 0.14}" opacity=".8"/>`
-    front = `<path d="M ${cx - rx},${cy} A ${rx},${ry} 0 0 0 ${cx + rx},${cy}" fill="none" stroke="${p.ring[1]}" stroke-width="${r * 0.42}" opacity=".95"/>
-      <path d="M ${cx - rx},${cy} A ${rx},${ry} 0 0 0 ${cx + rx},${cy}" fill="none" stroke="${p.ring[0]}" stroke-width="${r * 0.14}" opacity=".9"/>`
+  if (p.id === 'terre') {
+    // Océans + continents + calottes polaires
+    for (let i = 0; i < 22; i++) {
+      g.fillStyle = `hsl(${96 + Math.random() * 34},${38 + Math.random() * 26}%,${32 + Math.random() * 22}%)`
+      const x = Math.random() * 512, y = 40 + Math.random() * 176
+      g.beginPath()
+      for (let k = 0; k < 9; k++) {
+        const a = (k / 9) * Math.PI * 2
+        const r = 18 + Math.random() * 46
+        g.lineTo(x + Math.cos(a) * r * 1.5, y + Math.sin(a) * r * 0.8)
+      }
+      g.closePath(); g.fill()
+    }
+    g.fillStyle = 'rgba(255,255,255,.9)'
+    g.fillRect(0, 0, 512, 18); g.fillRect(0, 238, 512, 18)
+  } else {
+    // Bandes horizontales floues : c'est ce qui fait « planète »
+    p.bands.forEach((col, i) => {
+      const n = p.bands.length
+      const h = 256 / n
+      const y = i * h
+      const grad = g.createLinearGradient(0, y, 0, y + h)
+      grad.addColorStop(0, col + '00')
+      grad.addColorStop(0.5, col)
+      grad.addColorStop(1, col + '00')
+      g.fillStyle = grad
+      g.fillRect(0, y - h * 0.25, 512, h * 1.5)
+    })
+    // Turbulences
+    for (let i = 0; i < 900; i++) {
+      const y = Math.random() * 256
+      g.strokeStyle = `rgba(255,255,255,${Math.random() * 0.09})`
+      g.lineWidth = 1 + Math.random() * 3
+      g.beginPath()
+      const x = Math.random() * 512
+      g.moveTo(x, y)
+      g.lineTo(x + 20 + Math.random() * 70, y + (Math.random() - 0.5) * 4)
+      g.stroke()
+    }
+    // Cratères pour les petites planètes rocheuses
+    if (p.id === 'mercure' || p.id === 'mars') {
+      for (let i = 0; i < 90; i++) {
+        const x = Math.random() * 512, y = Math.random() * 256
+        const r = 3 + Math.random() * 12
+        g.fillStyle = 'rgba(0,0,0,.16)'
+        g.beginPath(); g.arc(x, y, r, 0, 7); g.fill()
+        g.fillStyle = 'rgba(255,255,255,.12)'
+        g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.7, 0, 7); g.fill()
+      }
+      if (p.id === 'mars') {
+        g.fillStyle = 'rgba(255,255,255,.85)'
+        g.fillRect(0, 0, 512, 12); g.fillRect(0, 244, 512, 12)
+      }
+    }
+    if (p.spot) {
+      const grad = g.createRadialGradient(340, 150, 4, 340, 150, 46)
+      grad.addColorStop(0, p.spot)
+      grad.addColorStop(0.7, p.spot)
+      grad.addColorStop(1, p.spot + '00')
+      g.fillStyle = grad
+      g.save(); g.translate(340, 150); g.scale(1.5, 1); g.translate(-340, -150)
+      g.beginPath(); g.arc(340, 150, 46, 0, 7); g.fill(); g.restore()
+    }
   }
-  return `${back}
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${pre}g_${p.id})"/>
-    <g clip-path="url(#${pre}c_${p.id})">${p.feat(cx, cy, r)}</g>
-    <ellipse cx="${cx - r * .34}" cy="${cy - r * .36}" rx="${r * .42}" ry="${r * .3}" fill="rgba(255,255,255,.3)"/>
-    ${front}`
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  t.anisotropy = 4
+  return t
 }
 
-function sunSVG(cx: number, cy: number, r: number, pre: string): string {
-  const rays = Array.from({ length: 12 }, (_, i) => {
-    const a = (i / 12) * Math.PI * 2
-    return `<line x1="${cx + Math.cos(a) * r * 1.05}" y1="${cy + Math.sin(a) * r * 1.05}" x2="${cx + Math.cos(a) * r * 1.35}" y2="${cy + Math.sin(a) * r * 1.35}" stroke="#FFC24D" stroke-width="4" stroke-linecap="round" opacity=".8"/>`
-  }).join('')
-  return `<defs><radialGradient id="${pre}sun" cx="42%" cy="40%" r="65%">
-      <stop offset="0" stop-color="#FFF6C0"/><stop offset="55%" stop-color="#FFCB4D"/><stop offset="100%" stop-color="#FF8A2E"/></radialGradient></defs>
-    <g class="sp-sunrays">${rays}</g>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${pre}sun)"/>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#FFE49A" stroke-width="2" opacity=".7"/>`
+function cloudTex(T: any) {
+  const c = document.createElement('canvas')
+  c.width = 512; c.height = 256
+  const g = c.getContext('2d')!
+  g.clearRect(0, 0, 512, 256)
+  for (let i = 0; i < 130; i++) {
+    const x = Math.random() * 512, y = 20 + Math.random() * 216
+    const r = 8 + Math.random() * 30
+    const grad = g.createRadialGradient(x, y, 1, x, y, r)
+    grad.addColorStop(0, 'rgba(255,255,255,.85)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.save(); g.translate(x, y); g.scale(2.1, 1); g.translate(-x, -y)
+    g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore()
+  }
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return t
 }
 
-function rocketSVG(av: string | null): string {
-  const face = av
-    ? `<clipPath id="spRkFace"><circle cx="0" cy="-3" r="6.5"/></clipPath>
-       <image href="${av}" x="-6.5" y="-9.5" width="13" height="13" clip-path="url(#spRkFace)" preserveAspectRatio="xMidYMid slice"/>`
-    : `<text x="0" y="1" font-size="10" text-anchor="middle">👧</text>`
-  return `<g id="spRocketWrap">
-    <g id="spRocket">
-      <ellipse cx="0" cy="14" rx="4.5" ry="8" fill="#FFB84D" class="sp-flame"/>
-      <path d="M0,-20 C7,-13 8,0 6,9 L-6,9 C-8,0 -7,-13 0,-20 Z" fill="#F1F5F9" stroke="#AEBECC" stroke-width="1.5"/>
-      <path d="M-6,7 L-13,16 L-4,12 Z" fill="#FF7B6B"/><path d="M6,7 L13,16 L4,12 Z" fill="#FF7B6B"/>
-      <circle cx="0" cy="-3" r="6.5" fill="#CBE9FA" stroke="#7FB8E4" stroke-width="1.5"/>
-      ${face}
-    </g></g>`
+/** Anneaux : un dégradé radial en bandes, avec des trous — la division de Cassini. */
+function ringTex(T: any, color: string) {
+  const c = document.createElement('canvas')
+  c.width = 256; c.height = 8
+  const g = c.getContext('2d')!
+  for (let x = 0; x < 256; x++) {
+    const t = x / 256
+    const gap = Math.abs(t - 0.62) < 0.035 || Math.abs(t - 0.28) < 0.02
+    const a = gap ? 0.05 : 0.35 + Math.sin(t * 44) * 0.16 + (1 - t) * 0.35
+    g.fillStyle = color
+    g.globalAlpha = Math.max(0, Math.min(0.95, a))
+    g.fillRect(x, 0, 1, 8)
+  }
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return t
 }
 
-function moveRocket(x: number, y: number, instant = false) {
-  const w = $('spRocketWrap')
-  if (instant) { w.style.transition = 'none'; void w.offsetWidth }
-  // La fusée est dessinée autour de l'origine (0,0) → on la place directement en (x,y)
-  w.style.transform = `translate(${x}px, ${y}px)`
-  if (instant) { void w.offsetWidth; w.style.transition = '' }
+/* ---------- La fusée ---------- */
+function makeRocket(T: any) {
+  const g = new T.Group()
+  const white = new T.MeshStandardMaterial({ color: 0xF4F6FA, roughness: 0.35, metalness: 0.25 })
+  const red = new T.MeshStandardMaterial({ color: 0xE8574C, roughness: 0.4 })
+  const glass = new T.MeshStandardMaterial({ color: 0x7FD0F0, roughness: 0.1, metalness: 0.4, emissive: 0x2A6A8A })
+  const body = new T.Mesh(new T.CapsuleGeometry(0.09, 0.2, 6, 14), white)
+  const nose = new T.Mesh(new T.ConeGeometry(0.09, 0.17, 14), red)
+  nose.position.y = 0.27
+  const win = new T.Mesh(new T.SphereGeometry(0.045, 12, 10), glass)
+  win.position.set(0, 0.08, 0.075)
+  for (let i = 0; i < 3; i++) {
+    const fin = new T.Mesh(new T.ConeGeometry(0.045, 0.13, 4), red)
+    const a = (i / 3) * Math.PI * 2
+    fin.position.set(Math.sin(a) * 0.09, -0.16, Math.cos(a) * 0.09)
+    fin.rotation.y = a
+    g.add(fin)
+  }
+  const flame = new T.Mesh(
+    new T.ConeGeometry(0.06, 0.22, 12),
+    new T.MeshBasicMaterial({ color: 0xFFB03A, transparent: true, opacity: 0.9 })
+  )
+  flame.position.y = -0.28
+  flame.rotation.x = Math.PI
+  g.add(body, nose, win, flame)
+  return { group: g, flame }
 }
 
-function renderMap() {
-  const trail = 'M ' + [[SUN.x, SUN.y - 30], ...PLANETS.map(p => [p.x, p.y])].map(([x, y]) => `${x} ${y}`).join(' L ')
-  const defs = PLANETS.map(p => planetDefs(p, p.x, p.y, p.r, 'm_')).join('')
-  const planets = PLANETS.map((p, i) => `
-    <g class="sp-planet" style="animation-delay:${-i * 0.4}s">
-      ${planetBody(p, p.x, p.y, p.r, 'm_')}
-      <circle class="sp-hit" data-p="${p.id}" cx="${p.x}" cy="${p.y}" r="${Math.max(p.r + 8, 20)}" fill="transparent"/>
-      <circle class="sp-halo" id="spHalo_${p.id}" cx="${p.x}" cy="${p.y}" r="${p.r + 6}" fill="none" stroke="#FFE08A" stroke-width="3" opacity="0"/>
-    </g>`).join('')
-  $('spMap').innerHTML = `
-    <defs>${defs}</defs>
-    <path d="${trail}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
-    ${sunSVG(SUN.x, SUN.y, SUN.r, 'm_')}
-    <circle class="sp-hit" data-p="soleil" cx="${SUN.x}" cy="${SUN.y}" r="${SUN.r}" fill="transparent"/>
-    ${planets}
-    ${rocketSVG(ctx.avatar)}`
-  moveRocket(SUN.x, SUN.y - SUN.r - 20, true)
+/* ---------- Navigation ---------- */
+function planetPos(p: any, t: number, out: any) {
+  const a = p.phase + t * p.def.speed
+  out.set(Math.sin(a) * p.def.orbit, 0, Math.cos(a) * p.def.orbit)
+  return out
+}
+
+function visit(id: string) {
+  if (!S || S.busy) return
+  S.busy = true
+  S.target = id
+  S.flyT = 0
+  tone(300, 0.18, 'sawtooth', 0.06)
+  setTimeout(() => tone(520, 0.16, 'sine', 0.07), 120)
+  $('spFactBox').style.display = 'none'
+}
+
+function arrive() {
+  const id = S.target
+  const p = id === 'soleil' ? null : S.planets.find((x: any) => x.def.id === id)
+  const name = p ? p.def.name : 'le Soleil'
+  const fact = p ? p.def.fact : SUN_FACT
+  const isNew = !!p && !S.visited.has(id)
+  if (isNew) { S.visited.add(id); sGood(); FX.fireworks?.() } else sPop()
+  $('spFactName').innerHTML = `${p ? '' : '☀️ '}${name}${isNew ? ' <span class="sp3-new">Nouveau !</span>' : ''}`
+  $('spFactText').textContent = fact
+  $('spFactBox').style.display = ''
+  ctx.say(fact)
+  updatePassport()
+}
+
+function back() {
+  if (!S) return
+  S.busy = false
+  S.target = null
+  S.flyT = 0
+  $('spFactBox').style.display = 'none'
+  sPop()
+  if (S.visited.size >= PLANETS.length && !S.finaled) finale()
 }
 
 function updatePassport() {
-  PLANETS.forEach(p => {
-    const d = $('spDot_' + p.id)
-    if (d) d.classList.toggle('got', sp.visited.has(p.id))
-  })
-  const left = PLANETS.length - sp.visited.size
-  $('spCount').textContent = left > 0 ? `🚀 ${sp.visited.size}/8` : '🌟 8/8'
-  // Guide : halo sur la prochaine planète non visitée (sauf niveau expert)
-  PLANETS.forEach(p => { const h = $('spHalo_' + p.id); if (h) h.setAttribute('opacity', '0') })
-  if (sp.hint && left > 0) {
-    const next = PLANETS.find(p => !sp.visited.has(p.id))
-    if (next) { const h = $('spHalo_' + next.id); if (h) h.setAttribute('opacity', '1'); h?.classList.add('pulse') }
-  }
-}
-
-function setBanner() {
-  const left = PLANETS.length - sp.visited.size
-  $('spSay').innerHTML = left > 0
-    ? `🚀 Touche une <b>planète</b> pour la visiter !<br><span class="sp-left">Encore ${left} à découvrir</span>`
-    : `🌟 Tu les as toutes visitées !`
-}
-
-function visit(pid: string) {
-  if (!sp || !sp.running || sp.busy) return
-  const sun = pid === 'soleil'
-  const p = sun ? null : PLANETS.find(x => x.id === pid)!
-  sp.busy = true
-  const tx = sun ? SUN.x : p!.x, ty = sun ? SUN.y : p!.y
-  moveRocket(tx, ty - (sun ? SUN.r : p!.r) - 12)
-  tone(300, 0.18, 'sawtooth', 0.06); setTimeout(() => tone(520, 0.16, 'sine', 0.07), 120)
-  const wrap = $('spRocketWrap'); wrap.classList.remove('sp-launch'); void wrap.offsetWidth; wrap.classList.add('sp-launch')
-  setTimeout(() => { if (sp && sp.running) openCard(pid) }, 820)
-}
-
-function openCard(pid: string) {
-  const sun = pid === 'soleil'
-  const p = sun ? null : PLANETS.find(x => x.id === pid)!
-  const name = sun ? 'le Soleil' : p!.name
-  const fact = sun
-    ? 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.'
-    : p!.fact
-  const svg = sun
-    ? `<svg viewBox="0 0 240 220" class="sp-cardsvg">${sunSVG(120, 112, 74, 'k_')}</svg>`
-    : `<svg viewBox="0 0 240 220" class="sp-cardsvg"><defs>${planetDefs(p!, 120, 108, 82, 'k_')}</defs>
-        <g id="spBigPlanet" class="sp-bigplanet">${planetBody(p!, 120, 108, 82, 'k_')}</g></svg>`
-  const extra = p?.extra ? `<div class="sp-extra">${p.extra}</div>` : ''
-  const isNew = !sun && !sp.visited.has(pid)
-  $('spArea').insertAdjacentHTML('beforeend', `
-    <div class="sp-card" id="spCard">
-      <div class="sp-cardname">${sun ? '☀️' : ''} ${name} ${isNew ? '<span class="sp-newbadge">Nouveau&nbsp;!</span>' : ''}</div>
-      <div class="sp-planetwrap" id="spPlanetTap">${svg}${extra}</div>
-      <div class="sp-fact">${fact}</div>
-      <button class="bigbtn primary" id="spNext">🚀 Continuer</button>
-    </div>`)
-  ctx.say(fact)
-  if (isNew) { sp.visited.add(pid); sGood(); FX.fireworks?.() }
-  else sPop()
-  updatePassport()
-  // Rejouer la merveille en touchant la planète (étincelles)
-  $('spPlanetTap').onclick = () => {
-    if (!sp || !sp.running) return
-    const big = $('spBigPlanet') || $('spPlanetTap')
-    big.classList.remove('sp-pulse'); void (big as HTMLElement).offsetWidth; big.classList.add('sp-pulse')
-    const r = $('spPlanetTap').getBoundingClientRect()
-    FX.burst(r.left + r.width / 2, r.top + r.height * 0.42, { colors: ['#FFE08A', '#FFF', '#B9A7F2', '#7FB8E4'], count: 12 })
-    tone(880, 0.08, 'triangle', 0.1); setTimeout(() => tone(1180, 0.09, 'sine', 0.08), 70)
-    ctx.say(fact)
-  }
-  ;($('spNext') as HTMLButtonElement).onclick = () => {
-    if (!sp || !sp.running) return
-    sPop(); $('spCard')?.remove(); sp.busy = false
-    setBanner()
-    if (sp.visited.size >= PLANETS.length) finale()
+  $('spCount').textContent = `🚀 ${S.visited.size}/8`
+  for (const p of PLANETS) {
+    $('spDot_' + p.id)?.classList.toggle('on', S.visited.has(p.id))
   }
 }
 
 function finale() {
-  sp.busy = true
-  const row = PLANETS.map(p =>
-    `<svg viewBox="0 0 ${p.r * 2.2 + 8} ${p.r * 2 + 6}" width="${p.r * 1.7 + 8}"><defs>${planetDefs(p, p.r * 1.1 + 4, p.r + 3, p.r, 'f_')}</defs>${planetBody(p, p.r * 1.1 + 4, p.r + 3, p.r, 'f_')}</svg>`).join('')
-  $('spArea').insertAdjacentHTML('beforeend', `
-    <div class="sp-card sp-finale" id="spFinale">
-      <div class="sp-cardname">🚀 Bravo, astronaute !</div>
-      <div class="sp-astro">${ctx.avatar ? `<span class="face-sprite" style="width:74px;height:74px;background-image:url('${ctx.avatar}')"></span>` : '👩‍🚀'}</div>
-      <div class="sp-planetrow">${row}</div>
-      <div class="sp-fact">${ctx.playerName} a visité <b>toute la famille du Soleil</b> ! 🌍🪐✨</div>
-      <button class="bigbtn primary" id="spFin">🌟 J'ai mon diplôme !</button>
-    </div>`)
+  S.finaled = true
+  S.busy = true
   sWin(); confetti(); FX.fireworks?.()
+  $('spFactName').innerHTML = '🚀 Bravo, astronaute !'
+  $('spFactText').textContent = `${ctx.playerName} a visité toute la famille du Soleil ! 🌍🪐✨`
+  $('spFactBox').style.display = ''
+  ;($('spBack') as HTMLElement).style.display = 'none'
+  ;($('spDiploma') as HTMLElement).style.display = ''
   ctx.say(`Bravo astronaute ${ctx.playerName} ! Tu as visité les huit planètes de la famille du Soleil. Tu es une vraie exploratrice de l'espace !`)
-  ;($('spFin') as HTMLButtonElement).onclick = () => {
-    if (!sp || !sp.running) return
-    ctx.finish({
-      title: 'Astronaute diplômée ! 🚀',
-      msg: `${ctx.playerName} a exploré tout le système solaire 🪐✨`,
-      stars: 3, starsEarned: 3
-    })
-  }
 }
 
 export const space: GameDef = {
   id: 'space', name: 'Voyage dans l\'Espace', icon: '🚀', sq: 'sq-lilac', cat: 'reflexion', music: 'space',
-  subtitle: 'Deviens astronaute et visite les planètes du système solaire !',
+  subtitle: 'Pilote ta fusée jusqu\'aux vraies planètes du système solaire !',
   mount(c) {
     ctx = c
-    sp = { visited: new Set<string>(), busy: false, running: true, hint: c.byTier(true, true, false) }
-
-    const stars = Array.from({ length: 46 }, () => {
-      const s = 1 + Math.random() * 2.4
-      return `<span class="sp-star" style="left:${Math.random() * 100}%;top:${Math.random() * 100}%;width:${s}px;height:${s}px;animation-delay:${-Math.random() * 4}s;animation-duration:${2.5 + Math.random() * 3}s"></span>`
-    }).join('')
-
+    let dead = false
     c.root.innerHTML = `
-      <div class="topbar"><div class="chip" id="spCount">🚀 0/8</div></div>
-      <div class="geo-say sp-say" id="spSay"></div>
-      <div id="spArea">
-        <div class="sp-sky">${stars}<span class="sp-shoot"></span></div>
-        <svg id="spMap" viewBox="0 0 360 480"></svg>
+      <div class="topbar">
+        <div class="chip" id="spCount">🚀 0/8</div>
+        <button class="chip" id="spLeft">◀</button>
+        <button class="chip" id="spRight">▶</button>
       </div>
-      <div class="sp-passport" id="spPassport">
-        ${PLANETS.map(p => `<span class="sp-dot" id="spDot_${p.id}" style="background:radial-gradient(circle at 35% 32%, ${p.hi}, ${p.lo})" title="${p.name}"></span>`).join('')}
+      <div class="arena g3-arena sp3-arena" id="spArena">
+        <div class="hint g3-hint" id="spHint">Touche une planète : ta fusée s'envole ! 🚀</div>
+      </div>
+      <div class="sp3-passport" id="spPassport">
+        ${PLANETS.map(p => `<span class="sp3-dot" id="spDot_${p.id}" style="background:${p.base}"></span>`).join('')}
+      </div>
+      <div class="g3-bar sp3-fact" id="spFactBox" style="display:none">
+        <div class="sp3-name" id="spFactName"></div>
+        <div class="sp3-text" id="spFactText"></div>
+        <div class="g3-row">
+          <button class="g3-btn" id="spBack">🚀 Continuer</button>
+          <button class="g3-btn" id="spDiploma" style="display:none">🌟 J'ai mon diplôme !</button>
+        </div>
       </div>`
 
-    renderMap()
-    setBanner()
-    updatePassport()
+    const arena = $('spArena')
+    const hideLoader = loader(arena, '🚀')
 
-    $('spMap').addEventListener('pointerdown', (e: PointerEvent) => {
-      const el = (e.target as HTMLElement).closest('[data-p]') as HTMLElement | null
-      if (el) visit(el.dataset.p!)
-    })
+    ;(async () => {
+      const stage: Stage = await createStage(arena, {
+        sky: '#05060F',
+        cam: [0, 9.5, 19], target: [0, 0, 0], fov: 52,
+        hemi: ['#2A3A6A', '#05060F', 0.35],
+        noSun: true, exposure: 1.0
+      })
+      if (dead) { stage.dispose(); return }
+      hideLoader()
+      const T = stage.T
+      const scene = stage.scene
 
-    ctx.say('Bienvenue dans l\'espace ! Voici le Soleil, une étoile géante. Autour de lui vivent huit planètes. Touche-en une pour la visiter avec ta fusée !')
+      /* --- Champ d'étoiles --- */
+      const N = 1300
+      const sp3 = new Float32Array(N * 3)
+      for (let i = 0; i < N; i++) {
+        const a = Math.random() * Math.PI * 2
+        const b = Math.acos(2 * Math.random() - 1)
+        const r = 60 + Math.random() * 30
+        sp3[i * 3] = Math.sin(b) * Math.cos(a) * r
+        sp3[i * 3 + 1] = Math.cos(b) * r
+        sp3[i * 3 + 2] = Math.sin(b) * Math.sin(a) * r
+      }
+      const starGeo = new T.BufferGeometry()
+      starGeo.setAttribute('position', new T.BufferAttribute(sp3, 3))
+      scene.add(new T.Points(starGeo, new T.PointsMaterial({
+        size: 0.75, map: stage.keep(dotTex(T)), transparent: true, depthWrite: false
+      })))
 
-    return () => { if (sp) { sp.running = false; sp = null } }
+      /* --- Le Soleil : la seule source de lumière du système --- */
+      const sun = new T.Mesh(
+        new T.SphereGeometry(0.92, 34, 24),
+        new T.MeshBasicMaterial({ color: 0xFFD98A })
+      )
+      scene.add(sun)
+      const glow = new T.Sprite(new T.SpriteMaterial({
+        map: stage.keep(dotTex(T, '#FFC24A')), color: 0xFFB13A,
+        transparent: true, blending: T.AdditiveBlending, depthWrite: false
+      }))
+      glow.scale.setScalar(3.6)
+      scene.add(glow)
+      const sunLight = new T.PointLight(0xFFF0D0, 260, 46, 2)
+      scene.add(sunLight)
+      // Appoint depuis la caméra : sans lui, les planètes du premier plan sont
+      // vues côté nuit — c'est juste physiquement, mais inregardable à 6 ans.
+      const fill = new T.DirectionalLight(0xB8CCFF, 0.75)
+      scene.add(fill)
+
+      /* --- Orbites --- */
+      const orbitMat = new T.MeshBasicMaterial({
+        color: 0x6E86C8, transparent: true, opacity: 0.16, side: T.DoubleSide, depthWrite: false
+      })
+      for (const def of PLANETS) {
+        const ring = new T.Mesh(new T.RingGeometry(def.orbit - 0.012, def.orbit + 0.012, 128), orbitMat)
+        ring.rotation.x = -Math.PI / 2
+        scene.add(ring)
+      }
+
+      /* --- Les planètes --- */
+      const planets = PLANETS.map((def, i) => {
+        const grp = new T.Group()
+        const mesh = new T.Mesh(
+          new T.SphereGeometry(def.radius, 40, 28),
+          new T.MeshStandardMaterial({ map: stage.keep(planetTex(T, def)), roughness: 0.88, metalness: 0.02 })
+        )
+        mesh.rotation.z = def.tilt
+        grp.add(mesh)
+        if (def.clouds) {
+          const cl = new T.Mesh(
+            new T.SphereGeometry(def.radius * 1.03, 32, 22),
+            new T.MeshStandardMaterial({
+              map: stage.keep(cloudTex(T)), transparent: true, opacity: 0.75, roughness: 1, depthWrite: false
+            })
+          )
+          cl.rotation.z = def.tilt
+          grp.add(cl)
+          grp.userData.clouds = cl
+        }
+        if (def.ring) {
+          const [ri, ro, col] = def.ring
+          const rg = new T.Mesh(
+            new T.RingGeometry(def.radius * ri, def.radius * ro, 96, 1),
+            new T.MeshBasicMaterial({
+              map: stage.keep(ringTex(T, col)), transparent: true, side: T.DoubleSide, depthWrite: false
+            })
+          )
+          rg.rotation.x = -Math.PI / 2 + 0.02
+          rg.rotation.z = def.tilt
+          rg.rotation.y = def.tilt
+          const holder = new T.Group()
+          holder.rotation.z = def.tilt
+          holder.add(rg)
+          grp.add(holder)
+        }
+        // Lunes : de simples cailloux gris qui tournent
+        const moons: any[] = []
+        for (let k = 0; k < (def.moons || 0); k++) {
+          const m = new T.Mesh(
+            new T.SphereGeometry(def.radius * (0.14 + k * 0.03), 12, 10),
+            new T.MeshStandardMaterial({ color: 0xB8B2A8, roughness: 0.95 })
+          )
+          grp.add(m)
+          moons.push({ m, d: def.radius * (1.9 + k * 0.7), s: 0.8 + k * 0.4, ph: Math.random() * 6 })
+        }
+        // Zone tapable généreuse : les petites planètes sont dures à viser
+        const hit = new T.Mesh(
+          new T.SphereGeometry(Math.max(def.radius * 1.55, 0.42), 12, 10),
+          new T.MeshBasicMaterial({ visible: false })
+        )
+        hit.userData.pid = def.id
+        grp.add(hit)
+        scene.add(grp)
+        return { def, grp, mesh, hit, moons, phase: (i * 2.1) % (Math.PI * 2) }
+      })
+
+      const sunHit = new T.Mesh(
+        new T.SphereGeometry(1.25, 14, 12),
+        new T.MeshBasicMaterial({ visible: false })
+      )
+      sunHit.userData.pid = 'soleil'
+      scene.add(sunHit)
+
+      const rocket = makeRocket(T)
+      rocket.group.position.set(2.9, 3.1, 7.2)
+      scene.add(rocket.group)
+
+      S = {
+        stage, planets, rocket, sun, glow, sunLight, fill, visited: new Set<string>(),
+        busy: false, target: null, flyT: 0, t: 0, finaled: false,
+        orbit: orbitCam(stage, 19, 9.5, [0, 0, 0]),
+        tmp: new T.Vector3(), tmp2: new T.Vector3()
+      }
+      updatePassport()
+
+      /* --- Toucher une planète --- */
+      const pick = picker(stage)
+      const onTap = (e: PointerEvent) => {
+        if (!S || S.busy) return
+        const hits = pick(e, [...planets.map(p => p.hit), sunHit])
+        if (!hits.length) return
+        let o: any = hits[0].object
+        while (o && !o.userData.pid) o = o.parent
+        if (o?.userData.pid) {
+          visit(o.userData.pid)
+          $('spHint').style.opacity = '0'
+        }
+      }
+      stage.renderer.domElement.addEventListener('pointerdown', onTap)
+
+      $('spLeft').onclick = () => { S?.orbit.turn(-0.5); sPop() }
+      $('spRight').onclick = () => { S?.orbit.turn(0.5); sPop() }
+      $('spBack').onclick = () => back()
+      $('spDiploma').onclick = () => {
+        ctx.finish({
+          title: 'Astronaute diplômée ! 🚀',
+          msg: `${ctx.playerName} a exploré tout le système solaire 🪐✨`,
+          stars: 3, starsEarned: 3
+        })
+      }
+
+      ctx.say('Bienvenue dans l\'espace ! Voici le Soleil, une étoile géante. Autour de lui vivent huit planètes. Touche-en une pour la visiter avec ta fusée !')
+
+      /* --- Boucle --- */
+      const goal = new T.Vector3()
+      stage.start((dt, now) => {
+        if (!S) return
+        // Le système ralentit pendant une visite : on regarde tranquillement
+        S.t += dt * (S.busy ? 0.15 : 1)
+
+        for (const p of S.planets) {
+          planetPos(p, S.t, p.grp.position)
+          p.mesh.rotation.y += dt * 0.35
+          if (p.grp.userData.clouds) p.grp.userData.clouds.rotation.y += dt * 0.24
+          for (const mo of p.moons) {
+            const a = mo.ph + S.t * mo.s * 2.4
+            mo.m.position.set(Math.cos(a) * mo.d, Math.sin(a) * mo.d * 0.3, Math.sin(a) * mo.d)
+          }
+        }
+        S.sun.rotation.y += dt * 0.05
+        S.glow.scale.setScalar(3.6 + Math.sin(now / 900) * 0.18)
+
+        // Cible de la fusée et de la caméra
+        if (S.target) {
+          const p = S.target === 'soleil' ? null : S.planets.find((x: any) => x.def.id === S.target)
+          const rad = p ? p.def.radius : 0.92
+          goal.copy(p ? p.grp.position : S.sun.position)
+          const near = Math.max(1.1, rad * 3.4)
+          S.orbit.look = [goal.x, goal.y, goal.z]
+          S.orbit.dist = near
+          S.orbit.height = rad * 0.9
+          S.orbit.auto = 0.22
+          // La fusée se pose à côté
+          const rp = S.rocket.group.position
+          const want = S.tmp.copy(goal)
+          want.x += rad * 1.5; want.y += rad * 0.5; want.z += rad * 1.5
+          rp.lerp(want, Math.min(1, dt * 2.2))
+          S.rocket.group.lookAt(goal)
+          S.rocket.group.rotateX(Math.PI / 2)
+          S.flyT += dt
+          if (S.flyT > 1.1 && !S.arrived) { S.arrived = true; arrive() }
+        } else {
+          S.arrived = false
+          S.orbit.look = [0, 0, 0]
+          S.orbit.dist = 19
+          S.orbit.height = 9.5
+          S.orbit.auto = 0.035
+          const rp = S.rocket.group.position
+          rp.lerp(S.tmp2.set(2.9, 3.1, 7.2), Math.min(1, dt * 1.6))
+          S.rocket.group.rotation.set(0, now / 2600, 0)
+        }
+        S.rocket.flame.scale.setScalar(0.7 + Math.sin(now / 45) * 0.25)
+        S.orbit.update(dt)
+        S.fill.position.copy(stage.camera.position)
+      })
+
+      S.cleanup = () => {
+        stage.renderer.domElement.removeEventListener('pointerdown', onTap)
+        stage.dispose()
+      }
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+
+    return () => {
+      dead = true
+      if (S) {
+        try { S.cleanup?.() } catch { /* déjà démonté */ }
+        S = null
+      }
+    }
   }
 }

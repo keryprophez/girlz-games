@@ -13,7 +13,14 @@
 Ces deux chantiers conditionnent tout le reste. Environnement réseau ouvert = ils
 sont enfin possibles.
 
-### 0.1 Assets réels
+### 0.1 Assets réels — **toujours à faire**
+> Vérifié le 25/07/2026 : `kenney.nl`, `poly.pizza` et `quaternius.com` répondent
+> bien depuis cet environnement (HTTP 200), le blocage réseau de la session
+> précédente a disparu. Le chantier n'a pas été mené faute de temps — il a été
+> arbitré au profit de l'étape 1, conformément à la règle d'arbitrage ci-dessus.
+> Attention : les téléchargements Kenney passent par un formulaire, l'URL directe
+> du `.zip` renvoie 404.
+
 - Télécharger les packs **CC0 Kenney** : *Impact Sounds*, *Interface Sounds*,
   *Animal Pack Redux*, *Physics Assets*, *Platformer Kit*.
 - Modèles 3D low-poly CC0 : **Poly Pizza**, **Quaternius** (glTF).
@@ -23,45 +30,46 @@ sont enfin possibles.
 - **Effet attendu : le plus gros saut visuel du projet, pour un effort modeste.**
 
 ### 0.2 Base de données
+- ✅ **Fait (filet de secours)** : export/import d'une sauvegarde JSON depuis le
+  bouton 💾 de l'accueil, jauge de quota, et alerte quand `localStorage` est plein
+  (`core/backup.ts`). Ça ne remplace pas la BDD, ça évite la perte sèche.
 - Demander à l'utilisateur : **URL projet Supabase + clé `anon`**.
 - Tables `profiles`, `progress` ; Storage pour photos et clips vocaux.
 - **Garder le local en cache** + synchro opportuniste (l'app doit rester jouable
   hors-ligne, contrainte 3).
 - RLS strict, aucun analytique tiers (contrainte 4 : données d'enfants).
-- Bonus utile immédiatement : **export/import d'une sauvegarde JSON** — filet de
-  sécurité même sans BDD.
+- ~~Bonus : export/import d'une sauvegarde JSON~~ → fait.
 
 ---
 
-## Étape 1 — Refaire les jeux phares en 3D 🎮
+## Étape 1 — Refaire les jeux phares en 3D 🎮 ✅ FAIT
 
-Le modèle : `src/games/stand3d.ts` (Three.js + cannon-es, éclairage physique,
-ombres portées PCFSoft, matériaux PBR, tone mapping ACES, pas fixe 60 Hz).
+Les cinq jeux 3D partagent désormais **`src/core/three3d.ts`** : réglage de rendu
+commun, boucle à pas fixe, caméra orbitale à boutons (pas de drag : le doigt sert
+à jouer), textures procédurales et nettoyage GPU complet.
 
-Ordre recommandé, du plus rentable au moins :
-
-| # | Jeu | Ce que la 3D apporte |
+| # | Jeu | Ce que la 3D a apporté |
 |---|---|---|
-| 1 | **⛄ Bonhomme de neige 3D** | Rouler de vraies boules qui grossissent, les **empiler avec la physique**, tourner autour avec la caméra, accessoires posés en 3D. Le meilleur candidat : créatif, sans échec, spectaculaire. |
-| 2 | **🧊 Igloo 3D** | Empiler des blocs de glace **translucides** (matériau transmissif), la voûte se ferme, on entre dedans à la fin. |
-| 3 | **🍕 Pizzeria 3D** (bac à sable) | Façon *Toca Kitchen* : pâte déformable, ingrédients qui **tombent** sur la pizza, four avec vraie lumière chaude, aucune étape imposée. |
-| 4 | **🚀 Espace 3D** | Vraies sphères texturées, anneaux de Saturne en géométrie, vol de la fusée avec caméra qui suit. |
-| 5 | **🎪 Supprimer `chamboule.ts`** | Doublon 2D de `stand3d`. Retirer le fichier + la ligne d'`index.ts`. |
+| 1 | **⛄ Bonhomme de neige 3D** | On roule la boule au doigt : elle **creuse son sillon** dans la neige (texture peinte en direct), elle grossit, puis elle tombe et **s'écrase sur la pile** avec cannon-es. Habillage en volumes (chapeau, écharpe, bras, boutons), caméra qui fait le tour. Aucun échec. |
+| 2 | **🧊 Igloo 3D** | Blocs **taillés dans la sphère** (pas des cubes) en matériau transmissif, appareillage décalé d'une demi-brique, calotte de faîte qui referme la voûte, puis on allume un feu et **tout l'igloo s'illumine de l'intérieur** sous une aurore boréale. |
+| 3 | **🍕 Pizzeria 3D** | Bac à sable sans étape imposée : sauce étalée au doigt sur une texture, ingrédients qui **tombent et roulent** (et parfois à côté), four à bois en voûte de berceau où la pâte dore et le fromage fond, parts mangées une par une. |
+| 4 | **🚀 Espace 3D** | Vraies sphères texturées en orbite, anneaux de Saturne en géométrie (avec la division de Cassini), lunes, nuages sur la Terre, fusée qui s'envole et caméra qui suit. Les textes pédagogiques d'origine sont conservés. |
+| 5 | **🎪 `chamboule.ts` supprimé** | Doublon 2D de `stand3d`. Fichier retiré, `matter.js` désinstallé. |
 
-**Standard de qualité à respecter pour chaque jeu 3D** (checklist) :
-- [ ] `antialias`, `pixelRatio` plafonné à 2, `ACESFilmicToneMapping`, `SRGBColorSpace`
-- [ ] Lumière hémisphérique + directionnelle avec `castShadow` + appoint frontal
-- [ ] `PCFSoftShadowMap`, `shadow.bias` réglé (pas d'acné d'ombre)
+**Standard de qualité à respecter pour chaque nouveau jeu 3D** (checklist) :
+- [ ] Partir de `createStage()` de `core/three3d.ts` — il applique déjà
+      `antialias`, `pixelRatio` plafonné à 2, `ACESFilmicToneMapping`,
+      `SRGBColorSpace`, `PCFSoftShadowMap`, `shadow.bias`, lumières et brouillard
 - [ ] Matériaux `MeshStandardMaterial` avec `roughness`/`metalness` crédibles
-- [ ] Brouillard de profondeur cohérent avec la couleur de fond
-- [ ] Physique à **pas fixe**, prévisualisation honnête si visée
-- [ ] **Nettoyage GPU complet** au démontage (géométries, matériaux, textures, renderer)
-- [ ] Chargement à la demande (`await import('three')`) + écran d'attente
-- [ ] Testé en navigateur avec capture d'écran regardée
+- [ ] Physique à **pas fixe** (`fixedStep()`), prévisualisation honnête si visée
+- [ ] **Nettoyage GPU** : `stage.dispose()` suffit si tout est dans la scène ;
+      `stage.keep(tex)` pour les textures non attachées
+- [ ] Chargement à la demande (`loadThree()` / `loadPhysics()`) + `loader()`
+- [ ] Testé en navigateur avec **capture d'écran regardée**
 
 ---
 
-## Étape 2 — Moderniser les jeux d'action 2D 🟠
+## Étape 2 — Moderniser les jeux d'action 2D 🟠 ← **le prochain chantier**
 
 `catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
 
@@ -96,9 +104,9 @@ ne pèse rien. Ce qui manque :
 
 ## Ce qui est déjà fait ✅ (ne pas refaire)
 
-- **Vraie 3D + physique** : `stand3d.ts` (Three.js + cannon-es) — la référence.
-- **Physique 2D** : `chamboule.ts` (matter.js, lance-pierre, trajectoire exacte)
-  — à supprimer au profit de la 3D.
+- **Vraie 3D + physique** : `stand3d`, `snowman`, `igloo`, `pizza`, `space`,
+  tous sur le socle `core/three3d.ts`.
+- **Sauvegarde exportable** : `core/backup.ts` + bouton 💾 de l'accueil.
 - **Moteur de game feel** : `core/juice.ts` (ressorts, transition iris, secousses).
 - **Musique générative** 6 thèmes + foley synthétisé (`core/music.ts`, `audio.ts`).
 - **Minuteur parental** avec verrou « question de grand » (`PlayTimer.tsx`) — la
@@ -107,7 +115,7 @@ ne pèse rien. Ce qui manque :
   (la mécanique de déblocage a été retirée : contrainte 1).
 - **Anti-crash** : ErrorBoundary + capture des erreurs runtime en jeu.
 - **Maj PWA automatique**, vibrations tactiles, `touch-action` correct.
-- **Smoke test CI** : les 38 jeux sont ouverts et vérifiés à chaque déploiement.
+- **Smoke test CI** : les 37 jeux sont ouverts et vérifiés à chaque déploiement.
 
 ---
 

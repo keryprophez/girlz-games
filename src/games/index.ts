@@ -34,13 +34,12 @@ import { geoGame } from './geo'
 import { space } from './space'
 import { caterpillar } from './caterpillar'
 import { fireworks } from './fireworks'
-import { chamboule } from './chamboule'
 import { stand3d } from './stand3d'
 
 export const GAMES: GameDef[] = [
   quizGame, intrus, letters, photoPuzzle, taquin, socks, patterns, mirror, geoGame, space, clock, tables, additions, market, maze, igloo, connect4, battleship,
   memory, simonGame,
-  catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon, caterpillar, chamboule, stand3d,
+  catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon, caterpillar, stand3d,
   coloring, dressup, snowman, pizza, piano, beatbox, fireworks
 ]
 

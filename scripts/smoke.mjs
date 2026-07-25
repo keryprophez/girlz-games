@@ -1,5 +1,5 @@
 /* Smoke test : ouvre chaque jeu de la ferme et vérifie qu'il se monte sans
-   erreur JavaScript. Protège les 32 jeux contre les régressions.
+   erreur JavaScript. Protège les 37 jeux contre les régressions.
    Usage : npm run build && npm run test:smoke */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'

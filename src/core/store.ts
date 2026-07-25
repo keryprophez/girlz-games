@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
 import type { Look } from './character'
 import { COLLECT } from './utils'
@@ -123,8 +124,16 @@ export const useFerme = create<FermeState>()(
       }
     }),
     {
-      name: 'ferme:v2',
+      name: STORE_KEY,
+      // Sans ça, un dépassement de quota fait échouer l'enregistrement en silence
+      storage: createJSONStorage(() => loudStorage),
       onRehydrateStorage: () => state => { if (state) setSound(state.sound) }
     }
   )
 )
+
+/* Écrit la sauvegarde dès le premier lancement : sinon une famille qui n'a
+   encore rien changé n'aurait rien à exporter (voir core/backup.ts). */
+try {
+  if (!localStorage.getItem(STORE_KEY)) useFerme.setState({})
+} catch { /* stockage indisponible : on joue quand même */ }

@@ -8,7 +8,7 @@
 
 ## 1. Le projet en trois phrases
 
-Webapp PWA de **38 mini-jeux** pour **Jade (6 ans)** et **Joyce (8 ans)**, jouable
+Webapp PWA de **37 jeux** pour **Jade (6 ans)** et **Joyce (8 ans)**, jouable
 hors-ligne sur tablette. Aucun jeu n'exige de savoir lire. Le père (utilisateur,
 `thibaud.lucchese@gmail.com`) est le commanditaire : il veut un niveau
 **professionnel**, et il a raison de dire que ce n'est pas encore le cas.
@@ -31,9 +31,16 @@ Il a raison. Diagnostic :
 | Animations CSS keyframes basiques | Pas de moteur d'animation, pas d'interpolation d'états |
 | 2D plate sans lumière ni profondeur | Rendu DOM/SVG/Canvas 2D |
 
-**Le seul jeu au niveau attendu aujourd'hui : `src/games/stand3d.ts`** — vraie 3D
-Three.js + physique cannon-es (éclairage, ombres portées, matériaux PBR, tone
-mapping). C'est la référence à suivre. **Regarde ce fichier avant tout autre.**
+**Où on en est (session du 25/07/2026)** : l'étape 1 de la roadmap est faite.
+**Cinq jeux sont maintenant en vraie 3D** : `stand3d` (la référence d'origine),
+`snowman`, `igloo`, `pizza`, `space`. Tous partagent le socle
+**`src/core/three3d.ts`** — c'est LUI qu'il faut lire en premier : il contient le
+réglage de rendu (ombres douces, tone mapping ACES, brouillard), la boucle à pas
+fixe, la caméra orbitale à boutons, les textures procédurales partagées et
+surtout le **nettoyage GPU complet**. Un nouveau jeu 3D part de là.
+
+Il reste **8 jeux d'action en 2D** au rendu daté (voir §7) : c'est le prochain
+gros chantier visuel.
 
 **Conclusion technique importante** : en 2D sans assets, on plafonne — le rendu
 *est* le dessin. En **3D procédurale**, la qualité vient de la lumière, des
@@ -74,6 +81,10 @@ src/
     music.ts      Musique d'ambiance GÉNÉRATIVE, 6 thèmes (jamais 2 fois pareil)
     voice.ts      Synthèse vocale FR
     juice.ts      spring() / iris() / shake() — game feel partagé
+    three3d.ts    SOCLE 3D PARTAGÉ : createStage(), orbitCam(), fixedStep(),
+                  textures procédurales, picker(), disposeTree() — à lire d'abord
+    backup.ts     Export/import de la sauvegarde JSON + stockage qui alerte
+                  quand le quota localStorage est atteint
     fx.ts         Particules DOM, confettis, feux d'artifice
     character.ts  Personnage SVG dont le visage est la photo de la joueuse
     clips.ts      Encouragements enregistrés par les parents
@@ -81,10 +92,11 @@ src/
     Home.tsx      Accueil : profils, réglages, bascule ferme/liste
     FarmHub.tsx   Décor de ferme (SVG) — 4 lieux = 4 catégories
     GameHost.tsx  Monte/démonte un jeu, écran de résultat, anti-crash, musique
-    PlayTimer.tsx Minuteur parental + verrou « question de grand »
+    PlayTimer.tsx Minuteur parental + verrou « question de grand » (MathGate, exporté)
+    Backup.tsx    Fenêtre parents : exporter / restaurer la sauvegarde
     ErrorBoundary.tsx / Album.tsx / VoiceStudio.tsx / Toast.tsx / Ambient.tsx
-  games/          38 fichiers, 1 par jeu + index.ts (le catalogue)
-scripts/smoke.mjs Smoke test Playwright : ouvre les 38 jeux, vérifie 0 erreur JS
+  games/          37 fichiers, 1 par jeu + index.ts (le catalogue)
+scripts/smoke.mjs Smoke test Playwright : ouvre les 37 jeux, vérifie 0 erreur JS
 ```
 
 **Contrat d'un jeu** — volontairement minimal, c'est la force du projet :
@@ -117,6 +129,11 @@ Puis **1 ligne dans `src/games/index.ts`**. Le `GameHost` fournit `ctx` :
 | **CSS transform vs attribut SVG** | Une animation CSS `transform` écrase l'attribut `transform="translate(…)"` d'un `<g>` SVG. |
 | **PWA en cache** | `registerSW` applique la maj automatiquement si elle arrive <15 s après l'ouverture (`src/main.tsx`). Sinon simple toast. Ne pas casser ça. |
 | **AudioContext unique** | `getCtx()` dans `core/audio.ts` est partagé sons + musique, avec `resume()` auto (iOS). Ne pas créer un second contexte. |
+| **cannon-es : corps figé** | Passer `body.type = STATIC` ne suffit pas : `invMass` reste fini et le corps suivant s'enfonce dedans. Mettre `body.mass = 0` **avant** `updateMassProperties()`. Même piège qu'`isStatic` en matter.js. |
+| **Sphère sur sphère** | Empiler des sphères en physique pure finit toujours par rouler. Dans `snowman.ts` la boule tombe sur un **rail vertical** (x/z verrouillés à chaque pas) : la chute est simulée, la dérive non. Le jeu ne peut pas se bloquer. |
+| **Planètes côté nuit** | Un système solaire éclairé par une seule lumière ponctuelle montre les planètes du premier plan **en ombre totale** — juste physiquement, inregardable à 6 ans. `space.ts` ajoute une directionnelle faible recollée sur la caméra à chaque image. |
+| **Blocs d'igloo** | Des cubes tangents à une sphère donnent une boîte, pas une coupole. `igloo.ts` découpe chaque bloc **dans la sphère** (`SphereGeometry` avec `phiStart/thetaStart`) : la voûte est vraie et les joints se voient. |
+| **`zustand/persist` muet** | Au dépassement de quota, `setItem` lève et persist avale l'exception : plus rien n'est enregistré, en silence. `core/backup.ts` fournit `loudStorage`, qui prévient par un toast. |
 
 ---
 
@@ -128,7 +145,13 @@ enregistrées, progression. **Un nettoyage du navigateur efface tout.** Le quota
 (~5 Mo) est aussi un risque : les photos et l'audio y sont stockés en base64, et
 zustand-persist échoue **silencieusement** au dépassement.
 
-Ce qu'il faut : **Supabase** (offre gratuite suffisante) ou équivalent.
+**Fait depuis** : un filet de secours existe — bouton **💾** de l'accueil
+(`core/backup.ts` + `components/Backup.tsx`) : export d'un fichier JSON complet
+(photos et voix comprises), réimport protégé par la « question de grand », jauge
+de remplissage du quota, et alerte quand l'enregistrement échoue. **Ça ne
+remplace pas une base de données**, ça évite juste la perte sèche.
+
+Ce qu'il faut toujours : **Supabase** (offre gratuite suffisante) ou équivalent.
 → Demander à l'utilisateur : URL du projet + clé `anon` publique.
 → Migration : profils/progression en table, photos/audio en Storage.
 → Garder un mode hors-ligne (cache local + synchro opportuniste).
@@ -162,18 +185,18 @@ feraient plus que n'importe quelle astuce technique. À arbitrer par l'utilisate
 `simon` · `connect4` · `battleship` · `piano` · `beatbox` · `coloring`
 
 **🟡 Bonne idée, rendu à refaire (candidats 3D ou refonte graphique)**
-`snowman` (⭐ le meilleur candidat 3D : sculpter des boules en 3D) ·
-`igloo` (construction 3D empilée, physique) · `pizza` (bac à sable façon Toca
-Kitchen, en 3D) · `chamboule` (doublon du `stand3d`, à **supprimer** au profit
-de la version 3D) · `caterpillar` · `socks` · `space` (les planètes mériteraient
-d'être de vraies sphères 3D texturées) · `geo` (zoom caméra 3D)
+`caterpillar` · `socks` · `geo` (le zoom continent → ville gagnerait à devenir un
+vrai déplacement de caméra 3D)
+*(`snowman`, `igloo`, `pizza` et `space` sont faits — voir 🔵 ; `chamboule` a été
+supprimé, `stand3d` le remplace.)*
 
 **🟠 Jeux d'action au rendu daté (Pixi 2D, sprites = emoji ou SVG)**
 `catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
 → tous gagneraient à passer sur de vrais sprites (Kenney) plutôt qu'une réécriture.
 
-**🔵 Référence à imiter**
-`stand3d` — vraie 3D + physique. **Le patron de tout nouveau développement.**
+**🔵 Vraie 3D — le niveau attendu**
+`stand3d` · `snowman` · `igloo` · `pizza` · `space`
+Tous montés sur `core/three3d.ts`. **Le patron de tout nouveau développement.**
 
 **⚪ Sans score, à laisser tranquilles**
 `fireworks` · `dressup`
@@ -187,8 +210,8 @@ d'être de vraies sphères 3D texturées) · `geo` (zoom caméra 3D)
 | Repo | `keryprophez/girlz-games` (public) |
 | Branche **par défaut** | `claude/magic-farm-game-q66bw4` ← **c'est elle que `deploy.yml` publie** |
 | `main` | maintenue au même commit (miroir) |
-| Branche de travail | `claude/winter-games-pizza-maker-35tmjc` |
-| Dernier commit | `e9fea93` (3D + retrait de l'addiction) |
+| Branche de travail | `claude/passation-roadmap-4b86sz` |
+| Dernier commit | étape 1 de la roadmap : 4 jeux passés en vraie 3D |
 | En ligne | https://keryprophez.github.io/girlz-games/ |
 
 **Procédure de livraison utilisée** (les 3 branches restent au même commit) :
@@ -225,7 +248,7 @@ le déploiement si un jeu casse. Le garder vert.
 
 ## 10. Message de l'utilisateur à garder en tête
 
-Il ne veut pas d'un catalogue de 38 mini-jeux inégaux. Il veut **peu de jeux, mais
+Il ne veut pas d'un catalogue de mini-jeux inégaux. Il veut **peu de jeux, mais
 qui ressemblent à de vrais jeux** — visuels et physique modernes. Quand il faut
 choisir entre « ajouter un 39ᵉ jeu » et « amener un jeu existant au niveau
 `stand3d` », **choisir la seconde option**.

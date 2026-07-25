@@ -16,7 +16,7 @@ const fmt = (ms: number) => {
 }
 
 /* ---- Le verrou mathématique (question de grand) ---- */
-function MathGate({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
+export function MathGate({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
   const [op] = useState(() => ({ a: rnd(23, 89), b: rnd(6, 9) }))
   const [typed, setTyped] = useState('')
   const [oops, setOops] = useState(0)

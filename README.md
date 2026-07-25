@@ -1,19 +1,19 @@
 # 🐤 La Ferme Magique
 
-Les jeux de **Joyce** et **Jade** — une webapp de 38 mini-jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
+Les jeux de **Joyce** et **Jade** — une webapp de 37 jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
 
 ## ✨ Ce qu'il y a dedans
 
-- **38 mini-jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
+- **37 jeux** en 4 catégories : Réflexion 🧠, Mémoire 🎯, Action ⚡, Créatif 🎨
 - **⏳ Minuteur parental** : on règle un temps de jeu par tranches de 5 min ; à la fin, un doux écran de nuit met les jeux en pause — pour débloquer ou prolonger, il faut résoudre une multiplication « de grand » (verrou anti-enfant, 3 essais)
-- **🐛 La Chenille** (snake tout doux : les bords téléportent, se marcher dessus fait juste trébucher), **🎪 Chamboule-Tout** (VRAIE physique matter.js : lance-pierre avec trajectoire prévisualisée exacte, boîtes-animaux qui culbutent, s'entrechoquent et dégringolent de l'étagère, la vache fait meuh), **🎆 Feu d'Artifice** (tape le ciel : sifflement, explosion en boule/anneau/cœur/étoile, bouquet final) — zéro échec
+- **🐛 La Chenille** (snake tout doux : les bords téléportent, se marcher dessus fait juste trébucher), **🎆 Feu d'Artifice** (tape le ciel : sifflement, explosion en boule/anneau/cœur/étoile, bouquet final) — zéro échec
 - **🎯 Le Stand 3D** : de la **vraie 3D temps réel** (Three.js) avec **vraie physique rigide** (cannon-es) — éclairage physique, ombres portées douces, matériaux PBR, tone mapping cinéma, textures générées à la volée (aucun fichier). On tire la balle en arrière, la trajectoire balistique exacte s'affiche, et les caisses basculent, s'entrechoquent et tombent de l'étagère pour de vrai
 - **🌾 La Ferme** : l'accueil est un décor vivant plutôt qu'une grille — les deux filles s'y promènent (leurs photos en avatar), le **ciel suit l'heure réelle** (matin, jour, soir, nuit étoilée). **Tout le décor est là dès la première seconde** : aucun palier, rien à débloquer, rien qui pousse à rejouer. On touche **L'École 🧠, La Grange 🎯, Le Pré ⚡ ou L'Atelier 🎨** pour ouvrir ses jeux. Bouton 📋 pour la liste classique
 - **✨ Moteur de « juice »** (`core/juice.ts`) : ressorts amortis, transition en iris à l'entrée de chaque jeu, secousses d'impact, cérémonie des étoiles sonore sur l'écran de résultat
 - **Mise à jour automatique** : la PWA applique les nouvelles versions dès l'ouverture (plus besoin de fermer/rouvrir deux fois) ; vibrations tactiles sur Android
-- **🚀 Voyage dans l'Espace** : la joueuse devient astronaute (sa photo dans le hublot de la fusée) et explore le système solaire dessiné à la main — Soleil, 8 planètes vivantes (anneaux de Saturne, tempête de Jupiter, Terre bleue…), une merveille racontée à voix haute à chaque visite, passeport à remplir et diplôme d'astronaute à la fin. Découverte pure, sans quiz
+- **🚀 Voyage dans l'Espace 3D** : un vrai système solaire en trois dimensions — sphères texturées qui tournent autour d'un Soleil qui éclaire tout le monde, anneaux de Saturne en géométrie, lunes en orbite, nuages sur la Terre. On touche une planète, la fusée s'y envole et la caméra la suit ; une merveille est racontée à voix haute. Passeport à remplir et diplôme d'astronaute à la fin. Découverte pure, sans quiz
 - **🔍 La Loupe Magique** : comprendre l'emboîtement **continent ⊃ pays ⊃ région ⊃ ville** sans quiz ni lecture — un petit animal veut rentrer chez lui, on zoome (vraie caméra) du plus grand au plus petit, les mots sont lus à voix haute et codés par couleur, et un récapitulatif emboîté conclut chaque tour
-- **⛄ Hiver & cuisine** : Bonhomme de neige (tape les boules pour changer leur taille, choisis leur forme et décore-le), L'Igloo (pose le bloc de glace de la bonne taille rangée par rangée — sans chrono en Douce, avant la tempête sinon), La Pizzeria (pâte, aplatissage, sauce tomate ou crème, ingrédients, cuisson au four à surveiller… puis on la croque !)
+- **⛄ Hiver & cuisine, en 3D** : **Bonhomme de neige** (on roule vraiment une boule dans la neige, elle creuse son sillon et grossit, puis elle tombe et s'écrase sur la pile avec la physique — chapeau, écharpe et bras en volumes), **L'Igloo** (blocs de glace translucides taillés dans une vraie coupole, la calotte referme le sommet, un feu s'allume dedans et tout l'igloo s'illumine sous une aurore boréale), **La Pizzeria** (bac à sable sans étape imposée : sauce étalée au doigt, ingrédients qui *tombent* et roulent sur la pâte, four à bois où la pâte dore et le fromage fond, puis on mange les parts une par une)
 - **Voix discrète** : la synthèse vocale ne sert qu'à lire le contenu à apprendre — multiplications, additions, heures, valeurs des pièces — jamais les consignes
 - **🎙 Voix de la famille** : papa/maman enregistrent « Bravo ! » et « Presque ! » pour chaque fille (bouton 🎙 sur l'accueil) ; le vrai clip est joué à la fin des parties
 - **⚔️ Défi à deux** : les sœurs jouent le même jeu tour à tour, écran de résultat commun et bienveillant, bouton Revanche — plus deux vrais jeux à deux sur la même tablette : **Puissance 4** (avec leurs têtes en jetons) et **Cache-Cache Pré** (bataille navale des animaux, on se passe la tablette)
@@ -40,9 +40,9 @@ Les jeux de **Joyce** et **Jade** — une webapp de 38 mini-jeux pensée pour jo
 | Build | Vite 6 + TypeScript |
 | Coquille (accueil, profils, album, résultats) | React 18 |
 | Jeux | Modules vanilla TS montés dans un hôte commun (`GameHost`) |
-| 3D & physique | Three.js + cannon-es (`Le Stand 3D`), matter.js (2D) — chargés à la demande |
+| 3D & physique | Three.js + cannon-es via le socle commun `src/core/three3d.ts` (Stand 3D, Bonhomme de neige, Igloo, Pizzeria, Espace) — chargés à la demande |
 | Rendu WebGL 2D | PixiJS (Ninja, Attrape, Poussin) — chargé à la demande |
-| État & persistance | Zustand + `localStorage` ⚠️ *pas de base de données — voir `PASSATION.md` §6* |
+| État & persistance | Zustand + `localStorage`, export/import d'une sauvegarde JSON (bouton 💾) ⚠️ *pas encore de base de données — voir `PASSATION.md` §6* |
 | Hors-ligne | vite-plugin-pwa (service worker + manifest) |
 | Déploiement | GitHub Actions → GitHub Pages |
 
@@ -70,7 +70,7 @@ npm run preview   # sert le build
 ## 🧪 Qualité
 
 ```bash
-npm run test:smoke   # ouvre les 38 jeux dans Chromium et vérifie 0 erreur JS
+npm run test:smoke   # ouvre les 37 jeux dans Chromium et vérifie 0 erreur JS
 ```
 Ce test **bloque le déploiement** en CI si un jeu casse.
 

@@ -6,6 +6,7 @@ import { sFlip, sNope } from '../core/audio'
 import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
+import { BackupButton } from './Backup'
 import { FarmHub } from './FarmHub'
 import type { Tier } from '../core/types'
 
@@ -84,6 +85,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <div className="stat"><button onClick={() => store.toggleSound()}>{store.sound ? '🔊' : '🔇'}</button></div>
         <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille">🎙</button></div>
         <TimerButton />
+        <BackupButton />
       </div>
 
       <button className="hub-toggle" onClick={() => { sFlip(); store.setHubView(store.hubView === 'farm' ? 'list' : 'farm') }}>

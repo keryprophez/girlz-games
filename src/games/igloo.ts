@@ -1,286 +1,422 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
 import { sGood, sNope, sPop, sWin, tone } from '../core/audio'
-import { confetti, FX } from '../core/fx'
+import { confetti } from '../core/fx'
+import {
+  createStage, loader, orbitCam, snowTex, bumpyNormal, dotTex, picker,
+  type Stage
+} from '../core/three3d'
 
-/* Construis l'igloo — attrape un bloc de glace dans les tas et GLISSE-le sur
-   l'emplacement qui brille (un simple tap sur le bon tas marche aussi).
-   Blocs de glace texturés, décor d'hiver, pingouin supporter. En Douce, pas
-   de chrono ; sinon la tempête approche doucement. */
+/* 🧊 L'Igloo 3D — on taille de vrais blocs de glace TRANSLUCIDES dans une
+   coupole : chaque rangée se referme un peu plus, la calotte scelle le sommet,
+   puis on allume un feu dedans et tout l'igloo s'illumine de l'intérieur, sous
+   une aurore boréale. Trois tailles de blocs : la case qui brille dit laquelle. */
 
-const SIZES: Record<string, { w: number; h: number; label: string }> = {
-  L: { w: 56, h: 36, label: 'Grand' },
-  M: { w: 46, h: 30, label: 'Moyen' },
-  S: { w: 36, h: 24, label: 'Petit' }
+const R = 1.6                 // rayon de la voûte
+const SIZES = { L: 0, M: 1, S: 2 }
+type SizeId = keyof typeof SIZES
+
+interface Slot {
+  size: SizeId
+  /** Découpe du bloc sur la sphère : azimut [a0, largeur] et polaire [t0, hauteur]. */
+  a0: number; aLen: number; t0: number; tLen: number
+  /** Centre du bloc — sert au fantôme et à la caméra. */
+  pos: [number, number, number]
+  filled: boolean
+  ghost: any
+  mesh: any
+  /** La calotte de faîte : une demi-sphère, pas un bloc. */
+  cap?: boolean
 }
 
-let ig: any = null
 let ctx: GameContext
+let S: any = null
 
-function buildLayout(rows: [string, number][]) {
-  const slots: any[] = []
-  const rowEnds: number[] = []
-  let door: any = null
-  let y = 252
-  rows.forEach(([sz, n], ri) => {
-    const { w, h } = SIZES[sz]
-    y -= h
-    const total = n * w + (n - 1) * 5
-    let x = 190 - total / 2
+/* ---------- Géométrie de la voûte ---------- */
+/* Bandes de la voûte, en angle polaire depuis le sommet.
+   Un bloc d'igloo n'est pas un cube : c'est un morceau de sphère taillé.
+   On les découpe donc directement dans la sphère — la coupole est vraie. */
+const BANDS: [number, number][] = [[1.20, Math.PI / 2], [0.80, 1.20], [0.40, 0.80]]
+const CAP_T = 0.44                 // la calotte referme le sommet
+const JOINT = 0.965                // léger jeu entre blocs = lignes de joint visibles
+
+function buildSlots(counts: [number, number, number]): Slot[] {
+  const slots: Slot[] = []
+  BANDS.forEach(([t0, t1], ri) => {
+    const n = counts[ri]
+    const step = (Math.PI * 2) / n
+    const tMid = (t0 + t1) / 2
     for (let i = 0; i < n; i++) {
-      // La porte remplace le bloc central de la rangée du bas
-      if (ri === 0 && i === (n - 1) / 2) door = { x, y, w, h }
-      else slots.push({ x, y, w, h, size: sz })
-      x += w + 5
-    }
-    rowEnds.push(slots.length)
-    y += 4 // les rangées se chevauchent légèrement
-  })
-  return { slots, door, rowEnds }
-}
-
-/* Un bloc de glace dessiné (reflet + fissure) pour le fantôme et les tas. */
-function blockSVG(w: number, h: number): string {
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%">
-    <rect x="1.5" y="1.5" width="${w - 3}" height="${h - 3}" rx="8" fill="#EAF6FE" stroke="#A8CFE8" stroke-width="3"/>
-    <rect x="${w * 0.14}" y="${h * 0.18}" width="${w * 0.34}" height="${h * 0.2}" rx="${h * 0.1}" fill="#FFFFFF" opacity=".85"/>
-    <path d="M${w * 0.62},${h * 0.6} l${w * 0.12},${h * 0.14}" stroke="#C4E0F2" stroke-width="2" stroke-linecap="round"/>
-  </svg>`
-}
-
-function fir(x: number, base: number, s: number): string {
-  return `<g>
-    <rect x="${x - 3 * s}" y="${base - 8 * s}" width="${6 * s}" height="${9 * s}" fill="#8A5A33"/>
-    <polygon points="${x - 16 * s},${base - 6 * s} ${x + 16 * s},${base - 6 * s} ${x},${base - 30 * s}" fill="#2E7D57"/>
-    <polygon points="${x - 12 * s},${base - 20 * s} ${x + 12 * s},${base - 20 * s} ${x},${base - 40 * s}" fill="#39905F"/>
-    <polygon points="${x - 8 * s},${base - 34 * s} ${x + 8 * s},${base - 34 * s} ${x},${base - 48 * s}" fill="#46A56C"/>
-    <path d="M${x - 8 * s},${base - 34 * s} Q${x},${base - 38 * s} ${x + 8 * s},${base - 34 * s}" stroke="#FFFFFF" stroke-width="${2.5 * s}" fill="none" stroke-linecap="round"/>
-  </g>`
-}
-
-function setWant() {
-  document.querySelectorAll('#igSvg .ig-slot').forEach(r => r.classList.remove('want'))
-  const cur = $(`igs${ig.idx}`)
-  if (cur) cur.classList.add('want')
-  $('igCount').textContent = `🧊 ${ig.idx}/${ig.slots.length}`
-}
-
-function slotScreenCenter(slot: any) {
-  const svgR = $('igSvg').getBoundingClientRect()
-  const k = svgR.width / 380
-  return {
-    x: svgR.left + slot.x * k + slot.w * k / 2,
-    y: svgR.top + (slot.y - ig.topY) * k + slot.h * k / 2,
-    k
-  }
-}
-
-function place() {
-  const slot = ig.slots[ig.idx]
-  const rect = $(`igs${ig.idx}`)
-  rect.classList.remove('ig-slot', 'want')
-  rect.classList.add('ig-block')
-  rect.setAttribute('fill', 'url(#igIceG)')
-  // Reflet sur le bloc posé
-  rect.insertAdjacentHTML('afterend',
-    `<rect x="${slot.x + slot.w * 0.14}" y="${slot.y + slot.h * 0.18}" width="${slot.w * 0.34}" height="${slot.h * 0.2}"
-      rx="${slot.h * 0.1}" fill="#FFFFFF" opacity=".8" class="ig-block" style="pointer-events:none"/>`)
-  sPop(); tone(240 + ig.idx * 10, 0.1, 'sine', 0.1)
-  const c = slotScreenCenter(slot)
-  FX.burst(c.x, c.y, { colors: ['#FFFFFF', '#DCEFF9', '#BFE0F5'], count: 10 })
-  ig.idx++
-  if (ig.idx >= ig.slots.length) { complete(); return }
-  // Une rangée terminée : petit jingle + le pingouin saute
-  if (ig.rowEnds.includes(ig.idx)) {
-    sGood()
-    const p = $('igPeng')
-    if (p) { p.classList.remove('hop'); void p.offsetWidth; p.classList.add('hop') }
-  }
-  setWant()
-}
-
-function wrongSize(pileEl: HTMLElement | null) {
-  ig.errors++
-  sNope()
-  const el = pileEl || document.querySelector<HTMLElement>('.ig-pile')
-  if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake') }
-}
-
-/* ---- Glisser-déposer des blocs ---- */
-function startDrag(e: PointerEvent, size: string, pileEl: HTMLElement) {
-  if (!ig || !ig.running || ig.done || ig.drag) return
-  e.preventDefault()
-  const { w, h } = SIZES[size]
-  const k = $('igSvg').getBoundingClientRect().width / 380
-  const ghost = document.createElement('div')
-  ghost.className = 'ig-ghost'
-  ghost.style.width = w * k + 'px'
-  ghost.style.height = h * k + 'px'
-  ghost.innerHTML = blockSVG(w, h)
-  document.body.appendChild(ghost)
-  ig.drag = { size, ghost, w: w * k, h: h * k, x0: e.clientX, y0: e.clientY, from: pileEl.getBoundingClientRect(), pile: pileEl }
-  dragMove(e)
-}
-
-function dragMove(e: PointerEvent) {
-  const d = ig && ig.drag
-  if (!d) return
-  d.ghost.style.left = e.clientX - d.w / 2 + 'px'
-  d.ghost.style.top = e.clientY - d.h / 2 + 'px'
-}
-
-function flyBack(d: any) {
-  d.ghost.style.transition = 'left .25s ease, top .25s ease, opacity .25s'
-  d.ghost.style.left = d.from.left + d.from.width / 2 - d.w / 2 + 'px'
-  d.ghost.style.top = d.from.top + d.from.height / 2 - d.h / 2 + 'px'
-  d.ghost.style.opacity = '0'
-  setTimeout(() => d.ghost.remove(), 260)
-}
-
-function dragEnd(e: PointerEvent) {
-  const d = ig && ig.drag
-  if (!d) return
-  ig.drag = null
-  if (ig.done) { d.ghost.remove(); return }
-  const dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0)
-  const slot = ig.slots[ig.idx]
-  const c = slotScreenCenter(slot)
-  const over = Math.abs(e.clientX - c.x) < slot.w * c.k / 2 + 20 && Math.abs(e.clientY - c.y) < slot.h * c.k / 2 + 20
-  // Déposé sur la case qui brille, OU simple tap sur le tas
-  if (over || dist < 10) {
-    if (d.size === slot.size) { d.ghost.remove(); place(); return }
-    wrongSize(d.pile)
-    flyBack(d)
-    return
-  }
-  flyBack(d) // lâché ailleurs : le bloc retourne au tas, sans punition
-}
-
-function complete() {
-  ig.done = true
-  $('igCount').textContent = `🧊 ${ig.slots.length}/${ig.slots.length}`
-  const walker = $('igPeng')
-  if (walker) walker.style.display = 'none'
-  const d = ig.door
-  const cx = d.x + d.w / 2, cy = d.y + d.h * 0.52, r = Math.min(d.w, d.h) * 0.42
-  const face = ctx.avatar
-    ? `<clipPath id="igFaceClip"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>
-       <image href="${ctx.avatar}" x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}"
-         clip-path="url(#igFaceClip)" preserveAspectRatio="xMidYMid slice"/>
-       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#fff" stroke-width="2.5"/>`
-    : `<text x="${cx}" y="${cy + 7}" font-size="${r * 1.9}" text-anchor="middle">👧</text>`
-  $('igSvg').insertAdjacentHTML('beforeend',
-    `<circle cx="${cx}" cy="${cy}" r="${d.w * 0.7}" fill="#FFD34D" opacity=".35"/>
-     ${face}<text x="${d.x - 34}" y="250" font-size="27">🐧</text>`)
-  sWin(); confetti()
-  ig.endT = setTimeout(() => ig && ig.running && finish(false), 1500)
-}
-
-function finish(storm: boolean) {
-  ig.done = true
-  const total = ig.slots.length
-  const stars = storm ? 1 : ig.errors <= 1 ? 3 : ig.errors <= Math.ceil(total / 4) ? 2 : 1
-  ctx.finish(storm
-    ? {
-        title: 'La tempête est arrivée !',
-        msg: `${ctx.playerName} a posé ${ig.idx} blocs sur ${total} — on finira au chaud ⛄`,
-        stars: 1, starsEarned: 1
-      }
-    : {
-        title: 'Igloo terminé !',
-        msg: `${ctx.playerName} a construit un igloo de ${total} blocs de glace 🐧`,
-        stars: stars as 1 | 2 | 3, starsEarned: stars
+      // Décalage d'une demi-brique une rangée sur deux : appareillage de maçon
+      const a = i * step + (ri % 2 ? step / 2 : 0)
+      // La porte occupe le devant de la rangée du bas
+      if (ri === 0 && Math.abs(((a + Math.PI) % (Math.PI * 2)) - Math.PI) < step * 0.75) continue
+      slots.push({
+        size: (['L', 'M', 'S'] as SizeId[])[ri],
+        a0: a - step * JOINT / 2, aLen: step * JOINT,
+        t0: t0 + (t1 - t0) * (1 - JOINT) / 2, tLen: (t1 - t0) * JOINT,
+        pos: [Math.sin(a) * R * Math.sin(tMid), R * Math.cos(tMid), Math.cos(a) * R * Math.sin(tMid)],
+        filled: false, ghost: null, mesh: null
       })
+    }
+  })
+  // Calotte de faîte : la dernière pièce, celle qui referme tout
+  slots.push({
+    size: 'S', a0: 0, aLen: Math.PI * 2, t0: 0, tLen: CAP_T,
+    pos: [0, R, 0], filled: false, ghost: null, mesh: null, cap: true
+  })
+  return slots
+}
+
+/** Géométrie d'un emplacement : un morceau de sphère, déjà à sa place. */
+function slotGeometry(T: any, s: Slot) {
+  const seg = Math.max(3, Math.round(s.aLen * 7)) + 1
+  return new T.SphereGeometry(R, seg, s.cap ? 8 : 5, s.a0, s.aLen, s.t0, s.tLen)
+}
+
+/* ---------- Décor ---------- */
+function aurora(T: any, scene: any) {
+  const c = document.createElement('canvas')
+  c.width = 512; c.height = 256
+  const g = c.getContext('2d')!
+  for (let b = 0; b < 5; b++) {
+    const x = 40 + b * 95 + Math.random() * 40
+    const grad = g.createLinearGradient(0, 0, 0, 256)
+    const hue = 130 + Math.random() * 90
+    grad.addColorStop(0, `hsla(${hue},85%,65%,0)`)
+    grad.addColorStop(0.45, `hsla(${hue},85%,62%,.55)`)
+    grad.addColorStop(1, `hsla(${hue + 40},80%,60%,0)`)
+    g.fillStyle = grad
+    g.beginPath()
+    g.moveTo(x, 0)
+    g.bezierCurveTo(x + 60, 80, x - 50, 170, x + 20, 256)
+    g.lineTo(x + 60, 256)
+    g.bezierCurveTo(x + 110, 170, x + 20, 80, x + 55, 0)
+    g.closePath(); g.fill()
+  }
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  const mesh = new T.Mesh(
+    new T.CylinderGeometry(26, 26, 14, 40, 1, true),
+    new T.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.55, side: T.BackSide, depthWrite: false })
+  )
+  mesh.position.y = 6
+  scene.add(mesh)
+  return mesh
+}
+
+function stars(T: any, scene: any) {
+  const N = 420
+  const pos = new Float32Array(N * 3)
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2
+    const p = Math.random() * 1.1
+    const r = 30
+    pos[i * 3] = Math.sin(a) * Math.cos(p) * r
+    pos[i * 3 + 1] = Math.abs(Math.sin(p)) * r + 3
+    pos[i * 3 + 2] = Math.cos(a) * Math.cos(p) * r
+  }
+  const geo = new T.BufferGeometry()
+  geo.setAttribute('position', new T.BufferAttribute(pos, 3))
+  const mat = new T.PointsMaterial({ size: 0.55, map: dotTex(T), transparent: true, depthWrite: false })
+  const pts = new T.Points(geo, mat)
+  scene.add(pts)
+  return pts
+}
+
+/* ---------- Poser un bloc ---------- */
+function nextSlot(): Slot | null {
+  return S.slots.find((s: Slot) => !s.filled) || null
+}
+
+function place(slot: Slot) {
+  const { T, scene } = S.stage
+  const m = new T.Mesh(slotGeometry(T, slot), S.iceMat)
+  m.castShadow = true
+  m.receiveShadow = true
+  scene.add(m)
+  slot.mesh = m
+  slot.filled = true
+  // Entrée en scène : le bloc arrive de l'extérieur et se plaque sur la voûte
+  m.scale.setScalar(1.5)
+  S.animating.push({ m, t: 0 })
+  if (slot.ghost) { slot.ghost.visible = false }
+  S.done++
+  sGood()
+  tone(420 + S.done * 22, 0.09, 'sine', 0.09)
+  refreshGhost()
+  paintUI()
+  if (!nextSlot()) setTimeout(() => S && enterIgloo(), 700)
+}
+
+function refreshGhost() {
+  for (const s of S.slots as Slot[]) if (s.ghost) s.ghost.visible = false
+  const n = nextSlot()
+  if (n && n.ghost) n.ghost.visible = true
+  S.want = n
+}
+
+/* ---------- Fin : on entre dans l'igloo ---------- */
+function enterIgloo() {
+  if (!S || S.inside) return
+  S.inside = true
+  const { T, scene } = S.stage
+  // On allume un feu à l'intérieur : la glace translucide s'illumine de l'intérieur.
+  // C'est le moment que la transmission rend joli — bien mieux que d'y coller la caméra.
+  const lamp = new T.PointLight(0xFFA24E, 22, 9, 2)
+  lamp.position.set(0, R * 0.35, 0)
+  scene.add(lamp)
+  const flame = new T.Mesh(
+    new T.SphereGeometry(0.16, 14, 12),
+    new T.MeshBasicMaterial({ color: 0xFFD79A })
+  )
+  flame.position.set(0, R * 0.3, 0)
+  scene.add(flame)
+  S.lamp = lamp
+  S.glow = 0
+  ;(S.iceMat as any).emissive = new T.Color(0xFF8A2E)
+  ;(S.iceMat as any).emissiveIntensity = 0
+
+  // La caméra se rapproche pour admirer l'igloo allumé, et en fait le tour
+  S.orbit.look = [0, R * 0.5, 0]
+  S.orbit.dist = 4.7
+  S.orbit.height = 0.7
+  S.orbit.auto = 0.25
+  ctx.toast('Ton igloo brille dans la nuit ! 🔥')
+  sWin()
+  confetti()
+  $('igHint').textContent = 'Bravo ! Ton igloo est fini ✨'
+  $('igHint').style.opacity = '1'
+  ;($('igTools') as HTMLElement).style.display = 'none'
+  ;($('igDone') as HTMLElement).style.display = ''
+}
+
+function finish() {
+  if (!S || S.ended) return
+  S.ended = true
+  ctx.finish({
+    title: 'Ton igloo est terminé ! 🧊',
+    msg: `${ctx.playerName} a posé ${S.slots.length} blocs de glace`,
+    stars: 3, starsEarned: 3
+  })
+}
+
+/* ---------- Interface ---------- */
+function paintUI() {
+  if (!S) return
+  $('igCount').textContent = `🧊 ${S.done}/${S.slots.length}`
+  const want = S.want as Slot | null
+  $('igTools').querySelectorAll<HTMLElement>('.g3-tool').forEach(b => {
+    b.classList.toggle('sel', !!want && b.dataset.s === want.size)
+  })
 }
 
 export const igloo: GameDef = {
   id: 'igloo', name: "L'Igloo", icon: '🧊', sq: 'sq-mint', cat: 'reflexion', music: 'winter',
-  subtitle: 'Attrape un bloc de glace et glisse-le sur la case qui brille !',
+  subtitle: 'Empile de vrais blocs de glace, referme la voûte et allume le feu !',
   mount(c) {
     ctx = c
-    const cfg = c.byTier<{ rows: [string, number][]; time: number }>(
-      { rows: [['L', 5], ['M', 4], ['S', 3]], time: 0 },
-      { rows: [['L', 7], ['M', 5], ['S', 4]], time: 90 },
-      { rows: [['L', 7], ['M', 6], ['S', 5], ['S', 3]], time: 60 }
-    )
-    const { slots, door, rowEnds } = buildLayout(cfg.rows)
-    // Cadre serré sur l'igloo : juste un peu de ciel au-dessus de la rangée la plus haute
-    const topY = Math.min(...slots.map(s => s.y)) - 40
-    ig = { slots, door, rowEnds, idx: 0, errors: 0, done: false, running: true, timeLeft: cfg.time, topY, drag: null }
-
-    const flakes = Array.from({ length: 9 }, () =>
-      `<span class="sn-flake" style="left:${4 + Math.random() * 92}%;animation-duration:${5 + Math.random() * 6}s;animation-delay:${-Math.random() * 10}s;font-size:${9 + Math.random() * 8}px">❄</span>`).join('')
+    let dead = false
+    const counts = c.byTier<[number, number, number]>([7, 6, 4], [9, 7, 5], [11, 9, 6])
 
     c.root.innerHTML = `
       <div class="topbar">
-        <div class="chip" id="igCount">🧊 0/${slots.length}</div>
-        ${cfg.time ? '<div class="chip">🌨 Avant la tempête…</div>' : ''}
+        <div class="chip" id="igCount">🧊 0/0</div>
+        <button class="chip" id="igLeft">◀</button>
+        <button class="chip" id="igRight">▶</button>
       </div>
-      ${cfg.time ? '<div class="tbar" style="max-width:520px"><div class="tfill" id="igTimer"></div></div>' : ''}
-      <div id="igArea">
-        ${flakes}
-        <svg id="igSvg" viewBox="0 ${topY} 380 ${270 - topY}">
-          <defs>
-            <linearGradient id="igIceG" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#CBE6F6"/>
-            </linearGradient>
-          </defs>
-          <circle cx="332" cy="${topY + 26}" r="15" fill="#FFE08A" stroke="#FFD34D" stroke-width="4"/>
-          <g fill="#FFFFFF" opacity=".85">
-            <ellipse cx="70" cy="${topY + 30}" rx="26" ry="9"/><ellipse cx="92" cy="${topY + 24}" rx="18" ry="7"/>
-            <ellipse cx="255" cy="${topY + 18}" rx="22" ry="7"/>
-          </g>
-          <ellipse cx="40" cy="252" rx="130" ry="30" fill="#F0F8FE"/>
-          <ellipse cx="345" cy="254" rx="140" ry="34" fill="#EAF4FC"/>
-          ${fir(28, 250, 1.15)}${fir(352, 250, 0.95)}${fir(64, 249, 0.7)}
-          <rect x="0" y="248" width="380" height="22" fill="#FFFFFF"/>
-          <ellipse cx="190" cy="250" rx="175" ry="9" fill="#F4FAFF" stroke="#DCE9F3" stroke-width="2"/>
-          <path d="M${door.x},${door.y + door.h} L${door.x},${door.y + door.h * 0.5} Q${door.x + door.w / 2},${door.y - 10} ${door.x + door.w},${door.y + door.h * 0.5} L${door.x + door.w},${door.y + door.h} Z"
-            fill="#2E5E86" stroke="#A8CFE8" stroke-width="3"/>
-          ${slots.map((s, i) =>
-            `<rect id="igs${i}" class="ig-slot" x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="9"/>`).join('')}
-        </svg>
-        <div id="igPeng">🐧</div>
+      <div class="arena g3-arena ig-arena" id="igArena">
+        <div class="hint g3-hint" id="igHint">Touche la case qui brille, ou choisis le bon bloc 👇</div>
       </div>
-      <div class="ig-piles">
-        ${(['L', 'M', 'S'] as const).map(sz => {
-          const { w, h, label } = SIZES[sz]
-          return `<button class="ig-pile" data-s="${sz}">
-            <span class="ig-pile-stack" style="width:${w}px;height:${h * 1.6}px">
-              <span class="ig-pile-b" style="width:${w * 0.86}px;height:${h * 0.9}px;left:${w * 0.1}px;top:0">${blockSVG(w, h)}</span>
-              <span class="ig-pile-b" style="width:${w}px;height:${h}px;left:0;top:${h * 0.62}px">${blockSVG(w, h)}</span>
-            </span><span>${label}</span></button>`
-        }).join('')}
+      <div class="g3-bar">
+        <div class="g3-row" id="igTools">
+          <button class="g3-tool" data-s="L"><span class="ig-cube big"></span></button>
+          <button class="g3-tool" data-s="M"><span class="ig-cube mid"></span></button>
+          <button class="g3-tool" data-s="S"><span class="ig-cube sml"></span></button>
+        </div>
+        <button class="g3-btn" id="igDone" style="display:none">C'est fini ! ✅</button>
       </div>`
 
-    document.querySelectorAll<HTMLElement>('.ig-pile').forEach(b => {
-      b.addEventListener('pointerdown', e => startDrag(e, b.dataset.s!, b))
-    })
-    const onMove = (e: PointerEvent) => dragMove(e)
-    const onUp = (e: PointerEvent) => dragEnd(e)
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-    setWant()
+    const arena = $('igArena')
+    const hideLoader = loader(arena, '🧊')
 
-    let timer = 0
-    if (cfg.time) {
-      timer = window.setInterval(() => {
-        if (!ig || !ig.running || ig.done) return
-        ig.timeLeft--
-        $('igTimer').style.width = (ig.timeLeft / cfg.time) * 100 + '%'
-        if (ig.timeLeft <= 0) finish(true)
-      }, 1000)
-    }
-    return () => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      if (ig) {
-        ig.running = false
-        clearTimeout(ig.endT)
-        if (ig.drag) ig.drag.ghost.remove()
-        ig = null
+    ;(async () => {
+      const stage: Stage = await createStage(arena, {
+        sky: '#16305A',
+        fog: [14, 40], fogColor: '#22467A',
+        cam: [0, 2, 5.6], target: [0, 1.1, 0], fov: 52,
+        hemi: ['#A8C8F2', '#33527A', 1.15],
+        sun: { pos: [-4, 7, 5], color: '#D8E8FF', intensity: 1.9, area: 6, far: 22 },
+        fill: 0.35, exposure: 1.25
+      })
+      if (dead) { stage.dispose(); return }
+      hideLoader()
+      const T = stage.T
+      const scene = stage.scene
+      // La réfraction coûte une passe de rendu : on la calcule en demi-résolution
+      ;(stage.renderer as any).transmissionResolutionScale = 0.5
+
+      /* Sol de neige nocturne */
+      const snowMap = stage.keep(snowTex(T, 10))
+      const snowNrm = stage.keep(bumpyNormal(T, 12, 10))
+      const ground = new T.Mesh(
+        new T.PlaneGeometry(70, 70),
+        new T.MeshStandardMaterial({ map: snowMap, normalMap: snowNrm, color: 0xC9DDF2, roughness: 0.8 })
+      )
+      ground.rotation.x = -Math.PI / 2
+      ground.receiveShadow = true
+      scene.add(ground)
+
+      const auro = aurora(T, scene)
+      stars(T, scene)
+
+      // Lune : la source de lumière visible du décor
+      const moon = new T.Mesh(
+        new T.SphereGeometry(1.2, 24, 18),
+        new T.MeshBasicMaterial({ color: 0xFFF6E0 })
+      )
+      moon.position.set(-9, 9, -14)
+      scene.add(moon)
+
+      /* La glace : translucide, avec un vrai indice de réfraction */
+      const iceMat = new T.MeshPhysicalMaterial({
+        color: 0xD9F1FF, roughness: 0.14, metalness: 0,
+        transmission: 0.72, thickness: 0.4, ior: 1.31, side: T.DoubleSide,
+        clearcoat: 0.6, clearcoatRoughness: 0.25,
+        normalMap: stage.keep(bumpyNormal(T, 6, 2)),
+        normalScale: new T.Vector2(0.35, 0.35)
+      })
+
+      const slots = buildSlots(counts)
+
+      /* Fantômes : les cases à remplir, une seule brille à la fois */
+      const ghostMat = new T.MeshBasicMaterial({
+        color: 0xFFD75E, transparent: true, opacity: 0.42, depthWrite: false, side: T.DoubleSide
+      })
+      for (const s of slots) {
+        const g = new T.Mesh(slotGeometry(T, s), ghostMat)
+        g.visible = false
+        scene.add(g)
+        s.ghost = g
       }
-      clearInterval(timer)
+
+      /* Porte : un petit tunnel devant, toujours ouvert */
+      const doorMat = new T.MeshPhysicalMaterial({
+        color: 0xCFEBFF, roughness: 0.2, transmission: 0.5, thickness: 0.3, ior: 1.31
+      })
+      const door = new T.Mesh(new T.CylinderGeometry(R * 0.34, R * 0.34, R * 0.8, 16, 1, true, 0, Math.PI), doorMat)
+      door.rotation.z = Math.PI / 2
+      door.rotation.y = Math.PI / 2
+      door.position.set(0, 0, R * 0.95)
+      door.castShadow = true
+      scene.add(door)
+
+      /* Un pingouin qui regarde le chantier — la seule « présence » du décor */
+      const peng = new T.Group()
+      const bodyMat = new T.MeshStandardMaterial({ color: 0x24262E, roughness: 0.7 })
+      const bellyMat = new T.MeshStandardMaterial({ color: 0xFFF6E8, roughness: 0.75 })
+      const beakMat = new T.MeshStandardMaterial({ color: 0xF0A02E, roughness: 0.5 })
+      const bd = new T.Mesh(new T.CapsuleGeometry(0.22, 0.24, 6, 14), bodyMat)
+      bd.position.y = 0.35; bd.castShadow = true
+      const bl = new T.Mesh(new T.SphereGeometry(0.17, 14, 12), bellyMat)
+      bl.position.set(0, 0.33, 0.11); bl.scale.set(1, 1.3, 0.6)
+      const bk = new T.Mesh(new T.ConeGeometry(0.05, 0.14, 8), beakMat)
+      bk.rotation.x = Math.PI / 2; bk.position.set(0, 0.5, 0.22)
+      const eyeGeo = new T.SphereGeometry(0.035, 10, 8)
+      const eyeMat = new T.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.3 })
+      for (const sx of [-1, 1]) {
+        const e = new T.Mesh(eyeGeo, eyeMat)
+        e.position.set(sx * 0.08, 0.57, 0.17)
+        peng.add(e)
+      }
+      peng.add(bd, bl, bk)
+      peng.position.set(1.65, 0, 1.95)
+      peng.rotation.y = -0.62
+      peng.scale.setScalar(1.15)
+      scene.add(peng)
+
+      S = {
+        stage, slots, iceMat, done: 0, want: null, animating: [], peng, auro,
+        inside: false, ended: false,
+        orbit: orbitCam(stage, 5.4, 0.95, [0, 1.1, 0])
+      }
+      refreshGhost()
+      paintUI()
+
+      /* --- Toucher directement la case qui brille --- */
+      const pick = picker(stage)
+      const onTap = (e: PointerEvent) => {
+        if (!S || S.inside) return
+        const want = S.want as Slot | null
+        if (!want) return
+        const hit = pick(e, [want.ghost])
+        if (hit.length) place(want)
+      }
+      stage.renderer.domElement.addEventListener('pointerdown', onTap)
+
+      /* --- Ou choisir la bonne taille de bloc dans la réserve --- */
+      $('igTools').querySelectorAll<HTMLElement>('.g3-tool').forEach(b => {
+        b.onclick = () => {
+          if (!S || S.inside) return
+          const want = S.want as Slot | null
+          if (!want) return
+          if (b.dataset.s === want.size) place(want)
+          else { sNope(); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 260) }
+        }
+      })
+
+      $('igLeft').onclick = () => { S?.orbit.turn(-0.55); sPop() }
+      $('igRight').onclick = () => { S?.orbit.turn(0.55); sPop() }
+      $('igDone').onclick = () => finish()
+
+      /* --- Boucle --- */
+      stage.start((dt, now) => {
+        if (!S) return
+        S.orbit.update(dt)
+        auro.rotation.y += dt * 0.02
+        ;(auro.material as any).opacity = 0.42 + Math.sin(now / 2600) * 0.14
+
+        // Mise en place des blocs : ils se plaquent sur la voûte en ralentissant
+        for (let i = S.animating.length - 1; i >= 0; i--) {
+          const a = S.animating[i]
+          a.t += dt * 2.4
+          if (a.t >= 1) {
+            a.m.scale.setScalar(1)
+            S.animating.splice(i, 1)
+          } else {
+            const k = 1 - Math.pow(1 - a.t, 3)
+            a.m.scale.setScalar(1.5 - 0.5 * k)
+          }
+        }
+
+        // Le fantôme respire pour attirer l'œil
+        const w = S.want as Slot | null
+        if (w?.ghost) {
+          const p = 0.32 + Math.sin(now / 260) * 0.16
+          ;(w.ghost.material as any).opacity = p
+          w.ghost.scale.setScalar(1 + Math.sin(now / 260) * 0.05)
+        }
+        // Le pingouin se dandine
+        S.peng.rotation.z = Math.sin(now / 620) * 0.09
+        if (S.lamp) {
+          S.lamp.intensity = 20 + Math.sin(now / 130) * 4
+          S.glow = Math.min(0.55, S.glow + dt * 0.5)
+          ;(S.iceMat as any).emissiveIntensity = S.glow + Math.sin(now / 210) * 0.04
+        }
+      })
+
+      S.cleanup = () => {
+        stage.renderer.domElement.removeEventListener('pointerdown', onTap)
+        stage.dispose()
+      }
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+
+    return () => {
+      dead = true
+      if (S) {
+        try { S.cleanup?.() } catch { /* déjà démonté */ }
+        S = null
+      }
     }
   }
 }
