@@ -214,16 +214,33 @@ button.chip:active{transform:scale(.92);}
 /* ============================================================
    TAUPE
    ============================================================ */
-#moleGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(10px,2.2vmin,16px);width:100%;max-width:470px;}
+/* Le pré : ciel, arbres au fond, trous, herbe devant — tout en sprites Kenney */
+#moleField{position:relative;width:100%;max-width:470px;border-radius:var(--r-xl);overflow:hidden;
+  box-shadow:var(--e2);border:1px solid var(--line);padding:14px 12px 20px;
+  background:linear-gradient(180deg,#BFE3F5 0%,#DDF0FA 26%,#9AD06B 26.5%,#7CBF57 100%);}
+.mole-sky,.mole-back,.mole-front{position:absolute;left:0;right:0;pointer-events:none;}
+.mole-sky{top:0;height:26%;}
+.mole-back{top:20%;height:0;}
+.mole-front{bottom:0;height:0;z-index:3;}
+.mole-deco{position:absolute;display:block;background-repeat:no-repeat;
+  filter:drop-shadow(0 3px 3px rgba(40,60,30,.18));}
+.mole-cloud{animation:moleDrift 46s linear infinite;filter:none;opacity:.9;}
+@keyframes moleDrift{from{transform:translateX(-140px);}to{transform:translateX(520px);}}
+@media(prefers-reduced-motion:reduce){.mole-cloud{animation:none;}}
+#moleGrid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);
+  gap:clamp(10px,2.2vmin,16px);width:100%;}
 .hole{aspect-ratio:1;position:relative;cursor:pointer;border:none;background:transparent;padding:0;}
 .hole .dirt{position:absolute;left:8%;right:8%;bottom:6%;height:32%;background:radial-gradient(ellipse at 50% 30%,#8a6a45,#5d452c);
   border-radius:50%;box-shadow:inset 0 6px 12px rgba(0,0,0,.35), var(--e1);}
-.hole .peep{position:absolute;left:0;right:0;bottom:16%;text-align:center;font-size:clamp(36px,9vmin,56px);
-  transform:translateY(90%) scale(.5);opacity:0;transition:transform .15s var(--spring),opacity .1s;
+/* .peep porte un sprite de la planche : sa taille et sa position de fond sont
+   posées en JS (core/sprites.ts), le CSS ne gère que l'animation de sortie. */
+.hole .peep{position:absolute;left:50%;bottom:16%;margin-left:0;
+  transform:translate(-50%,90%) scale(.5);opacity:0;transform-origin:bottom center;
+  transition:transform .15s var(--spring),opacity .1s;background-repeat:no-repeat;
   filter:drop-shadow(0 4px 4px rgba(69,54,42,.3));pointer-events:none;}
-.hole.up .peep{transform:translateY(0) scale(1);opacity:1;}
+.hole.up .peep{transform:translate(-50%,0) scale(1);opacity:1;}
 .hole.bonk .peep{animation:bonked .3s ease forwards;}
-@keyframes bonked{40%{transform:translateY(6%) scale(1.2,0.7);}100%{transform:translateY(95%) scale(.5);opacity:0;}}
+@keyframes bonked{40%{transform:translate(-50%,6%) scale(1.2,.7);}100%{transform:translate(-50%,95%) scale(.5);opacity:0;}}
 .hole .pow{position:absolute;left:0;right:0;bottom:58%;text-align:center;font-size:25px;opacity:0;pointer-events:none;}
 .hole.bonk .pow{animation:powUp .45s ease-out forwards;}
 @keyframes powUp{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-32px);}}
@@ -656,7 +673,7 @@ body.bigplay #skArea,body.bigplay .arena{
 body.bigplay .board{max-width:min(92vw,78vh) !important;}
 body.bigplay .igrid{max-width:min(92vw,74vh) !important;}
 body.bigplay #simonWrap{max-width:min(84vw,66vh);}
-body.bigplay #moleGrid{max-width:min(88vw,72vh);}
+body.bigplay #moleField{max-width:min(88vw,72vh);}
 body.bigplay .qbox{max-width:780px;}
 body.bigplay .lg-grid{max-width:min(90vw,60vh) !important;}
 body.bigplay .lg-slot{width:clamp(40px,6vmin,60px);height:clamp(50px,7.5vmin,72px);}

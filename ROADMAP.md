@@ -44,16 +44,34 @@ vrai déplacement de caméra 3D)
 
 ---
 
-## Étape A — Les assets réels 🔑 ← **le prochain chantier**
+## Étape A — Les assets réels 🔑 ✅ FAIT (priorité 1)
 
 **Le plus gros saut visuel du projet pour l'effort le plus faible.** Tout est CC0
-(Kenney), donc utilisable sans contrepartie.
+(Kenney), donc utilisable sans contrepartie ni attribution obligatoire.
 
-L'URL de téléchargement direct est lisible dans le HTML de chaque page
-(`https://kenney.nl/media/pages/assets/<slug>/<hash>/<fichier>.zip`) : **aucune
-manipulation manuelle n'est nécessaire**, l'agent récupère les zips lui-même.
+Le tout est automatisé : **`node scripts/import-assets.mjs`** télécharge les zips
+(l'URL directe est lisible dans le HTML de chaque page Kenney), ne garde que les
+planches utilisées, convertit l'atlas XML en JSON et écrit `CREDITS.md`. Pour
+ajouter un pack, éditer le script et le relancer — rien à faire à la main.
 
-### Priorité 1 — visuels 2D, pour l'étape B
+**Embarqué aujourd'hui : 563 Ko pour 467 sprites** (`public/assets/`), chargés à
+la demande par `core/sprites.ts` :
+
+| Planche | Sprites | Poids | Source |
+|---|---|---|---|
+| `animals` | 30 | 74 Ko | Animal Pack Remastered |
+| `fish` | 126 | 59 Ko | Fish Pack |
+| `nature` | 80 | 261 Ko | Background Elements |
+| `items` | 59 | 43 Ko | Platformer Art Deluxe |
+| `tiles` | 172 | 126 Ko | Platformer Art Deluxe |
+
+Les **particules** de Kenney ont été écartées : leurs PNG font 512×512 chacun
+(550 Ko à eux seuls) alors que `core/fx.ts` fait déjà le travail en DOM. À
+reprendre quand les jeux d'action passeront sur PixiJS.
+
+<details><summary>Les packs candidats, avec leur poids (référence)</summary>
+
+### Visuels 2D
 
 | Pack | Fichiers | Poids | Pour quoi |
 |---|---|---|---|
@@ -66,10 +84,14 @@ manipulation manuelle n'est nécessaire**, l'agent récupère les zips lui-même
 | [`particle-pack`](https://kenney.nl/assets/particle-pack) | 80 | 14,3 Mo | Étincelles, fumée, éclaboussures — le *juice* de tous les jeux d'action. Le plus lourd : à trier, on n'en garde qu'une poignée. |
 | [`emotes-pack`](https://kenney.nl/assets/emotes-pack) | 480 | 0,4 Mo | Retour d'émotion (bravo, raté) sans un mot à lire — utile partout vu la contrainte « aucune lecture ». |
 
-Optionnels si on veut aller plus loin : `shape-characters` (0,5 Mo),
-`sports-pack` (1,3 Mo), `jumper-pack` (1,5 Mo), `new-platformer-pack` (3,1 Mo).
+`generic-items` (2,2 Mo) et `physics-assets` (2,5 Mo) ont été écartés : leurs
+sprites s'appellent `genericItem_color_017`, il faut tous les regarder un par un
+pour savoir ce que c'est. Mauvais rapport effort/valeur.
 
-### Priorité 2 — modèles 3D, pour enrichir les jeux déjà faits
+Optionnels : `shape-characters` (0,5 Mo), `sports-pack` (1,3 Mo),
+`jumper-pack` (1,5 Mo), `new-platformer-pack` (3,1 Mo).
+
+### Modèles 3D, pour enrichir les jeux déjà faits
 
 | Pack | Poids | Pour quoi |
 |---|---|---|
@@ -78,26 +100,25 @@ Optionnels si on veut aller plus loin : `shape-characters` (0,5 Mo),
 | [`nature-kit`](https://kenney.nl/assets/nature-kit) | 10,0 Mo | Arbres et rochers — remplace les sapins en cônes de `snowman`. |
 | [`space-kit`](https://kenney.nl/assets/space-kit) | 6,4 Mo | Une vraie fusée pour `space`. |
 
-### Priorité 3 — sons (étape C)
+### Sons (étape C)
 
 [`impact-sounds`](https://kenney.nl/assets/impact-sounds) (0,8 Mo) et
 [`interface-sounds`](https://kenney.nl/assets/interface-sounds) (0,8 Mo).
 
-### À faire à l'import
-- Ranger dans `public/assets/<pack>/` et **trier** : on ne garde que ce qui sert.
-- Écrire `public/assets/CREDITS.md` à partir des `License.txt` de chaque zip.
-- Charger **à la demande par jeu** (comme Three.js aujourd'hui) : c'est le temps
-  de démarrage qui compte, plus le hors-ligne.
+</details>
 
 ---
 
-## Étape B — Moderniser les jeux d'action 2D 🟠
+## Étape B — Moderniser les jeux d'action 2D 🟠 ← **le prochain chantier**
 
-`catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
+| Jeu | État |
+|---|---|
+| `mole` → **Coucou les Animaux** | ✅ Fait. Sprites d'animaux Kenney, cactus à éviter, décor de pré (arbres, herbe, nuages, soleil). Sert de patron. |
+| `catch` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon` | À faire |
 
-Pas de réécriture : **remplacer les emoji par de vrais sprites**, passer tout le
-monde sur PixiJS avec atlas partagé, ajouter particules et *screen shake*
-cohérents. Effort faible, gain visuel élevé une fois l'étape A faite.
+Pas de réécriture : **remplacer les emoji par de vrais sprites** via
+`core/sprites.ts`, ajouter un décor tiré de la planche `nature`, puis particules
+et *screen shake* cohérents. Le gain est visible dès le premier jeu.
 
 ---
 

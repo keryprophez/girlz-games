@@ -44,11 +44,21 @@ niveau des jeux 3D », **toujours la seconde option**.
 src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.ts
              music.ts (générative) · voice.ts · juice.ts · fx.ts · character.ts
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
+             sprites.ts  ← planches d'assets CC0 chargées à la demande
              backup.ts   ← export/import JSON + alerte quota localStorage
 src/components/  Home · FarmHub · GameHost · PlayTimer · Backup · Album · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
-scripts/smoke.mjs  ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
+public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
+scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
+scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
 ```
+
+**Les visuels viennent des planches CC0 Kenney**, pas d'emoji : `loadAtlas('animals')`
+puis `frameStyle(atlas, 'cow', 64)` pour un jeu en DOM (voir `mole.ts`, le patron).
+Pour ajouter un pack, éditer `scripts/import-assets.mjs` et le relancer — les
+sprites triés sont commités, les zips ne le sont pas. Attention : la planche
+`nature` mélange les saisons, d'où les listes `GREEN_TREES` / `GREEN_GRASS` de
+`sprites.ts` — piocher au hasard sème de la neige au milieu d'un pré.
 
 **Contrat d'un jeu** — volontairement minimal, c'est la force du projet :
 
