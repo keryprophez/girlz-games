@@ -1,6 +1,6 @@
 # 🐤 La Ferme Magique
 
-Les jeux de **Joyce** et **Jade** — une webapp de 37 jeux pensée pour jouer sur tablette ou téléphone, même sans connexion. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
+Les jeux de **Joyce** et **Jade** — une webapp de 37 jeux pensée pour jouer sur tablette ou téléphone. Le portfolio est curé pour 6-8 ans : chaque jeu a une raison d'exister, aucun n'exige de savoir lire.
 
 ## ✨ Ce qu'il y a dedans
 
@@ -28,7 +28,7 @@ Les jeux de **Joyce** et **Jade** — une webapp de 37 jeux pensée pour jouer s
 - **Aucune mécanique d'addiction** : pas de monnaie, pas de boutique, pas de paliers de déblocage, pas de série quotidienne, pas de notification. Les étoiles sont un simple retour de fin de partie ; le décor de la ferme est entier dès la première seconde. Voir les anti-objectifs de `ROADMAP.md`
 - **Progression séparée** par joueuse : étoiles, album de 24 animaux à collectionner, meilleurs scores par jeu
 - **3 niveaux de difficulté** par profil (🌱 Douce / 🌿 Normale / 🔥 Expert), réglables d'un tap
-- **PWA hors-ligne** : installable sur l'écran d'accueil, polices auto-hébergées, aucun réseau requis après la première visite
+- **PWA installable** : s'ajoute à l'écran d'accueil comme une vraie app, polices auto-hébergées, mise à jour automatique
 - **Sons synthétisés** en Web Audio (aucun fichier audio) : jingles, et de vrais bruitages sculptés au bruit blanc filtré (plouf 💦, explosion 🎈, pop sec 🍿, meuh 🐮, crounch de neige ❄️, woosh de lancer 🎾)
 - **🎼 Musique d'ambiance GÉNÉRATIVE** (`core/music.ts`, toujours zéro fichier) : chaque univers a son thème — boîte à musique d'hiver, grand pad spatial, orgue de fête foraine, valse de trattoria, prairie douce, nuit calme — et la mélodie est improvisée en marche aléatoire sur la gamme : elle ne se répète jamais exactement. Volume discret, liée au bouton 🔊
 - **Rendu WebGL (PixiJS)** pour les jeux d'action rapides — Ninja Verger, Attrape et Poussin Volant : fruits et légumes vectoriels texturés, particules, chargé à la demande (le reste de l'app reste léger)
@@ -42,8 +42,8 @@ Les jeux de **Joyce** et **Jade** — une webapp de 37 jeux pensée pour jouer s
 | Jeux | Modules vanilla TS montés dans un hôte commun (`GameHost`) |
 | 3D & physique | Three.js + cannon-es via le socle commun `src/core/three3d.ts` (Stand 3D, Bonhomme de neige, Igloo, Pizzeria, Espace) — chargés à la demande |
 | Rendu WebGL 2D | PixiJS (Ninja, Attrape, Poussin) — chargé à la demande |
-| État & persistance | Zustand + `localStorage`, export/import d'une sauvegarde JSON (bouton 💾) ⚠️ *pas encore de base de données — voir `PASSATION.md` §6* |
-| Hors-ligne | vite-plugin-pwa (service worker + manifest) |
+| État & persistance | Zustand + `localStorage`, export/import d'une sauvegarde JSON (bouton 💾) ⚠️ *pas encore de base de données — voir `ROADMAP.md` étape D* |
+| Installation | vite-plugin-pwa (service worker + manifest) — l'app s'ajoute à l'écran d'accueil |
 | Déploiement | GitHub Actions → GitHub Pages |
 
 L'architecture des jeux est volontairement simple : chaque jeu implémente
@@ -76,7 +76,7 @@ Ce test **bloque le déploiement** en CI si un jeu casse.
 
 ## 🗺 Suite du projet
 
-- **`ROADMAP.md`** — l'ordre de bataille pour atteindre un niveau professionnel
-  (assets réels, base de données, refonte des jeux phares en 3D).
-- **`PASSATION.md`** — état honnête du projet, contraintes non négociables,
-  pièges techniques déjà rencontrés, verdict jeu par jeu. **À lire avant de coder.**
+- **`CLAUDE.md`** — les règles du projet : contraintes non négociables, contrat
+  d'un jeu, socle 3D, pièges techniques déjà payés, méthode de vérification.
+  **À lire avant de coder.**
+- **`ROADMAP.md`** — où on en est (verdict jeu par jeu) et ce qui reste à faire.

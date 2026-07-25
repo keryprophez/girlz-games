@@ -120,7 +120,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
           </div>
         ))}
       </div>}
-      <div className="footnote">Hors-ligne · la collection de chacune est gardée d'une fois sur l'autre 🌟</div>
+      <div className="footnote">La collection de chacune est gardée d'une fois sur l'autre 🌟</div>
 
       {albumOpen && <Album onClose={() => setAlbumOpen(false)} />}
       {voicesOpen && <VoiceStudio onClose={() => setVoicesOpen(false)} />}

@@ -1,27 +1,37 @@
 # CLAUDE.md — La Ferme Magique
 
-Webapp PWA de jeux pour **Jade (6 ans)** et **Joyce (8 ans)**, jouable hors-ligne
-sur tablette. Commanditaire : le père. Il veut un **niveau professionnel** — des
-vrais jeux, pas un catalogue de mini-jeux.
+Webapp PWA de jeux pour **Jade (6 ans)** et **Joyce (8 ans)**, sur tablette.
+Commanditaire : le père. Il veut un **niveau professionnel** — des vrais jeux,
+pas un catalogue de mini-jeux.
 
-Docs longues : `PASSATION.md` (état honnête, pièges, verdict jeu par jeu) et
-`ROADMAP.md` (ordre de bataille). Les lire avant un gros chantier.
+**Répartition des documents — ne rien dupliquer d'un fichier à l'autre :**
+`CLAUDE.md` = les règles et conventions (ce fichier) · `ROADMAP.md` = où on en
+est et ce qui reste à faire · `README.md` = présentation de l'app.
 
 ---
 
 ## Règles non négociables ❌
 
-1. **Aucune mécanique d'addiction.** Pas de monnaie, boutique, paliers de
-   déblocage, série/streak, notification de rappel, « reviens demain ».
-   Les étoiles sont un simple retour de fin de partie, rien de plus.
+1. **Aucune mécanique d'addiction.** Ne jamais ajouter, quoi qu'en suggère la
+   « bonne pratique » du jeu mobile : monnaie, boutique, coffres, énergie, vies
+   qui se rechargent · paliers de déblocage, arbre de progression, saisons,
+   événements limités · séries quotidiennes, notifications de rappel, « reviens
+   demain » · classements ou comparaison entre les deux sœurs au-delà du Défi à
+   deux amical · publicité, achats intégrés, analytique tiers, compte en ligne
+   pour les enfants. Les étoiles sont un simple retour de fin de partie.
 2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, voix,
    démonstration visuelle. `core/voice.ts` ne lit que le **contenu pédagogique**
    (multiplications, heures, noms de lieux), jamais les consignes.
-3. **Hors-ligne obligatoire.** PWA, tout précaché. Aucun appel réseau au runtime.
-4. **Pas de collecte de données enfants.** Photos et voix restent locales.
+3. **Pas de collecte de données enfants.** Photos et voix restent locales.
    Aucun analytique tiers.
-5. **Français uniquement** : textes, commentaires de code, messages de commit.
+4. **Français uniquement** : textes, commentaires de code, messages de commit.
    Et on se tutoie.
+
+**Le hors-ligne n'est PAS une contrainte** (décision du 25/07/2026). La PWA reste
+— elle sert à installer l'app sur l'écran d'accueil — mais le poids du précache
+n'est plus un critère de conception : les assets peuvent être chargés à la
+demande. C'est le **temps de démarrage** qui compte, pas la disponibilité en
+avion.
 
 **Règle d'arbitrage** : entre « ajouter un jeu » et « amener un jeu existant au
 niveau des jeux 3D », **toujours la seconde option**.
@@ -106,5 +116,14 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space
 - Branche **par défaut** `claude/magic-farm-game-q66bw4` ← c'est elle que
   `deploy.yml` publie. `main` est maintenue au même commit (miroir).
 - Développer sur une branche de travail, ne jamais pousser ailleurs sans
-  demander. Procédure de livraison : voir `PASSATION.md` §8.
+  demander. Livraison (les trois branches restent au même commit) :
+  ```bash
+  git push -u origin <branche-de-travail>
+  git checkout main && git merge --ff-only <branche> && git push origin main
+  git checkout claude/magic-farm-game-q66bw4 && git merge --ff-only <branche> \
+    && git push origin claude/magic-farm-game-q66bw4
+  git checkout <branche>
+  ```
+  Si tu bascules la branche par défaut sur `main` dans les réglages GitHub,
+  simplifier `deploy.yml` et supprimer cette gymnastique.
 - CI : `npm ci` → `npm run build` → `npm run test:smoke` → Pages.

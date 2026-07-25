@@ -1,96 +1,137 @@
 # 🗺 Roadmap — passer au niveau professionnel
 
-> Objectif fixé par l'utilisateur : **des vrais jeux, visuels et physique
-> modernes** — pas un catalogue de mini-jeux. Lire `PASSATION.md` d'abord.
->
-> Règle d'arbitrage : entre « ajouter un jeu » et « amener un jeu existant au
-> niveau de `stand3d` », **toujours choisir la seconde option**.
+> **Les règles du projet sont dans `CLAUDE.md`** (contraintes, contrat d'un jeu,
+> socle 3D, pièges, méthode, git). Ce document ne dit que : **où on en est** et
+> **ce qui reste à faire**. Rien n'y est répété.
+
+Objectif : **des vrais jeux, visuels et physique modernes** — pas un catalogue de
+mini-jeux.
 
 ---
 
-## Étape 0 — Débloquer les deux fondations (à faire en premier) 🔑
+## Où on en est
 
-Ces deux chantiers conditionnent tout le reste. Environnement réseau ouvert = ils
-sont enfin possibles.
+Le point de départ était ce retour, à prendre au mot :
 
-### 0.1 Assets réels — **toujours à faire**
-> Vérifié le 25/07/2026 : `kenney.nl`, `poly.pizza` et `quaternius.com` répondent
-> bien depuis cet environnement (HTTP 200), le blocage réseau de la session
-> précédente a disparu. Le chantier n'a pas été mené faute de temps — il a été
-> arbitré au profit de l'étape 1, conformément à la règle d'arbitrage ci-dessus.
-> Attention : les téléchargements Kenney passent par un formulaire, l'URL directe
-> du `.zip` renvoie 404.
+> « ça fait vraiment petit jeu pourri rempli d'émoticônes, avec des animations
+> flash des 80s »
 
-- Télécharger les packs **CC0 Kenney** : *Impact Sounds*, *Interface Sounds*,
-  *Animal Pack Redux*, *Physics Assets*, *Platformer Kit*.
-- Modèles 3D low-poly CC0 : **Poly Pizza**, **Quaternius** (glTF).
-- Ranger dans `public/assets/<pack>/`, écrire `public/assets/CREDITS.md`.
-- Charger **à la demande par jeu** (comme Three.js aujourd'hui) pour ne pas
-  gonfler le précache PWA. Vérifier que le hors-ligne tient toujours.
-- **Effet attendu : le plus gros saut visuel du projet, pour un effort modeste.**
+Cause racine : **aucun asset graphique dans le projet**. Les émoji servaient de
+sprites et les décors étaient dessinés à la main en SVG. En 3D procédurale la
+qualité vient de la lumière, des ombres et des matériaux — la machine produit le
+rendu qu'on ne sait pas dessiner. C'est pourquoi les jeux phares sont passés en
+3D. En 2D, sans assets, **on plafonne** : le rendu *est* le dessin.
 
-### 0.2 Base de données
-- ✅ **Fait (filet de secours)** : export/import d'une sauvegarde JSON depuis le
-  bouton 💾 de l'accueil, jauge de quota, et alerte quand `localStorage` est plein
-  (`core/backup.ts`). Ça ne remplace pas la BDD, ça évite la perte sèche.
-- Demander à l'utilisateur : **URL projet Supabase + clé `anon`**.
-- Tables `profiles`, `progress` ; Storage pour photos et clips vocaux.
-- **Garder le local en cache** + synchro opportuniste (l'app doit rester jouable
-  hors-ligne, contrainte 3).
-- RLS strict, aucun analytique tiers (contrainte 4 : données d'enfants).
-- ~~Bonus : export/import d'une sauvegarde JSON~~ → fait.
+### Verdict jeu par jeu
+
+**🔵 Vraie 3D — le niveau attendu** (tous sur `core/three3d.ts`)
+`stand3d` · `snowman` · `igloo` · `pizza` · `space`
+
+**🟢 Bons, à garder tels quels** (mécanique juste, pas de dette visuelle bloquante)
+`quiz` · `intrus` · `letters` · `puzzle` · `taquin` · `patterns` · `mirror` ·
+`clock` · `tables` · `additions` · `market` · `maze` · `memory` · `simon` ·
+`connect4` · `battleship` · `piano` · `beatbox` · `coloring`
+
+**🟠 Jeux d'action au rendu daté** (sprites = emoji ou SVG) — **étape B**
+`catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
+
+**🟡 Bonne idée, rendu à refaire**
+`caterpillar` · `socks` · `geo` (le zoom continent → ville gagnerait à devenir un
+vrai déplacement de caméra 3D)
+
+**⚪ Sans score, à laisser tranquilles**
+`fireworks` · `dressup`
 
 ---
 
-## Étape 1 — Refaire les jeux phares en 3D 🎮 ✅ FAIT
+## Étape A — Les assets réels 🔑 ← **le prochain chantier**
 
-Les cinq jeux 3D partagent désormais **`src/core/three3d.ts`** : réglage de rendu
-commun, boucle à pas fixe, caméra orbitale à boutons (pas de drag : le doigt sert
-à jouer), textures procédurales et nettoyage GPU complet.
+**Le plus gros saut visuel du projet pour l'effort le plus faible.** Tout est CC0
+(Kenney), donc utilisable sans contrepartie.
 
-| # | Jeu | Ce que la 3D a apporté |
+L'URL de téléchargement direct est lisible dans le HTML de chaque page
+(`https://kenney.nl/media/pages/assets/<slug>/<hash>/<fichier>.zip`) : **aucune
+manipulation manuelle n'est nécessaire**, l'agent récupère les zips lui-même.
+
+### Priorité 1 — visuels 2D, pour l'étape B
+
+| Pack | Fichiers | Poids | Pour quoi |
+|---|---|---|---|
+| [`animal-pack-remastered`](https://kenney.nl/assets/animal-pack-remastered) | 240 | 3,4 Mo | Les animaux de la ferme : `mole`, `catch`, album, décor d'accueil. **Le plus utile du lot.** |
+| [`platformer-art-deluxe`](https://kenney.nl/assets/platformer-art-deluxe) | 930 | 6,3 Mo | Sols, plateformes, décors, ennemis : `run`, `flappy`. Contient déjà les spritesheets + atlas XML. |
+| [`physics-assets`](https://kenney.nl/assets/physics-assets) | 215 | 2,5 Mo | Balles, caisses, éléments à faire tomber : `popcorn`, `balloon`. |
+| [`background-elements`](https://kenney.nl/assets/background-elements) | 110 | 1,0 Mo | Arrière-plans en parallaxe pour `run` et `flappy` — ce qui manque le plus à ces deux-là. |
+| [`fish-pack`](https://kenney.nl/assets/fish-pack) | 120 | 0,7 Mo | `fish`, directement. |
+| [`generic-items`](https://kenney.nl/assets/generic-items) | 160 | 2,2 Mo | Objets à attraper dans `catch` et à trancher dans `ninja`. |
+| [`particle-pack`](https://kenney.nl/assets/particle-pack) | 80 | 14,3 Mo | Étincelles, fumée, éclaboussures — le *juice* de tous les jeux d'action. Le plus lourd : à trier, on n'en garde qu'une poignée. |
+| [`emotes-pack`](https://kenney.nl/assets/emotes-pack) | 480 | 0,4 Mo | Retour d'émotion (bravo, raté) sans un mot à lire — utile partout vu la contrainte « aucune lecture ». |
+
+Optionnels si on veut aller plus loin : `shape-characters` (0,5 Mo),
+`sports-pack` (1,3 Mo), `jumper-pack` (1,5 Mo), `new-platformer-pack` (3,1 Mo).
+
+### Priorité 2 — modèles 3D, pour enrichir les jeux déjà faits
+
+| Pack | Poids | Pour quoi |
 |---|---|---|
-| 1 | **⛄ Bonhomme de neige 3D** | On roule la boule au doigt : elle **creuse son sillon** dans la neige (texture peinte en direct), elle grossit, puis elle tombe et **s'écrase sur la pile** avec cannon-es. Habillage en volumes (chapeau, écharpe, bras, boutons), caméra qui fait le tour. Aucun échec. |
-| 2 | **🧊 Igloo 3D** | Blocs **taillés dans la sphère** (pas des cubes) en matériau transmissif, appareillage décalé d'une demi-brique, calotte de faîte qui referme la voûte, puis on allume un feu et **tout l'igloo s'illumine de l'intérieur** sous une aurore boréale. |
-| 3 | **🍕 Pizzeria 3D** | Bac à sable sans étape imposée : sauce étalée au doigt sur une texture, ingrédients qui **tombent et roulent** (et parfois à côté), four à bois en voûte de berceau où la pâte dore et le fromage fond, parts mangées une par une. |
-| 4 | **🚀 Espace 3D** | Vraies sphères texturées en orbite, anneaux de Saturne en géométrie (avec la division de Cassini), lunes, nuages sur la Terre, fusée qui s'envole et caméra qui suit. Les textes pédagogiques d'origine sont conservés. |
-| 5 | **🎪 `chamboule.ts` supprimé** | Doublon 2D de `stand3d`. Fichier retiré, `matter.js` désinstallé. |
+| [`food-kit`](https://kenney.nl/assets/food-kit) | 4,4 Mo | Ingrédients de `pizza` — remplace les formes primitives par de vrais modèles. |
+| [`holiday-kit`](https://kenney.nl/assets/holiday-kit) | 4,3 Mo | Décor de `snowman` et `igloo`. |
+| [`nature-kit`](https://kenney.nl/assets/nature-kit) | 10,0 Mo | Arbres et rochers — remplace les sapins en cônes de `snowman`. |
+| [`space-kit`](https://kenney.nl/assets/space-kit) | 6,4 Mo | Une vraie fusée pour `space`. |
 
-**Standard de qualité à respecter pour chaque nouveau jeu 3D** (checklist) :
-- [ ] Partir de `createStage()` de `core/three3d.ts` — il applique déjà
-      `antialias`, `pixelRatio` plafonné à 2, `ACESFilmicToneMapping`,
-      `SRGBColorSpace`, `PCFSoftShadowMap`, `shadow.bias`, lumières et brouillard
-- [ ] Matériaux `MeshStandardMaterial` avec `roughness`/`metalness` crédibles
-- [ ] Physique à **pas fixe** (`fixedStep()`), prévisualisation honnête si visée
-- [ ] **Nettoyage GPU** : `stage.dispose()` suffit si tout est dans la scène ;
-      `stage.keep(tex)` pour les textures non attachées
-- [ ] Chargement à la demande (`loadThree()` / `loadPhysics()`) + `loader()`
-- [ ] Testé en navigateur avec **capture d'écran regardée**
+### Priorité 3 — sons (étape C)
+
+[`impact-sounds`](https://kenney.nl/assets/impact-sounds) (0,8 Mo) et
+[`interface-sounds`](https://kenney.nl/assets/interface-sounds) (0,8 Mo).
+
+### À faire à l'import
+- Ranger dans `public/assets/<pack>/` et **trier** : on ne garde que ce qui sert.
+- Écrire `public/assets/CREDITS.md` à partir des `License.txt` de chaque zip.
+- Charger **à la demande par jeu** (comme Three.js aujourd'hui) : c'est le temps
+  de démarrage qui compte, plus le hors-ligne.
 
 ---
 
-## Étape 2 — Moderniser les jeux d'action 2D 🟠 ← **le prochain chantier**
+## Étape B — Moderniser les jeux d'action 2D 🟠
 
 `catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
 
-Pas de réécriture : **remplacer les emoji par de vrais sprites** (Kenney), passer
-tout le monde sur PixiJS avec atlas partagé, ajouter particules et *screen shake*
-cohérents. Effort faible, gain visuel élevé une fois l'étape 0.1 faite.
+Pas de réécriture : **remplacer les emoji par de vrais sprites**, passer tout le
+monde sur PixiJS avec atlas partagé, ajouter particules et *screen shake*
+cohérents. Effort faible, gain visuel élevé une fois l'étape A faite.
 
 ---
 
-## Étape 3 — Le son au niveau 🔊
+## Étape C — Le son au niveau 🔊
 
 La musique générative (`core/music.ts`) est bonne et à garder — elle est unique et
 ne pèse rien. Ce qui manque :
-- **Vrais bruitages foley** (Kenney *Impact/Interface Sounds*) en remplacement des
-  bips synthétisés pour les impacts, clics, chutes.
+- **Vrais bruitages foley** en remplacement des bips synthétisés pour les impacts,
+  clics et chutes.
 - Mixage : bus musique / bus effets, volumes séparés, *ducking* léger de la
   musique pendant la voix.
 
 ---
 
-## Étape 4 — Finitions produit ✨
+## Étape D — Base de données 🔑 *(bloquée : dépend de toi)*
+
+Tout vit aujourd'hui dans `localStorage` (clé `ferme:v2`) : profils, photos en
+dataURL, voix enregistrées, progression. Un nettoyage du navigateur efface tout,
+et le quota (~5 Mo) est atteignable avec quelques photos.
+
+**Filet posé en attendant** : bouton 💾 de l'accueil — export d'un fichier JSON
+complet, réimport protégé par la « question de grand », jauge de quota, et alerte
+quand l'enregistrement échoue (`core/backup.ts`). Ça évite la perte sèche, ça ne
+remplace pas une base.
+
+Pour aller plus loin, il me faut de ta part : **l'URL du projet Supabase + la clé
+`anon` publique** (l'offre gratuite suffit largement). Ensuite :
+- Tables `profiles`, `progress` ; Storage pour les photos et les clips vocaux.
+- Garder le local en cache + synchro opportuniste.
+- RLS strict, aucun analytique tiers (données d'enfants).
+
+---
+
+## Étape E — Finitions produit ✨
 
 - **Renommer/modifier les profils** depuis l'interface (`updateProfile()` existe
   dans le store mais n'est appelé nulle part) ; 3ᵉ profil « invitée ».
@@ -98,33 +139,20 @@ ne pèse rien. Ce qui manque :
   (donc identique pour les deux sœurs). Le rendre aléatoire parmi les restants.
 - **Mode coopération** : les deux jouent en même temps sur la même tablette.
 - Vérifier les perfs sur la vraie tablette (60 fps sur les jeux 3D, sinon baisser
-  la résolution d'ombre / le pixelRatio).
+  la résolution d'ombre / le `pixelRatio`).
 
 ---
 
 ## Ce qui est déjà fait ✅ (ne pas refaire)
 
-- **Vraie 3D + physique** : `stand3d`, `snowman`, `igloo`, `pizza`, `space`,
-  tous sur le socle `core/three3d.ts`.
-- **Sauvegarde exportable** : `core/backup.ts` + bouton 💾 de l'accueil.
+- **Vraie 3D + physique** : `stand3d`, `snowman`, `igloo`, `pizza`, `space`, tous
+  sur le socle `core/three3d.ts`. `chamboule` (doublon 2D) supprimé.
+- **Sauvegarde exportable** : `core/backup.ts` + bouton 💾.
 - **Moteur de game feel** : `core/juice.ts` (ressorts, transition iris, secousses).
 - **Musique générative** 6 thèmes + foley synthétisé (`core/music.ts`, `audio.ts`).
 - **Minuteur parental** avec verrou « question de grand » (`PlayTimer.tsx`) — la
   seule fonctionnalité « adulte » demandée, elle marche, ne pas y toucher.
-- **Ferme d'accueil** décorative, ciel selon l'heure réelle, **sans aucun palier**
-  (la mécanique de déblocage a été retirée : contrainte 1).
+- **Ferme d'accueil** décorative, ciel selon l'heure réelle, sans aucun palier.
 - **Anti-crash** : ErrorBoundary + capture des erreurs runtime en jeu.
 - **Maj PWA automatique**, vibrations tactiles, `touch-action` correct.
 - **Smoke test CI** : les 37 jeux sont ouverts et vérifiés à chaque déploiement.
-
----
-
-## Anti-objectifs 🚫
-
-À ne **jamais** ajouter, quoi qu'en suggère la « bonne pratique » du jeu mobile :
-
-- Monnaie, boutique, coffres, énergie, vies qui se rechargent
-- Paliers de déblocage, arbre de progression, saisons, événements limités
-- Séries quotidiennes, notifications de rappel, « reviens demain »
-- Classements, comparaison entre les deux sœurs au-delà du Défi à deux amical
-- Publicité, achats intégrés, analytique tiers, compte en ligne pour les enfants
