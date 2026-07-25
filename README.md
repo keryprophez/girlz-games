@@ -25,7 +25,7 @@ Les jeux de **Joyce** et **Jade** — une webapp de 38 mini-jeux pensée pour jo
 - **Pop-corn !** : les grains tremblent quand ils sont chauds — tape dessus, POP, le pop-corn saute dans le carton
 - **Boîte à Rythme de la ferme** : séquenceur 8 pas × 4 animaux dessinés, sons synthétisés, 3 tempos, presets
 - **Puzzle avec n'importe quelle photo** : bouton 📷 dans le Puzzle pour charger une photo (papa, mamie, le chat…), gardée pour la prochaine fois
-- **Aucune mécanique d'addiction** : pas de monnaie, pas de boutique, pas de zones à débloquer — juste des étoiles et un album
+- **Aucune mécanique d'addiction** : pas de monnaie, pas de boutique, pas de paliers de déblocage, pas de série quotidienne, pas de notification. Les étoiles sont un simple retour de fin de partie ; le décor de la ferme est entier dès la première seconde. Voir les anti-objectifs de `ROADMAP.md`
 - **Progression séparée** par joueuse : étoiles, album de 24 animaux à collectionner, meilleurs scores par jeu
 - **3 niveaux de difficulté** par profil (🌱 Douce / 🌿 Normale / 🔥 Expert), réglables d'un tap
 - **PWA hors-ligne** : installable sur l'écran d'accueil, polices auto-hébergées, aucun réseau requis après la première visite
@@ -40,14 +40,16 @@ Les jeux de **Joyce** et **Jade** — une webapp de 38 mini-jeux pensée pour jo
 | Build | Vite 6 + TypeScript |
 | Coquille (accueil, profils, album, résultats) | React 18 |
 | Jeux | Modules vanilla TS montés dans un hôte commun (`GameHost`) |
-| État & persistance | Zustand + `localStorage` |
+| 3D & physique | Three.js + cannon-es (`Le Stand 3D`), matter.js (2D) — chargés à la demande |
+| Rendu WebGL 2D | PixiJS (Ninja, Attrape, Poussin) — chargé à la demande |
+| État & persistance | Zustand + `localStorage` ⚠️ *pas de base de données — voir `PASSATION.md` §6* |
 | Hors-ligne | vite-plugin-pwa (service worker + manifest) |
 | Déploiement | GitHub Actions → GitHub Pages |
 
 L'architecture des jeux est volontairement simple : chaque jeu implémente
 `mount(ctx) => cleanup` (voir `src/core/types.ts`). Le `GameHost` React fournit
 le contexte (difficulté, prénom, avatar, `finish()`, `toast()`) et gère
-récompenses, rejouer et retour au menu. **Ajouter un 16ᵉ jeu = 1 fichier dans
+récompenses, rejouer et retour au menu. **Ajouter un 39ᵉ jeu = 1 fichier dans
 `src/games/` + 1 ligne dans `src/games/index.ts`.**
 
 ## 🚀 Développement
@@ -65,7 +67,16 @@ npm run preview   # sert le build
 2. Merger sur `main` : le workflow `deploy.yml` construit et publie automatiquement
 3. Le jeu est servi sur `https://<user>.github.io/girlz-games/` — à ajouter à l'écran d'accueil de la tablette
 
-## 🗺 Prochaines idées
+## 🧪 Qualité
 
-- 🤝 Mode **coopération** (les deux jouent en même temps sur le même écran)
-- 🖼 Les dessins des filles (scannés) comme fonds de niveaux
+```bash
+npm run test:smoke   # ouvre les 38 jeux dans Chromium et vérifie 0 erreur JS
+```
+Ce test **bloque le déploiement** en CI si un jeu casse.
+
+## 🗺 Suite du projet
+
+- **`ROADMAP.md`** — l'ordre de bataille pour atteindre un niveau professionnel
+  (assets réels, base de données, refonte des jeux phares en 3D).
+- **`PASSATION.md`** — état honnête du projet, contraintes non négociables,
+  pièges techniques déjà rencontrés, verdict jeu par jeu. **À lire avant de coder.**
