@@ -113,7 +113,7 @@ Optionnels : `shape-characters` (0,5 Mo), `sports-pack` (1,3 Mo),
 
 | Jeu | État |
 |---|---|
-| `mole` → **Coucou les Animaux** | ✅ Fait. Sprites d'animaux Kenney, cactus à éviter, décor de pré (arbres, herbe, nuages, soleil). Sert de patron. |
+| `mole` → **Tape-Trous** | ✅ Fait. Sprites d'animaux Kenney, cactus à éviter, décor de pré (arbres, herbe, nuages, soleil), et de vrais trous dont les animaux sortent. Sert de patron. |
 | `catch` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon` | À faire |
 
 Pas de réécriture : **remplacer les emoji par de vrais sprites** via

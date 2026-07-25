@@ -103,6 +103,8 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space
 | **CSS transform vs SVG** | Une animation CSS `transform` écrase l'attribut `transform="translate(…)"` d'un `<g>`. |
 | **AudioContext unique** | `getCtx()` de `core/audio.ts` est partagé sons + musique. Ne pas créer un second contexte. |
 | **PWA en cache** | `registerSW` applique la maj auto si elle arrive <15 s après l'ouverture (`src/main.tsx`). Ne pas casser ça. |
+| **Animal « posé sur » un trou** | Un sprite au-dessus d'une ellipse sombre ne sort pas du trou, il est planté derrière. Il faut trois couches : terrier sombre, sprite dans un conteneur `overflow:hidden` coupé au bord du trou, bourrelet de terre par-dessus (voir `mole.ts` et `.hole` dans le CSS). |
+| **Noms de jeux en double** | Le nom de fichier est la mécanique (`battleship.ts`), le nom affiché est le thème pour les filles (« Cache-Cache Pré »). Vérifier les collisions de nom ET d'icône avant d'en rebaptiser un. |
 | **Smoke test + vue ferme** | L'accueil affiche la ferme, pas la grille : `scripts/smoke.mjs` bascule via `.hub-toggle`. Si tu changes l'accueil, mets à jour le smoke test. |
 
 ---

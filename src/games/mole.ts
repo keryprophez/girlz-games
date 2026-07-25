@@ -4,7 +4,7 @@ import { sBonk, sNope, sWin } from '../core/audio'
 import { FX, fxAt, JUICE } from '../core/fx'
 import { frameStyle, loadAtlas, FARM_ANIMALS, GREEN_GRASS, GREEN_TREES, type Atlas } from '../core/sprites'
 
-/* Coucou les Animaux — les animaux de la ferme sortent de leur trou, on tape
+/* Tape-Trous — les animaux de la ferme sortent de leur trou, on tape
    dessus… sauf le cactus, qui pique. Tous les visuels viennent des planches
    CC0 Kenney (`public/assets/`), plus un seul emoji dans le pré : arbres,
    nuages, herbe, animaux et cactus sont de vrais sprites. */
@@ -24,7 +24,7 @@ function dressField(nature: Atlas) {
   }
   // Arbres : tailles et essences variées, ça évite l'effet papier peint
   const px = [92, 116, 80, 104]
-  ;[4, 26, 53, 79].forEach((x, i) => put(back, GREEN_TREES[i % GREEN_TREES.length], px[i], x, -6))
+  ;[5, 33, 64, 91].forEach((x, i) => put(back, GREEN_TREES[i % GREEN_TREES.length], px[i], x, -6))
   // Herbe : semée au hasard tout du long, devant les trous
   for (let i = 0; i < 22; i++) {
     put(front, GREEN_GRASS[i % GREEN_GRASS.length], 16 + Math.random() * 14,
@@ -46,7 +46,7 @@ let ctx: GameContext
 /** Taille d'un sprite dans son trou — recalculée au montage et au redimensionnement. */
 function spriteSize(): number {
   const h = mole?.holes[0]
-  return Math.max(28, (h?.clientWidth || 120) * 0.66)
+  return Math.max(26, (h?.clientWidth || 120) * 0.54)
 }
 
 function popMole() {
@@ -87,7 +87,7 @@ function finish() {
 }
 
 export const moleGame: GameDef = {
-  id: 'mole', name: 'Coucou les Animaux', icon: '🐮', sq: 'sq-peach', cat: 'action',
+  id: 'mole', name: 'Tape-Trous', icon: '🔨', sq: 'sq-peach', cat: 'action',
   subtitle: 'Tape les animaux qui sortent… mais pas le cactus !',
   mount(c) {
     ctx = c
@@ -113,7 +113,8 @@ export const moleGame: GameDef = {
     for (let i = 0; i < 9; i++) {
       const b = document.createElement('button') as any
       b.className = 'hole'
-      b.innerHTML = `<div class="peep"></div><div class="dirt"></div><div class="pow">💥</div>`
+      b.innerHTML = `<div class="burrow"></div><div class="clip"><div class="peep"></div></div>` +
+        `<div class="lip"></div><div class="pow">💥</div>`
       b._busy = false
       b.onpointerdown = () => whack(b) // pointerdown : zéro latence, aucun tap rapide perdu
       grid.appendChild(b); mole.holes.push(b)

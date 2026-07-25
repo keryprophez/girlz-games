@@ -227,21 +227,36 @@ button.chip:active{transform:scale(.92);}
 .mole-cloud{animation:moleDrift 46s linear infinite;filter:none;opacity:.9;}
 @keyframes moleDrift{from{transform:translateX(-140px);}to{transform:translateX(520px);}}
 @media(prefers-reduced-motion:reduce){.mole-cloud{animation:none;}}
+/* La grille descend sous la ligne d'horizon : sinon les troncs semblent pousser
+   dans les trous de la première rangée. */
 #moleGrid{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);
-  gap:clamp(10px,2.2vmin,16px);width:100%;}
+  gap:clamp(10px,2.2vmin,16px);width:100%;margin-top:clamp(18px,5vmin,34px);}
 .hole{aspect-ratio:1;position:relative;cursor:pointer;border:none;background:transparent;padding:0;}
-.hole .dirt{position:absolute;left:8%;right:8%;bottom:6%;height:32%;background:radial-gradient(ellipse at 50% 30%,#8a6a45,#5d452c);
-  border-radius:50%;box-shadow:inset 0 6px 12px rgba(0,0,0,.35), var(--e1);}
-/* .peep porte un sprite de la planche : sa taille et sa position de fond sont
-   posées en JS (core/sprites.ts), le CSS ne gère que l'animation de sortie. */
-.hole .peep{position:absolute;left:50%;bottom:16%;margin-left:0;
-  transform:translate(-50%,90%) scale(.5);opacity:0;transform-origin:bottom center;
-  transition:transform .15s var(--spring),opacity .1s;background-repeat:no-repeat;
-  filter:drop-shadow(0 4px 4px rgba(69,54,42,.3));pointer-events:none;}
-.hole.up .peep{transform:translate(-50%,0) scale(1);opacity:1;}
+/* Un trou, c'est trois couches : le noir du terrier, l'animal COUPÉ au bord du
+   trou (d'où le .clip en overflow:hidden), puis le bourrelet de terre par-dessus.
+   Sans le clip l'animal est simplement posé derrière une flaque marron. */
+.hole .burrow{position:absolute;left:1%;right:1%;bottom:10%;height:36%;border-radius:50%;
+  background:radial-gradient(ellipse at 50% 92%,#2A1B10 0%,#3A2716 52%,#57402A 100%);
+  box-shadow:inset 0 6px 11px rgba(0,0,0,.55);}
+.hole .clip{position:absolute;left:0;right:0;bottom:26%;height:62%;overflow:hidden;
+  z-index:2;pointer-events:none;}
+.hole .peep{position:absolute;left:50%;bottom:0;background-repeat:no-repeat;
+  transform:translate(-50%,102%);opacity:0;transform-origin:bottom center;
+  transition:transform .17s var(--spring),opacity .08s;
+  filter:drop-shadow(0 3px 3px rgba(30,20,10,.45));}
+.hole.up .peep{transform:translate(-50%,0);opacity:1;}
 .hole.bonk .peep{animation:bonked .3s ease forwards;}
-@keyframes bonked{40%{transform:translate(-50%,6%) scale(1.2,.7);}100%{transform:translate(-50%,95%) scale(.5);opacity:0;}}
-.hole .pow{position:absolute;left:0;right:0;bottom:58%;text-align:center;font-size:25px;opacity:0;pointer-events:none;}
+@keyframes bonked{40%{transform:translate(-50%,8%) scale(1.15,.8);}
+  100%{transform:translate(-50%,102%) scale(.9);opacity:0;}}
+/* Bourrelet de terre : il passe DEVANT l'animal et cache la coupe nette */
+/* Bourrelet de terre : un peu plus large que le trou, il déborde donc en avant
+   et donne l'épaisseur du sol. C'est lui qui cache la coupe nette de l'animal. */
+.hole .lip{position:absolute;left:-3%;right:-3%;bottom:6%;height:25%;border-radius:50%;
+  z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,#8A6540 0%,#75502E 34%,#5A3B20 78%,#4A2F19 100%);
+  box-shadow:inset 0 4px 6px rgba(255,228,186,.26), 0 5px 9px rgba(40,26,12,.32);}
+.hole .pow{position:absolute;left:0;right:0;bottom:62%;text-align:center;font-size:25px;
+  opacity:0;pointer-events:none;z-index:4;}
 .hole.bonk .pow{animation:powUp .45s ease-out forwards;}
 @keyframes powUp{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-32px);}}
 
