@@ -20,11 +20,20 @@ Comptage automatique sur les 38 fichiers de `src/games/` :
 | Jeux avec une **difficulté qui monte** en cours de partie | **6 / 38** |
 | Jeux avec un **plafond d'adresse** (mieux jouer = visiblement mieux) | **~12 / 38** |
 
-**29 jeux sur 38 ne peuvent pas être perdus.** Ce n'est pas un détail d'équilibrage,
-c'est la cause racine du « pas plaisant à jouer ». Sans risque de perdre, il n'y a
-pas de tension ; sans tension, aucune satisfaction à gagner. Les jeux Flash étaient
-souvent moches **et durs** — c'est la dureté qui les rendait addictifs au bon sens
-du terme.
+⚠️ **Nuance essentielle, corrigée après retour utilisateur : cette règle ne vaut
+QUE pour les jeux d'adresse.** Exiger une défaite dans un coloriage, au piano, dans
+un exercice de multiplications ou un bac à sable créatif serait absurde et nuisible.
+
+La règle correcte est **par genre** :
+- **Jeux d'adresse / action** → une partie doit pouvoir se perdre, sinon il n'y a
+  ni tension ni satisfaction (Chenille, Taupe, Ballon, Simon en manquent).
+- **Puzzles / réflexion** → pas de défaite nécessaire, mais **quelque chose doit se
+  mesurer** (coups, temps) pour que progresser se voie.
+- **Exercices pédagogiques** → aucune défaite : correction immédiate, zéro temps mort.
+- **Bacs à sable créatifs** → aucun score : la richesse d'expression remplace l'enjeu.
+
+Ce qui vaut, lui, **pour absolument tous les jeux** : **un geste clair** et **zéro
+temps mort** entre deux essais.
 
 ⚠️ Rappel de la contrainte du projet : « pas d'addiction » = pas de monnaie, pas de
 paliers, pas de rappels quotidiens. **Ça n'a jamais voulu dire « pas de
@@ -53,22 +62,25 @@ frottements cohérents, endormissement rapide des corps, plus impact = *screen
 shake* + particules + son proportionnels à la violence du choc, appliqués par le
 `GameHost` et non par chaque jeu. Un choc doit **se sentir** partout pareil.
 
-### Couche C — LES RÈGLES (la réponse à « pas plaisant »)
-→ **Contrat imposé à tout ce qui s'appelle « jeu »** :
-1. **un seul geste** (un tap, un glissé — pas un assistant en 6 étapes) ;
-2. **on peut perdre** (vies, chrono, collision) ;
-3. **réessai en moins d'une seconde** (pas de modale, pas d'attente) ;
-4. **ça accélère** (vitesse, taille, densité) ;
-5. **un joueur adroit fait visiblement mieux.**
+### Couche C — LA JOUABILITÉ (la réponse à « pas plaisant »)
+**Valable pour tous, sans exception :**
+1. **un geste clair** — pas d'assistant en 6 étapes ;
+2. **zéro temps mort** — réessayer ou recommencer en moins d'une seconde, aucune
+   modale ni attente entre deux tentatives ;
+3. **retour immédiat** à chaque action (son + visuel en moins de 100 ms).
 
-Ce contrat devrait être vérifié par le smoke test, pas seulement par de la bonne
-volonté.
+**Puis, selon le genre uniquement :**
+- **Adresse / action** → une défaite possible, et une difficulté qui monte.
+- **Puzzle / réflexion** → une mesure (coups, temps) pour voir son progrès.
+- **Exercice pédagogique** → correction immédiate, jamais de sanction.
+- **Bac à sable créatif** → plus de liberté d'expression (options, annuler,
+  sauvegarder), jamais de score.
 
 ---
 
 ## 3. Verdict par jeu, et coupe proposée
 
-### 🎮 Les 10 VRAIS jeux à garder (et à amener au même niveau)
+### 🎮 Les 10 jeux d'ADRESSE (le seul groupe concerné par la règle de défaite)
 
 | Jeu | État | Ce qui manque |
 |---|---|---|
