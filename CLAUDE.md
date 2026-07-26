@@ -45,6 +45,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              music.ts (générative) · voice.ts · juice.ts · fx.ts · character.ts
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
              sprites.ts  ← planches d'assets CC0 chargées à la demande
+             impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
 src/components/  Home · FarmHub · GameHost · PlayTimer · Backup · Album · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
@@ -105,6 +106,8 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space
 | **PWA en cache** | `registerSW` applique la maj auto si elle arrive <15 s après l'ouverture (`src/main.tsx`). Ne pas casser ça. |
 | **Animal « posé sur » un trou** | Un sprite au-dessus d'une ellipse sombre ne sort pas du trou, il est planté derrière. Il faut trois couches : terrier sombre, sprite dans un conteneur `overflow:hidden` coupé au bord du trou, bourrelet de terre par-dessus (voir `mole.ts` et `.hole` dans le CSS). |
 | **Noms de jeux en double** | Le nom de fichier est la mécanique (`battleship.ts`), le nom affiché est le thème pour les filles (« Cache-Cache Pré »). Vérifier les collisions de nom ET d'icône avant d'en rebaptiser un. |
+| **Mesure faussée par le service worker** | La maj auto de la PWA recharge la page <15 s après l'ouverture — en plein test Playwright, on mesure alors l'ACCUEIL et pas le jeu (une luminosité relevée à 210/255 au lieu de 68). Toujours ouvrir le contexte avec `serviceWorkers: 'block'`. |
+| **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **Smoke test + vue ferme** | L'accueil affiche la ferme, pas la grille : `scripts/smoke.mjs` bascule via `.hub-toggle`. Si tu changes l'accueil, mets à jour le smoke test. |
 
 ---
