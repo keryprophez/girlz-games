@@ -33,6 +33,17 @@ sont enfin possibles.
 
 ---
 
+## ⚠️ LIRE `AUDIT.md` EN PREMIER
+
+Audit chiffré des 38 jeux (mesuré, pas estimé) : **9 jeux sur 38 peuvent se
+perdre, 29 n'ont aucun échec possible**. Conclusion : le problème n'est pas
+réparable jeu par jeu, il est architectural — trois couches partagées manquent
+(art, feel, règles), et le catalogue doit être coupé de 38 à **10 jeux + 3
+espaces assumés** (Apprendre / Créer / À deux).
+
+**Ordre imposé : les RÈGLES d'abord, l'art en dernier.** Un joli jeu sans enjeu
+reste ennuyeux — l'igloo passé en 3D en est la preuve.
+
 ## Étape 0 bis — Passer chaque jeu au TEST D'ADRESSE 🎯
 
 **Avant tout travail graphique.** Pour chaque jeu, répondre :
