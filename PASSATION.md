@@ -42,10 +42,61 @@ sait pas dessiner. C'est pourquoi la 3D est la voie retenue.
 
 ---
 
+## 2 bis. LA LEÇON DE GAME DESIGN (la plus importante) 🎯
+
+Retour de l'utilisateur, après avoir testé : *« l'igloo, c'est tellement nul »*,
+*« trouve comment faire un jeu au niveau des jeux Flash, QUI EUX SONT PLAISANTS »*.
+
+**Le diagnostic : les jeux Flash n'étaient pas beaux, ils étaient BONS.** Bloons
+c'était des cercles plats. Line Rider, un trait sur fond blanc. Ils avaient
+quatre choses que les jeux de ce projet n'avaient pas :
+
+| Ce qu'ils avaient | L'erreur commise ici |
+|---|---|
+| **Un seul geste**, maîtrisable à l'infini | Des assistants en 6 étapes (choisis ta pâte, puis la sauce…) |
+| **Un échec réel possible** | « Tout le monde gagne », zéro enjeu |
+| **Réessai immédiat** | 1,5 s d'attente, toasts, modales entre deux essais |
+| **Difficulté croissante** | La même chose N fois, puis « bravo » |
+
+**J'avais confondu « bienveillant avec des enfants » et « sans difficulté ».**
+En retirant tout risque, j'ai retiré toute satisfaction. Bloons n'a aucune
+mécanique d'addiction *et* est difficile : ce sont deux axes indépendants.
+« Pas d'addiction » ≠ « pas de challenge ».
+
+**Référence de gameplay dans le projet : `src/games/icetower.ts`** (La Tour de
+Glace). Un tap pour lâcher un bloc suspendu, la physique décide, la tour peut
+s'écrouler. Preuve mesurée : en visant bien → 9-10 blocs et combo PARFAIT ×10 ;
+en tapant au hasard → « la tour s'écroule » à 3 blocs. **Le même jeu, deux
+résultats radicalement différents = de l'adresse existe.** C'est le critère à
+appliquer à chaque jeu : *un joueur adroit fait-il visiblement mieux ?*
+
+Tout jeu qui échoue à ce test est un formulaire déguisé, pas un jeu.
+
+## 2 ter. Le plafond visuel : ce que je peux et ne peux PAS faire 🎨
+
+Retour utilisateur sur la 3D : *« graphismes encore dégueulasse, 3d dégueulasse »*.
+Honnête et fondé. Ce qui a été tenté sur `icetower.ts`, et qui **ne suffit pas** :
+
+- ✅ IBL via `PMREMGenerator` + `RoomEnvironment` (sans carte d'environnement,
+  un `MeshStandardMaterial` est plat et plastique — c'est **indispensable**)
+- ✅ Post-traitement `EffectComposer` + `UnrealBloomPass` (⚠️ à doser très bas,
+  0.16/0.96 : au-delà, toute la scène blanchit — erreur commise puis corrigée)
+- ✅ `RoundedBoxGeometry` (arêtes arrondies = objet dessiné, pas boîte de code)
+- ✅ Ombres `PCFSoftShadowMap`, tone mapping ACES, palette assombrie pour que les
+  objets clairs ressortent
+
+**Le plafond : des cubes arrondis restent des cubes.** Sans modèles 3D et sans
+textures, on obtient au mieux du « 3D correct de programmeur ». Le saut suivant
+exige des **assets** (voir §6b) : modèles glTF stylisés (Poly Pizza, Quaternius),
+textures PBR, et idéalement un illustrateur. Ce n'est pas un problème d'effort,
+c'est un problème de matière première.
+
 ## 3. Contraintes NON NÉGOCIABLES ❌
 
 Ces règles viennent de l'utilisateur. Les enfreindre = travail à refaire.
 
+0. **La difficulté N'EST PAS de l'addiction.** Un jeu doit pouvoir être raté.
+   Voir §2 bis — c'est la correction la plus importante à retenir.
 1. **AUCUNE mécanique d'addiction.** Pas de monnaie, pas de boutique, pas de
    paliers de déblocage, pas de série/streak, pas de notification de rappel, pas
    de « reviens demain ». J'ai violé cette règle en construisant une ferme dont
@@ -78,8 +129,7 @@ src/
     character.ts  Personnage SVG dont le visage est la photo de la joueuse
     clips.ts      Encouragements enregistrés par les parents
   components/
-    Home.tsx      Accueil : profils, réglages, bascule ferme/liste
-    FarmHub.tsx   Décor de ferme (SVG) — 4 lieux = 4 catégories
+    Home.tsx      Accueil : profils, réglages, GRILLE des jeux par catégorie
     GameHost.tsx  Monte/démonte un jeu, écran de résultat, anti-crash, musique
     PlayTimer.tsx Minuteur parental + verrou « question de grand »
     ErrorBoundary.tsx / Album.tsx / VoiceStudio.tsx / Toast.tsx / Ambient.tsx
@@ -112,7 +162,9 @@ Puis **1 ligne dans `src/games/index.ts`**. Le `GameHost` fournit `ctx` :
 | **matter.js `isStatic`** | Un corps créé avec `isStatic: true` garde une masse infinie quand on le libère → positions `NaN`. Créer **dynamique puis** `Body.setStatic(b, true)`. |
 | **Horloge murale vs simulée** | Ne jamais tester la fin d'une action physique avec `performance.now()` si la physique tourne à pas fixe : accumuler un `simMs`. |
 | **`preventDefault` global** | Un anti-double-tap sur `touchend` **avale un clic sur deux** dans les jeux rapides. Utiliser `touch-action: manipulation` en CSS. |
-| **Smoke test + vue ferme** | L'accueil affiche la ferme, pas la grille. `scripts/smoke.mjs` bascule en vue liste via `.hub-toggle` avant d'énumérer les `.gc`. Si tu changes l'accueil, mets à jour le smoke test. |
+| **Boucle de rendu après démontage** | ⚠️ Piège rencontré **deux fois** : appeler `ctx.finish()` (ou une fonction qui le fait) depuis la boucle `requestAnimationFrame` démonte le jeu **synchroniquement** (état global → `null`), puis la boucle continue et plante. **Toujours** `return` juste après, et re-tester `if (!it \|\| !it.running) return` après tout appel susceptible de terminer la partie. |
+| **Bloom qui blanchit tout** | `UnrealBloomPass` avec un seuil bas sur une scène claire délave l'image entière. Rester vers `strength 0.16 / threshold 0.96`. |
+| **Élément de jeu hors cadre** | La grue de `icetower` était à 3,1 unités au-dessus du sommet : le bloc à lâcher sortait de l'écran, le jeu était **injouable** sans le voir. Toujours vérifier par capture d'écran que ce qu'on doit viser est visible. |
 | **Nettoyage GPU** | Three.js/Pixi : disposer géométries, matériaux, textures **et** renderer au démontage, sinon fuite à chaque partie. Voir `stand3d.ts`. |
 | **CSS transform vs attribut SVG** | Une animation CSS `transform` écrase l'attribut `transform="translate(…)"` d'un `<g>` SVG. |
 | **PWA en cache** | `registerSW` applique la maj automatiquement si elle arrive <15 s après l'ouverture (`src/main.tsx`). Sinon simple toast. Ne pas casser ça. |
@@ -162,8 +214,7 @@ feraient plus que n'importe quelle astuce technique. À arbitrer par l'utilisate
 `simon` · `connect4` · `battleship` · `piano` · `beatbox` · `coloring`
 
 **🟡 Bonne idée, rendu à refaire (candidats 3D ou refonte graphique)**
-`snowman` (⭐ le meilleur candidat 3D : sculpter des boules en 3D) ·
-`igloo` (construction 3D empilée, physique) · `pizza` (bac à sable façon Toca
+`snowman` (⭐ le meilleur candidat 3D : sculpter des boules en 3D) · `pizza` (bac à sable façon Toca
 Kitchen, en 3D) · `chamboule` (doublon du `stand3d`, à **supprimer** au profit
 de la version 3D) · `caterpillar` · `socks` · `space` (les planètes mériteraient
 d'être de vraies sphères 3D texturées) · `geo` (zoom caméra 3D)
@@ -172,8 +223,16 @@ d'être de vraies sphères 3D texturées) · `geo` (zoom caméra 3D)
 `catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
 → tous gagneraient à passer sur de vrais sprites (Kenney) plutôt qu'une réécriture.
 
-**🔵 Référence à imiter**
-`stand3d` — vraie 3D + physique. **Le patron de tout nouveau développement.**
+**🔵 Références à imiter**
+`icetower` — **la référence de GAMEPLAY** (un geste, échec réel, adresse mesurable).
+`stand3d` — la référence de **rendu 3D** (IBL, ombres, physique).
+Tout nouveau jeu doit passer les deux tests : *« un joueur adroit fait-il mieux ? »*
+et *« est-ce que ça ressemble à un jeu ? »*.
+
+**🗑 Supprimés sur retour utilisateur**
+`igloo` (« pose le bloc sur la case qui brille » = formulaire, aucune adresse) →
+remplacé par `icetower`. `FarmHub` (accueil ferme : « nul et sans intérêt ») →
+retour à la grille de jeux.
 
 **⚪ Sans score, à laisser tranquilles**
 `fireworks` · `dressup`

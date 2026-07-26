@@ -33,6 +33,19 @@ sont enfin possibles.
 
 ---
 
+## Étape 0 bis — Passer chaque jeu au TEST D'ADRESSE 🎯
+
+**Avant tout travail graphique.** Pour chaque jeu, répondre :
+*« un joueur adroit fait-il visiblement mieux qu'un joueur maladroit ? »*
+
+Si non → ce n'est pas un jeu, c'est un formulaire. Le refondre autour de :
+**un seul geste** · **un échec réel** · **réessai immédiat** · **difficulté qui monte**.
+
+Modèle : `src/games/icetower.ts` (voir `PASSATION.md` §2 bis).
+Premiers candidats à refondre : `pizza` (assistant en 6 étapes), `snowman`
+(aucun enjeu), `geo` et `space` (découverte sans adresse — acceptable car
+pédagogiques, mais alors les assumer comme « livres interactifs », pas jeux).
+
 ## Étape 1 — Refaire les jeux phares en 3D 🎮
 
 Le modèle : `src/games/stand3d.ts` (Three.js + cannon-es, éclairage physique,
@@ -43,12 +56,18 @@ Ordre recommandé, du plus rentable au moins :
 | # | Jeu | Ce que la 3D apporte |
 |---|---|---|
 | 1 | **⛄ Bonhomme de neige 3D** | Rouler de vraies boules qui grossissent, les **empiler avec la physique**, tourner autour avec la caméra, accessoires posés en 3D. Le meilleur candidat : créatif, sans échec, spectaculaire. |
-| 2 | **🧊 Igloo 3D** | Empiler des blocs de glace **translucides** (matériau transmissif), la voûte se ferme, on entre dedans à la fin. |
+| 2 | **🏔 Tour de Glace** (existe) | Déjà le bon gameplay. Ne manque que la matière : blocs de glace en vrai matériau transmissif + modèles de décor. |
 | 3 | **🍕 Pizzeria 3D** (bac à sable) | Façon *Toca Kitchen* : pâte déformable, ingrédients qui **tombent** sur la pizza, four avec vraie lumière chaude, aucune étape imposée. |
 | 4 | **🚀 Espace 3D** | Vraies sphères texturées, anneaux de Saturne en géométrie, vol de la fusée avec caméra qui suit. |
 | 5 | **🎪 Supprimer `chamboule.ts`** | Doublon 2D de `stand3d`. Retirer le fichier + la ligne d'`index.ts`. |
 
 **Standard de qualité à respecter pour chaque jeu 3D** (checklist) :
+- [ ] **IBL obligatoire** : `PMREMGenerator` + `RoomEnvironment` (sans ça, tout
+      matériau standard paraît plat et plastique)
+- [ ] `RoundedBoxGeometry` plutôt que `BoxGeometry` pour tout objet « dessiné »
+- [ ] Bloom **très dosé** (`0.16 / 0.4 / 0.96`) — au-delà, l'image blanchit
+- [ ] Palette assombrie si les objets sont clairs (contraste sujet/fond)
+- [ ] **Vérifier par capture d'écran que ce qu'on doit viser est dans le cadre**
 - [ ] `antialias`, `pixelRatio` plafonné à 2, `ACESFilmicToneMapping`, `SRGBColorSpace`
 - [ ] Lumière hémisphérique + directionnelle avec `castShadow` + appoint frontal
 - [ ] `PCFSoftShadowMap`, `shadow.bias` réglé (pas d'acné d'ombre)
