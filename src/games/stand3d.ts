@@ -1,6 +1,7 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
-import { sBonk, sHit, sWin, sWoosh, tone } from '../core/audio'
+import { sWin, sWoosh, tone } from '../core/audio'
+import { force, impact } from '../core/impact'
 
 /* Le Stand 3D — vraie 3D temps réel (Three.js) + vraie physique rigide
    (cannon-es). Rendu moderne : éclairage physique, ombres portées douces,
@@ -350,12 +351,11 @@ export const stand3d: GameDef = {
 
       // Sons d'impact proportionnels au choc
       world.addEventListener('postStep', () => {})
+      // Le choc est ressenti comme partout ailleurs : son, secousse et
+      // particules proportionnels à la vitesse de collision (core/impact.ts)
       ballBody.addEventListener('collide', (e: any) => {
-        const now = performance.now()
-        if (now - st.lastSnd < 80) return
-        st.lastSnd = now
         const v = Math.abs(e.contact.getImpactVelocityAlongNormal())
-        if (v > 3.5) sHit(); else if (v > 1) sBonk()
+        impact(force(v, 1, 8), { matter: 'bois' })
       })
 
       /* --- Visée : glisser / lâcher --- */

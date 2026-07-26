@@ -1,6 +1,7 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
-import { sCrunch, sNope, sWin, tone } from '../core/audio'
+import { sNope, sWin, tone } from '../core/audio'
+import { force, impact } from '../core/impact'
 import { shake } from '../core/juice'
 
 /* La Tour de Glace — l'archétype du bon jeu Flash : UN SEUL GESTE, un plafond
@@ -26,18 +27,18 @@ function iceTex(T: any, tint: number): any {
   c.width = c.height = 128
   const g = c.getContext('2d')!
   const grad = g.createLinearGradient(0, 0, 128, 128)
-  grad.addColorStop(0, '#EAF8FF'); grad.addColorStop(0.4, '#A8D8F0'); grad.addColorStop(1, '#5A9BC4')
+  grad.addColorStop(0, '#BFE4F6'); grad.addColorStop(0.4, '#79B8DC'); grad.addColorStop(1, '#3A72A0')
   g.fillStyle = grad; g.fillRect(0, 0, 128, 128)
   // Fissures et éclats : la glace n'est jamais lisse
   for (let i = 0; i < 9; i++) {
-    g.strokeStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.4})`
+    g.strokeStyle = `rgba(226,244,255,${0.18 + Math.random() * 0.22})`
     g.lineWidth = 1 + Math.random() * 2
     const x = Math.random() * 128, y = Math.random() * 128
     g.beginPath(); g.moveTo(x, y)
     g.lineTo(x + (Math.random() - 0.5) * 44, y + (Math.random() - 0.5) * 44)
     g.stroke()
   }
-  g.fillStyle = 'rgba(255,255,255,.55)'
+  g.fillStyle = 'rgba(226,244,255,.3)'
   g.fillRect(8, 8, 44, 12)
   const t = new T.CanvasTexture(c)
   t.colorSpace = T.SRGBColorSpace
@@ -112,7 +113,8 @@ function judge() {
     it.lives--
     it.combo = 0
     sNope()
-    shake($('itArena'), 8, 320)
+    // Un bloc qui rate, c'est un vrai fracas : force maximale
+    impact(0.95, { matter: 'glace' })
     hud()
     if (it.lives <= 0) { gameOver(); return }
     ctx.toast('Raté ! Encore ' + it.lives + ' bloc' + (it.lives > 1 ? 's' : ''))
@@ -137,7 +139,8 @@ function judge() {
     flash(s)
   } else {
     it.combo = 0
-    sCrunch()
+    // Posé de travers : le choc se sent d'autant plus que le bloc est décalé
+    impact(force(0.9 + dx * 9, 1, 7), { matter: 'glace', noShake: dx < 0.2 })
   }
   hud()
   it.swing = null
@@ -214,20 +217,20 @@ export const icetower: GameDef = {
       renderer.shadowMap.enabled = true
       renderer.shadowMap.type = T.PCFSoftShadowMap
       renderer.toneMapping = T.ACESFilmicToneMapping
-      renderer.toneMappingExposure = 0.92
+      renderer.toneMappingExposure = 0.88
       renderer.outputColorSpace = T.SRGBColorSpace
       $('itLoad')?.remove()
       arena.appendChild(renderer.domElement)
 
       const scene = new T.Scene()
-      scene.background = new T.Color('#1E3A5C')
+      scene.background = new T.Color('#1B3350')
       // IBL : sans carte d'environnement, un matériau standard reste plat et
       // plastique. RoomEnvironment est généré par Three (aucun fichier).
       const pmrem = new T.PMREMGenerator(renderer)
       scene.environment = pmrem.fromScene(new RE.RoomEnvironment(), 0.04).texture
-      scene.environmentIntensity = 1.15
+      scene.environmentIntensity = 0.7
       pmrem.dispose()
-      scene.fog = new T.Fog('#24466E', 16, 44)
+      scene.fog = new T.Fog('#1E3A59', 15, 40)
 
       // Caméra presque frontale : l'alignement doit se LIRE au pixel
       const composer = new EC.EffectComposer(renderer)
@@ -240,8 +243,8 @@ export const icetower: GameDef = {
       composer.addPass(bloom)
       composer.addPass(new OP.OutputPass())
 
-      scene.add(new T.HemisphereLight(0xDCEEFF, 0x2A4666, 0.75))
-      const sun = new T.DirectionalLight(0xFFF6E0, 2.1)
+      scene.add(new T.HemisphereLight(0xBBD8F0, 0x24405E, 0.55))
+      const sun = new T.DirectionalLight(0xFFF0D4, 1.4)
       sun.position.set(4, 8, 6)
       sun.castShadow = true
       sun.shadow.mapSize.set(1024, 1024)
@@ -252,7 +255,7 @@ export const icetower: GameDef = {
       sun.shadow.bias = -0.0013
       sun.shadow.radius = 3
       scene.add(sun)
-      const fill = new T.DirectionalLight(0xFFFFFF, 0.45)
+      const fill = new T.DirectionalLight(0xC8DCF0, 0.18)
       fill.position.set(-2, 3, 7)
       scene.add(fill)
 
@@ -267,7 +270,7 @@ export const icetower: GameDef = {
       // Neige au sol
       const ground = new T.Mesh(
         new T.CircleGeometry(22, 48),
-        new T.MeshStandardMaterial({ color: 0xC2D4DE, roughness: 0.95 })
+        new T.MeshStandardMaterial({ color: 0x2B4763, roughness: 0.96 })
       )
       ground.rotation.x = -Math.PI / 2
       ground.receiveShadow = true
@@ -280,7 +283,7 @@ export const icetower: GameDef = {
       // Socle de départ
       const baseMesh = new T.Mesh(
         new RB.RoundedBoxGeometry(BASE_W + 0.35, 0.3, 1, 2, 0.03),
-        new T.MeshStandardMaterial({ color: 0x7FA6BC, roughness: 0.8 })
+        new T.MeshStandardMaterial({ color: 0x37597B, roughness: 0.82 })
       )
       baseMesh.position.set(0, 0.15, 0)
       baseMesh.castShadow = true; baseMesh.receiveShadow = true

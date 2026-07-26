@@ -1,4 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
+import { impact } from '../core/impact'
 import { $, pick, rnd } from '../core/utils'
 import { sCrunch, sNope, sWin, tone } from '../core/audio'
 import { FX } from '../core/fx'
@@ -83,7 +84,7 @@ function step() {
   if (hitIdx > 0 && hitIdx < cp.snake.length - 1) {
     cp.lives--
     sNope()
-    FX.shake(10)
+    impact(0.7, { matter: 'pate' })
     $('cpArena').classList.remove('shake'); void $('cpArena').offsetWidth; $('cpArena').classList.add('shake')
     hud()
     if (cp.lives <= 0) { finish(); return }

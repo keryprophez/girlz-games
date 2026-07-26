@@ -1,4 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
+import { impact } from '../core/impact'
 import { $ } from '../core/utils'
 import { chickSVG } from '../core/character'
 import { sCatch, sJump, sNope, sWin } from '../core/audio'
@@ -64,7 +65,8 @@ function feathers(x: number, y: number) {
 
 function hit() {
   if (!fl || fl.invuln > 0) return
-  fl.lives--; fl.invuln = 1200; sNope(); FX.shake(7)
+  fl.lives--; fl.invuln = 1200; sNope()
+  impact(0.8, { matter: 'sourd' })
   feathers(fl.chick.x, fl.chick.y)
   $('flHearts').textContent = '❤️'.repeat(fl.lives) + '🖤'.repeat(3 - fl.lives)
   if (fl.lives <= 0) { fl.running = false; setTimeout(finish, 400) }

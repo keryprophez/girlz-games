@@ -1,4 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
+import { impactAt } from '../core/impact'
 import { $, pick } from '../core/utils'
 import { sBonk, sNope, sWin } from '../core/audio'
 import { FX, fxAt, JUICE } from '../core/fx'
@@ -92,7 +93,7 @@ function whack(h: any) {
     // Le cactus coûte un cœur ET le combo : se tromper doit se payer
     mole.lives--
     mole.combo = 0
-    sNope(); FX.shake(12)
+    sNope(); impactAt(h, 0.8, { matter: 'sourd' })
     hud()
     if (mole.lives <= 0) { finish(true); return }
     ctx.toast(`🌵 Aïe ! ${'❤️'.repeat(mole.lives)}`)

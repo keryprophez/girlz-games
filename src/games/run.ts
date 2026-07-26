@@ -1,4 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
+import { impact } from '../core/impact'
 import { $, pick } from '../core/utils'
 import { tractorSVG } from '../core/character'
 import { sJump, sNope, sWin } from '../core/audio'
@@ -46,7 +47,9 @@ function loop(t: number) {
       run.lives--; run.invuln = 1200
       $('runHearts').textContent = '❤️'.repeat(run.lives) + '🖤'.repeat(3 - run.lives)
       run.area.classList.remove('hitflash'); void run.area.offsetWidth; run.area.classList.add('hitflash')
-      sNope(); FX.shake(8)
+      sNope()
+      // Percuter un obstacle : choc plein, ressenti comme partout ailleurs
+      impact(0.85, { matter: 'sourd' })
       if (run.lives <= 0) { finish(); return }
     }
     if (o.x < -60) { o.el.remove(); run.obstacles.splice(i, 1) }
