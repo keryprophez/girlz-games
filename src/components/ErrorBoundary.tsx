@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="rbtns">
             <button className="bigbtn primary"
               onClick={() => { this.setState({ crashed: false }); this.props.onReset() }}>
-              🏠 Retour à la ferme
+              🏠 Retour à l'accueil
             </button>
           </div>
         </div>

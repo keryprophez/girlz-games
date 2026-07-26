@@ -953,10 +953,7 @@ body.bigplay .geo-say{font-size:19px;}
 /* ============================================================
    LA FERME VIVANTE (accueil)
    ============================================================ */
-.hub-toggle{margin:10px 0 8px;border:2px solid var(--line);background:var(--card);border-radius:99px;
-  cursor:pointer;font-family:'Baloo 2';font-weight:700;font-size:14.5px;padding:9px 18px;
-  box-shadow:var(--e1);transition:transform .2s var(--spring);}
-.hub-toggle:active{transform:scale(.94);}
+
 .hub-wrap{position:relative;width:100%;border-radius:var(--r-xl);overflow:hidden;
   box-shadow:var(--e2);border:1px solid var(--line);}
 .hub-svg{display:block;width:100%;height:auto;}
@@ -1087,10 +1084,6 @@ body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
    ============================================================ */
 .pz-arena{background:#3B2A22;}
 
-/* Vue ferme : cartes profil compactes pour que le monde tienne à l'écran */
-.hub-lean .pcard{padding:9px 18px 9px;}
-.hub-lean .pavatar{width:clamp(46px,9vmin,60px);height:clamp(46px,9vmin,60px);}
-.hub-lean .brand{margin-top:0;}
 
 /* ============================================================
    LE STAND 3D (Three.js + cannon-es)
