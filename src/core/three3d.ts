@@ -336,6 +336,48 @@ export function dotTex(T: T3, color = '#FFFFFF') {
   return t
 }
 
+/** Glace translucide : matériau récupéré de l'ancien igloo 3D, le seul acquis
+    visuel qui méritait de lui survivre. La réfraction coûte une passe de rendu —
+    penser à `renderer.transmissionResolutionScale = 0.5` sur la scène. */
+export function iceMaterial(T: T3, stage?: Stage) {
+  const nrm = bumpyNormal(T, 6, 2)
+  stage?.keep(nrm)
+  return new T.MeshPhysicalMaterial({
+    color: 0xD9F1FF, roughness: 0.14, metalness: 0,
+    transmission: 0.72, thickness: 0.4, ior: 1.31, side: T.DoubleSide,
+    clearcoat: 0.6, clearcoatRoughness: 0.25,
+    normalMap: nrm, normalScale: new T.Vector2(0.35, 0.35)
+  })
+}
+
+/** Aurore boréale : rideau de lumière sur un cylindre, vu de l'intérieur. */
+export function aurora(T: T3, radius = 26, height = 14) {
+  const c = document.createElement('canvas')
+  c.width = 512; c.height = 256
+  const g = c.getContext('2d')!
+  for (let b = 0; b < 5; b++) {
+    const x = 40 + b * 95 + Math.random() * 40
+    const grad = g.createLinearGradient(0, 0, 0, 256)
+    const hue = 130 + Math.random() * 90
+    grad.addColorStop(0, `hsla(${hue},85%,65%,0)`)
+    grad.addColorStop(0.45, `hsla(${hue},85%,62%,.55)`)
+    grad.addColorStop(1, `hsla(${hue + 40},80%,60%,0)`)
+    g.fillStyle = grad
+    g.beginPath()
+    g.moveTo(x, 0)
+    g.bezierCurveTo(x + 60, 80, x - 50, 170, x + 20, 256)
+    g.lineTo(x + 60, 256)
+    g.bezierCurveTo(x + 110, 170, x + 20, 80, x + 55, 0)
+    g.closePath(); g.fill()
+  }
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return new T.Mesh(
+    new T.CylinderGeometry(radius, radius, height, 40, 1, true),
+    new T.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.55, side: T.BackSide, depthWrite: false })
+  )
+}
+
 /* ---------- Interaction : quel objet est sous le doigt ? ---------- */
 export function picker(stage: Stage) {
   const { T, camera, renderer } = stage

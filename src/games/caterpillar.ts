@@ -3,10 +3,14 @@ import { $, pick, rnd } from '../core/utils'
 import { sCrunch, sNope, sWin, tone } from '../core/audio'
 import { FX } from '../core/fx'
 
-/* La Chenille qui grandit — un snake tout doux : glisse le doigt pour guider
-   la chenille vers les fruits, elle grandit à chaque bouchée. Pas de mort :
-   les bords ramènent de l'autre côté (pré magique) et se marcher dessus fait
-   juste trébucher (on raccourcit un peu). Objectif : devenir bien dodue ! */
+/* La Chenille qui grandit — un snake. Glisse le doigt, elle fonce vers les
+   fruits et s'allonge à chaque bouchée.
+
+   Il y a un VRAI enjeu : se mordre la queue coûte un cœur, et à zéro cœur la
+   partie est finie. Les bords ramènent de l'autre côté (pré magique) — la
+   difficulté ne vient pas des murs mais de sa propre longueur et de la vitesse,
+   qui monte à chaque fruit. Pas d'objectif chiffré : on va aussi loin qu'on
+   peut, c'est ça qui donne envie de recommencer. */
 
 const FRUITS = ['🍎', '🍓', '🍇', '🍊', '🍐', '🫐']
 const CELL = 30
@@ -74,13 +78,18 @@ function step() {
   const head = cp.snake[0]
   let nx = (head.x + cp.dir.x + cp.cols) % cp.cols
   let ny = (head.y + cp.dir.y + cp.rows) % cp.rows
-  // Se marcher dessus : on trébuche (raccourcit de 2), sans mourir
+  // Se mordre : ça coûte un cœur. À zéro, la partie s'arrête.
   const hitIdx = cp.snake.findIndex((s: any) => s.x === nx && s.y === ny)
   if (hitIdx > 0 && hitIdx < cp.snake.length - 1) {
-    cp.stumbles++
+    cp.lives--
     sNope()
-    cp.snake = cp.snake.slice(0, Math.max(3, cp.snake.length - 2))
+    FX.shake(10)
     $('cpArena').classList.remove('shake'); void $('cpArena').offsetWidth; $('cpArena').classList.add('shake')
+    hud()
+    if (cp.lives <= 0) { finish(); return }
+    // Il reste une vie : on raccourcit et on repart, sans temps mort
+    cp.snake = cp.snake.slice(0, Math.max(4, Math.floor(cp.snake.length / 2)))
+    ctx.toast(`💔 Aïe ! ${'❤️'.repeat(cp.lives)}`)
   }
   cp.snake.unshift({ x: nx, y: ny })
   if (nx === cp.fruit.x && ny === cp.fruit.y) {
@@ -89,17 +98,21 @@ function step() {
     const r = cp.canvas.getBoundingClientRect()
     FX.burst(r.left + (nx + 0.5) * (r.width / cp.cols), r.top + (ny + 0.5) * (r.height / cp.rows),
       { colors: ['#FFE08A', '#8FCB74', '#FF9E7A'], count: 8 })
-    $('cpScore').textContent = `🍎 ${cp.eaten}/${cp.goal}`
+    hud()
     placeFruit()
-    if (cp.eaten >= cp.goal) { finish(); return }
-    // La chenille accélère tout doucement
-    cp.speed = Math.max(130, cp.speed - 6)
+    // La chenille accélère : c'est ça qui finit par avoir raison de la joueuse
+    cp.speed = Math.max(cp.floor, cp.speed - 8)
     clearInterval(cp.timer)
     cp.timer = setInterval(step, cp.speed)
   } else {
     cp.snake.pop()
   }
   draw()
+}
+
+function hud() {
+  $('cpScore').textContent = `🍎 ${cp.eaten}`
+  $('cpLives').textContent = '❤️'.repeat(Math.max(0, cp.lives)) || '—'
 }
 
 function setDir(x: number, y: number) {
@@ -110,11 +123,16 @@ function setDir(x: number, y: number) {
 }
 
 function finish() {
+  if (!cp || !cp.running) return
+  cp.running = false
+  clearInterval(cp.timer)
   sWin()
-  const stars = cp.stumbles === 0 ? 3 : cp.stumbles <= 2 ? 2 : 1
+  const th = ctx.byTier([14, 7], [18, 9], [24, 12])
+  const n = cp.eaten
+  const stars = n >= th[0] ? 3 : n >= th[1] ? 2 : 1
   ctx.finish({
-    title: 'Quelle belle chenille !',
-    msg: `${ctx.playerName} a fait grandir une chenille de ${cp.snake.length} anneaux 🐛`,
+    title: n >= th[0] ? 'Chenille GÉANTE !' : n >= th[1] ? 'Belle chenille !' : 'Elle s\'est mordu la queue !',
+    msg: `${ctx.playerName} a croqué ${n} fruit${n > 1 ? 's' : ''} 🐛`,
     stars: stars as 1 | 2 | 3, starsEarned: stars
   })
 }
@@ -125,7 +143,10 @@ export const caterpillar: GameDef = {
   mount(c) {
     ctx = c
     c.root.innerHTML = `
-      <div class="topbar"><div class="chip" id="cpScore">🍎 0/?</div></div>
+      <div class="topbar">
+        <div class="chip" id="cpScore">🍎 0</div>
+        <div class="chip" id="cpLives">❤️❤️❤️</div>
+      </div>
       <div class="arena cp-arena" id="cpArena"><canvas id="cpCanvas"></canvas></div>`
     const arena = $('cpArena')
     const cols = Math.max(10, Math.floor(arena.clientWidth / CELL))
@@ -136,13 +157,15 @@ export const caterpillar: GameDef = {
     const midY = Math.floor(rows / 2)
     cp = {
       cols, rows, canvas, cx2d: canvas.getContext('2d'),
-      snake: [{ x: 5, y: midY }, { x: 4, y: midY }, { x: 3, y: midY }],
+      // Assez longue dès le départ pour pouvoir se mordre : sans ça les
+      // premières dizaines de secondes sont sans aucun risque, donc sans tension.
+      snake: Array.from({ length: 6 }, (_, i) => ({ x: 6 - i, y: midY })),
       dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 },
-      eaten: 0, stumbles: 0, running: true,
-      goal: c.byTier(8, 12, 16),
-      speed: c.byTier(300, 240, 190)
+      eaten: 0, lives: 3, running: true,
+      speed: c.byTier(300, 250, 200),
+      floor: c.byTier(150, 125, 100)
     }
-    $('cpScore').textContent = `🍎 0/${cp.goal}`
+    hud()
     placeFruit()
     draw()
     cp.timer = setInterval(step, cp.speed)

@@ -7,7 +7,6 @@ import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
 import { BackupButton } from './Backup'
-import { FarmHub } from './FarmHub'
 import type { Tier } from '../core/types'
 
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
@@ -43,13 +42,13 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
   }
 
   return (
-    <section className={'screen active' + (store.hubView === 'farm' ? ' hub-lean' : '')}>
+    <section className="screen active">
       <div className="brand">
         <h1>La Ferme Magique</h1>
         <div className="tag">{GAMES.length} jeux pour rêver, jouer et apprendre ✨</div>
       </div>
 
-      {store.hubView === 'list' && <div className="seg-label">Qui joue ?</div>}
+      <div className="seg-label">Qui joue ?</div>
       <div className="profiles">
         {store.profiles.map(p => {
           const pProg = store.progress[p.id] || { stars: 0, stickers: [], bestStars: {} }
@@ -88,17 +87,11 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <BackupButton />
       </div>
 
-      <button className="hub-toggle" onClick={() => { sFlip(); store.setHubView(store.hubView === 'farm' ? 'list' : 'farm') }}>
-        {store.hubView === 'farm' ? '📋 Voir tous les jeux' : '🌾 Retour à la ferme'}
-      </button>
-
-      {store.hubView === 'farm' && <FarmHub onPlay={onPlay} duel={duel} />}
-
       <button className={'dueltoggle' + (duel ? ' on' : '')} onClick={() => { setDuel(d => !d); sFlip() }}>
         ⚔️ Défi à deux {duel ? '· activé ! Choisissez un jeu' : ''}
       </button>
 
-      {store.hubView === 'list' && <div className="cats">
+      <div className="cats">
         {CATEGORIES.map(cat => (
           <div className="cat" key={cat.id}>
             <div className="eyebrow">{cat.icon} {cat.label}</div>
@@ -119,7 +112,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
             </div>
           </div>
         ))}
-      </div>}
+      </div>
       <div className="footnote">La collection de chacune est gardée d'une fois sur l'autre 🌟</div>
 
       {albumOpen && <Album onClose={() => setAlbumOpen(false)} />}

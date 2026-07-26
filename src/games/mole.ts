@@ -4,10 +4,16 @@ import { sBonk, sNope, sWin } from '../core/audio'
 import { FX, fxAt, JUICE } from '../core/fx'
 import { frameStyle, loadAtlas, FARM_ANIMALS, GREEN_GRASS, GREEN_TREES, type Atlas } from '../core/sprites'
 
-/* Tape-Trous — les animaux de la ferme sortent de leur trou, on tape
-   dessus… sauf le cactus, qui pique. Tous les visuels viennent des planches
-   CC0 Kenney (`public/assets/`), plus un seul emoji dans le pré : arbres,
-   nuages, herbe, animaux et cactus sont de vrais sprites. */
+/* Tape-Trous — les animaux sortent de leur trou, on tape dessus… sauf le
+   cactus, qui pique.
+
+   Rater COÛTE : taper un cactus enlève un cœur, et à zéro cœur la partie
+   s'arrête net, avant la fin du chrono. À l'inverse, enchaîner sans se tromper
+   fait monter un combo qui multiplie les points — c'est lui le plafond
+   d'adresse : n'importe qui tape 10 animaux, seule une joueuse attentive en
+   enchaîne 15 d'affilée.
+
+   Tous les visuels viennent des planches CC0 Kenney (`public/assets/`). */
 
 /** Décor du pré : arbres au fond, touffes d'herbe devant, nuages qui passent. */
 function dressField(nature: Atlas) {
@@ -64,26 +70,56 @@ function popMole() {
   h.classList.add('up')
   h._hideT = setTimeout(() => {
     h.classList.remove('up')
+    // Un animal qui redescend sans avoir été tapé casse la série
+    if (!h._whacked && !h._isCactus && mole.combo > 0) { mole.combo = 0; hud() }
     setTimeout(() => { h._busy = false }, 180)
   }, mole.cfg.up)
+}
+
+function hud() {
+  $('moleScore').textContent = '🔨 ' + mole.score
+  $('moleLives').textContent = '❤️'.repeat(Math.max(0, mole.lives)) || '—'
+  const c = $('moleCombo')
+  c.textContent = mole.combo >= 3 ? `×${Math.min(5, Math.floor(mole.combo / 3) + 1)}` : ''
+  c.classList.toggle('on', mole.combo >= 3)
 }
 
 function whack(h: any) {
   if (!mole || !mole.running || !h._busy || h._whacked || !h.classList.contains('up')) return
   h._whacked = true; clearTimeout(h._hideT)
   h.classList.remove('up'); h.classList.add('bonk')
-  if (h._isCactus) { mole.score = Math.max(0, mole.score - 2); sNope(); ctx.toast('🌵 Aïe, ça pique ! -2') }
-  else { mole.score++; sBonk(); fxAt(h, JUICE.warm, 12); FX.floatEl(h, '+1') }
-  $('moleScore').textContent = '🔨 ' + mole.score
+  if (h._isCactus) {
+    // Le cactus coûte un cœur ET le combo : se tromper doit se payer
+    mole.lives--
+    mole.combo = 0
+    sNope(); FX.shake(12)
+    hud()
+    if (mole.lives <= 0) { finish(true); return }
+    ctx.toast(`🌵 Aïe ! ${'❤️'.repeat(mole.lives)}`)
+  } else {
+    mole.combo++
+    mole.bestCombo = Math.max(mole.bestCombo, mole.combo)
+    const mult = Math.min(5, Math.floor(mole.combo / 3) + 1)
+    mole.score += mult
+    sBonk(); fxAt(h, JUICE.warm, 12); FX.floatEl(h, '+' + mult)
+    hud()
+  }
   setTimeout(() => { h.classList.remove('bonk'); h._busy = false }, 340)
 }
 
-function finish() {
-  const score = mole ? mole.score : 0
+function finish(piqued = false) {
+  if (!mole || !mole.running) return
+  mole.running = false
+  clearTimeout(mole.spawnT)
   sWin()
-  const th = ctx.byTier([14, 8], [20, 12], [26, 16])
+  const score = mole.score
+  const th = ctx.byTier([24, 12], [34, 18], [46, 24])
   const stars = score >= th[0] ? 3 : score >= th[1] ? 2 : 1
-  ctx.finish({ title: 'Animaux attrapés !', msg: `${ctx.playerName} en a attrapé ${score} 🐮`, stars, starsEarned: stars })
+  ctx.finish({
+    title: piqued ? 'Trop de cactus ! 🌵' : score >= th[0] ? 'Quel coup d\'œil !' : 'Animaux attrapés !',
+    msg: `${ctx.playerName} a marqué ${score} points` + (mole.bestCombo >= 3 ? ` — ${mole.bestCombo} d'affilée !` : ''),
+    stars, starsEarned: stars
+  })
 }
 
 export const moleGame: GameDef = {
@@ -94,7 +130,9 @@ export const moleGame: GameDef = {
     c.root.innerHTML = `
       <div class="topbar">
         <div class="chip" id="moleScore">🔨 0</div>
+        <div class="chip" id="moleLives">❤️❤️❤️</div>
       </div>
+      <div class="mole-combo" id="moleCombo"></div>
       <div class="tbar" style="max-width:470px"><div class="tfill" id="moleTimer"></div></div>
       <div id="moleField">
         <div class="mole-sky" id="moleSky"></div>
@@ -107,7 +145,8 @@ export const moleGame: GameDef = {
       { up: 820, gap: 560, cactus: 0.2, multi: 0.25 },
       { up: 620, gap: 420, cactus: 0.28, multi: 0.4 }
     )
-    mole = { score: 0, timeLeft: 30, cfg: { ...cfg }, holes: [], running: true, animals: null, items: null, px: 60 }
+    mole = { score: 0, lives: 3, combo: 0, bestCombo: 0, timeLeft: 45, cfg: { ...cfg },
+      holes: [], running: true, animals: null, items: null, px: 60 }
     const grid = $('moleGrid')
     grid.innerHTML = ''
     for (let i = 0; i < 9; i++) {
@@ -144,8 +183,8 @@ export const moleGame: GameDef = {
         timer = window.setInterval(() => {
           if (!mole || !mole.running) return
           mole.timeLeft--
-          $('moleTimer').style.width = (mole.timeLeft / 30) * 100 + '%'
-          if (mole.timeLeft === 20 || mole.timeLeft === 10) {
+          $('moleTimer').style.width = (mole.timeLeft / 45) * 100 + '%'
+          if (mole.timeLeft === 32 || mole.timeLeft === 20 || mole.timeLeft === 10) {
             mole.cfg.up = Math.max(420, mole.cfg.up * 0.8)
             mole.cfg.gap = Math.max(300, mole.cfg.gap * 0.8)
             ctx.toast('Plus vite ! ⚡')

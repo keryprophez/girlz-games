@@ -87,7 +87,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         tone(620 + i * 170, 0.18, 'sine', 0.13)
         FX.burst(window.innerWidth / 2 + (i - 1) * 74, window.innerHeight * 0.36,
           { colors: ['#FFD34D', '#FFF3B0', '#FF9E7A'], count: 9 })
-      }, 320 + i * 220))
+      }, (game.cat === 'action' ? 90 : 320) + i * (game.cat === 'action' ? 110 : 220)))
     }
     return () => ts.forEach(clearTimeout)
   }, [result])
@@ -190,7 +190,12 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
       )}
 
       {result && !duel && (
-        <div id="result" className="show">
+        /* Sur un jeu d'adresse, taper N'IMPORTE OÙ relance : réessayer doit
+           coûter un geste, pas une visée. Le bouton reste pour les autres. */
+        <div id="result" className={'show' + (game.cat === 'action' ? ' quickretry' : '')}
+          onClick={game.cat === 'action'
+            ? e => { if (e.target === e.currentTarget) { setResult(null); setRunId(r => r + 1) } }
+            : undefined}>
           <div className="modal">
             <h2>{result.title}</h2>
             <p>{result.msg}  (+{result.starsEarned} ⭐)</p>
@@ -209,6 +214,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
               <button className="bigbtn primary" onClick={() => { setResult(null); setRunId(r => r + 1) }}>↻ Rejouer</button>
               <button className="bigbtn ghost" onClick={onHome}>🏠 Menu</button>
             </div>
+            {game.cat === 'action' && <div className="retryhint">ou tape à côté pour rejouer 👆</div>}
           </div>
         </div>
       )}
