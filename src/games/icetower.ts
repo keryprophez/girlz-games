@@ -225,6 +225,7 @@ export const icetower: GameDef = {
       // plastique. RoomEnvironment est généré par Three (aucun fichier).
       const pmrem = new T.PMREMGenerator(renderer)
       scene.environment = pmrem.fromScene(new RE.RoomEnvironment(), 0.04).texture
+      scene.environmentIntensity = 1.15
       pmrem.dispose()
       scene.fog = new T.Fog('#24466E', 16, 44)
 

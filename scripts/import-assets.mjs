@@ -33,6 +33,10 @@ const PACKS = {
   fish: {
     slug: 'fish-pack', title: 'Fish Pack',
     url: 'https://kenney.nl/media/pages/assets/fish-pack/07ae98c5b6-1747237960/kenney_fish-pack_2.zip'
+  },
+  food: {
+    slug: 'food-kit', title: 'Food Kit (3D)',
+    url: 'https://kenney.nl/media/pages/assets/food-kit/83086fa91c-1719418518/kenney_food-kit.zip'
   }
 }
 
@@ -44,6 +48,16 @@ const SHEETS = [
   { out: 'nature', pack: 'background', png: 'Spritesheet/bgElements_spritesheet.png' },
   { out: 'items', pack: 'platformer', png: 'Base pack/Items/items_spritesheet.png' },
   { out: 'tiles', pack: 'platformer', png: 'Base pack/Tiles/tiles_spritesheet.png' }
+]
+
+/* Modèles 3D : quelques .glb triés dans les kits Kenney. Ils sont minuscules
+   (8 à 60 Ko) et partagent une seule texture `Textures/colormap.png` — qu'il
+   faut copier À CÔTÉ des .glb, car ils la référencent en chemin relatif. */
+const MODELS = [
+  { pack: 'food', dir: 'Models/GLB format', out: 'food', files: [
+    'mushroom.glb', 'tomato-slice.glb', 'cheese-cut.glb', 'corn.glb',
+    'onion-half.glb', 'sausage-half.glb', 'pepper.glb', 'bread.glb'
+  ] }
 ]
 
 /* Particules : PAS embarquées pour l'instant. Les PNG de Kenney font 512×512
@@ -115,6 +129,22 @@ if (PARTICLES.length) {
     cpSync(src, join(OUT, 'particles', basename(f)))
     total += readFileSync(src).length
   }
+}
+
+for (const m of MODELS) {
+  const dst = join(OUT, 'models', m.out)
+  mkdirSync(join(dst, 'Textures'), { recursive: true })
+  const src = join(TMP, m.pack, m.dir)
+  for (const f of m.files) {
+    const from = join(src, f)
+    if (!existsSync(from)) { console.error(`✗ modèle introuvable : ${from}`); process.exit(1) }
+    cpSync(from, join(dst, f))
+    total += readFileSync(from).length
+  }
+  const tex = join(src, 'Textures', 'colormap.png')
+  cpSync(tex, join(dst, 'Textures', 'colormap.png'))
+  total += readFileSync(tex).length
+  console.log(`✓ modèles ${m.out} — ${m.files.length} objets 3D`)
 }
 
 writeFileSync(join(OUT, 'CREDITS.md'), `# Crédits des assets

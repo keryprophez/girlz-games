@@ -4,6 +4,7 @@ import { sCrunch, sPop, sWin, tone } from '../core/audio'
 import { confetti } from '../core/fx'
 import {
   createStage, loadPhysics, loader, fixedStep, orbitCam, woodTex, bumpyNormal, picker,
+  loadModel, fitModel,
   type Stage, type Cannon
 } from '../core/three3d'
 
@@ -62,8 +63,31 @@ function paintSauce(x: number, z: number, color: string) {
   tex.needsUpdate = true
 }
 
-/* ---------- Fabrique d'ingrédients ---------- */
-function ingredientKit(T: any) {
+/* ---------- Fabrique d'ingrédients ----------
+   Chaque ingrédient est un vrai modèle glTF (Kenney Food Kit), pré-chargé une
+   fois puis cloné. Les primitives d'avant — un cube pour le fromage, une sphère
+   aplatie pour le basilic — ne pouvaient pas donner autre chose que du plastique. */
+const MODELS: Record<string, { file: string; size: number; r: number; melt: boolean }> = {
+  cheese: { file: 'cheese-cut', size: 0.10, r: 0.038, melt: true },
+  mushroom: { file: 'mushroom', size: 0.095, r: 0.042, melt: false },
+  olive: { file: 'onion-half', size: 0.075, r: 0.032, melt: false },
+  slice: { file: 'tomato-slice', size: 0.105, r: 0.046, melt: false },
+  corn: { file: 'corn', size: 0.08, r: 0.032, melt: false },
+  basil: { file: 'pepper', size: 0.085, r: 0.034, melt: false }
+}
+
+/** Charge tous les modèles d'un coup : un ingrédient ne doit jamais faire attendre. */
+async function preloadIngredients(T: any) {
+  const kit: Record<string, any> = {}
+  await Promise.all(Object.entries(MODELS).map(async ([id, def]) => {
+    const proto = await loadModel('food', def.file)
+    fitModel(T, proto, def.size)
+    kit[id] = { r: def.r, melt: def.melt, make: () => proto.clone(true) }
+  }))
+  return kit
+}
+
+function ingredientKitFallback(T: any) {
   const std = (c: number, r = 0.7) => new T.MeshStandardMaterial({ color: c, roughness: r })
   const capGeo = new T.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2)
   const stemGeo = new T.CylinderGeometry(0.018, 0.022, 0.045, 8)
@@ -237,12 +261,12 @@ export const pizza: GameDef = {
       const [, CANNON] = await loadPhysics()
       if (dead) return
       const stage: Stage = await createStage(arena, {
-        sky: '#3B2A22',
-        fog: [4, 12], fogColor: '#3B2A22',
+        sky: '#241811',
+        fog: [3.2, 9], fogColor: '#241811',
         cam: [0, 1.2, 1.6], target: [0, 0.06, 0], fov: 46,
-        hemi: ['#FFE6C4', '#5A3E2C', 0.9],
+        hemi: ['#FFE6C4', '#3A2618', 0.75],
         sun: { pos: [1.6, 3.2, 2.2], color: '#FFEFD2', intensity: 2.6, area: 3, far: 10 },
-        fill: 0.45, exposure: 1.1
+        fill: 0.3, exposure: 0.98
       })
       if (dead) { stage.dispose(); return }
       hideLoader()
@@ -251,7 +275,7 @@ export const pizza: GameDef = {
 
       /* --- Plan de travail --- */
       const counterMat = new T.MeshStandardMaterial({
-        map: stage.keep(woodTex(T, '#A87C4E', 2)),
+        map: stage.keep(woodTex(T, '#7A5533', 2)),
         normalMap: stage.keep(bumpyNormal(T, 5, 6)),
         roughness: 0.72, metalness: 0.02
       })
@@ -386,7 +410,7 @@ export const pizza: GameDef = {
       world.addBody(disc)
 
       S = {
-        stage, CANNON, world, matFood, kit: ingredientKit(T),
+        stage, CANNON, world, matFood, kit: ingredientKitFallback(T),
         sauce: { g: dc.g, tex: sauceTex },
         doughMat, crustMat, sideMat, pizzaGroup, wedges, fire, fireLight,
         loose: [], melting: [], tool: 'tomato' as ToolId, dropped: 0, eaten: 0,
@@ -395,6 +419,12 @@ export const pizza: GameDef = {
         step: fixedStep()
       }
       paintUI()
+
+      /* Les vrais modèles remplacent les primitives dès qu'ils sont là. Le jeu
+         reste jouable pendant le chargement grâce au jeu de secours. */
+      preloadIngredients(T)
+        .then(kit => { if (S) { S.kit = kit; S.realModels = true } })
+        .catch(() => ctx.toast('Modèles 3D indisponibles, formes simples 🍕'))
 
       /* --- Toucher la pizza --- */
       const pick = picker(stage)

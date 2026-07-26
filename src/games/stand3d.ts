@@ -194,21 +194,30 @@ export const stand3d: GameDef = {
       renderer.shadowMap.enabled = true
       renderer.shadowMap.type = T.PCFSoftShadowMap
       renderer.toneMapping = T.ACESFilmicToneMapping
-      renderer.toneMappingExposure = 1.05
+      renderer.toneMappingExposure = 0.95
       renderer.outputColorSpace = T.SRGBColorSpace
       $('s3Load')?.remove()
       arena.appendChild(renderer.domElement)
 
+      /* IBL : sans carte d'environnement à réfléchir, le bois et la balle
+         rendent une couleur plate. RoomEnvironment est généré par Three,
+         aucun fichier à télécharger. */
+      const { RoomEnvironment } = await import('three/examples/jsm/environments/RoomEnvironment.js')
+      const pmrem = new T.PMREMGenerator(renderer)
+      const envRT = pmrem.fromScene(new RoomEnvironment() as any, 0.04)
+
       const scene = new T.Scene()
-      scene.background = new T.Color('#BFE3F5')
-      scene.fog = new T.Fog('#CFE9F7', 9, 26)
+      scene.environment = envRT.texture
+      scene.environmentIntensity = 0.55
+      scene.background = new T.Color('#7FB0CC')
+      scene.fog = new T.Fog('#9CC4DC', 9, 26)
 
       const camera = new T.PerspectiveCamera(48, W / H, 0.1, 80)
       camera.position.set(0, 2.05, 3.95)
       camera.lookAt(0, 1.02, -0.15)
 
       /* --- Lumières : ciel + soleil rasant avec ombres douces --- */
-      scene.add(new T.HemisphereLight(0xCFE9FF, 0x6E8F52, 1.05))
+      scene.add(new T.HemisphereLight(0xCFE9FF, 0x6E8F52, 0.34))
       const sun = new T.DirectionalLight(0xFFF1D0, 2.3)
       sun.position.set(3.4, 6.2, 4.2)
       sun.castShadow = true
@@ -222,7 +231,7 @@ export const stand3d: GameDef = {
       sun.shadow.radius = 3
       scene.add(sun)
       // Appoint frontal doux : évite les faces avant éteintes
-      const fill = new T.DirectionalLight(0xFFFFFF, 0.55)
+      const fill = new T.DirectionalLight(0xFFFFFF, 0.24)
       fill.position.set(-1.6, 2.4, 5)
       scene.add(fill)
 
@@ -289,7 +298,7 @@ export const stand3d: GameDef = {
       ]
       const crates = spots.map(([x, row], i) => {
         const y = SHELF_Y + 0.045 + CRATE / 2 + row * (CRATE + 0.004)
-        const mat = new T.MeshStandardMaterial({ map: woodTex(T, BANDS[i]), roughness: 0.72, metalness: 0.02 })
+        const mat = new T.MeshStandardMaterial({ map: woodTex(T, BANDS[i]), roughness: 0.55, metalness: 0.03, envMapIntensity: 1.1 })
         const mesh = new T.Mesh(geo, mat)
         mesh.castShadow = true; mesh.receiveShadow = true
         mesh.position.set(x, y, 0)
@@ -309,7 +318,7 @@ export const stand3d: GameDef = {
       /* --- La balle --- */
       const ball = new T.Mesh(
         new T.SphereGeometry(BALL_R, 32, 24),
-        new T.MeshStandardMaterial({ color: 0xE8A13F, roughness: 0.42, metalness: 0.12 })
+        new T.MeshStandardMaterial({ color: 0xE8A13F, roughness: 0.28, metalness: 0.05, envMapIntensity: 1.2 })
       )
       ball.castShadow = true
       scene.add(ball)
@@ -432,6 +441,7 @@ export const stand3d: GameDef = {
             ms.forEach((m: any) => { if (m.map) m.map.dispose(); m.dispose() })
           }
         })
+        envRT.dispose(); pmrem.dispose()
         renderer.dispose()
         renderer.domElement.remove()
       }

@@ -9,6 +9,7 @@ des choses — ce travail est offert.
 - **Platformer Art Deluxe** — <https://kenney.nl/assets/platformer-art-deluxe>
 - **Background Elements** — <https://kenney.nl/assets/background-elements>
 - **Fish Pack** — <https://kenney.nl/assets/fish-pack>
+- **Food Kit (3D)** — <https://kenney.nl/assets/food-kit>
 
 Les planches ont été **triées** : on ne garde que les sprites réellement utilisés
 par les jeux. Pour en ajouter, modifier `scripts/import-assets.mjs` et le

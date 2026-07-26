@@ -25,6 +25,10 @@ export function loader(arena: HTMLElement, icon: string): () => void {
 
 /* ---------- Options de scène ---------- */
 export interface StageOpts {
+  /** Éclairage d'environnement. `false` uniquement pour l'espace (fond noir). */
+  ibl?: boolean
+  /** Intensité de l'environnement (1 = neutre). */
+  iblIntensity?: number
   /** Couleur du ciel / du fond. */
   sky: string
   /** Brouillard [proche, lointain] — teinté avec `fogColor` ou une variante du ciel. */
@@ -88,8 +92,29 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   const tg = o.target || [0, 1, 0]
   camera.lookAt(tg[0], tg[1], tg[2])
 
+  /* L'IBL REMPLACE l'ambiante, elle ne s'y ajoute pas : sans cette baisse, la
+     scène part en blanc délavé — le sujet ne ressort plus du fond. */
+  const iblOn = o.ibl !== false
   const hemiCfg = o.hemi || ['#CFE9FF', '#6E8F52', 1.0]
-  scene.add(new T.HemisphereLight(hemiCfg[0], hemiCfg[1], hemiCfg[2] as number))
+  scene.add(new T.HemisphereLight(hemiCfg[0], hemiCfg[1], (hemiCfg[2] as number) * (iblOn ? 0.32 : 1)))
+
+  /* --- IBL : LE réglage qui sépare « plastique mat » de « matière ».
+     Sans carte d'environnement, un MeshStandardMaterial n'a rien à réfléchir :
+     il rend une couleur plate. RoomEnvironment donne des reflets crédibles à
+     tout le monde d'un coup, sans fichier HDR à télécharger. --- */
+  let pmrem: any = null
+  if (iblOn) {
+    const { RoomEnvironment } = await import('three/examples/jsm/environments/RoomEnvironment.js')
+    pmrem = new T.PMREMGenerator(renderer)
+    const envScene = new RoomEnvironment()
+    const env = pmrem.fromScene(envScene as any, 0.04)
+    scene.environment = env.texture
+    scene.environmentIntensity = o.iblIntensity ?? 0.6
+    envScene.traverse?.((x: any) => {
+      if (x.geometry) x.geometry.dispose()
+      if (x.material) (Array.isArray(x.material) ? x.material : [x.material]).forEach((m: any) => m.dispose())
+    })
+  }
 
   let sun: import('three').DirectionalLight | null = null
   if (!o.noSun) {
@@ -108,7 +133,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
     sun.shadow.radius = 3
     scene.add(sun)
     if (o.fill !== 0) {
-      const fill = new T.DirectionalLight(0xFFFFFF, o.fill ?? 0.5)
+      const fill = new T.DirectionalLight(0xFFFFFF, (o.fill ?? 0.5) * (iblOn ? 0.45 : 1))
       fill.position.set(-1.8, 2.6, 5)
       scene.add(fill)
     }
@@ -142,6 +167,8 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
       disposeTree(T, scene)
       extras.forEach(r => { try { r.dispose() } catch { /* déjà libéré */ } })
       extras.length = 0
+      if (scene.environment) { scene.environment.dispose(); scene.environment = null }
+      pmrem?.dispose()
       renderer.dispose()
       renderer.forceContextLoss?.()
       renderer.domElement.remove()
@@ -376,6 +403,50 @@ export function aurora(T: T3, radius = 26, height = 14) {
     new T.CylinderGeometry(radius, radius, height, 40, 1, true),
     new T.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.55, side: T.BackSide, depthWrite: false })
   )
+}
+
+/* ---------- Modèles glTF ----------
+   De vrais objets modélisés, pas des primitives. Un cube arrondi reste un cube :
+   c'est ici que se joue le saut visuel. Chaque modèle n'est chargé qu'une fois
+   puis cloné — un `.glb` Kenney pèse 8 à 60 Ko. */
+const models = new Map<string, Promise<import('three').Group>>()
+
+export function loadModel(kit: string, name: string): Promise<import('three').Group> {
+  const key = `${kit}/${name}`
+  let p = models.get(key)
+  if (!p) {
+    p = (async () => {
+      const [T, { GLTFLoader }] = await Promise.all([
+        loadThree(),
+        import('three/examples/jsm/loaders/GLTFLoader.js')
+      ])
+      const url = `${import.meta.env.BASE_URL}assets/models/${kit}/${name}.glb`
+      const gltf = await new GLTFLoader().loadAsync(url)
+      gltf.scene.traverse((o: any) => {
+        if (!o.isMesh) return
+        o.castShadow = true
+        o.receiveShadow = true
+        // Kenney sort ses kits en filtrage « plus proche » : ça pixellise à
+        // l'écran. On repasse en linéaire, la texture est un atlas de couleurs.
+        const m = o.material
+        if (m?.map) { m.map.magFilter = T.LinearFilter; m.map.minFilter = T.LinearMipmapLinearFilter; m.map.needsUpdate = true }
+        if (m) { m.roughness = 0.62; m.metalness = 0.02 }
+      })
+      return gltf.scene as unknown as import('three').Group
+    })()
+    models.set(key, p)
+    p.catch(() => models.delete(key))
+  }
+  return p.then(g => g.clone(true))
+}
+
+/** Met un modèle à l'échelle voulue et le pose sur son point le plus bas. */
+export function fitModel(T: T3, g: import('three').Object3D, targetSize: number) {
+  const box = new T.Box3().setFromObject(g)
+  const size = box.getSize(new T.Vector3())
+  const k = targetSize / Math.max(size.x, size.y, size.z)
+  g.scale.setScalar(k)
+  return g
 }
 
 /* ---------- Interaction : quel objet est sous le doigt ? ---------- */
