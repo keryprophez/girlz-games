@@ -130,14 +130,16 @@ La règle qui a tout guidé : la **simulation validée ne change pas d'un chiffr
 
 ---
 
-## Étape C — Le son au niveau 🔊
+## Étape C — Le son au niveau 🔊 (impacts ✅)
 
 La musique générative (`core/music.ts`) est bonne et à garder — elle est unique et
-ne pèse rien. Ce qui manque :
-- **Vrais bruitages foley** en remplacement des bips synthétisés pour les impacts,
-  clics et chutes.
-- Mixage : bus musique / bus effets, volumes séparés, *ducking* léger de la
-  musique pendant la voix.
+ne pèse rien.
+- ✅ **Vrais bruitages foley pour les chocs** : 24 sons Kenney (impact-sounds,
+  CC0) branchés dans `core/impact.ts` — la force choisit la variante (léger →
+  lourd), hauteur légèrement variée, synthé en secours pendant le chargement.
+  Tous les jeux qui passent par `impact()` en profitent d'un coup.
+- Reste : clics d'interface, et le mixage (bus musique / bus effets, volumes
+  séparés, *ducking* léger de la musique pendant la voix).
 
 ---
 

@@ -30,11 +30,67 @@ const MATTERS: Record<Matter, { freq: number; dur: number; type: BiquadFilterTyp
   sourd: { freq: 180, dur: 0.24, type: 'lowpass', q: 0.6 }
 }
 
-/** Bruit de choc : souffle filtré + corps sinusoïdal, tous deux mis à l'échelle. */
+/* Foley : de VRAIS bruitages (Kenney impact-sounds, CC0) remplacent le souffle
+   synthétique dès qu'ils sont décodés. 4 variantes par matière, classées du
+   plus léger au plus lourd — la FORCE du choc choisit la variante. Les listes
+   doivent rester alignées avec SOUNDS de scripts/import-assets.mjs. */
+const FOLEY: Record<Matter, string[]> = {
+  bois: ['impactWood_light_000', 'impactWood_medium_000', 'impactWood_medium_002', 'impactWood_heavy_000'],
+  glace: ['impactGlass_light_000', 'impactGlass_light_002', 'impactGlass_medium_000', 'impactGlass_heavy_000'],
+  neige: ['footstep_snow_000', 'footstep_snow_002', 'impactSoft_medium_000', 'impactSoft_heavy_000'],
+  pate: ['impactSoft_medium_001', 'impactSoft_medium_003', 'impactSoft_heavy_001', 'impactSoft_heavy_003'],
+  metal: ['impactMetal_light_000', 'impactMetal_medium_000', 'impactMetal_medium_002', 'impactMetal_heavy_000'],
+  sourd: ['impactPunch_medium_000', 'impactPunch_medium_002', 'impactPunch_heavy_000', 'impactPunch_heavy_002']
+}
+const foleyBuf: Partial<Record<Matter, (AudioBuffer | null)[]>> = {}
+let foleyStarted = false
+
+/** Charge tous les bruitages en tâche de fond (≈212 Ko). Premier choc = synthé. */
+function loadFoley() {
+  const ac = getCtx()
+  if (!ac || foleyStarted) return
+  foleyStarted = true
+  for (const [m, files] of Object.entries(FOLEY) as [Matter, string[]][]) {
+    foleyBuf[m] = files.map(() => null)
+    files.forEach((f, i) => {
+      fetch(`${import.meta.env.BASE_URL}assets/sounds/${f}.ogg`)
+        .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer() })
+        .then(b => ac.decodeAudioData(b))
+        .then(buf => { foleyBuf[m]![i] = buf })
+        .catch(() => { /* le synthé reste en secours */ })
+    })
+  }
+}
+
+/** Joue la variante foley de la matière si elle est décodée. Sinon : false. */
+function playFoley(m: Matter, f: number): boolean {
+  const ac = getCtx()
+  const variants = foleyBuf[m]
+  if (!ac || !variants) return false
+  // La force choisit la variante ; on accepte la voisine si elle n'est pas prête
+  const want = Math.min(variants.length - 1, Math.floor(f * variants.length))
+  const buf = variants[want] || variants.find(Boolean)
+  if (!buf) return false
+  try {
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    // Jamais deux fois exactement le même choc : hauteur légèrement variée
+    src.playbackRate.value = 0.92 + Math.random() * 0.16
+    const g = ac.createGain()
+    g.gain.value = 0.22 + f * 0.55
+    src.connect(g); g.connect(ac.destination)
+    src.start()
+    return true
+  } catch { return false }
+}
+
+/** Bruit de choc : foley réel si chargé, sinon souffle filtré + corps sinus. */
 function thud(m: Matter, f: number) {
   if (!isSoundOn() || f <= 0) return
   const ac = getCtx()
   if (!ac) return
+  loadFoley()
+  if (playFoley(m, f)) return
   const cfg = MATTERS[m]
   const t0 = ac.currentTime
   const dur = cfg.dur * (0.6 + f * 0.7)

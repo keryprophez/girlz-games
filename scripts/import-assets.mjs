@@ -37,6 +37,10 @@ const PACKS = {
   food: {
     slug: 'food-kit', title: 'Food Kit (3D)',
     url: 'https://kenney.nl/media/pages/assets/food-kit/83086fa91c-1719418518/kenney_food-kit.zip'
+  },
+  impact: {
+    slug: 'impact-sounds', title: 'Impact Sounds',
+    url: 'https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip'
   }
 }
 
@@ -70,6 +74,18 @@ const MODELS = [
     'fish.glb'
   ] }
 ]
+
+/* Bruitages foley pour core/impact.ts : 4 variantes par matière, classées du
+   plus léger au plus lourd — c'est la FORCE du choc qui choisit la variante.
+   Les fichiers viennent de Audio/ dans le pack impact-sounds. */
+const SOUNDS = {
+  bois: ['impactWood_light_000', 'impactWood_medium_000', 'impactWood_medium_002', 'impactWood_heavy_000'],
+  glace: ['impactGlass_light_000', 'impactGlass_light_002', 'impactGlass_medium_000', 'impactGlass_heavy_000'],
+  neige: ['footstep_snow_000', 'footstep_snow_002', 'impactSoft_medium_000', 'impactSoft_heavy_000'],
+  pate: ['impactSoft_medium_001', 'impactSoft_medium_003', 'impactSoft_heavy_001', 'impactSoft_heavy_003'],
+  metal: ['impactMetal_light_000', 'impactMetal_medium_000', 'impactMetal_medium_002', 'impactMetal_heavy_000'],
+  sourd: ['impactPunch_medium_000', 'impactPunch_medium_002', 'impactPunch_heavy_000', 'impactPunch_heavy_002']
+}
 
 /* Particules : PAS embarquées pour l'instant. Les PNG de Kenney font 512×512
    chacun — 550 Ko à eux seuls, la moitié du poids total — alors que core/fx.ts
@@ -156,6 +172,22 @@ for (const m of MODELS) {
   cpSync(tex, join(dst, 'Textures', 'colormap.png'))
   total += readFileSync(tex).length
   console.log(`✓ modèles ${m.out} — ${m.files.length} objets 3D`)
+}
+
+{
+  const dst = join(OUT, 'sounds')
+  mkdirSync(dst, { recursive: true })
+  let n = 0
+  for (const files of Object.values(SOUNDS)) {
+    for (const f of files) {
+      const from = join(TMP, 'impact', 'Audio', f + '.ogg')
+      if (!existsSync(from)) { console.error(`✗ son introuvable : ${from}`); process.exit(1) }
+      cpSync(from, join(dst, f + '.ogg'))
+      total += readFileSync(from).length
+      n++
+    }
+  }
+  console.log(`✓ sons — ${n} bruitages foley`)
 }
 
 writeFileSync(join(OUT, 'CREDITS.md'), `# Crédits des assets
