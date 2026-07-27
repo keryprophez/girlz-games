@@ -581,7 +581,9 @@ export const snowman: GameDef = {
         // Le doigt pousse dans le repère de la caméra : « vers le haut » = « vers le fond »
         stage.camera.getWorldDirection(fwd)
         fwd.y = 0; fwd.normalize()
-        right.set(fwd.z, 0, -fwd.x)
+        // La droite de l'ÉCRAN est (−fwd.z, 0, fwd.x) — l'autre signe envoyait
+        // la boule à gauche quand le doigt glissait à droite (vécu sur tablette)
+        right.set(-fwd.z, 0, fwd.x)
         move.copy(right).multiplyScalar(dx * 0.011).add(fwd.clone().multiplyScalar(-dy * 0.011))
         const dist = move.length()
         if (dist < 0.0004) return

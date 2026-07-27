@@ -51,8 +51,12 @@ function doughCanvas() {
 /** Pose une tache de sauce à la position monde (x,z) de la pizza. */
 function paintSauce(x: number, z: number, color: string) {
   const { g, tex } = S.sauce
-  const px = ((x / PR) * 0.5 + 0.5) * 512
-  const py = ((z / PR) * 0.5 + 0.5) * 512
+  // La face du dessus d'un CylinderGeometry a ses UV en (u = z, v = x), et la
+  // texture canvas est retournée verticalement (flipY). Le doigt touche (x, z)
+  // → le canvas se peint en (z, −x). Peindre en (x, z) mettait la tache à
+  // l'OPPOSÉ du doigt — vécu sur tablette, corrigé ici.
+  const px = ((z / PR_IN) * 0.5 + 0.5) * 512
+  const py = ((-x / PR_IN) * 0.5 + 0.5) * 512
   const rad = 52
   const grad = g.createRadialGradient(px, py, 4, px, py, rad)
   grad.addColorStop(0, color)
@@ -327,12 +331,52 @@ export const pizza: GameDef = {
       hearth.position.set(0, -0.045, VAULT_Z)
       hearth.receiveShadow = true
 
-      const fire = new T.Mesh(
-        new T.SphereGeometry(0.17, 14, 10),
-        new T.MeshBasicMaterial({ color: 0xFF8A2E })
-      )
-      fire.position.set(0, 0.1, VAULT_Z - VAULT_L / 2 + 0.16)
-      fire.scale.set(2.2, 0.55, 0.7)
+      /* Le feu : de VRAIES langues de flammes qui dansent, pas un rond orange.
+         Une texture de flamme (goutte, cœur clair → pointe rouge qui s'éteint)
+         sur des sprites additifs : ils se superposent en brillant, chacun avec
+         son rythme, plus quelques braises qui montent. */
+      const fc = document.createElement('canvas')
+      fc.width = 64; fc.height = 128
+      const fg = fc.getContext('2d')!
+      fg.translate(32, 0)
+      const flamePath = new Path2D()
+      flamePath.moveTo(0, 8)
+      flamePath.bezierCurveTo(26, 52, 25, 88, 0, 120)
+      flamePath.bezierCurveTo(-25, 88, -26, 52, 0, 8)
+      const fgrad = fg.createLinearGradient(0, 120, 0, 6)
+      fgrad.addColorStop(0, 'rgba(255,246,196,0.95)')
+      fgrad.addColorStop(0.4, 'rgba(255,176,58,0.9)')
+      fgrad.addColorStop(0.78, 'rgba(226,84,30,0.6)')
+      fgrad.addColorStop(1, 'rgba(190,40,18,0)')
+      fg.fillStyle = fgrad
+      fg.fill(flamePath)
+      const flameTex = stage.keep(new T.CanvasTexture(fc))
+      flameTex.colorSpace = T.SRGBColorSpace
+      const fireGroup = new T.Group()
+      fireGroup.position.set(0, 0.02, VAULT_Z - VAULT_L / 2 + 0.18)
+      const flames: any[] = []
+      for (let i = 0; i < 6; i++) {
+        const sp = new T.Sprite(new T.SpriteMaterial({
+          map: flameTex, blending: T.AdditiveBlending, depthWrite: false,
+          transparent: true, opacity: 0.9
+        }))
+        const base = 0.13 + Math.random() * 0.1
+        sp.position.set(-0.26 + i * 0.104 + (Math.random() - 0.5) * 0.03, base, (Math.random() - 0.5) * 0.05)
+        fireGroup.add(sp)
+        flames.push({ sp, base, phase: Math.random() * 9, speed: 80 + Math.random() * 40 })
+      }
+      // Braises : des étincelles qui montent et s'éteignent, puis repartent
+      const embers: any[] = []
+      for (let i = 0; i < 5; i++) {
+        const sp = new T.Sprite(new T.SpriteMaterial({
+          map: flameTex, blending: T.AdditiveBlending, depthWrite: false,
+          transparent: true, opacity: 0.8
+        }))
+        sp.scale.set(0.014, 0.02, 1)
+        sp.position.set((Math.random() - 0.5) * 0.5, Math.random() * 0.3, 0)
+        fireGroup.add(sp)
+        embers.push({ sp, vy: 0.14 + Math.random() * 0.12, sway: Math.random() * 9 })
+      }
       // Bûches
       const logMat = new T.MeshStandardMaterial({ color: 0x4A2E1B, roughness: 1 })
       for (let i = 0; i < 3; i++) {
@@ -342,10 +386,10 @@ export const pizza: GameDef = {
         log.position.set(-0.32 + i * 0.06, 0.04 + i * 0.05, VAULT_Z - VAULT_L / 2 + 0.2)
         oven.add(log)
       }
-      oven.add(vault, back, sole, shell, frame, hearth, fire)
+      oven.add(vault, back, sole, shell, frame, hearth, fireGroup)
       scene.add(oven)
       const fireLight = new T.PointLight(0xFF7A22, 6, 3.2, 2)
-      fireLight.position.copy(fire.position)
+      fireLight.position.copy(fireGroup.position)
       fireLight.position.y = 0.22
       scene.add(fireLight)
 
@@ -412,7 +456,7 @@ export const pizza: GameDef = {
       S = {
         stage, CANNON, world, matFood, kit: ingredientKitFallback(T),
         sauce: { g: dc.g, tex: sauceTex },
-        doughMat, crustMat, sideMat, pizzaGroup, wedges, fire, fireLight,
+        doughMat, crustMat, sideMat, pizzaGroup, wedges, flames, embers, fireLight,
         loose: [], melting: [], tool: 'tomato' as ToolId, dropped: 0, eaten: 0,
         bake: 0, inOven: false, ovenT: 0, ended: false,
         orbit: orbitCam(stage, 1.55, 1.05, [0, 0.06, 0]),
@@ -510,10 +554,19 @@ export const pizza: GameDef = {
           $('pzState').textContent = k < 0.4 ? '🔥 Ça chauffe…' : k < 0.85 ? '😋 Ça sent bon !' : '🍕 Bien dorée !'
         }
 
-        // Flamme du four
-        const fl = 1 + Math.sin(now / 90) * 0.18 + Math.sin(now / 37) * 0.08
-        S.fire.scale.set(2.2 * fl, 0.55 * fl, 0.7)
-        S.fireLight.intensity = 5 + fl * 2
+        // Le feu danse : chaque langue a son rythme, les braises montent
+        for (const f of S.flames) {
+          const k = 0.78 + Math.sin(now / f.speed + f.phase) * 0.2 + Math.sin(now / 39 + f.phase * 2) * 0.09
+          f.sp.scale.set(f.base * 0.95 * (1.15 - k * 0.25), f.base * 2.1 * k, 1)
+          f.sp.position.y = f.base * 1.02 * k
+        }
+        for (const e2 of S.embers) {
+          e2.sp.position.y += e2.vy * dt
+          e2.sp.position.x += Math.sin(now / 300 + e2.sway) * dt * 0.05
+          e2.sp.material.opacity = Math.max(0, 0.8 - e2.sp.position.y * 1.6)
+          if (e2.sp.position.y > 0.55) e2.sp.position.set((Math.random() - 0.5) * 0.5, 0.02, 0)
+        }
+        S.fireLight.intensity = 5.4 + Math.sin(now / 90) * 1.3 + Math.sin(now / 37) * 0.6
 
         // Ingrédients encore en l'air
         S.step(dt, () => world.step(1 / 60))
