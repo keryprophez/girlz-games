@@ -36,18 +36,21 @@ const page = await browser.newPage({ viewport: { width: 480, height: 860 } })
 const pageErrors = []
 page.on('pageerror', e => pageErrors.push(e.message))
 
+// L'univers « À deux » duplique les jeux en mode duel : on ne teste que les
+// tuiles solo, sinon le smoke double de durée pour les mêmes montages
+const TILE = '.gc:not(.gc-duel)'
 await page.goto(URL)
-await page.waitForSelector('.gc', { timeout: 10000 })
-const games = await page.$$eval('.gc', els => els.map(el => el.querySelector('.nm')?.textContent || '?'))
+await page.waitForSelector(TILE, { timeout: 10000 })
+const games = await page.$$eval('.gc:not(.gc-duel)', els => els.map(el => el.querySelector('.nm')?.textContent || '?'))
 console.log(`${games.length} jeux à vérifier…`)
 
 const failures = []
 for (let i = 0; i < games.length; i++) {
   pageErrors.length = 0
   await page.goto(URL)
-  await page.waitForSelector('.gc')
-  await page.locator('.gc').nth(i).click()
-  // Laisse le temps au jeu de se monter (les jeux WebGL chargent PixiJS à la demande)
+  await page.waitForSelector(TILE)
+  await page.locator(TILE).nth(i).click()
+  // Laisse le temps au jeu de se monter (la 3D charge three.js à la demande)
   await page.waitForTimeout(1600)
   const mounted = await page.$eval('.gameroot', el => el.children.length > 0).catch(() => false)
   if (pageErrors.length || !mounted) {

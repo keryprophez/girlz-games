@@ -1,4 +1,4 @@
-import type { GameDef, GameCategory } from '../core/types'
+import type { GameDef } from '../core/types'
 import { memory } from './memory'
 import { quizGame } from './quiz'
 import { catchGame } from './catch'
@@ -43,13 +43,41 @@ export const GAMES: GameDef[] = [
   coloring, dressup, snowman, pizza, piano, beatbox, fireworks
 ]
 
-export const CATEGORIES: { id: GameCategory; label: string; icon: string }[] = [
-  { id: 'reflexion', label: 'Réflexion', icon: '🧠' },
-  { id: 'memoire', label: 'Mémoire', icon: '🎯' },
-  { id: 'action', label: 'Action', icon: '⚡' },
-  { id: 'creatif', label: 'Créatif', icon: '🎨' }
+/* L'accueil est découpé en trois univers + le Défi à deux. Chaque jeu vit dans
+   UN SEUL univers — l'affectation est ici, pas dans les fichiers de jeux :
+   - Jouer     = on s'amuse, on peut perdre (action, puzzles, plateau)
+   - Apprendre = pédagogique, jamais de sanction
+   - Créer     = pas de score du tout */
+export const WORLDS: { id: string; label: string; icon: string; games: GameDef[] }[] = [
+  {
+    id: 'jouer', label: 'Jouer', icon: '⚡',
+    games: [
+      catchGame, moleGame, runGame, fishGame, ninja, flappy, popcorn, balloon,
+      caterpillar, stand3d, icetower,
+      photoPuzzle, taquin, socks, patterns, mirror, space, maze,
+      connect4, battleship, memory, simonGame
+    ]
+  },
+  {
+    id: 'apprendre', label: 'Apprendre', icon: '📚',
+    games: [letters, clock, tables, additions, market, quizGame, intrus, geoGame]
+  },
+  {
+    id: 'creer', label: 'Créer', icon: '🎨',
+    games: [coloring, dressup, snowman, pizza, piano, beatbox, fireworks]
+  }
 ]
 
 export function gameById(id: string): GameDef | undefined {
   return GAMES.find(g => g.id === id)
+}
+
+// Garde-fou (dev) : chaque jeu doit vivre dans exactement un univers
+if (import.meta.env.DEV) {
+  const seen = new Map<string, number>()
+  for (const w of WORLDS) for (const g of w.games) seen.set(g.id, (seen.get(g.id) || 0) + 1)
+  for (const g of GAMES) {
+    const n = seen.get(g.id) || 0
+    if (n !== 1) console.warn(`⚠️ ${g.id} apparaît ${n} fois dans WORLDS`)
+  }
 }

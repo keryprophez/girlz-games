@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
-import { CATEGORIES, GAMES } from '../games'
+import { GAMES, WORLDS } from '../games'
 import { COLLECT } from '../core/utils'
-import { sFlip, sNope } from '../core/audio'
+import { sFlip } from '../core/audio'
 import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
@@ -16,7 +16,6 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
   const store = useFerme()
   const [albumOpen, setAlbumOpen] = useState(false)
   const [voicesOpen, setVoicesOpen] = useState(false)
-  const [duel, setDuel] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const photoTarget = useRef<string>('')
 
@@ -87,22 +86,15 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <BackupButton />
       </div>
 
-      <button className={'dueltoggle' + (duel ? ' on' : '')} onClick={() => { setDuel(d => !d); sFlip() }}>
-        ⚔️ Défi à deux {duel ? '· activé ! Choisissez un jeu' : ''}
-      </button>
-
       <div className="cats">
-        {CATEGORIES.map(cat => (
-          <div className="cat" key={cat.id}>
-            <div className="eyebrow">{cat.icon} {cat.label}</div>
+        {WORLDS.map(w => (
+          <div className="cat" key={w.id}>
+            <div className="eyebrow">{w.icon} {w.label}</div>
             <div className="grid">
-              {GAMES.filter(g => g.cat === cat.id).map(g => {
+              {w.games.map(g => {
                 const best = prog.bestStars[g.id] || 0
-                // Les jeux créatifs sans score n'ont pas de sens en Défi à deux
-                const noDuel = duel && g.duel === false
                 return (
-                  <button className={'gc' + (noDuel ? ' gc-solo' : '')} key={g.id}
-                    onClick={() => { if (noDuel) { sNope(); return } onPlay(g.id, duel) }}>
+                  <button className="gc" key={g.id} onClick={() => onPlay(g.id, false)}>
                     <span className={'sq ' + g.sq}>{g.icon}</span>
                     <span className="nm">{g.name}</span>
                     <span className="gc-stars">{'★'.repeat(best)}{'☆'.repeat(3 - best)}</span>
@@ -112,6 +104,21 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
             </div>
           </div>
         ))}
+        {/* Le Défi à deux : un univers à part entière — taper un jeu ici le
+            lance directement à deux, plus de bascule à activer avant */}
+        <div className="cat cat-duel">
+          <div className="eyebrow">⚔️ À deux</div>
+          <div className="duel-hint">Chacune son tour, on compare à la fin !</div>
+          <div className="grid">
+            {GAMES.filter(g => g.duel !== false).map(g => (
+              <button className="gc gc-duel" key={'d-' + g.id} onClick={() => onPlay(g.id, true)}>
+                <span className={'sq ' + g.sq}>{g.icon}<span className="duel-badge">⚔️</span></span>
+                <span className="nm">{g.name}</span>
+                <span className="gc-stars">👧 🆚 👧</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       <div className="footnote">La collection de chacune est gardée d'une fois sur l'autre 🌟</div>
 

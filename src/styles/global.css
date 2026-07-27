@@ -120,8 +120,15 @@ body.ingame .critter{display:none;}
   box-shadow:inset 0 -3px 6px rgba(69,54,42,.08), inset 0 2px 4px rgba(255,255,255,.7);}
 .gc .nm{font-family:'Baloo 2';font-weight:700;font-size:clamp(12.5px,2.8vmin,15px);line-height:1.1;text-align:center;}
 .gc-stars{font-size:11px;color:var(--mango);letter-spacing:1px;}
-/* Jeu créatif sans score : grisé quand le Défi à deux est activé */
-.gc.gc-solo{opacity:.35;filter:grayscale(.7);transform:none;box-shadow:var(--e1);}
+/* Univers « À deux » : mêmes cartes, liseré lilas + badge ⚔️ sur l'icône */
+.cat-duel .eyebrow{color:var(--coral);}
+.duel-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 9px;}
+.gc.gc-duel{border-color:var(--lilac);}
+.gc .sq{position:relative;}
+.duel-badge{position:absolute;right:-6px;bottom:-6px;font-size:14px;
+  background:var(--card);border:1px solid var(--line);border-radius:50%;
+  width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--e1);}
 .sq-pink{background:#FFE3E0;}.sq-mint{background:#DDF5E4;}.sq-sky{background:#DDEFFC;}
 .sq-sun{background:#FFF0CC;}.sq-lilac{background:#EDE3FD;}.sq-peach{background:#FFE8D6;}
 .footnote{margin:14px 0 6px;font-size:11.5px;color:var(--ink-soft);text-align:center;}
@@ -465,12 +472,6 @@ body.bigplay .g3-bar{max-width:820px;}
 .saybtn:active{transform:scale(.88);}
 .qbox{position:relative;}
 .saytext{cursor:pointer;}
-.dueltoggle{margin-top:12px;border:2px solid var(--line);background:var(--card);border-radius:99px;
-  cursor:pointer;font-family:'Baloo 2';font-weight:700;font-size:14.5px;padding:9px 18px;
-  box-shadow:var(--e1);transition:all .25s var(--spring);}
-.dueltoggle.on{background:linear-gradient(135deg,var(--lilac),var(--coral));color:#fff;
-  box-shadow:0 6px 18px rgba(176,140,240,.4);transform:scale(1.04);}
-.dueltoggle:active{transform:scale(.94);}
 .duel-tag{color:var(--coral);}
 .duelrow{display:flex;align-items:center;gap:12px;justify-content:center;margin:8px 0;}
 .duelname{font-family:'Baloo 2';font-weight:800;font-size:19px;min-width:70px;text-align:left;}
