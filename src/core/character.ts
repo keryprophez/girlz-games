@@ -171,23 +171,6 @@ export function chickSVG(photo: string | null, look: Look | null, widthPx: numbe
   </svg>`
 }
 
-/** Tracteur dessiné conduit par la joueuse (viewBox 0 0 170 130). */
-export function tractorSVG(photo: string | null, look: Look | null, widthPx: number): string {
-  return `<svg viewBox="0 0 170 130" width="${widthPx}" height="${widthPx * 0.76}" xmlns="http://www.w3.org/2000/svg">
-    ${miniHead(photo, look, 62, 38, 18)}
-    <rect x="40" y="60" width="14" height="16" fill="#F6C99F"/>
-    <rect x="24" y="66" width="76" height="34" rx="8" fill="#E4573D" stroke="#B93E2C" stroke-width="3"/>
-    <rect x="96" y="76" width="52" height="26" rx="6" fill="#E4573D" stroke="#B93E2C" stroke-width="3"/>
-    <rect x="130" y="56" width="9" height="24" rx="3" fill="#8A7A6B"/>
-    <rect x="100" y="80" width="20" height="9" rx="3" fill="#FFCE3C"/>
-    <circle cx="48" cy="102" r="24" fill="#3D3D3D" stroke="#242424" stroke-width="3"/>
-    <circle cx="48" cy="102" r="10" fill="#C9C9C9"/>
-    <circle cx="130" cy="108" r="16" fill="#3D3D3D" stroke="#242424" stroke-width="3"/>
-    <circle cx="130" cy="108" r="6.5" fill="#C9C9C9"/>
-    <path d="M84,64 Q94,54 96,66" fill="none" stroke="#242424" stroke-width="4" stroke-linecap="round"/>
-  </svg>`
-}
-
 /** Panier de récolte avec la joueuse dedans (viewBox 0 0 120 116). */
 export function basketSVG(photo: string | null, look: Look | null, widthPx: number): string {
   return `<svg viewBox="0 0 120 116" width="${widthPx}" height="${widthPx * 0.97}" xmlns="http://www.w3.org/2000/svg">
