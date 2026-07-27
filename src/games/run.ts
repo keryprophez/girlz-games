@@ -284,7 +284,9 @@ export const runGame: GameDef = {
 
       const jump = () => {
         if (!run || !run.running) return
-        if (!run.jumping) { run.jumping = true; run.vy = 0.95; sJump() }
+        // 1.18 (et pas 0.95 comme en 2D) : sur le rendu 3D le saut paraissait
+        // riquiqui — retour joueur. Plus haut ET plus de temps de vol.
+        if (!run.jumping) { run.jumping = true; run.vy = 1.18; sJump() }
       }
       const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); jump() } }
       const onTap = (e: Event) => { e.preventDefault(); jump() }

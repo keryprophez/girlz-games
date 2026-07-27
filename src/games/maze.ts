@@ -1,10 +1,16 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, boardSize, shuffle } from '../core/utils'
 import { sGood, sJump, sPop, sWin } from '../core/audio'
+import { impact } from '../core/impact'
+import { frameStyle, loadAtlas, type Atlas } from '../core/sprites'
 
 /* Labyrinthe — 4 façons de se perdre :
    🐤 Classique (grands niveaux), 🌫 Brouillard (on ne voit qu'autour du poussin),
-   🧊 Glace (on glisse jusqu'au mur), 🕶 3D (vue première personne, raycasting canvas). */
+   🧊 Glace (on glisse jusqu'au mur), 🕶 3D (vue première personne, raycasting canvas).
+
+   Poussin et poule sont de VRAIS sprites (planche animals de Kenney), le
+   poussin sème des traces de pas, la glissade sur glace est animée et se
+   termine par un choc de glace, et les murs de la vue 3D sont en planches. */
 
 let mz: any = null
 let ctx: GameContext
@@ -34,22 +40,9 @@ function generate(n: number): Cell[][] {
   return g
 }
 
-function chickDot(px: number): string {
-  return `<svg viewBox="0 0 40 40" width="${px}" height="${px}">
-    <circle cx="20" cy="22" r="14" fill="#FFD44D" stroke="#E8B923" stroke-width="2.5"/>
-    <circle cx="15" cy="18" r="2.4" fill="#45362A"/><circle cx="25" cy="18" r="2.4" fill="#45362A"/>
-    <path d="M17,25 L23,25 L20,29 Z" fill="#FFA94D"/>
-    <path d="M12,8 Q14,3 17,7 Q20,2 23,7 Q26,3 28,8" fill="none" stroke="#E8B923" stroke-width="2.5" stroke-linecap="round"/>
-  </svg>`
-}
-function henDot(px: number): string {
-  return `<svg viewBox="0 0 40 40" width="${px}" height="${px}">
-    <circle cx="20" cy="22" r="15" fill="#FFF6E8" stroke="#D9BFA0" stroke-width="2.5"/>
-    <path d="M13,9 Q15,3 18,8 Q20,1 23,8 Q25,3 27,9" fill="#FF6B81" stroke="#E04E63" stroke-width="2"/>
-    <circle cx="15" cy="19" r="2.4" fill="#45362A"/><circle cx="25" cy="19" r="2.4" fill="#45362A"/>
-    <path d="M17,26 L23,26 L20,31 Z" fill="#FFA94D"/>
-  </svg>`
-}
+/* Les personnages : de vrais sprites, plus de dessin à la main */
+const chickSprite = (px: number) => `<i class="mz-spr" style="${frameStyle(mz.atlas, 'chick', px)}"></i>`
+const henSprite = (px: number) => `<i class="mz-spr" style="${frameStyle(mz.atlas, 'chicken', px)}"></i>`
 
 const MODES: Record<string, { label: string; factor: number }> = {
   classic: { label: '🐤', factor: 1 },
@@ -141,19 +134,38 @@ function load2D() {
   }
   walls += `<line x1="0" y1="${mz.px}" x2="${mz.px}" y2="${mz.px}"/><line x1="${mz.px}" y1="0" x2="${mz.px}" y2="${mz.px}"/>`
   const sw = Math.max(2.5, Math.min(4, cw / 8))
+  // Deux passes de murs : une ombre décalée dessous, le trait par-dessus —
+  // les haies prennent du relief sans coûter un pixel de plus
   area.innerHTML = `
     <svg viewBox="0 0 ${mz.px} ${mz.px}" width="${mz.px}" height="${mz.px}">
+      <g stroke="rgba(105,72,38,.35)" stroke-width="${sw + 1}" stroke-linecap="round" transform="translate(0,${sw * 0.6})">${walls}</g>
       <g stroke="#B97F3F" stroke-width="${sw}" stroke-linecap="round">${walls}</g>
     </svg>
-    <div class="mz-goal" style="left:${(n - 1) * cw}px;top:${(n - 1) * cw}px;width:${cw}px;height:${cw}px">${henDot(cw * 0.8)}</div>
-    <div class="mz-chick" id="mzChick" style="width:${cw}px;height:${cw}px">${chickDot(cw * 0.72)}</div>
+    <div class="mz-crumbs" id="mzCrumbs"></div>
+    <div class="mz-goal" style="left:${(n - 1) * cw}px;top:${(n - 1) * cw}px;width:${cw}px;height:${cw}px">${henSprite(cw * 0.82)}</div>
+    <div class="mz-chick" id="mzChick" style="width:${cw}px;height:${cw}px">${chickSprite(cw * 0.74)}</div>
     ${mz.mode === 'fog' ? '<div class="mz-fog" id="mzFog"></div>' : ''}`
   moveChick(0, 0, false)
 }
 
-function moveChick(x: number, y: number, sound = true) {
+/** Une trace de pas à la case quittée : le chemin parcouru se lit d'un œil. */
+function dropCrumb(x: number, y: number) {
+  const box = document.getElementById('mzCrumbs')
+  if (!box) return
+  const c = document.createElement('i')
+  c.className = 'mz-crumb'
+  c.style.left = (x + 0.5) * mz.cell + 'px'
+  c.style.top = (y + 0.5) * mz.cell + 'px'
+  box.appendChild(c)
+  while (box.children.length > 60) box.removeChild(box.firstChild!)
+}
+
+function moveChick(x: number, y: number, sound = true, slideCells = 0) {
+  if (x !== mz.pos.x || y !== mz.pos.y) dropCrumb(mz.pos.x, mz.pos.y)
   mz.pos = { x, y }
   const el = $('mzChick')
+  // Glissade sur glace : la durée suit la distance, on VOIT le trajet
+  el.style.transitionDuration = slideCells ? Math.min(0.55, 0.08 + slideCells * 0.05) + 's' : ''
   el.style.left = x * mz.cell + 'px'
   el.style.top = y * mz.cell + 'px'
   if (mz.mode === 'fog') {
@@ -192,12 +204,21 @@ function slide(d: number) {
   // Glace : on glisse jusqu'au prochain mur
   let { x, y } = mz.pos
   const D = [[0, -1], [1, 0], [0, 1], [-1, 0]][d]
-  let moved = false
+  let cells = 0
+  let toGoal = false
   while (open(x, y, d)) {
-    x += D[0]; y += D[1]; moved = true
-    if (x === mz.n - 1 && y === mz.n - 1) break
+    x += D[0]; y += D[1]; cells++
+    if (x === mz.n - 1 && y === mz.n - 1) { toGoal = true; break }
   }
-  if (moved) { sJump(); moveChick(x, y, false) }
+  if (!cells) return
+  sJump()
+  moveChick(x, y, false, cells)
+  // Le TOC contre le mur arrive quand le poussin s'arrête, pas avant —
+  // sauf à l'arrivée : là c'est la poule qu'on retrouve, pas un mur
+  if (!toGoal) {
+    const ms = Math.min(0.55, 0.08 + cells * 0.05) * 1000
+    setTimeout(() => { if (mz && mz.running) impact(0.35 + Math.min(0.35, cells * 0.06), { matter: 'glace', noShake: true }) }, ms)
+  }
 }
 
 /* ============ Mode 3D (raycasting première personne) ============ */
@@ -312,15 +333,27 @@ function render3D() {
       if (sideX < sideY) { sideX += dDX; mapX += sx; side = 0 } else { sideY += dDY; mapY += sy; side = 1 }
       if (mapX < 0 || mapY < 0 || mapX >= mz.m || mapY >= mz.m || mz.B[mapY][mapX]) break
     }
-    const dist = Math.max(0.05, (side === 0 ? sideX - dDX : sideY - dDY) * Math.cos(ra - base))
+    const raw = Math.max(0.05, side === 0 ? sideX - dDX : sideY - dDY)
+    const dist = Math.max(0.05, raw * Math.cos(ra - base))
     const h = Math.min(H * 1.6, H / dist)
     const gold = mz.gold.has(`${mapX}:${mapY}`)
     const shade = Math.max(0.35, 1 - dist / 12)
     let r = 217, gg = 160, b = 95 // bois chaud
     if (gold) { r = 255; gg = 206; b = 60 }
     if (side === 1) { r *= 0.78; gg *= 0.78; b *= 0.78 }
-    g.fillStyle = `rgb(${r * shade | 0},${gg * shade | 0},${b * shade | 0})`
+    // Texture de planches : coordonnée du point touché LE LONG du mur →
+    // joints verticaux réguliers + grain aléatoire stable par planche
+    let u = side === 0 ? py + raw * dy : px + raw * dx
+    u -= Math.floor(u)
+    const grain = ((((mapX * 73856093) ^ (mapY * 19349663) ^ (Math.floor(u * 8) * 83492791)) >>> 0) % 100) / 100
+    let k = shade * (0.93 + grain * 0.13)
+    if ((u * 2) % 1 < 0.05 || u > 0.975) k *= 0.7
+    g.fillStyle = `rgb(${r * k | 0},${gg * k | 0},${b * k | 0})`
     g.fillRect(i * cw, (H - h) / 2, cw + 1, h)
+    // Deux lisses horizontales aux tiers : le mur cesse d'être une nappe unie
+    g.fillStyle = `rgba(60,40,20,${(0.16 * shade).toFixed(3)})`
+    g.fillRect(i * cw, (H - h) / 2 + h * 0.33, cw + 1, Math.max(1, h * 0.018))
+    g.fillRect(i * cw, (H - h) / 2 + h * 0.66, cw + 1, Math.max(1, h * 0.018))
   }
 }
 
@@ -400,9 +433,9 @@ export const maze: GameDef = {
       </div>
       <div class="gsub" id="mzSub"></div>
       <div id="mzArea"></div>`
-    mz = { running: true, mode: 'classic', anim: null, swipe: null }
+    mz = { running: true, mode: 'classic', anim: null, swipe: null, atlas: null }
     document.querySelectorAll<HTMLElement>('.mz-mode').forEach(b => {
-      b.onclick = () => mz && mz.running && setMode(b.dataset.m!)
+      b.onclick = () => mz && mz.running && mz.atlas && setMode(b.dataset.m!)
     })
     const area = $('mzArea')
     const onMove = (e: PointerEvent) => {
@@ -452,7 +485,10 @@ export const maze: GameDef = {
     area.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('keydown', onKey)
-    setMode('classic')
+    // Les sprites d'abord : le plateau se construit avec les personnages dedans
+    loadAtlas('animals').then((a: Atlas) => {
+      if (mz && mz.running) { mz.atlas = a; setMode('classic') }
+    })
     return () => {
       if (mz) { mz.running = false; mz = null }
       area.removeEventListener('pointerdown', onDown)

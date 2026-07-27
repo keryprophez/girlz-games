@@ -471,17 +471,20 @@ export const snowman: GameDef = {
       </div>
       <div class="arena g3-arena" id="snArena">
         <div class="hint g3-hint" id="snHint">Glisse ton doigt : la boule roule et grossit ! ❄️</div>
-      </div>
-      <div class="g3-bar" id="snRoll">
-        <div class="g3-gauge"><i id="snGauge"></i></div>
-        <button class="g3-btn" id="snPlace">Poser la boule ⬇️</button>
-      </div>
-      <div class="g3-bar" id="snDeco" style="display:none">
-        <div class="g3-row" id="snTabs"></div>
-        <div class="g3-row sn-optrow" id="snOpts"></div>
-        <div class="g3-row">
-          <button class="g3-btn ghost" id="snAgain">🎲 Surprise</button>
-          <button class="g3-btn" id="snDone">C'est fini ! ✅</button>
+        <!-- Les barres vivent DANS l'arène : en plein écran, une barre posée
+             sous l'arène passait sous le bord de l'écran — plus aucun moyen
+             de poser la boule. Vécu sur tablette, corrigé ici. -->
+        <div class="g3-bar sn-overlay" id="snRoll">
+          <div class="g3-gauge"><i id="snGauge"></i></div>
+          <button class="g3-btn" id="snPlace">Poser la boule ⬇️</button>
+        </div>
+        <div class="g3-bar sn-overlay" id="snDeco" style="display:none">
+          <div class="g3-row" id="snTabs"></div>
+          <div class="g3-row sn-optrow" id="snOpts"></div>
+          <div class="g3-row">
+            <button class="g3-btn ghost" id="snAgain">🎲 Surprise</button>
+            <button class="g3-btn" id="snDone">C'est fini ! ✅</button>
+          </div>
         </div>
       </div>`
 
@@ -561,10 +564,14 @@ export const snowman: GameDef = {
       let lastPt: { x: number; y: number } | null = null
       const fwd = new T.Vector3(), right = new T.Vector3(), move = new T.Vector3()
 
+      let downAt = 0
+      let downPt: { x: number; y: number } | null = null
       const onDown = (e: PointerEvent) => {
         if (!S || S.phase !== 'roll' || !S.ball) return
         dragging = true
         lastPt = { x: e.clientX, y: e.clientY }
+        downAt = performance.now()
+        downPt = { x: e.clientX, y: e.clientY }
         $('snHint').style.opacity = '0'
       }
       const onMove = (e: PointerEvent) => {
@@ -589,7 +596,14 @@ export const snowman: GameDef = {
 
         if (S.r < cap) {
           S.r = Math.min(cap, S.r + dist * GROW)
-          if (S.r >= cap) { ctx.toast('Elle est énorme ! Pose-la 👇'); tone(880, 0.12, 'triangle', 0.12) }
+          if (S.r >= cap) {
+            // Taille maxi : elle se pose TOUTE SEULE. Attendre un bouton
+            // bloquait une enfant qui ne lit pas (et le bouton était hors
+            // écran en plein écran).
+            ctx.toast('Elle est énorme ! 🎉')
+            tone(880, 0.12, 'triangle', 0.12)
+            setTimeout(() => { if (S && S.phase === 'roll' && !S.dropping && S.ball) placeBall() }, 650)
+          }
         }
         b.scale.setScalar(S.r)
         b.position.y = S.r
@@ -603,7 +617,15 @@ export const snowman: GameDef = {
         if (S.rolled > 0.55) { S.rolled = 0; sCrunch() }
         paintUI()
       }
-      const onUp = () => { dragging = false; lastPt = null }
+      const onUp = (e: PointerEvent) => {
+        // Un TAP (sans glisser) pose la boule si elle est assez grosse :
+        // le geste le plus naturel du monde, aucun bouton à trouver
+        if (dragging && downPt && S && S.phase === 'roll' && S.ball && !S.dropping) {
+          const moved = Math.hypot(e.clientX - downPt.x, e.clientY - downPt.y)
+          if (moved < 9 && performance.now() - downAt < 350 && S.r >= R0 * 1.35) placeBall()
+        }
+        dragging = false; lastPt = null; downPt = null
+      }
 
       stage.renderer.domElement.addEventListener('pointerdown', onDown)
       window.addEventListener('pointermove', onMove)
