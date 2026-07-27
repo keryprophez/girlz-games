@@ -25,18 +25,17 @@ rendu qu'on ne sait pas dessiner. C'est pourquoi les jeux phares sont passés en
 ### Verdict jeu par jeu
 
 **🔵 Vraie 3D — le niveau attendu** (tous sur `core/three3d.ts`)
-`stand3d` · `snowman` · `igloo` · `pizza` · `space`
+`stand3d` · `snowman` · `igloo` · `pizza` · `space` · `icetower` · `catch` ·
+`popcorn` · `ninja` · `fish` · `balloon` · `caterpillar` · `run` · `flappy`
 
 **🟢 Bons, à garder tels quels** (mécanique juste, pas de dette visuelle bloquante)
 `quiz` · `intrus` · `letters` · `puzzle` · `taquin` · `patterns` · `mirror` ·
 `clock` · `tables` · `additions` · `market` · `maze` · `memory` · `simon` ·
-`connect4` · `battleship` · `piano` · `beatbox` · `coloring`
-
-**🟠 Jeux d'action au rendu daté** (sprites = emoji ou SVG) — **étape B**
-`catch` · `mole` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon`
+`connect4` · `battleship` · `piano` · `beatbox` · `coloring` · `mole` (2D mais
+sur de vrais sprites Kenney, avec de vrais trous)
 
 **🟡 Bonne idée, rendu à refaire**
-`caterpillar` · `socks` · `geo` (le zoom continent → ville gagnerait à devenir un
+`socks` · `geo` (le zoom continent → ville gagnerait à devenir un
 vrai déplacement de caméra 3D)
 
 **⚪ Sans score, à laisser tranquilles**
@@ -109,16 +108,25 @@ Optionnels : `shape-characters` (0,5 Mo), `sports-pack` (1,3 Mo),
 
 ---
 
-## Étape B — Moderniser les jeux d'action 2D 🟠 ← **le prochain chantier**
+## Étape B — Moderniser les jeux d'action ✅ FAIT
 
-| Jeu | État |
+Les huit jeux d'action sont passés en **vraie 3D** sur `core/three3d.ts`, chacun
+vérifié en y jouant (bot Playwright + captures inspectées) :
+
+| Jeu | Incarnation |
 |---|---|
-| `mole` → **Tape-Trous** | ✅ Fait. Sprites d'animaux Kenney, cactus à éviter, décor de pré (arbres, herbe, nuages, soleil), et de vrais trous dont les animaux sortent. Sert de patron. |
-| `catch` · `run` · `fish` · `ninja` · `flappy` · `popcorn` · `balloon` | À faire |
+| `mole` → **Tape-Trous** | 2D assumée : sprites Kenney, vrais trous en 3 couches. Le patron du style sprites. |
+| `catch` | Fruits glTF qui tombent (cannon-es), saladier modèle 3D, caisses de marché. |
+| `popcorn` | Vraie poêle glTF, grains qui gigotent, pop-corn qui saute à l'impulsion physique. |
+| `ninja` | Fruits glTF tranchés en vraies moitiés (`-half`), lame-traînée canvas par-dessus. |
+| `fish` | Le poisson glTF EST le curseur, halo sur l'eau, jaillissement en parabole. |
+| `balloon` | Ballon clearcoat qui se déforme à la pompe et explose en lambeaux physiques. |
+| `caterpillar` | Chenille de sphères qui glisse de case en case, fruits glTF, pré en damier. |
+| `run` | Tracteur low-poly, roues qui tournent, fumée, obstacles en volume, parallaxe. |
+| `flappy` | Poussin qui bat des ailes entre des palissades de bois, plumes au choc. |
 
-Pas de réécriture : **remplacer les emoji par de vrais sprites** via
-`core/sprites.ts`, ajouter un décor tiré de la planche `nature`, puis particules
-et *screen shake* cohérents. Le gain est visible dès le premier jeu.
+La règle qui a tout guidé : la **simulation validée ne change pas d'un chiffre**
+(mêmes gravités, fenêtres de collision, cadences) — seule l'incarnation change.
 
 ---
 
@@ -166,8 +174,8 @@ Pour aller plus loin, il me faut de ta part : **l'URL du projet Supabase + la cl
 
 ## Ce qui est déjà fait ✅ (ne pas refaire)
 
-- **Vraie 3D + physique** : `stand3d`, `snowman`, `igloo`, `pizza`, `space`, tous
-  sur le socle `core/three3d.ts`. `chamboule` (doublon 2D) supprimé.
+- **Vraie 3D + physique** : les 14 jeux listés en 🔵 ci-dessus, tous sur le socle
+  `core/three3d.ts`. `chamboule` (doublon 2D) supprimé, PixiJS retiré du projet.
 - **Sauvegarde exportable** : `core/backup.ts` + bouton 💾.
 - **Moteur de game feel** : `core/juice.ts` (ressorts, transition iris, secousses).
 - **Musique générative** 6 thèmes + foley synthétisé (`core/music.ts`, `audio.ts`).

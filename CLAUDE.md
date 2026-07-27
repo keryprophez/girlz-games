@@ -84,7 +84,9 @@ caméra, `loadThree()`/`loadPhysics()` + `loader()` pour le chargement à la
 demande, `stage.dispose()` pour le nettoyage GPU (et `stage.keep(tex)` pour les
 textures non attachées à la scène).
 
-Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space`.
+Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space` ·
+`icetower` · `catch` · `popcorn` · `ninja` · `fish` · `balloon` · `caterpillar` ·
+`run` · `flappy`.
 
 ---
 
@@ -108,6 +110,8 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space
 | **Noms de jeux en double** | Le nom de fichier est la mécanique (`battleship.ts`), le nom affiché est le thème pour les filles (« Cache-Cache Pré »). Vérifier les collisions de nom ET d'icône avant d'en rebaptiser un. |
 | **Mesure faussée par le service worker** | La maj auto de la PWA recharge la page <15 s après l'ouverture — en plein test Playwright, on mesure alors l'ACCUEIL et pas le jeu (une luminosité relevée à 210/255 au lieu de 68). Toujours ouvrir le contexte avec `serviceWorkers: 'block'`. |
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
+| **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
+| **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
 | **Smoke test + vue ferme** | L'accueil affiche la ferme, pas la grille : `scripts/smoke.mjs` bascule via `.hub-toggle`. Si tu changes l'accueil, mets à jour le smoke test. |
 
 ---
