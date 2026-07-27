@@ -159,18 +159,6 @@ function miniHead(photo: string | null, look: Look | null, cx: number, cy: numbe
   return `<g transform="translate(${cx - 100 * s},${cy - 72 * s}) scale(${s})">${inner}</g>`
 }
 
-/** Poussin dessiné avec le visage de la joueuse (viewBox 0 0 120 130). */
-export function chickSVG(photo: string | null, look: Look | null, widthPx: number): string {
-  return `<svg viewBox="0 0 120 130" width="${widthPx}" height="${widthPx * 1.08}" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18,88 Q4,80 8,66 Q20,72 26,80 Z" fill="#F2BE3C"/>
-    <circle cx="62" cy="88" r="32" fill="#FFD44D" stroke="#E8B923" stroke-width="3"/>
-    <ellipse class="wing" cx="38" cy="88" rx="15" ry="10" fill="#F2BE3C" stroke="#D9A32A" stroke-width="2"/>
-    <path d="M92,84 L108,88 L92,94 Z" fill="#FFA94D" stroke="#E08A2E" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M52,118 L52,126 M72,118 L72,126" stroke="#E08A2E" stroke-width="4" stroke-linecap="round"/>
-    ${miniHead(photo, look, 62, 44, 21)}
-  </svg>`
-}
-
 /** Panier de récolte avec la joueuse dedans (viewBox 0 0 120 116). */
 export function basketSVG(photo: string | null, look: Look | null, widthPx: number): string {
   return `<svg viewBox="0 0 120 116" width="${widthPx}" height="${widthPx * 0.97}" xmlns="http://www.w3.org/2000/svg">

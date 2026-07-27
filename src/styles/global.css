@@ -380,9 +380,7 @@ body.bigplay .g3-bar{max-width:820px;}
   text-shadow:0 2px 4px rgba(0,0,0,.3);pointer-events:none;z-index:7;animation:njPtUp .6s ease-out forwards;}
 @keyframes njPtUp{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-40px);}}
 /* ---- Poussin volant ---- */
-.fl-arena{background:linear-gradient(180deg,#CBEBFD 0%,#E0F6ED 55%);cursor:pointer;}
-.fl-start{position:absolute;top:28%;left:0;right:0;text-align:center;font-family:'Fredoka';
-  font-weight:700;font-size:17px;color:var(--ink);z-index:5;}
+.fl-arena{background:#243550;cursor:pointer;}
 
 /* ============================================================
    PUZZLE PHOTO (glisser-déposer)
