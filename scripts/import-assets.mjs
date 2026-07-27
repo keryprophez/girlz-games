@@ -61,7 +61,9 @@ const MODELS = [
     // Récolte d'Attrape, et le panier
     'bowl.glb', 'apple.glb', 'carrot.glb', 'banana.glb', 'orange.glb',
     'strawberry.glb', 'pear.glb', 'broccoli.glb', 'leek.glb', 'pineapple.glb',
-    'eggplant.glb', 'avocado.glb'
+    'eggplant.glb', 'avocado.glb',
+    // La poêle de Pop-corn
+    'frying-pan.glb'
   ] }
 ]
 

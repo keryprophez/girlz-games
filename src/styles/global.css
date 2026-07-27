@@ -1126,3 +1126,4 @@ body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
 @keyframes g3Wave{0%{opacity:0;transform:scale(.6);}25%{opacity:1;transform:scale(1.1);}
   70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.15);}}
 .ca-arena{background:#1D3C5E;}
+.pc-arena{background:#241B12;}
