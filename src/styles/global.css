@@ -1054,9 +1054,7 @@ body.bigplay .hub-wrap{max-width:1100px;}
 /* ============================================================
    LA CHENILLE / FEU D'ARTIFICE
    ============================================================ */
-.cp-arena{background:linear-gradient(180deg,#EAF8E4,#D8F0CC);cursor:pointer;display:flex;
-  align-items:center;justify-content:center;}
-#cpCanvas{max-width:100%;max-height:100%;}
+.cp3-arena{background:#1E3524;cursor:pointer;}
 .fw-arena{background:linear-gradient(180deg,#0E0A22,#241A4A 70%,#3A2C66);cursor:pointer;}
 #fwCanvas{position:absolute;inset:0;width:100%;height:100%;}
 .fw-hint{color:#D8CFF5;z-index:3;}
