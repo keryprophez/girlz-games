@@ -1,240 +1,318 @@
-import type { GameDef } from '../core/types'
+import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
-import { basketSVG } from '../core/character'
-import { sCatch, sNope, sPower, sWin } from '../core/audio'
-// PixiJS chargé à la demande (code-splitting), comme pour le Ninja
-let PIXI: any = null
+import { sPower, sWin, tone } from '../core/audio'
+import { impact } from '../core/impact'
+import {
+  createStage, loadPhysics, loader, fixedStep, loadModel, fitModel,
+  type Stage, type Cannon
+} from '../core/three3d'
 
-/* Attrape la Récolte — version « vrai jeu » : rendu WebGL, légumes dessinés
-   qui tombent en tournoyant, panier avec la tête de la joueuse, étincelles en
-   particules. La logique validée (vagues, bonus, combos) ne change pas. */
+/* 🧺 Attrape la Récolte, en 3D — la récolte TOMBE pour de vrai : chaque fruit
+   est un modèle glTF avec son corps physique, il rebondit sur le bord du
+   panier, roule et peut en ressortir. Le doigt fait glisser le panier.
+
+   Un seul geste. Attraper un piment coûte un cœur — trois piments et c'est
+   fini, avant le chrono. Rater un fruit ne coûte pas de cœur mais casse la
+   série : c'est le combo qui fait le plafond d'adresse, pas la punition. Les
+   vagues accélèrent la chute et resserrent les envois. */
+
+const G = 16              // gravité franche : une chute molle n'a aucun poids
+const LANE = 2.5          // demi-largeur du terrain
+const BASKET_Y = 0.1
+const FLOOR_Y = -0.6
+
+/* La récolte : que du bon, sauf le piment. Aucun texte à lire, la forme suffit. */
+const CROPS = ['apple', 'carrot', 'banana', 'orange', 'strawberry', 'pear', 'broccoli', 'leek', 'pineapple', 'eggplant', 'avocado']
+const BAD = 'pepper'
 
 let ca: any = null
+let ctx: GameContext
 
-function tick() {
-  if (!ca || !ca.running) return
-  ca.timeLeft--
-  $('timerFill').style.width = (ca.timeLeft / 40) * 100 + '%'
-  if (ca.timeLeft === 30 || ca.timeLeft === 20 || ca.timeLeft === 10) {
-    ca.wave++
-    ca.baseSpeed *= 1.22
-    ca.spawnEvery = Math.max(430, ca.spawnEvery * 0.84)
-    showWave('Vague ' + ca.wave + ' !'); sPower()
-  }
-  if (ca.timeLeft <= 0) finish()
+function hud() {
+  $('caScore').textContent = '🧺 ' + ca.score
+  $('caLives').textContent = '❤️'.repeat(Math.max(0, ca.lives)) || '—'
+  const c = $('caCombo')
+  c.textContent = ca.combo >= 3 ? `×${Math.min(5, Math.floor(ca.combo / 3) + 1)}` : ''
+  c.classList.toggle('on', ca.combo >= 3)
 }
 
-function showWave(txt: string) {
-  const w = $('waveMsg')
+function flash(txt: string) {
+  const w = $('caWave')
   w.textContent = txt
-  w.classList.remove('show'); void (w as any).offsetWidth; w.classList.add('show')
+  w.classList.remove('show'); void w.offsetWidth; w.classList.add('show')
 }
 
-function flashCombo(txt: string) {
-  const c = $('comboMsg') as any
-  c.textContent = txt; c.style.opacity = '1'
-  clearTimeout(c._h); c._h = setTimeout(() => (c.style.opacity = '0'), 700)
+/** Lâche un fruit (ou un piment) quelque part au-dessus du terrain. */
+function spawn() {
+  if (!ca || !ca.running) return
+  const CANNON: Cannon = ca.CANNON
+  const bad = Math.random() < ca.cfg.bad
+  const kind = bad ? BAD : pick(CROPS)
+  const proto = ca.models[kind]
+  if (!proto) return
+  const obj = proto.clone(true)
+  const x = (Math.random() * 2 - 1) * (LANE - 0.35)
+  obj.position.set(x, 2.9, 0)
+  ca.stage.scene.add(obj)
+  const body = new CANNON.Body({
+    mass: 0.4, material: ca.matFood,
+    shape: new CANNON.Sphere(0.13),
+    position: new CANNON.Vec3(x, 2.9, 0)
+  })
+  body.linearDamping = 0.02
+  body.angularVelocity.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6)
+  body.velocity.set(0, -ca.cfg.speed, 0)
+  ca.world.addBody(body)
+  ca.items.push({ obj, body, bad, done: false })
 }
 
-function burst(x: number, y: number, color: number, count: number) {
-  for (let i = 0; i < count; i++) {
-    const p = new PIXI.Sprite(ca.particleT)
-    p.anchor.set(0.5)
-    p.tint = color
-    p.scale.set(0.6 + Math.random() * 1.4)
-    ca.stage.addChild(p)
-    const a = Math.random() * Math.PI * 2
-    const v = 0.08 + Math.random() * 0.24
-    ca.parts.push({ sp: p, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.14, life: 1 })
+/** Le fruit est-il tombé DANS le panier ? Test sur le volume de la corbeille. */
+function inBasket(p: any) {
+  return Math.abs(p.x - ca.basketX) < 0.42 && p.y < BASKET_Y + 0.34 && p.y > BASKET_Y - 0.3
+}
+
+function caught(it: any) {
+  it.done = true
+  if (it.bad) {
+    ca.lives--
+    ca.combo = 0
+    impact(0.85, { matter: 'sourd' })
+    hud()
+    if (ca.lives <= 0) { drop(it); finish(true); return }
+    ctx.toast(`🌶️ Trop piquant ! ${'❤️'.repeat(ca.lives)}`)
+  } else {
+    ca.combo++
+    ca.bestCombo = Math.max(ca.bestCombo, ca.combo)
+    ca.score += Math.min(5, Math.floor(ca.combo / 3) + 1)
+    tone(560 + Math.min(10, ca.combo) * 55, 0.09, 'triangle', 0.12)
+    impact(0.3, { matter: 'neige', noShake: true })
+    hud()
   }
+  drop(it)
 }
 
-function spawnItem() {
-  const r = Math.random()
-  let good: boolean, art: any, power: string | null = null
-  if (r < 0.10) { const k = pick(['x2', 'magnet', 'slow']); art = ca.T.powers[k]; power = k; good = true }
-  else if (r < 0.10 + ca.badChance) { good = false; art = pick(ca.T.bads) }
-  else { good = true; art = pick(ca.T.goods) }
-  const sp = new PIXI.Sprite(art.tex)
-  sp.anchor.set(0.5)
-  sp.scale.set(0.52 + Math.random() * 0.1)
-  ca.stage.addChild(sp)
-  const x = 30 + Math.random() * (ca.W - 60)
-  ca.items.push({
-    sp, x, y: -40, good, power, tint: art.tint,
-    rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.0035
+/** Un fruit perdu casse la série, mais ne coûte PAS de cœur.
+    Rater une chute est normal à six ans ; ce qui doit se payer, c'est
+    d'attraper ce qu'on ne devait pas. Sinon la partie meurt en quatre
+    secondes et personne ne comprend pourquoi. */
+function missed(it: any) {
+  it.done = true
+  if (!it.bad) {
+    ca.combo = 0
+    impact(0.45, { matter: 'pate' })
+    hud()
+  } else {
+    impact(0.2, { matter: 'pate', noShake: true })
+  }
+  drop(it)
+}
+
+function drop(it: any) {
+  ca.world.removeBody(it.body)
+  ca.stage.scene.remove(it.obj)
+  const i = ca.items.indexOf(it)
+  if (i >= 0) ca.items.splice(i, 1)
+}
+
+function finish(piquant: boolean) {
+  if (!ca || !ca.running) return
+  ca.running = false
+  clearInterval(ca.timer)
+  clearTimeout(ca.spawnT)
+  sWin()
+  const th = ctx.byTier([26, 13], [36, 18], [48, 24])
+  const stars = ca.score >= th[0] ? 3 : ca.score >= th[1] ? 2 : 1
+  ctx.finish({
+    title: piquant ? 'Aïe, le piment ! 🌶️' : ca.score >= th[0] ? 'Quelle récolte !' : 'Récolte rentrée !',
+    msg: `${ctx.playerName} a marqué ${ca.score} points`
+      + (ca.bestCombo >= 3 ? ` — ${ca.bestCombo} d'affilée !` : ''),
+    stars: stars as 1 | 2 | 3, starsEarned: stars
   })
 }
 
-function handleCatch(it: any) {
-  if (it.power) { activatePower(it.power); burst(it.x, ca.H - 70, 0xffce3c, 12); return }
-  if (it.good) {
-    ca.combo++
-    let pts = 1 * ca.mult
-    if (ca.combo % 5 === 0) { pts += 2; flashCombo('COMBO ×' + ca.combo + ' !') }
-    ca.score += pts; sCatch()
-    burst(it.x, ca.H - 70, it.tint, 10)
-    burst(it.x, ca.H - 70, 0xffffff, 4)
-  } else {
-    ca.score = Math.max(0, ca.score - 1); ca.combo = 0; sNope()
-    burst(it.x, ca.H - 70, 0x8a8a8a, 8)
-  }
-  $('catchScore').textContent = '🧺 ' + ca.score
-}
-
-function activatePower(k: string) {
-  sPower(); ca.powerTimer = 5000
-  const badge = $('powerBadge')
-  badge.style.display = 'block'
-  if (k === 'x2') { ca.mult = 2; badge.textContent = '⚡ Points ×2' }
-  if (k === 'magnet') { ca.magnet = true; badge.textContent = '🧲 Aimant' }
-  if (k === 'slow') { ca.slow = true; badge.textContent = '⏳ Ralenti' }
-}
-
-function finish() {
-  if (!ca) return
-  const { score, ctx } = ca
-  sWin()
-  const stars = score >= 28 ? 3 : score >= 14 ? 2 : 1
-  // ctx.finish déclenche le cleanup complet via GameHost
-  ctx.finish({ title: 'Belle récolte !', msg: `${ctx.playerName} a ramassé ${score} bonnes choses 🧺`, stars, starsEarned: stars })
-}
-
 export const catchGame: GameDef = {
-  id: 'catch', name: 'Attrape', icon: '🧺', sq: 'sq-sky', cat: 'action',
-  subtitle: 'Attrape la récolte, évite les bêtises',
-  mount(ctx) {
-    ctx.root.innerHTML = `
-      <div class="topbar">
-        <div class="chip" id="catchScore">🧺 0</div>
-      </div>
-      <div class="tbar"><div class="tfill" id="timerFill"></div></div>
-      <div id="catchArea">
-        <div class="hint">Glisse n'importe où · flèches ⬅️ ➡️ (maintiens !)</div>
-        <div class="powerbadge" id="powerBadge"></div>
-        <div class="combo" id="comboMsg"></div>
-        <div class="wavemsg" id="waveMsg"></div>
-        <div class="nj-loading">🧺…</div>
-      </div>`
-    const area = $('catchArea')
-    const cfg = ctx.byTier(
-      { sp: 0.13, spawn: 1000, bad: 0.17 },
-      { sp: 0.18, spawn: 780, bad: 0.25 },
-      { sp: 0.24, spawn: 620, bad: 0.32 }
-    )
+  id: 'catch', name: 'Attrape', icon: '🧺', sq: 'sq-sky', cat: 'action', music: 'meadow',
+  subtitle: 'Glisse le panier sous la récolte… mais pas sous le piment !',
+  mount(c) {
+    ctx = c
     let dead = false
-    let app: any = null
-    let timer: any = null
-    const listeners: [any, string, any][] = []
+    c.root.innerHTML = `
+      <div class="topbar">
+        <div class="chip" id="caScore">🧺 0</div>
+        <div class="chip" id="caLives">❤️❤️❤️</div>
+      </div>
+      <div class="g3-combo" id="caCombo"></div>
+      <div class="tbar" style="max-width:520px"><div class="tfill" id="caTimer"></div></div>
+      <div class="arena g3-arena ca-arena" id="caArena">
+        <div class="hint g3-hint" id="caHint">Glisse ton doigt pour déplacer le panier 🧺</div>
+        <div class="g3-wave" id="caWave"></div>
+      </div>`
+
+    const arena = $('caArena')
+    const hideLoader = loader(arena, '🧺')
 
     ;(async () => {
-      PIXI = PIXI || await import('pixi.js')
-      const [{ texFromSVG, particleTex }, { GOODS_ART, BADS_ART, POWERS_ART }] =
-        await Promise.all([import('./pixiKit'), import('./farmArt')])
-      const goods = await Promise.all(GOODS_ART.map(async a => ({ tint: a.tint, tex: await texFromSVG(a.svg, 96) })))
-      const bads = await Promise.all(BADS_ART.map(async a => ({ tint: a.tint, tex: await texFromSVG(a.svg, 96) })))
-      const powers: any = {}
-      for (const k of Object.keys(POWERS_ART)) powers[k] = { tint: POWERS_ART[k].tint, tex: await texFromSVG(POWERS_ART[k].svg, 96) }
-      const basketT = await texFromSVG(basketSVG(ctx.avatar, ctx.look, 74), 168, 163)
+      const [, CANNON] = await loadPhysics()
       if (dead) return
-      const W = area.clientWidth || 400, H = area.clientHeight || 360
-      app = new PIXI.Application({
-        width: W, height: H, backgroundAlpha: 0, antialias: true,
-        resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true
+      const stage: Stage = await createStage(arena, {
+        sky: '#1D3C5E',
+        fog: [7, 20], fogColor: '#1D3C5E',
+        cam: [0, 1.35, 5.0], target: [0, 1.1, 0], fov: 46,
+        hemi: ['#CFE4FF', '#22384F', 0.9],
+        sun: { pos: [2.6, 6, 4.5], color: '#FFF2D8', intensity: 2.2, area: 5, far: 16 },
+        fill: 0.35, exposure: 0.95, iblIntensity: 0.55
       })
-      area.querySelector('.nj-loading')?.remove()
-      area.appendChild(app.view as HTMLCanvasElement)
-      const stage = new PIXI.Container()
-      app.stage.addChild(stage)
+      if (dead) { stage.dispose(); return }
+      hideLoader()
+      const T = stage.T
+      const scene = stage.scene
 
-      const basket = new PIXI.Sprite(basketT)
-      basket.anchor.set(0.5, 1)
-      basket.width = 84; basket.height = 82
-      basket.y = H - 4
-      stage.addChild(basket)
+      /* Sol sombre : c'est la récolte qui doit ressortir, pas le décor */
+      const ground = new T.Mesh(
+        new T.PlaneGeometry(26, 26),
+        new T.MeshStandardMaterial({ color: 0x1F4433, roughness: 0.95 })
+      )
+      ground.rotation.x = -Math.PI / 2
+      ground.position.y = FLOOR_Y
+      ground.receiveShadow = true
+      scene.add(ground)
 
+      /* Décor : des caisses de marché et un fond de grange. Sans lui, le panier
+         flotte dans le vide et rien ne donne l'échelle de la chute. */
+      const crateMat = new T.MeshStandardMaterial({ color: 0x6B4A2E, roughness: 0.85 })
+      for (const [x, z, sc] of [[-2.4, -1.2, 0.5], [2.5, -1.4, 0.62], [-3.1, -2.2, 0.42], [3.2, -2.4, 0.48]] as [number, number, number][]) {
+        const crate = new T.Mesh(new T.BoxGeometry(sc, sc * 0.8, sc), crateMat)
+        crate.position.set(x, FLOOR_Y + sc * 0.4, z)
+        crate.rotation.y = Math.random()
+        crate.castShadow = true; crate.receiveShadow = true
+        scene.add(crate)
+      }
+      const barn = new T.Mesh(
+        new T.PlaneGeometry(20, 2.2),
+        new T.MeshStandardMaterial({ color: 0x3A2A1E, roughness: 1 })
+      )
+      barn.position.set(0, FLOOR_Y + 1.1, -4.5)
+      scene.add(barn)
+
+      /* Monde physique */
+      const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) })
+      world.broadphase = new CANNON.SAPBroadphase(world)
+      ;(world.solver as any).iterations = 8
+      const matFood = new CANNON.Material('food')
+      world.addContactMaterial(new CANNON.ContactMaterial(matFood, matFood, { friction: 0.4, restitution: 0.18 }))
+      world.addBody(new CANNON.Body({
+        type: CANNON.Body.STATIC, material: matFood, shape: new CANNON.Plane(),
+        position: new CANNON.Vec3(0, FLOOR_Y, 0),
+        quaternion: new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0)
+      }))
+
+      /* Le panier : un vrai modèle, piloté au doigt */
+      const basket = await loadModel('food', 'bowl')
+      fitModel(T, basket, 0.9)
+      basket.position.set(0, BASKET_Y, 0)
+      scene.add(basket)
+
+      /* Toute la récolte préchargée : un fruit ne doit jamais faire attendre */
+      const models: Record<string, any> = {}
+      await Promise.all([...CROPS, BAD].map(async k => {
+        const g = await loadModel('food', k)
+        fitModel(T, g, k === BAD ? 0.24 : 0.3)
+        models[k] = g
+      }))
+      if (dead) { stage.dispose(); return }
+
+      const cfg = c.byTier(
+        { speed: 0.1, every: 1250, bad: 0.1 },
+        { speed: 0.5, every: 980, bad: 0.17 },
+        { speed: 1.0, every: 780, bad: 0.24 }
+      )
       ca = {
-        ctx, stage, W, H, T: { goods, bads, powers }, particleT: particleTex(), basket,
-        score: 0, combo: 0, basketX: W / 2, items: [], parts: [],
-        baseSpeed: cfg.sp, spawnEvery: cfg.spawn, badChance: cfg.bad,
-        lastSpawn: 0, timeLeft: 40, running: true,
-        wave: 1, mult: 1, magnet: false, slow: false, powerTimer: 0,
-        keys: { left: false, right: false }
+        stage, CANNON, world, matFood, models, basket,
+        items: [], score: 0, lives: 3, combo: 0, bestCombo: 0,
+        basketX: 0, wantX: 0, timeLeft: 45, wave: 1, running: true,
+        cfg: { ...cfg }, step: fixedStep()
       }
-      basket.x = ca.basketX
-      showWave('Vague 1 !')
+      hud()
 
-      const onKey = (e: KeyboardEvent, down: boolean) => {
+      /* --- Un seul geste : glisser --- */
+      const moveTo = (clientX: number) => {
+        const r = stage.renderer.domElement.getBoundingClientRect()
+        const t = (clientX - r.left) / r.width
+        ca.wantX = Math.max(-1, Math.min(1, t * 2 - 1)) * (LANE - 0.45)
+        $('caHint').style.opacity = '0'
+      }
+      let dragging = false
+      const onDown = (e: PointerEvent) => { dragging = true; moveTo(e.clientX) }
+      const onMove = (e: PointerEvent) => { if (dragging) moveTo(e.clientX) }
+      const onUp = () => { dragging = false }
+      stage.renderer.domElement.addEventListener('pointerdown', onDown)
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
+
+      const spawner = () => {
         if (!ca || !ca.running) return
-        if (e.key === 'ArrowLeft') { ca.keys.left = down; e.preventDefault() }
-        if (e.key === 'ArrowRight') { ca.keys.right = down; e.preventDefault() }
+        spawn()
+        ca.spawnT = setTimeout(spawner, ca.cfg.every * (0.75 + Math.random() * 0.5))
       }
-      const kd = (e: KeyboardEvent) => onKey(e, true)
-      const ku = (e: KeyboardEvent) => onKey(e, false)
-      const pm = (e: any) => {
+      spawner()
+
+      ca.timer = setInterval(() => {
         if (!ca || !ca.running) return
-        const cx = e.touches ? e.touches[0].clientX : e.clientX
-        const rect = area.getBoundingClientRect()
-        ca.basketX = Math.max(30, Math.min(rect.width - 30, cx - rect.left))
-      }
-      window.addEventListener('keydown', kd); listeners.push([window, 'keydown', kd])
-      window.addEventListener('keyup', ku); listeners.push([window, 'keyup', ku])
-      window.addEventListener('pointermove', pm); listeners.push([window, 'pointermove', pm])
-      window.addEventListener('touchmove', pm); listeners.push([window, 'touchmove', pm])
-
-      timer = setInterval(tick, 1000)
-
-      app.ticker.add(() => {
-        if (!ca || !ca.running || !app) return
-        const dt = Math.min(50, app.ticker.deltaMS)
-        const kv = 0.55
-        if (ca.keys.left) ca.basketX = Math.max(30, ca.basketX - kv * dt)
-        if (ca.keys.right) ca.basketX = Math.min(ca.W - 30, ca.basketX + kv * dt)
-        // Le panier glisse en douceur vers le doigt
-        basket.x += (ca.basketX - basket.x) * Math.min(1, dt * 0.02)
-        basket.rotation = Math.max(-0.12, Math.min(0.12, (ca.basketX - basket.x) * 0.004))
-
-        if (ca.powerTimer > 0) {
-          ca.powerTimer -= dt
-          if (ca.powerTimer <= 0) {
-            ca.mult = 1; ca.magnet = false; ca.slow = false
-            $('powerBadge').style.display = 'none'
-          }
+        ca.timeLeft--
+        $('caTimer').style.width = (ca.timeLeft / 45) * 100 + '%'
+        if (ca.timeLeft === 34 || ca.timeLeft === 22 || ca.timeLeft === 11) {
+          ca.wave++
+          ca.cfg.speed = ca.cfg.speed * 1.25 + 0.3
+          ca.cfg.every = Math.max(420, ca.cfg.every * 0.82)
+          ca.cfg.bad = Math.min(0.32, ca.cfg.bad + 0.05)
+          flash('Vague ' + ca.wave + ' !'); sPower()
         }
-        const speed = ca.baseSpeed * (ca.slow ? 0.5 : 1)
-        ca.lastSpawn += dt
-        if (ca.lastSpawn >= ca.spawnEvery) { ca.lastSpawn = 0; spawnItem() }
+        if (ca.timeLeft <= 0) finish(false)
+      }, 1000)
 
-        const bx = basket.x, bw = ca.magnet ? 92 : 62, catchY = ca.H - 56
+      /* --- Boucle --- */
+      stage.start(dt => {
+        if (!ca || !ca.running) return
+        // Le panier suit le doigt en douceur : un suivi sec donnerait du zapping
+        ca.basketX += (ca.wantX - ca.basketX) * Math.min(1, dt * 16)
+        basket.position.x = ca.basketX
+        basket.rotation.z = (ca.wantX - ca.basketX) * 0.5   // il penche : ça lui donne du poids
+
+        ca.step(dt, () => {
+          world.step(1 / 60)
+          // Terrain plat : rien ne doit partir vers le fond
+          for (const it of ca.items) { it.body.position.z = 0; it.body.velocity.z = 0 }
+        })
+
         for (let i = ca.items.length - 1; i >= 0; i--) {
           const it = ca.items[i]
-          it.y += speed * dt
-          it.rot += it.vr * dt
-          if (ca.magnet && it.good) it.x += (bx - it.x) * 0.06
-          it.sp.x = it.x; it.sp.y = it.y; it.sp.rotation = it.rot
-          if (it.y >= catchY && it.y <= catchY + 56 && Math.abs(it.x - bx) < bw) {
-            handleCatch(it); it.sp.destroy(); ca.items.splice(i, 1); continue
-          }
-          if (it.y > ca.H + 50) { if (it.good) ca.combo = 0; it.sp.destroy(); ca.items.splice(i, 1) }
-        }
-        for (let i = ca.parts.length - 1; i >= 0; i--) {
-          const p = ca.parts[i]
-          p.life -= 0.03 * (dt / 16.7)
-          p.vy += 0.012 * (dt / 16.7)
-          p.x += p.vx * dt; p.y += p.vy * dt
-          if (p.life <= 0) { p.sp.destroy(); ca.parts.splice(i, 1); continue }
-          p.sp.x = p.x; p.sp.y = p.y; p.sp.alpha = p.life
+          if (it.done) continue
+          it.obj.position.copy(it.body.position as any)
+          it.obj.quaternion.copy(it.body.quaternion as any)
+          if (inBasket(it.body.position)) { caught(it); if (!ca || !ca.running) return; continue }
+          if (it.body.position.y < FLOOR_Y + 0.22) { missed(it); if (!ca || !ca.running) return }
         }
       })
-    })()
 
-    const cleanup = () => {
+      ca.cleanup = () => {
+        stage.renderer.domElement.removeEventListener('pointerdown', onDown)
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        clearInterval(ca.timer)
+        clearTimeout(ca.spawnT)
+        stage.dispose()
+      }
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+
+    return () => {
       dead = true
-      if (ca) { ca.running = false; ca = null }
-      clearInterval(timer)
-      listeners.forEach(([t, ev, fn]) => t.removeEventListener(ev, fn))
-      if (app) { app.destroy(true, { children: true, texture: false, baseTexture: false }); app = null }
+      if (ca) {
+        ca.running = false
+        try { ca.cleanup?.() } catch { /* déjà démonté */ }
+        ca = null
+      }
     }
-    return cleanup
   }
 }

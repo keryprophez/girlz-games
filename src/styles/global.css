@@ -1113,3 +1113,16 @@ body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
 #result.quickretry{cursor:pointer;}
 #result.quickretry .modal{cursor:default;}
 .retryhint{margin-top:10px;font-size:13px;color:var(--ink-soft);font-weight:600;}
+
+/* Combo et annonce de vague, communs aux jeux d'action 3D */
+.g3-combo{height:26px;font-family:'Baloo 2';font-weight:800;font-size:22px;color:var(--mango);
+  text-shadow:0 2px 0 #fff,0 3px 8px rgba(69,54,42,.25);opacity:0;transform:scale(.7);
+  transition:opacity .18s,transform .3s var(--spring);margin-bottom:2px;}
+.g3-combo.on{opacity:1;transform:scale(1);}
+.g3-wave{position:absolute;top:38%;left:0;right:0;text-align:center;z-index:4;pointer-events:none;
+  font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,7vmin,40px);color:#FFE08A;
+  text-shadow:0 3px 12px rgba(0,0,0,.6);opacity:0;transform:scale(.6);}
+.g3-wave.show{animation:g3Wave 1.1s ease-out;}
+@keyframes g3Wave{0%{opacity:0;transform:scale(.6);}25%{opacity:1;transform:scale(1.1);}
+  70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.15);}}
+.ca-arena{background:#1D3C5E;}

@@ -55,8 +55,13 @@ const SHEETS = [
    faut copier À CÔTÉ des .glb, car ils la référencent en chemin relatif. */
 const MODELS = [
   { pack: 'food', dir: 'Models/GLB format', out: 'food', files: [
+    // Garniture de la Pizzeria
     'mushroom.glb', 'tomato-slice.glb', 'cheese-cut.glb', 'corn.glb',
-    'onion-half.glb', 'sausage-half.glb', 'pepper.glb', 'bread.glb'
+    'onion-half.glb', 'sausage-half.glb', 'pepper.glb', 'bread.glb',
+    // Récolte d'Attrape, et le panier
+    'bowl.glb', 'apple.glb', 'carrot.glb', 'banana.glb', 'orange.glb',
+    'strawberry.glb', 'pear.glb', 'broccoli.glb', 'leek.glb', 'pineapple.glb',
+    'eggplant.glb', 'avocado.glb'
   ] }
 ]
 
