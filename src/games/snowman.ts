@@ -4,6 +4,7 @@ import { sCrunch, sPop, sWin, tone } from '../core/audio'
 import { confetti } from '../core/fx'
 import {
   createStage, loadPhysics, loader, fixedStep, orbitCam, snowTex, bumpyNormal, disposeTree,
+  loadModel, fitModel,
   type Stage, type Orbit, type Cannon
 } from '../core/three3d'
 
@@ -67,26 +68,21 @@ function digAt(x: number, z: number, r: number) {
 }
 
 /* ---------- Décor ---------- */
-function addTrees(T: any, scene: any) {
-  const trunkGeo = new T.CylinderGeometry(0.09, 0.13, 0.6, 8)
-  const trunkMat = new T.MeshStandardMaterial({ color: 0x6B4A32, roughness: 0.9 })
-  const leafGeo = new T.ConeGeometry(0.62, 1.5, 9)
-  const leafMat = new T.MeshStandardMaterial({ color: 0x2F6B4A, roughness: 0.85 })
-  const capMat = new T.MeshStandardMaterial({ color: 0xF4FAFF, roughness: 0.75 })
-  const capGeo = new T.ConeGeometry(0.5, 0.55, 9)
+/** Vrais sapins enneigés du kit holiday, en couronne autour du terrain. */
+async function addTrees(T: any, scene: any, gone: () => boolean) {
+  const kinds = await Promise.all(
+    ['tree-snow-a', 'tree-snow-b', 'tree-snow-c'].map(n => loadModel('holiday', n))
+  )
+  // Le jeu a pu être démonté pendant le chargement : ne rien greffer sur
+  // une scène déjà nettoyée, sinon ces meshes échappent au dispose
+  if (gone()) return
   for (let i = 0; i < 22; i++) {
     const a = (i / 22) * Math.PI * 2 + Math.random() * 0.2
     const d = FIELD + 1.4 + Math.random() * 5
-    const x = Math.sin(a) * d, z = Math.cos(a) * d
-    const s = 0.8 + Math.random() * 0.9
-    const g = new T.Group()
-    const tr = new T.Mesh(trunkGeo, trunkMat); tr.position.y = 0.3; tr.castShadow = true
-    const lv = new T.Mesh(leafGeo, leafMat); lv.position.y = 1.25; lv.castShadow = true
-    const cp = new T.Mesh(capGeo, capMat); cp.position.y = 1.62; cp.castShadow = true
-    g.add(tr, lv, cp)
-    g.position.set(x, 0, z)
-    g.scale.setScalar(s)
-    g.rotation.y = Math.random() * 3
+    const g = kinds[i % kinds.length].clone(true)
+    fitModel(T, g, 1.6 + Math.random() * 1.5)
+    g.position.set(Math.sin(a) * d, 0, Math.cos(a) * d)
+    g.rotation.y = Math.random() * Math.PI * 2
     scene.add(g)
   }
 }
@@ -532,7 +528,7 @@ export const snowman: GameDef = {
       trailMesh.receiveShadow = true
       scene.add(trailMesh)
 
-      addTrees(T, scene)
+      addTrees(T, scene, () => dead)
       const fall = addSnowfall(T, scene)
 
       /* Monde physique : ne sert qu'à la chute et à l'écrasement des boules */

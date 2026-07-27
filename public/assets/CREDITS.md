@@ -11,6 +11,8 @@ des choses — ce travail est offert.
 - **Fish Pack** — <https://kenney.nl/assets/fish-pack>
 - **Food Kit (3D)** — <https://kenney.nl/assets/food-kit>
 - **Impact Sounds** — <https://kenney.nl/assets/impact-sounds>
+- **Holiday Kit (3D)** — <https://kenney.nl/assets/holiday-kit>
+- **Space Kit (3D)** — <https://kenney.nl/assets/space-kit>
 
 Les planches ont été **triées** : on ne garde que les sprites réellement utilisés
 par les jeux. Pour en ajouter, modifier `scripts/import-assets.mjs` et le

@@ -41,6 +41,14 @@ const PACKS = {
   impact: {
     slug: 'impact-sounds', title: 'Impact Sounds',
     url: 'https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip'
+  },
+  holiday: {
+    slug: 'holiday-kit', title: 'Holiday Kit (3D)',
+    url: 'https://kenney.nl/media/pages/assets/holiday-kit/3976a6496a-1733923970/kenney_holiday-kit.zip'
+  },
+  space: {
+    slug: 'space-kit', title: 'Space Kit (3D)',
+    url: 'https://kenney.nl/media/pages/assets/space-kit/20874c75ac-1677698978/kenney_space-kit.zip'
   }
 }
 
@@ -72,6 +80,15 @@ const MODELS = [
     'lemon.glb', 'apple-half.glb', 'lemon-half.glb', 'pear-half.glb', 'advocado-half.glb',
     // Pêche Précise
     'fish.glb'
+  ] },
+  // Sapins enneigés du Bonhomme de neige (colormap externe, comme food)
+  { pack: 'holiday', dir: 'Models/GLB format', out: 'holiday', files: [
+    'tree-snow-a.glb', 'tree-snow-b.glb', 'tree-snow-c.glb'
+  ] },
+  // La vraie fusée de Voyage dans l'Espace : modulaire, on l'assemble en jeu
+  // (matériaux embarqués, pas de colormap dans ce kit)
+  { pack: 'space', dir: 'Models/GLTF format', out: 'space', files: [
+    'rocket_baseA.glb', 'rocket_fuelA.glb', 'rocket_topA.glb'
   ] }
 ]
 
@@ -168,9 +185,12 @@ for (const m of MODELS) {
     cpSync(from, join(dst, f))
     total += readFileSync(from).length
   }
+  // Certains kits (space, nature) embarquent leurs matériaux : pas de colormap
   const tex = join(src, 'Textures', 'colormap.png')
-  cpSync(tex, join(dst, 'Textures', 'colormap.png'))
-  total += readFileSync(tex).length
+  if (existsSync(tex)) {
+    cpSync(tex, join(dst, 'Textures', 'colormap.png'))
+    total += readFileSync(tex).length
+  }
   console.log(`✓ modèles ${m.out} — ${m.files.length} objets 3D`)
 }
 

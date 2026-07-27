@@ -3,7 +3,7 @@ import { $ } from '../core/utils'
 import { sGood, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
 import {
-  createStage, loader, orbitCam, dotTex, picker, type Stage
+  createStage, loader, orbitCam, dotTex, picker, loadModel, type Stage
 } from '../core/three3d'
 
 /* 🚀 Mon Voyage dans l'Espace, en 3D — un vrai système solaire : des sphères
@@ -187,30 +187,34 @@ function ringTex(T: any, color: string) {
 }
 
 /* ---------- La fusée ---------- */
-function makeRocket(T: any) {
-  const g = new T.Group()
-  const white = new T.MeshStandardMaterial({ color: 0xF4F6FA, roughness: 0.35, metalness: 0.25 })
-  const red = new T.MeshStandardMaterial({ color: 0xE8574C, roughness: 0.4 })
-  const glass = new T.MeshStandardMaterial({ color: 0x7FD0F0, roughness: 0.1, metalness: 0.4, emissive: 0x2A6A8A })
-  const body = new T.Mesh(new T.CapsuleGeometry(0.09, 0.2, 6, 14), white)
-  const nose = new T.Mesh(new T.ConeGeometry(0.09, 0.17, 14), red)
-  nose.position.y = 0.27
-  const win = new T.Mesh(new T.SphereGeometry(0.045, 12, 10), glass)
-  win.position.set(0, 0.08, 0.075)
-  for (let i = 0; i < 3; i++) {
-    const fin = new T.Mesh(new T.ConeGeometry(0.045, 0.13, 4), red)
-    const a = (i / 3) * Math.PI * 2
-    fin.position.set(Math.sin(a) * 0.09, -0.16, Math.cos(a) * 0.09)
-    fin.rotation.y = a
-    g.add(fin)
+/** La vraie fusée du kit space de Kenney : trois étages empilés (moteur,
+    réservoir, coiffe), mesurés à la Box3 — plus la flamme, qui reste à nous. */
+async function makeRocket(T: any) {
+  const stackParts = await Promise.all(
+    ['rocket_baseA', 'rocket_fuelA', 'rocket_topA'].map(n => loadModel('space', n))
+  )
+  const stack = new T.Group()
+  const box = new T.Box3(), v = new T.Vector3()
+  let h = 0
+  for (const p of stackParts) {
+    box.setFromObject(p)
+    p.position.y = h - box.min.y
+    h += box.getSize(v).y
+    stack.add(p)
   }
+  // Même gabarit que l'ancienne fusée (~0.6 unité), origine au CENTRE :
+  // la navigation fait lookAt + rotateX(π/2) sur cette origine-là
+  const k = 0.62 / h
+  stack.scale.setScalar(k)
+  stack.position.y = -0.31
+  const g = new T.Group()
   const flame = new T.Mesh(
     new T.ConeGeometry(0.06, 0.22, 12),
     new T.MeshBasicMaterial({ color: 0xFFB03A, transparent: true, opacity: 0.9 })
   )
-  flame.position.y = -0.28
+  flame.position.y = -0.36
   flame.rotation.x = Math.PI
-  g.add(body, nose, win, flame)
+  g.add(stack, flame)
   return { group: g, flame }
 }
 
@@ -426,7 +430,8 @@ export const space: GameDef = {
       sunHit.userData.pid = 'soleil'
       scene.add(sunHit)
 
-      const rocket = makeRocket(T)
+      const rocket = await makeRocket(T)
+      if (dead) { stage.dispose(); return }
       rocket.group.position.set(2.9, 3.1, 7.2)
       scene.add(rocket.group)
 
