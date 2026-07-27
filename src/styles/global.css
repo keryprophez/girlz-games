@@ -1127,3 +1127,5 @@ body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
   70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.15);}}
 .ca-arena{background:#1D3C5E;}
 .pc-arena{background:#241B12;}
+.nj3-arena{background:#1A2E24;}
+#njBlade{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;}

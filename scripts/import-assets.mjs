@@ -63,7 +63,9 @@ const MODELS = [
     'strawberry.glb', 'pear.glb', 'broccoli.glb', 'leek.glb', 'pineapple.glb',
     'eggplant.glb', 'avocado.glb',
     // La poêle de Pop-corn
-    'frying-pan.glb'
+    'frying-pan.glb',
+    // Ninja Verger : fruits entiers + leurs moitiés (« advocado » : typo Kenney)
+    'lemon.glb', 'apple-half.glb', 'lemon-half.glb', 'pear-half.glb', 'advocado-half.glb'
   ] }
 ]
 
