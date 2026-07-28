@@ -260,6 +260,8 @@ export const caterpillar: GameDef = {
       }
       hud()
       placeFruit()
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+      if ((window as any).__BOT) (window as any).__cp = cp
       // La tête démarre pile sur sa case, les segments derrière
       head.position.set(gx(6), segY, gz(midY))
       cp.timer = setInterval(step, cp.speed)

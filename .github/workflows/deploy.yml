@@ -30,6 +30,9 @@ jobs:
       - run: npm run build
       # Smoke test : chaque jeu doit se monter sans erreur avant de déployer
       - run: npm run test:smoke
+      # Bots de jeu : les parcours clés doivent être GAGNABLES avant de déployer
+      # (se saute tout seul si le runner n'a pas de WebGL utilisable)
+      - run: npm run test:play
       - uses: actions/configure-pages@v5
         with:
           enablement: true

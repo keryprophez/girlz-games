@@ -285,6 +285,8 @@ export const runGame: GameDef = {
         puffDust(n: number) { puff(-0.1, 0.06, dustMat, 0.5, 4 * n) }
       }
       $('runHearts').textContent = '❤️❤️❤️'
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+      if ((window as any).__BOT) (window as any).__run = run
 
       const jump = () => {
         if (!run || !run.running) return

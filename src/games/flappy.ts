@@ -227,6 +227,8 @@ export const flappy: GameDef = {
         }
       }
 
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+      if ((window as any).__BOT) (window as any).__fl = fl
       const cx = W * 0.22
       const spawnPipe = () => {
         const gap = H * cfg.gap
