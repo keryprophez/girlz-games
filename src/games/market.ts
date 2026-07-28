@@ -1,5 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd } from '../core/utils'
+import { foodImg } from '../core/sprites'
 import { sGood, sNope, sPop, sWin } from '../core/audio'
 import { fxAt, JUICE } from '../core/fx'
 
@@ -16,7 +17,9 @@ const DENOMS: Denom[] = [
   { v: 100, kind: 'coin' }, { v: 200, kind: 'coin' },
   { v: 500, kind: 'note' }, { v: 1000, kind: 'note' }, { v: 2000, kind: 'note' }
 ]
-const ITEMS = ['🍎', '🥕', '🥖', '🧀', '🍓', '🥚', '🌻', '🍯', '🎈', '🍪']
+/* L'étal : les rendus 2D du Food Kit — les mêmes objets que la 3D du projet */
+const ITEMS = ['apple', 'carrot', 'loaf-baguette', 'cheese', 'strawberry',
+  'egg', 'honey', 'corn', 'cookie', 'muffin']
 
 /** Pièces et billets dessinés en SVG, aux couleurs des vrais euros. */
 export function moneySVG(v: number): string {
@@ -154,14 +157,14 @@ function nextRound() {
   const item = pick(ITEMS)
   if (mk.mode === 'pay') {
     mk.goal = price
-    $('mkItem').innerHTML = `<span class="mk-emoji">${item}</span>
+    $('mkItem').innerHTML = `${foodImg(item, 52)}
       <span class="mk-price">${fmt(price)}</span>
       <span class="mk-sub">${mk.q + 1}/${mk.totalQ}</span>`
   } else {
     // La monnaie : payé avec le plus petit billet au-dessus du prix
     const note = price < 500 ? 500 : price < 1000 ? 1000 : 2000
     mk.goal = note - price
-    $('mkItem').innerHTML = `<span class="mk-emoji">${item}</span>
+    $('mkItem').innerHTML = `${foodImg(item, 52)}
       <span class="mk-price">${fmt(price)}</span>
       <span class="mk-paid">payé avec ${moneySVG(note)}</span>
       <span class="mk-sub">${mk.q + 1}/${mk.totalQ}</span>`

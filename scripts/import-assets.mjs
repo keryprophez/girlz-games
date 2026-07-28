@@ -92,6 +92,21 @@ const MODELS = [
   ] }
 ]
 
+/* Icônes 2D tirées des RENDUS du Food Kit (Previews/) : les mêmes objets que
+   les modèles 3D de la Pizzeria et d'Attrape, en pictogrammes cohérents.
+   Servent au Marché (produits), au Quiz (scènes à compter) et à l'Intrus. */
+const ICONS = [
+  // Étal du marché
+  'apple', 'carrot', 'loaf-baguette', 'cheese', 'strawberry', 'egg', 'honey',
+  'corn', 'cookie', 'muffin',
+  // Fruits et légumes de l'Intrus
+  'banana', 'grapes', 'cherries', 'orange', 'pear', 'lemon', 'pineapple',
+  'watermelon', 'broccoli', 'tomato', 'eggplant', 'onion', 'pumpkin-basic',
+  'radish', 'cabbage',
+  // Objets (« lequel n'est pas un animal ? »)
+  'pot', 'plate-dinner', 'cup', 'bread', 'cake'
+]
+
 /* Bruitages foley pour core/impact.ts : 4 variantes par matière, classées du
    plus léger au plus lourd — c'est la FORCE du choc qui choisit la variante.
    Les fichiers viennent de Audio/ dans le pack impact-sounds. */
@@ -192,6 +207,18 @@ for (const m of MODELS) {
     total += readFileSync(tex).length
   }
   console.log(`✓ modèles ${m.out} — ${m.files.length} objets 3D`)
+}
+
+{
+  const dst = join(OUT, 'icons', 'food')
+  mkdirSync(dst, { recursive: true })
+  for (const f of ICONS) {
+    const from = join(TMP, 'food', 'Previews', f + '.png')
+    if (!existsSync(from)) { console.error(`✗ icône introuvable : ${from}`); process.exit(1) }
+    cpSync(from, join(dst, f + '.png'))
+    total += readFileSync(from).length
+  }
+  console.log(`✓ icônes food — ${ICONS.length} pictogrammes`)
 }
 
 {

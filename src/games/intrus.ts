@@ -2,27 +2,35 @@ import type { GameContext, GameDef } from '../core/types'
 import { $, pick, shuffle } from '../core/utils'
 import { sGood, sNope, sWin } from '../core/audio'
 import { fxAt, JUICE } from '../core/fx'
+import { foodImg, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
 
-const P_NONFLY = ['🐕', '🐈', '🐷', '🐮', '🐑', '🐰', '🐴', '🐐', '🐢', '🐌', '🦔', '🐹']
-const P_FLY = ['🦋', '🐝', '🐞', '🦅', '🕊️', '🦜', '🦇', '🦉', '🐦']
-const P_LAND = ['🐕', '🐈', '🐷', '🐮', '🐑', '🐰', '🐴', '🐐', '🦒', '🦓', '🐘', '🦔']
-const P_WATER = ['🐟', '🐠', '🐙', '🦈', '🐬', '🦀', '🐳', '🦭', '🐡', '🦞']
-const P_NONBIRD = ['🐕', '🐈', '🐷', '🐮', '🐑', '🐰', '🐴', '🐠', '🐙', '🦊', '🐸', '🐢']
-const P_BIRD = ['🐔', '🐤', '🦆', '🦅', '🦉', '🐧', '🦜', '🦩', '🕊️']
-const P_YELLOW = ['🍌', '🐤', '🌽', '🧀', '🌟', '🍋', '⭐', '🌻']
-const P_NONYELLOW = ['🍎', '🍇', '🍓', '🦋', '🐷', '🐸', '🍆', '🔵', '🍅']
-const I_FRUITS = ['🍎', '🍓', '🍌', '🍇', '🍊', '🍉', '🍑', '🍒', '🥝', '🍍']
-const I_VEG = ['🥕', '🥦', '🌽', '🥔', '🍅', '🥬', '🧅', '🍆', '🫑']
-const P_ANIMALS = ['🐕', '🐈', '🐔', '🐷', '🐮', '🐑', '🐰', '🐴', '🦆', '🐐', '🦁', '🐯', '🐘']
-const P_OBJECTS = ['🍎', '🚗', '⚽', '🌳', '🏠', '🎈', '📚', '🔵', '⭐', '🪁', '🥕']
+/* Chaque proposition est un VRAI visuel : sprite de la planche animals (a),
+   poisson de la planche fish (f), ou icône food (i) — plus d'emoji. */
+type It = { k: 'a' | 'f' | 'i'; n: string }
+const A = (n: string): It => ({ k: 'a', n })
+const F = (n: string): It => ({ k: 'f', n })
+const I = (n: string): It => ({ k: 'i', n })
+
+const P_LAND = ['cow', 'pig', 'dog', 'horse', 'goat', 'rabbit', 'giraffe', 'zebra', 'elephant', 'monkey', 'bear', 'moose'].map(A)
+const P_WATER = [A('whale'), A('narwhal'), A('walrus'), F('fish_blue'), F('fish_orange'), F('fish_pink'), F('fish_red'), F('fish_green')]
+const P_BIRD = ['chicken', 'chick', 'duck', 'owl', 'parrot', 'penguin'].map(A)
+const P_NONBIRD = [...['cow', 'pig', 'dog', 'horse', 'goat', 'rabbit', 'frog', 'snake', 'panda'].map(A), F('fish_blue'), F('fish_orange')]
+const I_FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon', 'pineapple', 'watermelon'].map(I)
+const I_VEG = ['carrot', 'broccoli', 'corn', 'tomato', 'eggplant', 'onion', 'cabbage', 'pumpkin-basic', 'radish'].map(I)
+const P_ANIMALS = ['cow', 'pig', 'chicken', 'duck', 'horse', 'goat', 'rabbit', 'dog', 'monkey', 'panda', 'zebra', 'elephant'].map(A)
+const P_OBJECTS = ['pot', 'plate-dinner', 'cup', 'bread', 'cake', 'loaf-baguette', 'muffin', 'cookie'].map(I)
+const P_YELLOW = [I('banana'), I('corn'), I('cheese'), I('lemon'), A('chick')]
+const P_NONYELLOW = [I('apple'), I('strawberry'), I('broccoli'), I('tomato'), A('pig'), A('frog'), A('whale'), I('grapes')]
+const I_FOODS = ['apple', 'bread', 'cheese', 'cookie', 'strawberry', 'muffin', 'corn', 'cake', 'watermelon'].map(I)
 const CATS = [
-  { q: 'Lequel sait voler ?', maj: P_NONFLY, intr: P_FLY },
   { q: "Lequel vit dans l'eau ?", maj: P_LAND, intr: P_WATER },
   { q: 'Lequel est un oiseau ?', maj: P_NONBIRD, intr: P_BIRD },
   { q: "Lequel n'est PAS jaune ?", maj: P_YELLOW, intr: P_NONYELLOW },
   { q: "Lequel n'est PAS un fruit ?", maj: I_FRUITS, intr: I_VEG },
-  { q: "Lequel n'est PAS un animal ?", maj: P_ANIMALS, intr: P_OBJECTS }
+  { q: "Lequel n'est PAS un animal ?", maj: P_ANIMALS, intr: P_OBJECTS },
+  { q: "Lequel n'est PAS à manger ?", maj: I_FOODS, intr: P_ANIMALS }
 ]
+const same = (a: It, b: It) => a.k === b.k && a.n === b.n
 
 let intr: any = {}
 let ctx: GameContext
@@ -33,7 +41,7 @@ function load() {
   const size = ctx.byTier(intr.round >= 3 ? 6 : 4, intr.round >= 3 ? 9 : 6, intr.round >= 2 ? 12 : 9)
   const cat = pick(CATS)
   const members = shuffle([...cat.maj]).slice(0, Math.min(size - 1, cat.maj.length))
-  const intruderE = pick(cat.intr.filter(e => !members.includes(e)))
+  const intruderE = pick(cat.intr.filter(e => !members.some(m => same(m, e))))
   const items = shuffle([...members.map(e => ({ e, intruder: false })), { e: intruderE, intruder: true }])
   $('intQ').textContent = cat.q
   const grid = $('intGrid')
@@ -44,7 +52,9 @@ function load() {
   intr.lock = false
   items.forEach(item => {
     const b = document.createElement('button') as any
-    b.className = 'itile'; b.textContent = item.e
+    b.className = 'itile'
+    b.innerHTML = item.e.k === 'i' ? foodImg(item.e.n, 54)
+      : spriteSpan(item.e.k === 'a' ? intr.animals : intr.fish, item.e.n, 54)
     b._isIntruder = item.intruder
     b.onclick = () => pickTile(b, item.intruder)
     grid.appendChild(b)
@@ -114,7 +124,10 @@ export const intrus: GameDef = {
       <div class="tbar" style="max-width:420px"><div class="tfill" id="intTimer"></div></div>
       <div class="igrid" id="intGrid"></div>`
     intr = { round: 0, total: 6, score: 0, streak: 0, lock: false, tInt: null, running: true }
-    load()
+    // Les planches d'abord : les manches se construisent avec les sprites
+    Promise.all([loadAtlas('animals'), loadAtlas('fish')]).then(([a, f]: Atlas[]) => {
+      if (intr.running) { intr.animals = a; intr.fish = f; load() }
+    })
     return () => { intr.running = false; clearInterval(intr.tInt) }
   }
 }

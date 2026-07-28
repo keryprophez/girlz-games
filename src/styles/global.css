@@ -209,6 +209,12 @@ button.chip:active{transform:scale(.92);}
    INTRUS
    ============================================================ */
 .igrid{display:grid;gap:clamp(8px,1.9vmin,13px);width:100%;justify-content:center;}
+/* Sprites et icônes insérés dans du HTML (quiz, intrus, marché) */
+.spr{display:inline-block;vertical-align:middle;margin:2px;pointer-events:none;
+  filter:drop-shadow(0 2px 2px rgba(69,54,42,.18));}
+.q-grp{display:inline-block;margin:4px 10px;padding:5px 9px;border:1px dashed var(--line);
+  border-radius:12px;background:rgba(255,255,255,.55);}
+.q-op{font-size:22px;vertical-align:middle;margin:0 6px;}
 .itile{aspect-ratio:1;border:1px solid var(--line);cursor:pointer;border-radius:var(--r-md);background:var(--card);
   display:flex;align-items:center;justify-content:center;font-size:clamp(28px,7.4vmin,48px);
   box-shadow:var(--e1);transition:transform .2s var(--spring),background .2s,border-color .2s;}
@@ -815,7 +821,7 @@ body.bigplay #mrGrid{max-width:min(88vw,68vh);}
 .mk-item{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
   background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
   padding:10px 16px;margin-bottom:10px;box-shadow:var(--e1);min-height:64px;}
-.mk-emoji{font-size:42px;}
+
 .mk-price{font-family:'Baloo 2';font-weight:800;font-size:26px;background:#FFF0CC;
   border:2px dashed var(--mango);border-radius:12px;padding:2px 14px;}
 .mk-paid{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-soft);font-weight:600;}

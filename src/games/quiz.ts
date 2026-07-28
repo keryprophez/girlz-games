@@ -1,10 +1,17 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, FARM, pick, rnd, shuffle, uniqueNumbers } from '../core/utils'
+import { $, pick, rnd, shuffle, uniqueNumbers } from '../core/utils'
 import { sGood, sNope, sWin } from '../core/audio'
 import { FX, fxAt, JUICE } from '../core/fx'
+import { FARM_ANIMALS, foodImg, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
 
 let quiz: any = {}
 let ctx: GameContext
+
+/* Les scènes à compter : de VRAIS sprites (planche animals + icônes food),
+   plus d'emoji. row() aligne n exemplaires du même sprite. */
+const SPR = 34
+const row = (name: string, n: number) => spriteSpan(quiz.atlas, name, SPR).repeat(n)
+const eggs = (n: number) => foodImg('egg', SPR).repeat(n)
 
 function renderHearts() {
   $('qHearts').textContent = '❤️'.repeat(quiz.lives) + '🖤'.repeat(3 - quiz.lives)
@@ -16,7 +23,7 @@ function nextQuestion() {
   const q: any = ctx.byTier<() => any>(makeEasy, makeMedium, makeExpert)()
   quiz.current = q
   $('qPrompt').textContent = q.prompt
-  $('qScene').textContent = q.scene || ''
+  $('qScene').innerHTML = q.scene || ''
   $('qProgress').textContent = `Question ${quiz.asked + 1}/${quiz.max}`
   $('qStreak').textContent = quiz.streak >= 2 ? `🔥 série ${quiz.streak}` : ''
   $('quizScore').textContent = '⭐ ' + quiz.score
@@ -53,17 +60,17 @@ function answerQ(btn: HTMLButtonElement, chosen: any, correct: any) {
 
 function makeEasy() {
   const t = Math.random()
-  if (t < 0.35) { const a = pick(FARM), n = rnd(3, 10); return { prompt: "Combien d'animaux ?", scene: a.repeat(n), options: uniqueNumbers(n, 2, 12, 4), answer: n } }
-  if (t < 0.65) { const a = rnd(1, 6), b = rnd(1, 6), s = a + b; return { prompt: `Combien font ${a} + ${b} ?`, scene: '🐣'.repeat(a) + ' ➕ ' + '🐣'.repeat(b), options: uniqueNumbers(s, 2, 14, 4), answer: s } }
-  if (t < 0.85) { const a = rnd(4, 10), b = rnd(1, a - 1), d = a - b; return { prompt: `Il en reste combien : ${a} - ${b} ?`, scene: '🥚'.repeat(a), options: uniqueNumbers(d, 0, 10, 4), answer: d } }
-  const a = pick(FARM); let x = rnd(2, 6), y = rnd(2, 7); if (x === y) y++
-  return { prompt: 'Quel groupe a le PLUS ?', scene: `A: ${a.repeat(x)}   B: ${a.repeat(y)}`, options: ['A', 'B'], answer: x > y ? 'A' : 'B' }
+  if (t < 0.35) { const a = pick(FARM_ANIMALS), n = rnd(3, 10); return { prompt: "Combien d'animaux ?", scene: row(a, n), options: uniqueNumbers(n, 2, 12, 4), answer: n } }
+  if (t < 0.65) { const a = rnd(1, 6), b = rnd(1, 6), s = a + b; return { prompt: `Combien font ${a} + ${b} ?`, scene: row('chick', a) + ' <b class="q-op">➕</b> ' + row('chick', b), options: uniqueNumbers(s, 2, 14, 4), answer: s } }
+  if (t < 0.85) { const a = rnd(4, 10), b = rnd(1, a - 1), d = a - b; return { prompt: `Il en reste combien : ${a} - ${b} ?`, scene: eggs(a), options: uniqueNumbers(d, 0, 10, 4), answer: d } }
+  const a = pick(FARM_ANIMALS); let x = rnd(2, 6), y = rnd(2, 7); if (x === y) y++
+  return { prompt: 'Quel groupe a le PLUS ?', scene: `<span class="q-grp">A&nbsp;: ${row(a, x)}</span><span class="q-grp">B&nbsp;: ${row(a, y)}</span>`, options: ['A', 'B'], answer: x > y ? 'A' : 'B' }
 }
 function makeMedium() {
   const t = Math.random()
   if (t < 0.25) { const a = rnd(5, 15), b = rnd(3, 10), s = a + b; return { prompt: `${a} + ${b} = ?`, options: uniqueNumbers(s, 8, 30, 4), answer: s } }
   if (t < 0.5) { const a = rnd(8, 18), b = rnd(2, a - 2), d = a - b; return { prompt: `${a} - ${b} = ?`, options: uniqueNumbers(d, 0, 18, 4), answer: d } }
-  if (t < 0.72) { const a = rnd(2, 5), b = rnd(2, 5), p = a * b; return { prompt: `${a} paquets de ${b} œufs, ça fait ?`, options: uniqueNumbers(p, 4, 30, 4), answer: p } }
+  if (t < 0.72) { const a = rnd(2, 5), b = rnd(2, 5), p = a * b; return { prompt: `${a} paquets de ${b} œufs, ça fait ?`, scene: Array.from({ length: a }, () => `<span class="q-grp">${eggs(b)}</span>`).join(''), options: uniqueNumbers(p, 4, 30, 4), answer: p } }
   if (t < 0.88) { const a = rnd(2, 9), s = rnd(a + 1, 18), m = s - a; return { prompt: `${a} + ? = ${s}`, options: uniqueNumbers(m, 0, 16, 4), answer: m } }
   const st = rnd(1, 6), seq = [st, st + 2, st + 4, st + 6]
   return { prompt: 'Quel nombre vient après ?', scene: seq.join('  ') + '  …', options: uniqueNumbers(st + 8, st + 2, st + 16, 4), answer: st + 8 }
@@ -105,9 +112,12 @@ export const quizGame: GameDef = {
         <div class="qopts" id="qOpts"></div>
         <div class="qfoot"><span id="qProgress"></span><span class="streak" id="qStreak"></span></div>
       </div>`
-    quiz = { score: 0, lives: 3, streak: 0, best: 0, asked: 0, max: c.byTier(8, 10, 10), running: true }
+    quiz = { score: 0, lives: 3, streak: 0, best: 0, asked: 0, max: c.byTier(8, 10, 10), running: true, atlas: null }
     renderHearts()
-    nextQuestion()
+    // Les sprites d'abord : les scènes à compter se construisent avec
+    loadAtlas('animals').then((a: Atlas) => {
+      if (quiz.running) { quiz.atlas = a; nextQuestion() }
+    })
     return () => { quiz.running = false }
   }
 }

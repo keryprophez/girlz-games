@@ -82,6 +82,17 @@ export function setFrame(el: HTMLElement, atlas: Atlas, name: string, px: number
    se relance à l'identique, et on retrouve la source sans traduction à faire. */
 
 /** Animaux de la ferme présents dans `animals`, dans l'ordre où on aime les voir. */
+/** Chemin d'une icône food (rendu 2D du Food Kit, voir import-assets.mjs). */
+export const foodIcon = (name: string) => `${import.meta.env.BASE_URL}assets/icons/food/${name}.png`
+
+/** Une icône food prête à insérer dans du HTML. */
+export const foodImg = (name: string, px: number) =>
+  `<img class="spr" src="${foodIcon(name)}" width="${px}" height="${px}" alt="">`
+
+/** Un sprite d'atlas prêt à insérer dans du HTML. */
+export const spriteSpan = (atlas: Atlas, name: string, px: number) =>
+  `<i class="spr" style="${frameStyle(atlas, name, px)}"></i>`
+
 export const FARM_ANIMALS = [
   'cow', 'pig', 'chicken', 'chick', 'duck', 'horse', 'goat', 'rabbit',
   'dog', 'frog', 'owl', 'parrot'
