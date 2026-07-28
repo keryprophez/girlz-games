@@ -36,7 +36,7 @@ interface FermeState {
   reward(gameId: string, starsEarned: number, stars: number, profileId?: string): string | null
 }
 
-const emptyProgress = (): Progress => ({ stars: 0, stickers: [], bestStars: {} })
+const emptyProgress = (): Progress => ({ stars: 0, stickers: [], bestStars: {}, adapt: {} })
 
 export const useFerme = create<FermeState>()(
   persist(
@@ -104,10 +104,17 @@ export const useFerme = create<FermeState>()(
         }
         const bestStars = { ...prog.bestStars }
         bestStars[gameId] = Math.max(bestStars[gameId] || 0, stars)
+        // Difficulté qui s'adapte en silence : 3 ⭐ pousse vers le vif (+0.5),
+        // 1 ⭐ vers le doux (−0.5), 2 ⭐ ramène vers le réglage de base (±0.25).
+        // Le décalage effectif (arrondi, ±1 cran max) est appliqué par GameHost.
+        const adapt = { ...(prog.adapt || {}) }
+        const cur = adapt[gameId] || 0
+        adapt[gameId] = Math.max(-1, Math.min(1,
+          stars >= 3 ? cur + 0.5 : stars <= 1 ? cur - 0.5 : cur - Math.sign(cur) * 0.25))
         set({
           progress: {
             ...s.progress,
-            [id]: { stars: prog.stars + starsEarned, stickers, bestStars }
+            [id]: { stars: prog.stars + starsEarned, stickers, bestStars, adapt }
           }
         })
         return newSticker

@@ -53,4 +53,8 @@ export interface Progress {
   stars: number
   stickers: string[]
   bestStars: Record<string, number>
+  /** Ajustement discret de difficulté par jeu (jamais affiché) : −1..+1,
+      par demi-pas. Deux parties parfaites → un cran plus vif ; deux parties
+      à une étoile → un cran plus doux. Voir reward() et GameHost. */
+  adapt?: Record<string, number>
 }

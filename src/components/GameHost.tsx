@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
 import { gameById } from '../games'
-import type { FinishPayload, GameContext, Profile } from '../core/types'
+import type { FinishPayload, GameContext, Profile, Tier } from '../core/types'
 import { toast } from '../core/utils'
 import { confetti, FX } from '../core/fx'
 import { say, shutUp } from '../core/voice'
@@ -99,13 +99,18 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     iris() // entrée de scène : le cercle s'ouvre sur le jeu
     if (game.music) playMusic(game.music)
     const p = profile
+    // Difficulté adaptative : le palier choisi par le parent, décalé en
+    // silence d'un cran max selon les dernières parties (voir reward()).
+    const TIERS: Tier[] = ['easy', 'med', 'exp']
+    const shift = Math.round(useFerme.getState().progressOf(p.id).adapt?.[gameId] ?? 0)
+    const tier = TIERS[Math.max(0, Math.min(2, TIERS.indexOf(p.tier) + shift))]
     const ctx: GameContext = {
       root: rootRef.current,
-      tier: p.tier,
+      tier,
       playerName: p.name,
       avatar: p.avatar,
       look: p.look || null,
-      byTier: (e, m, x) => (p.tier === 'easy' ? e : p.tier === 'med' ? m : x),
+      byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
       toast,
       say,
       finish(payload) {
