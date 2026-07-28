@@ -3,7 +3,7 @@ import { impact } from '../core/impact'
 import { $ } from '../core/utils'
 import { sCatch, sJump, sNope, sWin } from '../core/audio'
 import {
-  createStage, loadThree, loader, woodTex,
+  createStage, loadThree, loader, woodTex, avatarMedallion,
   type Stage
 } from '../core/three3d'
 
@@ -198,6 +198,10 @@ export const flappy: GameDef = {
       const { g: chick, wings } = makeChick(T)
       chick.scale.setScalar(1.15) // un peu plus gros que sa hitbox : plus lisible, plus indulgent
       scene.add(chick)
+      // Le poussin, c'est ELLE : médaillon photo au-dessus de la houppette
+      avatarMedallion(T, c.avatar, 0.14).then(med => {
+        if (med && fl) { med.position.set(0, 0.34, 0); chick.add(med) }
+      })
 
       /* Plumes : petites sphères jaunes qui voltigent au choc */
       const featherGeo = new T.SphereGeometry(0.03, 6, 5)

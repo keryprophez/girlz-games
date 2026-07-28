@@ -449,6 +449,32 @@ export function fitModel(T: T3, g: import('three').Object3D, targetSize: number)
   return g
 }
 
+/** Médaillon rond avec la photo de la joueuse (ctx.avatar), toujours face
+    caméra — pour incarner « c'est MOI qui joue » dans les jeux 3D.
+    Renvoie null sans photo ; le nettoyage passe par disposeTree comme le
+    reste de la scène. */
+export async function avatarMedallion(T: T3, dataUrl: string | null, size: number) {
+  if (!dataUrl) return null
+  const img = new Image()
+  try {
+    await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = dataUrl })
+  } catch { return null }
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')!
+  g.save()
+  g.beginPath(); g.arc(64, 64, 57, 0, Math.PI * 2); g.clip()
+  g.drawImage(img, 0, 0, 128, 128)
+  g.restore()
+  g.beginPath(); g.arc(64, 64, 57, 0, Math.PI * 2)
+  g.lineWidth = 9; g.strokeStyle = '#FFFDF6'; g.stroke()
+  const tex = new T.CanvasTexture(c)
+  tex.colorSpace = T.SRGBColorSpace
+  const sp = new T.Sprite(new T.SpriteMaterial({ map: tex, depthWrite: false }))
+  sp.scale.set(size, size, 1)
+  return sp
+}
+
 /* ---------- Interaction : quel objet est sous le doigt ? ---------- */
 export function picker(stage: Stage) {
   const { T, camera, renderer } = stage

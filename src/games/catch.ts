@@ -3,7 +3,7 @@ import { $, pick } from '../core/utils'
 import { sPower, sWin, tone } from '../core/audio'
 import { impact } from '../core/impact'
 import {
-  createStage, loadPhysics, loader, fixedStep, loadModel, fitModel,
+  createStage, loadPhysics, loader, fixedStep, loadModel, fitModel, avatarMedallion,
   type Stage, type Cannon
 } from '../core/three3d'
 
@@ -272,12 +272,20 @@ export const catchGame: GameDef = {
       }, 1000)
 
       /* --- Boucle --- */
+      // C'est SON panier : médaillon photo qui l'accompagne (hors du groupe
+      // remis à l'échelle par fitModel, il suit dans la boucle)
+      let med: any = null
+      avatarMedallion(T, c.avatar, 0.28).then(m => {
+        if (m && ca) { med = m; scene.add(m) }
+      })
+
       stage.start(dt => {
         if (!ca || !ca.running) return
         // Le panier suit le doigt en douceur : un suivi sec donnerait du zapping
         ca.basketX += (ca.wantX - ca.basketX) * Math.min(1, dt * 16)
         basket.position.x = ca.basketX
         basket.rotation.z = (ca.wantX - ca.basketX) * 0.5   // il penche : ça lui donne du poids
+        if (med) med.position.set(ca.basketX, basket.position.y + 0.62, 0)
 
         ca.step(dt, () => {
           world.step(1 / 60)

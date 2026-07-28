@@ -3,7 +3,7 @@ import { impact } from '../core/impact'
 import { $ } from '../core/utils'
 import { sJump, sNope, sWin } from '../core/audio'
 import {
-  createStage, loadThree, loader, woodTex,
+  createStage, loadThree, loader, woodTex, avatarMedallion,
   type Stage
 } from '../core/three3d'
 
@@ -214,6 +214,10 @@ export const runGame: GameDef = {
       const { g: tractor, wheels } = makeTractor(T)
       tractor.position.set(0, 0, 0)
       scene.add(tractor)
+      // C'est ELLE qui conduit : son médaillon photo flotte au-dessus de la cabine
+      avatarMedallion(T, c.avatar, 0.26).then(med => {
+        if (med && run) { med.position.set(-0.14, 1.02, 0); tractor.add(med) }
+      })
 
       /* Fumée de cheminée + poussière : petites sphères recyclées */
       const puffGeo = new T.SphereGeometry(0.05, 8, 6)
