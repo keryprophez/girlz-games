@@ -35,8 +35,8 @@ rendu qu'on ne sait pas dessiner. C'est pourquoi les jeux phares sont passés en
 sur de vrais sprites Kenney, avec de vrais trous)
 
 **🟡 Bonne idée, rendu à refaire**
-`socks` · `geo` (le zoom continent → ville gagnerait à devenir un
-vrai déplacement de caméra 3D)
+*(vide — `socks` et `geo` ont été refaits : tricot + jardin pour l'un,
+sprites sur toute la carte pour l'autre)*
 
 **⚪ Sans score, à laisser tranquilles**
 `fireworks` · `dressup`
@@ -171,6 +171,26 @@ Pour aller plus loin, il me faut de ta part : **l'URL du projet Supabase + la cl
 - **Mode coopération** : les deux jouent en même temps sur la même tablette.
 - Vérifier les perfs sur la vraie tablette (60 fps sur les jeux 3D, sinon baisser
   la résolution d'ombre / le `pixelRatio`).
+
+---
+
+## Vague « 5 axes » du 28/07 ✅
+
+- **Les filles dans les jeux** : `avatarMedallion()` (three3d) — la photo de
+  profil en médaillon face caméra, posée sur le tracteur, le poussin et le
+  panier d'Attrape. À étendre aux autres jeux au besoin (3 lignes par jeu).
+- **Univers Apprendre habillé** : Quiz, Intrus et Marché en sprites/icônes.
+  Découverte clé : le Food Kit embarque un rendu 2D par modèle (`Previews/`),
+  importés dans `public/assets/icons/food/` — cohérents avec la 3D.
+- **Difficulté adaptative silencieuse** : `progress.adapt` (par profil × jeu),
+  mis à jour dans `reward()`, appliqué par GameHost (±1 cran max sur le palier
+  parent). Jamais affiché.
+- **socks + geo refaits** (voir verdicts ci-dessus). Nouveau helper
+  `frameDataURL()` (sprites dans du SVG).
+- **Bots de jeu en CI** : `npm run test:play` dans `deploy.yml` — bonhomme
+  joué jusqu'au bout, chenille qui croque, tracteur sur 100 m, poussin sur
+  2 barrières, sauce de pizza cherchée sous le doigt. Crochets `window.__BOT`
+  inertes en prod. La suite se saute si le runner n'a pas de WebGL.
 
 ---
 
