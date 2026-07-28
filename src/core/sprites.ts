@@ -82,6 +82,31 @@ export function setFrame(el: HTMLElement, atlas: Atlas, name: string, px: number
    se relance à l'identique, et on retrouve la source sans traduction à faire. */
 
 /** Animaux de la ferme présents dans `animals`, dans l'ordre où on aime les voir. */
+const imgEls = new Map<string, HTMLImageElement>()
+const cropCache = new Map<string, string>()
+
+/** Découpe une frame d'atlas en data-URL — pour les <image> d'un SVG, là où
+    background-position ne peut pas suivre. Après `await loadAtlas`, la planche
+    est déjà décodée : le découpage est immédiat. */
+export function frameDataURL(atlas: Atlas, name: string, px: number): string {
+  const key = `${atlas.image}|${name}|${px}`
+  const hit = cropCache.get(key)
+  if (hit) return hit
+  const f = atlas.frames[name]
+  if (!f) return ''
+  let img = imgEls.get(atlas.image)
+  if (!img) { img = new Image(); img.src = atlas.image; imgEls.set(atlas.image, img) }
+  if (!img.complete) return ''
+  const k = px / Math.max(f.w, f.h)
+  const c = document.createElement('canvas')
+  c.width = Math.max(1, Math.round(f.w * k))
+  c.height = Math.max(1, Math.round(f.h * k))
+  c.getContext('2d')!.drawImage(img, f.x, f.y, f.w, f.h, 0, 0, c.width, c.height)
+  const u = c.toDataURL('image/png')
+  cropCache.set(key, u)
+  return u
+}
+
 /** Chemin d'une icône food (rendu 2D du Food Kit, voir import-assets.mjs). */
 export const foodIcon = (name: string) => `${import.meta.env.BASE_URL}assets/icons/food/${name}.png`
 

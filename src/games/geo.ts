@@ -2,6 +2,7 @@ import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd, shuffle } from '../core/utils'
 import { sGood, sNope, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
+import { frameDataURL, GREEN_TREES, loadAtlas, type Atlas } from '../core/sprites'
 
 /* La Loupe Magique — apprendre l'emboîtement CONTINENT ⊃ PAYS ⊃ RÉGION ⊃
    VILLE sans quiz ni lecture. Un petit animal veut rentrer chez lui : on
@@ -16,10 +17,12 @@ const CONTINENTS = ['Grande Terre', 'Douceterre', 'Mondorico', 'Terre-en-Ciel', 
 const COUNTRIES = ['Doucepré', 'Sucrelande', 'Mielpays', 'Câlinie', 'Pomdland', 'Rêvie', 'Bonbonie']
 const REGION_NAMES = ['les Collines', 'la Grande Forêt', 'les Prés Fleuris', 'la Vallée', 'le Bord de Mer', 'les Montagnes']
 const CITY_NAMES = ['Framboisette', 'Petibourg', 'Coquelicot', 'Ronronville', 'Trésorville', 'Mésange', "Pomme d'Api", 'Câlinou', 'Bisou-les-Bains', 'Doudouville', 'Papillon', 'Guimauve']
-const LANDMARKS = ['🏔️', '🌋', '🗼', '🏰', '🌴', '⛰️']
+/* Les animaux sont de VRAIS sprites de la planche Kenney (plus d'emoji) —
+   le nom de frame sert aussi de clé pour frameDataURL. */
 const ANIMALS: [string, string][] = [
-  ['🐰', 'le petit lapin'], ['🐭', 'la petite souris'], ['🦊', 'le renardeau'],
-  ['🐻', "l'ourson"], ['🐨', 'le koala'], ['🐱', 'le chaton'], ['🐹', 'le hamster'], ['🐧', 'le pingouin']
+  ['rabbit', 'le petit lapin'], ['bear', "l'ourson"], ['penguin', 'le pingouin'],
+  ['panda', 'le petit panda'], ['monkey', 'le petit singe'], ['frog', 'la petite grenouille'],
+  ['owl', 'la chouette'], ['duck', 'le caneton']
 ]
 const REGION_COLORS: [string, string][] = [
   ['#CDEBB6', '#8FCB74'], ['#BFE3F5', '#6FBEE0'], ['#FFDFC4', '#F0A878'],
@@ -69,11 +72,12 @@ const houseMark = () => `
   <rect x="-8" y="-3" width="16" height="11" rx="1.5" fill="#FBE4BC" stroke="#C99A5F" stroke-width="1.5"/>
   <rect x="-2.5" y="1" width="5" height="7" fill="#C77B4E"/>`
 
-function tree(x: number, y: number, s: number): string {
-  return `<g transform="translate(${x},${y})" opacity=".85" pointer-events="none">
-    <rect x="${-1.4 * s}" y="0" width="${2.8 * s}" height="${4 * s}" fill="#9A6A3C"/>
-    <polygon points="${-7 * s},1 ${7 * s},1 0,${-11 * s}" fill="#4CA772"/>
-    <polygon points="${-5 * s},${-6 * s} ${5 * s},${-6 * s} 0,${-15 * s}" fill="#5CBB80"/></g>`
+/** Un vrai arbre de la planche nature, posé sur la carte (déterministe par index). */
+function tree(x: number, y: number, s: number, i = 0): string {
+  const u = frameDataURL(geo.nature, GREEN_TREES[i % GREEN_TREES.length], 40)
+  const w = 26 * s
+  return `<image href="${u}" x="${x - w / 2}" y="${y - w}" width="${w}" height="${w}"
+    opacity=".92" pointer-events="none"/>`
 }
 
 /* ---------- Construction d'une carte ---------- */
@@ -97,7 +101,7 @@ function buildMap(nCities: number) {
   const ccols = shuffle([...COUNTRY_COLORS])
   const others = OTHER_C.map((O, i) => ({
     ...O, name: countryNames[i + 1], path: blob(O.cx, O.cy, O.rx, O.ry, i * 2 + 4),
-    fill: ccols[i][0], stroke: ccols[i][1], landmark: pick(LANDMARKS)
+    fill: ccols[i][0], stroke: ccols[i][1]
   }))
   return { continent, target, others }
 }
@@ -120,18 +124,19 @@ function renderMap() {
     return `<g class="geo-region" data-r="${ri}">
       <path class="geo-region-blob${ri === tr ? ' tregion' : ''}" data-hit="region" data-r="${ri}"${ri === tr ? ' data-correct="1"' : ''}
         d="${R.path}" fill="${R.fill}" stroke="${R.stroke}" stroke-width="2.5"/>
-      ${tree(R.cx - R.rx * 0.5, R.cy + R.ry * 0.4, 0.7)}
+      ${tree(R.cx - R.rx * 0.5, R.cy + R.ry * 0.4, 0.7, ri)}
       <text class="geo-rlabel" x="${R.cx}" y="${R.cy - R.ry * 0.66}" text-anchor="middle">${R.name}</text>
       ${cities}
     </g>`
   }).join('')
 
-  // Les autres pays (décoratifs) — à choisir à l'étape « pays »
+  // Les autres pays (décoratifs) — à choisir à l'étape « pays ».
+  // Leur « monument » : un bosquet de vrais arbres, plus d'emoji.
   const othersSvg = others.map((O: any, oi: number) => `
     <g class="geo-country geo-country-other" data-oi="${oi}">
       <path class="geo-country-blob" data-hit="country" data-target="0"
         d="${O.path}" fill="${O.fill}" stroke="${O.stroke}" stroke-width="3"/>
-      <text x="${O.cx}" y="${O.cy - 2}" text-anchor="middle" font-size="26" pointer-events="none">${O.landmark}</text>
+      ${tree(O.cx - 14, O.cy + 8, 1.1, oi)}${tree(O.cx + 12, O.cy + 12, 0.8, oi + 2)}
       <text class="geo-colabel" x="${O.cx}" y="${O.cy + O.ry * 0.62}" text-anchor="middle">${O.name}</text>
     </g>`).join('')
 
@@ -147,7 +152,8 @@ function renderMap() {
         <text class="geo-colabel geo-tclabel" x="${target.cx}" y="${target.cy - target.ry * 0.72}" text-anchor="middle">${target.name}</text>
         <g class="geo-inside" id="geoInside">${regionsSvg}</g>
       </g>
-      <text class="geo-char" id="geoChar" x="${t.x}" y="${t.y - 12}" text-anchor="middle">${geo.animal[0]}</text>
+      <image class="geo-char" id="geoChar" href="${frameDataURL(geo.animals, geo.animal[0], 52)}"
+        x="${t.x - 13}" y="${t.y - 38}" width="26" height="26"/>
       <rect class="geo-contHit" data-hit="continent" x="4" y="4" width="392" height="292" rx="30" fill="transparent"/>
     </g>`
 }
@@ -288,7 +294,7 @@ function showRecap() {
         <div class="geo-nest geo-n-pays"><span class="geo-nlabel">🏳️ Pays</span><b>${T.name}</b>
           <div class="geo-nest geo-n-region"><span class="geo-nlabel">🏞️ Région</span><b>${R.name}</b>
             <div class="geo-nest geo-n-ville"><span class="geo-nlabel">🏘️ Ville</span><b>${city.name}</b>
-              <span class="geo-recap-char">${geo.animal[0]}</span></div>
+              <img class="geo-recap-char" src="${frameDataURL(geo.animals, geo.animal[0], 56)}" width="28" height="28" alt=""></div>
           </div>
         </div>
       </div>
@@ -368,7 +374,10 @@ export const geoGame: GameDef = {
     })
 
     ctx.say("Le monde est plein de continents. Dans un continent, il y a des pays. Dans un pays, des régions. Et dans une région, des villes !")
-    setTimeout(() => { if (geo && geo.running) startRound() }, 200)
+    // Les planches d'abord : la carte se dessine avec animaux et arbres dedans
+    Promise.all([loadAtlas('animals'), loadAtlas('nature')]).then(([a, n]: Atlas[]) => {
+      if (geo && geo.running) { geo.animals = a; geo.nature = n; startRound() }
+    })
 
     return () => { if (geo) { geo.running = false; geo = null } }
   }
