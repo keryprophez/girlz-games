@@ -214,6 +214,37 @@ export const ninja: GameDef = {
         scene.add(tr, lv)
       }
 
+      /* La fête au verger : lampions chauds qui se balancent + lucioles.
+         Entre deux volées, l'écran vivait mal son vide — plus maintenant. */
+      const lanterns: any[] = []
+      for (const [lx, ly, lz] of [[-1.7, 1.75, -2.2], [0, 2.05, -2.6], [1.7, 1.8, -2.2]] as [number, number, number][]) {
+        const g = new T.Group()
+        const paper = new T.Mesh(
+          new T.SphereGeometry(0.15, 12, 10),
+          new T.MeshStandardMaterial({ color: 0xB2402E, roughness: 0.6, emissive: 0xFF9040, emissiveIntensity: 0.9 })
+        )
+        paper.scale.set(1, 1.2, 1)
+        const cap = new T.Mesh(new T.CylinderGeometry(0.05, 0.07, 0.05, 8),
+          new T.MeshStandardMaterial({ color: 0x4A3524, roughness: 0.8 }))
+        cap.position.y = 0.19
+        const wire = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.5, 4),
+          new T.MeshStandardMaterial({ color: 0x2A2018, roughness: 1 }))
+        wire.position.y = 0.45
+        g.add(paper, cap, wire)
+        g.position.set(lx, ly, lz)
+        scene.add(g)
+        lanterns.push({ g, phase: lx * 2.1 })
+      }
+      const fireflyGeo = new T.SphereGeometry(0.02, 6, 5)
+      const fireflyMat = new T.MeshBasicMaterial({ color: 0xFFE9A0, transparent: true })
+      const fireflies: any[] = []
+      for (let i = 0; i < 12; i++) {
+        const m = new T.Mesh(fireflyGeo, fireflyMat.clone())
+        m.position.set((Math.random() * 2 - 1) * 3.4, -0.6 + Math.random() * 2.2, -1 - Math.random() * 4)
+        scene.add(m)
+        fireflies.push({ m, ph: Math.random() * 9, sp: 0.25 + Math.random() * 0.3 })
+      }
+
       /* Monde physique : pas de sol — ce qui retombe sort de l'écran et meurt */
       const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) })
 
@@ -227,10 +258,12 @@ export const ninja: GameDef = {
       }))
       if (dead) { stage.dispose(); return }
 
+      // Cadence resserrée : une volée vole ~1,3 s — au-delà de 1,5 s entre
+      // deux, l'écran restait vide (vu en passe visuelle). Zéro temps mort.
       const cfg = c.byTier(
-        { min: 1, max: 2, every: 1800, bad: 0.08 },
-        { min: 2, max: 3, every: 1500, bad: 0.15 },
-        { min: 2, max: 4, every: 1200, bad: 0.22 }
+        { min: 2, max: 2, every: 1450, bad: 0.08 },
+        { min: 2, max: 3, every: 1250, bad: 0.15 },
+        { min: 3, max: 4, every: 1050, bad: 0.22 }
       )
       nj = {
         stage, CANNON, world, models, fruits: [], halves: [],
@@ -299,6 +332,13 @@ export const ninja: GameDef = {
       /* --- Boucle --- */
       stage.start((dt, now) => {
         if (!nj || !nj.running) return
+        // La fête vit toute seule : lampions qui se balancent, lucioles
+        for (const l of lanterns) l.g.rotation.z = Math.sin(now / 900 + l.phase) * 0.09
+        for (const fy of fireflies) {
+          fy.m.position.x += Math.sin(now / 1300 + fy.ph) * dt * fy.sp
+          fy.m.position.y += Math.cos(now / 1100 + fy.ph * 2) * dt * fy.sp * 0.6
+          fy.m.material.opacity = 0.35 + Math.sin(now / 240 + fy.ph * 3) * 0.3
+        }
         nj.step(dt, () => {
           world.step(1 / 60)
           for (const f of nj.fruits) { f.body.position.z = 0; f.body.velocity.z = 0 }
@@ -353,6 +393,7 @@ export const ninja: GameDef = {
         window.removeEventListener('resize', sizeBlade)
         clearInterval(nj.timer)
         clearTimeout(nj.waveT)
+        fireflyGeo.dispose(); fireflyMat.dispose()
         stage.dispose()
       }
     })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })

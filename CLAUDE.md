@@ -30,8 +30,9 @@ est et ce qui reste à faire · `README.md` = présentation de l'app.
 **Le hors-ligne n'est PAS une contrainte** (décision du 25/07/2026). La PWA reste
 — elle sert à installer l'app sur l'écran d'accueil — mais le poids du précache
 n'est plus un critère de conception : les assets peuvent être chargés à la
-demande. C'est le **temps de démarrage** qui compte, pas la disponibilité en
-avion.
+demande. Le temps de démarrage n'est pas non plus un critère (dit explicitement
+le 28/07) : ce qui compte, c'est la **qualité une fois en jeu** — design,
+physique, jouabilité.
 
 **Règle d'arbitrage** : entre « ajouter un jeu » et « amener un jeu existant au
 niveau des jeux 3D », **toujours la seconde option**.

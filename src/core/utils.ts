@@ -1,5 +1,13 @@
-export const FARM = ['🐕', '🐈', '🐔', '🐤', '🐷', '🐮', '🐑', '🐰', '🐴', '🦆', '🐐', '🦃']
+/* La collection de l'album : des NOMS de sprites de la planche animals.
+   L'ordre est l'ordre de déblocage (les animaux de la ferme d'abord). */
 export const COLLECT = [
+  'dog', 'chicken', 'chick', 'pig', 'cow', 'rabbit', 'horse', 'duck',
+  'goat', 'frog', 'owl', 'parrot', 'bear', 'panda', 'monkey', 'penguin',
+  'giraffe', 'zebra', 'elephant', 'whale', 'moose', 'buffalo', 'sloth', 'hippo'
+]
+/** L'ancienne collection (emoji), gardée UNIQUEMENT pour migrer les
+    sauvegardes existantes : l'emoji d'index i devient COLLECT[i]. */
+export const OLD_COLLECT = [
   '🐕', '🐈', '🐔', '🐤', '🐷', '🐮', '🐑', '🐰', '🐴', '🦆', '🐐', '🦃',
   '🐝', '🦋', '🐞', '🐌', '🦔', '🐸', '🦉', '🦄', '🐢', '🦊', '🐿️', '🦩'
 ]

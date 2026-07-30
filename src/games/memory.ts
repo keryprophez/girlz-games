@@ -1,14 +1,16 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, FARM, shuffle } from '../core/utils'
+import { $, shuffle } from '../core/utils'
 import { sFlip, sGood, sWin } from '../core/audio'
 import { fxAt, JUICE } from '../core/fx'
+import { FARM_ANIMALS, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
 
 let mem: any = {}
 let ctx: GameContext
 
 function loadRound() {
   const pairs = mem.rounds[mem.round]
-  const picks = shuffle([...FARM]).slice(0, pairs)
+  // Les faces des cartes : de vrais sprites de la planche animals
+  const picks = shuffle([...FARM_ANIMALS]).slice(0, pairs)
   const deck = shuffle([...picks, ...picks])
   mem.first = null; mem.lock = false; mem.found = 0; mem.pairs = pairs
   $('memRound').textContent = `Manche ${mem.round + 1}/${mem.rounds.length}`
@@ -19,11 +21,11 @@ function loadRound() {
   board.style.maxWidth = cols * 98 + 'px'
   board.innerHTML = ''
   const cards: HTMLButtonElement[] = []
-  deck.forEach(emoji => {
+  deck.forEach(name => {
     const card = document.createElement('button')
     card.className = 'mcard'
-    card.dataset.emoji = emoji
-    card.innerHTML = `<div class="mcinner"><div class="face back">❓</div><div class="face front">${emoji}</div></div>`
+    card.dataset.k = name
+    card.innerHTML = `<div class="mcinner"><div class="face back">❓</div><div class="face front">${spriteSpan(mem.atlas, name, 46)}</div></div>`
     card.onclick = () => flipCard(card)
     board.appendChild(card)
     cards.push(card)
@@ -43,7 +45,7 @@ function flipCard(card: HTMLButtonElement) {
   if (!mem.first) { mem.first = card; return }
   mem.lock = true; mem.moves++
   $('memMoves').textContent = `Coups : ${mem.moves}`
-  if (mem.first.dataset.emoji === card.dataset.emoji) {
+  if (mem.first.dataset.k === card.dataset.k) {
     setTimeout(() => {
       if (!mem.running) return
       mem.first.classList.add('matched'); card.classList.add('matched')
@@ -90,7 +92,10 @@ export const memory: GameDef = {
       </div>
       <div class="board" id="memBoard"></div>`
     mem = { rounds: c.byTier([3, 4, 6], [4, 6, 8], [6, 8, 10]), round: 0, moves: 0, running: true }
-    loadRound()
+    // La planche d'abord : les cartes se construisent avec les sprites
+    loadAtlas('animals').then((a: Atlas) => {
+      if (mem.running) { mem.atlas = a; loadRound() }
+    })
     return () => { mem.running = false; clearTimeout(mem.previewT) }
   }
 }

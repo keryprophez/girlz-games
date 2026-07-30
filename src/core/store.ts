@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
 import type { Look } from './character'
-import { COLLECT } from './utils'
+import { COLLECT, OLD_COLLECT } from './utils'
 import { setSound } from './audio'
 
 interface FermeState {
@@ -124,7 +124,28 @@ export const useFerme = create<FermeState>()(
       name: STORE_KEY,
       // Sans ça, un dépassement de quota fait échouer l'enregistrement en silence
       storage: createJSONStorage(() => loudStorage),
-      onRehydrateStorage: () => state => { if (state) setSound(state.sound) }
+      onRehydrateStorage: () => state => {
+        if (!state) return
+        setSound(state.sound)
+        // Migration : les stickers étaient des emoji, ils deviennent des noms
+        // de sprites (même index → même rang de déblocage, rien n'est perdu)
+        const prog = state.progress || {}
+        let dirty = false
+        const next: typeof prog = {}
+        for (const [id, p] of Object.entries(prog)) {
+          if (p?.stickers?.some(s => OLD_COLLECT.includes(s))) {
+            dirty = true
+            next[id] = {
+              ...p,
+              stickers: p.stickers.map(s => {
+                const i = OLD_COLLECT.indexOf(s)
+                return i >= 0 ? COLLECT[i] : s
+              })
+            }
+          } else next[id] = p
+        }
+        if (dirty) setTimeout(() => useFerme.setState({ progress: next }), 0)
+      }
     }
   )
 )
