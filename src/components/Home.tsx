@@ -8,6 +8,10 @@ import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
 import { BackupButton } from './Backup'
 import type { Tier } from '../core/types'
+import { ICON, starsHTML } from '../core/icons'
+
+const Svg = ({ html, className }: { html: string; className?: string }) =>
+  <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
 const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
@@ -57,15 +61,14 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
               onClick={() => { store.selectProfile(p.id); sFlip() }}>
               <button className="pavatar" onClick={e => { e.stopPropagation(); askPhoto(p.id) }}
                 style={p.avatar ? { backgroundImage: `url(${p.avatar})` } : undefined}>
-                {!p.avatar && '👧'}
-                <span className="pcam">📷</span>
+                <span className="pcam"><Svg html={ICON.camera} /></span>
               </button>
               {p.avatar && (
                 <button className="pdel" title="Enlever la photo"
                   onClick={e => { e.stopPropagation(); store.setAvatar(p.id, null) }}>✖</button>
               )}
               <div className="pname">{p.name}</div>
-              <div className="pmeta">⭐ {pProg.stars}</div>
+              <div className="pmeta"><Svg html={ICON.star} className="ico-inline" /> {pProg.stars}</div>
               {sel && (
                 <button className="ptier" onClick={e => { e.stopPropagation(); store.setTier(p.id, NEXT_TIER[p.tier]); sFlip() }}>
                   {TIER_LABEL[p.tier]}
@@ -78,10 +81,10 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
       <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
 
       <div className="statrow">
-        <div className="stat">⭐ {prog.stars}</div>
-        <div className="stat"><button onClick={() => setAlbumOpen(true)}>📔 {prog.stickers.length}/{COLLECT.length}</button></div>
-        <div className="stat"><button onClick={() => store.toggleSound()}>{store.sound ? '🔊' : '🔇'}</button></div>
-        <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille">🎙</button></div>
+        <div className="stat"><Svg html={ICON.star} className="ico-inline" /> {prog.stars}</div>
+        <div className="stat"><button onClick={() => setAlbumOpen(true)}><Svg html={ICON.album} className="ico-inline" /> {prog.stickers.length}/{COLLECT.length}</button></div>
+        <div className="stat"><button onClick={() => store.toggleSound()}><Svg html={store.sound ? ICON.sound : ICON.mute} /></button></div>
+        <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille"><Svg html={ICON.mic} /></button></div>
         <TimerButton />
         <BackupButton />
       </div>
@@ -97,7 +100,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
                   <button className="gc" key={g.id} onClick={() => onPlay(g.id, false)}>
                     <span className={'sq ' + g.sq}>{g.icon}</span>
                     <span className="nm">{g.name}</span>
-                    <span className="gc-stars">{'★'.repeat(best)}{'☆'.repeat(3 - best)}</span>
+                    {w.id !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}
                   </button>
                 )
               })}
@@ -107,15 +110,14 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         {/* Le Défi à deux : un univers à part entière — taper un jeu ici le
             lance directement à deux, plus de bascule à activer avant */}
         <div className="cat cat-duel">
-          <div className="eyebrow">⚔️ À deux</div>
+          <div className="eyebrow"><Svg html={ICON.versus} className="ico-inline" /> À deux</div>
           <div className="duel-hint">Chacune son tour, on compare à la fin !</div>
           <div className="grid">
             {GAMES.filter(g => g.duel !== false).map(g => (
               <button className="gc gc-duel" key={'d-' + g.id} onClick={() => onPlay(g.id, true)}>
-                <span className={'sq ' + g.sq}>{g.icon}<span className="duel-badge">⚔️</span></span>
+                <span className={'sq ' + g.sq}>{g.icon}<span className="duel-badge"><Svg html={ICON.versus} /></span></span>
                 <span className="nm">{g.name}</span>
-                <span className="gc-stars">👧 🆚 👧</span>
-              </button>
+                              </button>
             ))}
           </div>
         </div>

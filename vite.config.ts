@@ -17,8 +17,8 @@ export default defineConfig({
         theme_color: '#FFF9F0',
         background_color: '#FFF9F0',
         display: 'standalone',
-        // Pas de verrou portrait : le mode grand écran ⛶ est pensé pour le paysage
-        orientation: 'any',
+        // Tout en paysage (décision du 2/09) : la tablette est posée ainsi pour la 3D
+        orientation: 'landscape',
         lang: 'fr',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },

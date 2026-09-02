@@ -3,6 +3,7 @@ import { useFerme } from '../core/store'
 import { rnd, toast } from '../core/utils'
 import { sGood, sNope, sPop, tone } from '../core/audio'
 import { say } from '../core/voice'
+import { setPaused } from '../core/session'
 
 /* Minuteur parental — on règle un temps de jeu par tranches de 5 minutes.
    Quand c'est fini : écran de pause tout doux qui bloque les jeux. Pour
@@ -124,7 +125,7 @@ export function TimerButton() {
 }
 
 /* ---- Le gardien : surveille l'heure et affiche l'écran de pause ---- */
-export function PlayGuard({ onExpire }: { onExpire: () => void }) {
+export function PlayGuard() {
   const { timerEnd, setTimerEnd } = useFerme()
   const [, tick] = useState(0)
   const [gate, setGate] = useState(false)
@@ -149,14 +150,16 @@ export function PlayGuard({ onExpire }: { onExpire: () => void }) {
     }
   })
 
-  // À l'expiration : on quitte le jeu en cours et on sonne la pause
+  // À l'expiration : le jeu en cours se fige sous l'écran de nuit (il
+  // reprendra là où il en était si un parent débloque) et on sonne la pause
   useEffect(() => {
     if (expired && !chimed.current) {
       chimed.current = true
-      onExpire()
+      setPaused(true)
       ;[392, 330, 262].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'sine', 0.1), i * 260))
       say('C\'est l\'heure de la pause ! Tu as très bien joué.')
     }
+    if (!expired) setPaused(false)
   }, [expired])
 
   if (!expired) return null

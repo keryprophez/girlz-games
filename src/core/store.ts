@@ -12,8 +12,6 @@ interface FermeState {
   progress: Record<string, Progress>
   sound: boolean
   /** Mode grand écran mémorisé : chaque jeu se monte directement à la bonne taille. */
-  bigplay: boolean
-  toggleBigplay(): void
   /** Minuteur parental : timestamp de fin de jeu (null = pas de minuteur). */
   timerEnd: number | null
   setTimerEnd(t: number | null): void
@@ -48,8 +46,6 @@ export const useFerme = create<FermeState>()(
       currentId: 'jade',
       progress: { jade: emptyProgress(), joyce: emptyProgress() },
       sound: true,
-      bigplay: false,
-      toggleBigplay() { set(s => ({ bigplay: !s.bigplay })) },
       timerEnd: null,
       setTimerEnd(t) { set({ timerEnd: t }) },
 

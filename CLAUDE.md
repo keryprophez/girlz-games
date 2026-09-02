@@ -84,7 +84,17 @@ export const monJeu: GameDef = {
 ```
 Puis **une ligne dans `src/games/index.ts`**. `GameHost` fournit `ctx` :
 `root`, `tier`, `playerName`, `avatar`, `look`, `byTier(e,m,x)`, `finish()`,
-`toast()`, `say()`.
+`toast()`, `say()`, et depuis le 2/09 les **timers de partie** `after(ms,fn)` /
+`every(ms,fn)` / `cancel(id)` / `alive()` (annulés au démontage, suspendus en
+pause — ne plus utiliser `setTimeout` pour piloter un jeu). `finish()` accepte
+`outroMs` : le jeu reste monté ce temps-là (ralenti, chute, caméra) avant le
+score. La **pause** est globale (`core/session.ts` : `setPaused`, `onPause`) :
+onglet caché, minuteur parental, bouton pause ; `createStage` fige sa boucle
+dessus tout seul. En jeu, `body.playing` met la coquille en **plein écran** :
+l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
+barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
+carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
+jamais d'emoji.
 
 **Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
 antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,

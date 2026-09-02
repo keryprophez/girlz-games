@@ -5,6 +5,9 @@ export interface FinishPayload {
   msg: string
   stars: 1 | 2 | 3
   starsEarned: number
+  /** Outro : le jeu reste monté ce temps-là (ralenti, chute, caméra qui
+      recule…) avant l'écran de résultat. 0 = tout de suite. */
+  outroMs?: number
 }
 
 import type { Look } from './character'
@@ -24,6 +27,14 @@ export interface GameContext {
       du projet est « aucune lecture requise », et le moteur de voix est
       gardé pour la suite. */
   say(text: string): void
+  /** Timers DE PARTIE : annulés au démontage, suspendus en pause. À utiliser
+      à la place de setTimeout/setInterval pour tout ce qui pilote le jeu. */
+  after(ms: number, fn: () => void): number
+  every(ms: number, fn: () => void): number
+  cancel(id: number): void
+  /** false dès que la partie est démontée : à tester dans les callbacks
+      asynchrones (chargement de modèles, promesses). */
+  alive(): boolean
 }
 
 export type GameCategory = 'reflexion' | 'memoire' | 'action' | 'creatif'

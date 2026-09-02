@@ -6,6 +6,8 @@
    Three.js est toujours chargé À LA DEMANDE (`await import('three')`) : le
    bundle de départ reste léger et l'app démarre vite sur tablette. */
 
+import { onPause, isPaused } from './session'
+
 export type T3 = typeof import('three')
 export type Cannon = typeof import('cannon-es')
 
@@ -15,12 +17,20 @@ export const loadPhysics = (): Promise<[T3, Cannon]> =>
   Promise.all([import('three'), import('cannon-es')])
 
 /* ---------- Écran d'attente ---------- */
-export function loader(arena: HTMLElement, icon: string): () => void {
+export function loader(arena: HTMLElement, icon: string, timeoutMs = 15000): () => void {
   const el = document.createElement('div')
   el.className = 'nj-loading'
   el.textContent = icon
   arena.appendChild(el)
-  return () => el.remove()
+  // Un chargement qui n'aboutit jamais (glTF en 404, import cassé) laissait
+  // tourner l'écran d'attente sans fin : au-delà du délai, c'est une erreur
+  // comme une autre, GameHost affiche « Oups » avec Réessayer.
+  const guard = window.setTimeout(() => {
+    if (!el.isConnected) return
+    el.remove()
+    window.dispatchEvent(new ErrorEvent('error', { message: 'Chargement 3D bloqué' }))
+  }, timeoutMs)
+  return () => { clearTimeout(guard); el.remove() }
 }
 
 /* ---------- Options de scène ---------- */
@@ -73,7 +83,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
 
   const renderer = new T.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
   renderer.setSize(W, H)
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
+  renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio)) // Tab A9+ : Adreno 619, 2× est trop
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = T.PCFSoftShadowMap
   renderer.toneMapping = T.ACESFilmicToneMapping
@@ -142,6 +152,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   const extras: { dispose(): void }[] = []
   let raf = 0
   let last = performance.now()
+  let unPause: () => void = () => {}
 
   const stage: Stage = {
     T, renderer, scene, camera, sun, arena, alive: true,
@@ -150,6 +161,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
       last = performance.now()
       const loop = () => {
         if (!stage.alive) return
+        if (isPaused()) { raf = 0; return } // figé : la pause relancera la boucle
         const now = performance.now()
         const dt = Math.min(0.1, (now - last) / 1000)
         last = now
@@ -158,11 +170,17 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         renderer.render(scene, camera)
         raf = requestAnimationFrame(loop)
       }
+      unPause = onPause(p => {
+        if (p || !stage.alive || raf) return
+        last = performance.now() // pas de saut de temps au retour
+        raf = requestAnimationFrame(loop)
+      })
       raf = requestAnimationFrame(loop)
     },
     dispose() {
       stage.alive = false
       cancelAnimationFrame(raf)
+      unPause()
       window.removeEventListener('resize', onResize)
       disposeTree(T, scene)
       extras.forEach(r => { try { r.dispose() } catch { /* déjà libéré */ } })

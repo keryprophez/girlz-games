@@ -40,29 +40,34 @@ jeu par itération, livré, joué, capturé.
   un jeu 3D reste sur son écran d'attente ; bots inchangés (ils tournent bien
   en CI : 2 min 22 s sur le dernier run).
 
-## Phase 1 — La coquille de jeu et le moteur d'arcade (à faire, 2-3 sessions)
+## Phase 1 — La coquille de jeu et le moteur d'arcade (en cours)
 
-Le chantier qui change tous les jeux d'un coup. **Plan détaillé à présenter
-avant de coder.**
+Le chantier qui change tous les jeux d'un coup. Plan validé le 2/09 : tout en
+paysage, plein écran automatique, carton titre, une ligne de texte gardée
+sur l'écran de fin, sessions A puis B puis C.
 
-1. **Plein écran immersif** : l'arène = le viewport, titre et sous-titre
-   disparaissent en jeu, HUD en icônes SVG dans la scène, bouton maison
-   discret, plus aucun emoji dans la coquille.
-2. **Cycle de vie** (`GameHost` + `three3d`) : outro gagner/perdre différencié
-   (ralenti, caméra, silence, puis score), pause sur `visibilitychange` et
-   minuteur parental, `unhandledrejection` → écran Oups, loader avec timeout,
-   jeton de partie qui tue les timers orphelins.
-3. **`core/arcade.ts`** : score, vies, combo, rampe liée à la performance,
+1. ✅ **Session A — plein écran et cycle de vie** : l'arène = le viewport,
+   barre flottante maison/pause/rejouer, carton titre 1,5 s, icônes SVG dans
+   la coquille (`core/icons.ts`), cérémonies différenciées (3 étoiles = fête,
+   1 étoile = « Encore ! » sans confetti, Créer sans étoiles), outro via
+   `finish({ outroMs })`, pause globale (`core/session.ts` : onglet caché,
+   minuteur parental qui fige au lieu de démonter, bouton pause), écran Oups
+   sur `unhandledrejection` et loader bloqué > 15 s, timers de partie
+   `ctx.after/every`, `pixelRatio` ≤ 1,5, manifest en paysage + invite à
+   tourner la tablette. Reste pour la phase 2 : les HUD des jeux (chips
+   emoji, `.g3-hint` en texte) passent par `core/arcade.ts` jeu par jeu.
+2. **Session B — `core/arcade.ts`** : score, vies, combo, rampe liée à la performance,
    `simMs`, near-miss, barème d'étoiles, HUD standard.
-4. **`core/scene3d.ts`** : sol, décor (kit glTF nature/ferme importé une
+3. **`core/scene3d.ts`** : sol, décor (kit glTF nature/ferme importé une
    fois), `toScreen()`, particules GPU, secousse caméra, `follow()`,
    `timeScale`. `pixelRatio` plafonné à 1,5 pour la Tab A9+, pas de bloom ni
    de réfraction tant que les fps ne sont pas mesurés.
-5. **`core/rounds.ts`** et **`core/exercise.ts`** : manches sans temps mort,
+4. **`core/rounds.ts`** et **`core/exercise.ts`** : manches sans temps mort,
    QCM avec second essai, barre de modes.
-6. **Sons de gestes** (tranche, saut, flap, pas, prise, clic ; Kenney CC0) et
+5. **Sons de gestes** (tranche, saut, flap, pas, prise, clic ; Kenney CC0) et
    bus musique / effets / voix avec ducking.
-7. **Preuve** : `icetower` et `ninja` migrés dessus, capturés, comparés.
+6. **Session B/C — preuves** : `icetower` puis `ninja` migrés dessus, capturés,
+   comparés ; sonde fps ; captures de référence par jeu.
 
 ## Phase 2 — Un jeu par session (ordre proposé)
 

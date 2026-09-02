@@ -1,3 +1,4 @@
+import { ICON } from '../core/icons'
 import { useRef, useState } from 'react'
 import { exportSave, importSave, isTight, prettySize, saveBytes, QUOTA } from '../core/backup'
 import { sGood, sNope, sPop } from '../core/audio'
@@ -16,7 +17,7 @@ export function BackupButton() {
     <>
       <div className="stat">
         <button onClick={() => { sPop(); setOpen(true) }} title="Sauvegarde">
-          {tight ? '⚠️' : '💾'}
+          <span className={tight ? 'ico-warn' : ''} dangerouslySetInnerHTML={{ __html: ICON.save }} />
         </button>
       </div>
       {open && <BackupModal onClose={() => setOpen(false)} />}

@@ -119,7 +119,7 @@ body.ingame .critter{display:none;}
   display:flex;align-items:center;justify-content:center;font-size:clamp(24px,5.6vmin,32px);
   box-shadow:inset 0 -3px 6px rgba(69,54,42,.08), inset 0 2px 4px rgba(255,255,255,.7);}
 .gc .nm{font-family:'Baloo 2';font-weight:700;font-size:clamp(12.5px,2.8vmin,15px);line-height:1.1;text-align:center;}
-.gc-stars{font-size:11px;color:var(--mango);letter-spacing:1px;}
+.gc-stars{font-size:11px;display:flex;justify-content:center;min-height:14px;}
 /* Univers « À deux » : mêmes cartes, liseré lilas + badge ⚔️ sur l'icône.
    Compacté (6 colonnes, tuiles réduites) : 30 jeux sans doubler l'accueil. */
 .cat-duel .eyebrow{color:var(--coral);}
@@ -281,8 +281,7 @@ button.chip:active{transform:scale(.92);}
   text-align:center;max-width:440px;width:88%;box-shadow:var(--e2);}
 .modal h2{font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,5.6vmin,36px);margin-bottom:4px;}
 .modal p{font-size:15.5px;color:var(--ink-soft);margin-bottom:10px;}
-.stars{font-size:clamp(34px,8.6vmin,50px);margin:6px 0 10px;}
-.stars span{display:inline-block;animation:starpop .5s var(--spring) backwards;}
+.stars{display:flex;justify-content:center;margin:4px 0 8px;}
 @keyframes starpop{from{transform:scale(0) rotate(-40deg);opacity:0;}to{transform:scale(1);opacity:1;}}
 .rewardbox{background:#FFF4D6;border:1px solid rgba(255,184,77,.4);border-radius:var(--r-md);
   padding:12px;margin:6px 0 14px;font-weight:600;}
@@ -340,7 +339,7 @@ button.chip:active{transform:scale(.92);}
 .g3-gauge{width:min(240px,72%);height:12px;border-radius:99px;background:rgba(69,54,42,.1);overflow:hidden;}
 .g3-gauge>i{display:block;height:100%;border-radius:99px;transition:width .18s ease;
   background:linear-gradient(90deg,var(--lagoon),var(--meadow));}
-body.bigplay .g3-bar{max-width:820px;}
+body.playing .g3-bar{max-width:820px;}
 /* Barre posée DANS l'arène : reste visible même en plein écran */
 .sn-overlay{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:6;
   width:auto;max-width:94%;margin:0;padding:9px 14px;border-radius:18px;
@@ -572,34 +571,94 @@ body.bigplay .g3-bar{max-width:820px;}
 .tq2-mini img{width:34px;height:34px;border-radius:8px;display:block;}
 
 /* ============================================================
-   MODE GRAND ÉCRAN (body.bigplay) — les surfaces de jeu s'étendent
+   MODE JEU (body.playing) — le jeu EST l'écran
+   Plus de carte au milieu d'une page : l'arène remplit la fenêtre, la barre
+   maison/pause/rejouer flotte par-dessus, le titre passe en carton 1,5 s.
    ============================================================ */
-body.bigplay .screen{max-width:1100px;}
-body.bigplay .gsub{display:none;}
-body.bigplay .ghostbar{margin-bottom:2px;}
-body.bigplay .halo,body.bigplay .critter{display:none;}
-body.bigplay #catchArea,body.bigplay #runArea,body.bigplay .arena{
-  max-width:min(96vw,960px);height:calc(100vh - 200px);max-height:none;}
-body.bigplay .board{max-width:min(92vw,78vh) !important;}
-body.bigplay .igrid{max-width:min(92vw,74vh) !important;}
-body.bigplay #simonWrap{max-width:min(84vw,66vh);}
-body.bigplay #moleField{max-width:min(88vw,72vh);}
-body.bigplay .qbox{max-width:780px;}
-body.bigplay .lg-grid{max-width:min(90vw,60vh) !important;}
-body.bigplay .lg-slot{width:clamp(40px,6vmin,60px);height:clamp(50px,7.5vmin,72px);}
-body.bigplay .colpanel{max-width:780px;}
-body.bigplay #pnKeys{max-width:900px;}
-body.bigplay .pkey{max-width:100px;height:min(38vh,320px);}
-body.bigplay #bbGrid{max-width:760px;}
-body.bigplay .bb-cell{max-width:70px;border-radius:14px;}
-body.bigplay .bb-animal{width:58px;height:58px;}
-body.bigplay #fishPond{max-width:720px;}
-body.bigplay .du-stage{max-width:600px;height:min(52vh,420px);}
-body.bigplay .du-doll{transform:translateX(-50%) scale(1.4);transform-origin:bottom center;}
-body.bigplay .pt-box,body.bigplay .ck-box{max-width:720px;}
-body.bigplay #tbGrid{max-width:min(92vw,66vh);}
-body.bigplay .tbar{max-width:800px !important;}
-body.bigplay #mzMap{width:140px;height:140px;}
+body.playing #app{padding:0;overflow:hidden;}
+body.playing .screen.play{max-width:none;height:100%;position:relative;margin:0;animation:none;}
+body.playing .halo,body.playing .critter{display:none;}
+body.playing .gameroot{flex:1;min-height:0;width:100%;overflow:auto;padding:6px 8px 8px;gap:6px;}
+body.playing .gameroot.outro{pointer-events:none;}
+/* Les arènes d'action et 3D prennent toute la place restante */
+body.playing #catchArea,body.playing #runArea,body.playing .arena{
+  flex:1;width:100%;max-width:none;height:auto;max-height:none;min-height:0;border-radius:20px;}
+/* Les plateaux 2D : aussi grands que la hauteur le permet */
+body.playing .board{max-width:min(92vw,78vh) !important;}
+body.playing .igrid{max-width:min(92vw,74vh) !important;}
+body.playing #simonWrap{max-width:min(84vw,66vh);}
+body.playing #moleField{max-width:min(88vw,72vh);}
+body.playing .lg-grid{max-width:min(90vw,60vh) !important;}
+body.playing .lg-slot{width:clamp(40px,6vmin,60px);height:clamp(50px,7.5vmin,72px);}
+body.playing .colpanel{max-width:780px;}
+body.playing #pnKeys{max-width:900px;}
+body.playing .pkey{max-width:100px;height:min(38vh,320px);}
+body.playing #bbGrid{max-width:760px;}
+body.playing .bb-cell{max-width:70px;border-radius:14px;}
+body.playing .bb-animal{width:58px;height:58px;}
+body.playing .du-stage{max-width:600px;height:min(52vh,420px);}
+body.playing .du-doll{transform:translateX(-50%) scale(1.4);transform-origin:bottom center;}
+body.playing .pt-box,body.playing .ck-box{max-width:720px;}
+body.playing #tbGrid{max-width:min(92vw,66vh);}
+body.playing .tbar{max-width:800px !important;}
+body.playing .g3-bar{max-width:820px;margin-top:4px;}
+body.playing .tb-pad{max-width:640px;gap:8px;}
+body.playing .tb-key{max-width:56px;font-size:26px !important;}
+body.playing #mrGrid{max-width:min(88vw,68vh);}
+body.playing .mk-bank,body.playing .mk-traywrap{max-width:760px;}
+body.playing .mk-coin{width:76px;height:76px;}
+body.playing .mk-coin.mk-note{width:116px;height:66px;}
+body.playing #geoArea{max-width:720px;}
+body.playing .geo-say{font-size:19px;}
+body.playing #cpCanvas{max-height:calc(100vh - 160px);}
+
+/* Barre flottante */
+.playbar{position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;
+  justify-content:space-between;z-index:8;pointer-events:none;}
+.playbar>*{pointer-events:auto;}
+.playbar-right{display:flex;gap:8px;}
+.playbar-who{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.8);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:99px;padding:4px 12px 4px 4px;font-family:'Baloo 2';font-size:15px;}
+.pbtn{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
+  background:rgba(255,255,255,.82);backdrop-filter:blur(10px);box-shadow:var(--e1);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;font-size:24px;transition:transform .2s var(--spring);}
+.pbtn:active{transform:scale(.9);}
+.pbtn-big{width:96px;height:96px;font-size:52px;background:var(--paper);box-shadow:var(--e2);}
+.ico{display:inline-block;vertical-align:-.15em;}
+.ico-inline{font-size:1.05em;}
+.ico-heart{color:#FF5A6E;}
+.ico-star{color:#FFC533;}
+.ico-empty{color:rgba(69,54,42,.32);}
+.ico-warn{color:var(--coral);}
+.stars .ico,.duelstars .ico{font-size:clamp(34px,7vmin,48px);margin:0 3px;}
+.stars .ico{animation:starpop .5s var(--spring) both;}
+.stars .ico:nth-child(2){animation-delay:.18s;}.stars .ico:nth-child(3){animation-delay:.36s;}
+.gc-stars .ico{font-size:12px;margin:0 1px;}
+.duel-badge .ico{font-size:12px;}
+.bigbtn .ico{font-size:1.15em;margin-right:4px;}
+#result.lost .modal h2{color:var(--ink-soft);}
+.face-blank{display:inline-block;border-radius:50%;background:#F4D9C2;border:2px solid #fff;}
+
+/* Carton titre : 1,5 s, ne bloque rien */
+.titlecard{position:absolute;inset:0;z-index:7;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;pointer-events:none;animation:titlecard 1.5s ease-in-out both;}
+.titlecard-sq{width:118px;height:118px;border-radius:34px;display:flex;align-items:center;justify-content:center;
+  font-size:64px;box-shadow:var(--e2);border:3px solid #fff;}
+.titlecard-name{font-family:'Baloo 2';font-weight:800;font-size:clamp(30px,6vmin,46px);color:var(--ink);
+  background:rgba(255,249,240,.9);padding:6px 26px;border-radius:99px;box-shadow:var(--e2);}
+@keyframes titlecard{0%{opacity:0;transform:scale(.7);}18%{opacity:1;transform:scale(1.04);}
+  30%{transform:scale(1);}78%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.08);}}
+
+/* Pause : un voile et un gros bouton lecture */
+.pausewall{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,249,240,.55);backdrop-filter:blur(8px);cursor:pointer;}
+
+/* Tablette en portrait : tourne-la (icône seule, rien à lire) */
+.rotate-hint{display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;
+  background:var(--paper);color:var(--ink);font-size:120px;}
+.rotate-hint .ico{animation:rotateHint 1.6s ease-in-out infinite;}
+@keyframes rotateHint{50%{transform:rotate(90deg);}}
+@media (orientation:portrait) and (pointer:coarse){.rotate-hint{display:flex;}}
 
 /* ---- Ninja WebGL ---- */
 #njArea canvas{display:block;width:100%;height:100%;touch-action:none;}
@@ -616,8 +675,8 @@ body.bigplay #mzMap{width:140px;height:140px;}
 .tb-pad{display:flex;gap:5px;justify-content:center;width:100%;max-width:520px;margin:0 auto;}
 .tb-key{flex:1;max-width:46px;aspect-ratio:1;padding:0;display:flex;align-items:center;justify-content:center;}
 .tb-key.del{background:#FFE5E1;color:var(--coral);max-width:52px;}
-body.bigplay .tb-pad{max-width:640px;gap:8px;}
-body.bigplay .tb-key{max-width:56px;font-size:26px !important;}
+body.playing .tb-pad{max-width:640px;gap:8px;}
+body.playing .tb-key{max-width:56px;font-size:26px !important;}
 
 /* ---- Retour à la photo par défaut sur la carte profil ---- */
 .pdel{position:absolute;top:8px;left:10px;width:22px;height:22px;border-radius:50%;
@@ -677,7 +736,7 @@ button.mr-cell:active{transform:scale(.86);}
 .mr-chip{width:34px;height:34px;border-radius:50%;border:3px solid #fff;cursor:pointer;
   box-shadow:var(--e1);transition:transform .15s var(--spring);}
 .mr-chip.sel{transform:scale(1.18);box-shadow:0 0 0 3px var(--ink);}
-body.bigplay #mrGrid{max-width:min(88vw,68vh);}
+body.playing #mrGrid{max-width:min(88vw,68vh);}
 
 /* ============================================================
    LE MARCHÉ (euros)
@@ -709,9 +768,9 @@ body.bigplay #mrGrid{max-width:min(88vw,68vh);}
 .mk-total{text-align:center;font-family:'Baloo 2';font-weight:800;font-size:22px;margin-top:4px;}
 .mk-total.over{color:var(--coral);animation:lgpulse .6s ease-in-out infinite;}
 .mk-total.exact{color:var(--meadow);}
-body.bigplay .mk-bank,body.bigplay .mk-traywrap{max-width:760px;}
-body.bigplay .mk-coin{width:76px;height:76px;}
-body.bigplay .mk-coin.mk-note{width:116px;height:66px;}
+body.playing .mk-bank,body.playing .mk-traywrap{max-width:760px;}
+body.playing .mk-coin{width:76px;height:76px;}
+body.playing .mk-coin.mk-note{width:116px;height:66px;}
 
 /* ============================================================
    BONHOMME DE NEIGE 3D — palette d'habillage
@@ -784,8 +843,8 @@ body.bigplay .mk-coin.mk-note{width:116px;height:66px;}
 .geo-n-region{border-color:var(--meadow);background:#E9F8ED;margin-top:7px;}
 .geo-n-ville{border-color:var(--lagoon);background:#E6F3FB;margin-top:7px;}
 .geo-recap-char{font-size:26px;display:inline-block;margin-left:4px;vertical-align:middle;animation:geoBob 1.4s ease-in-out infinite;}
-body.bigplay #geoArea{max-width:720px;}
-body.bigplay .geo-say{font-size:19px;}
+body.playing #geoArea{max-width:720px;}
+body.playing .geo-say{font-size:19px;}
 
 /* ============================================================
    JUICE — transition en iris
@@ -839,7 +898,7 @@ body.bigplay .geo-say{font-size:19px;}
 .fw-hint{color:#D8CFF5;z-index:3;}
 .fw-town{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:22px;letter-spacing:2px;
   filter:brightness(.55) saturate(.7);pointer-events:none;z-index:2;}
-body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
+body.playing #cpCanvas{max-height:calc(100vh - 220px);}
 
 /* ============================================================
    VOYAGE DANS L'ESPACE 3D
