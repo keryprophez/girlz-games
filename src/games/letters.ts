@@ -24,7 +24,7 @@ function loadWord() {
 
   // Les cases du mot à remplir
   const slots = $('lgWord')
-  slots.innerHTML = word.split('').map((ch, i) =>
+  slots.innerHTML = word.split('').map((_ch, i) =>
     `<span class="lg-slot${i === 0 ? ' next' : ''}" data-i="${i}"></span>`).join('')
 
   // La grille : lettres du mot + intrus

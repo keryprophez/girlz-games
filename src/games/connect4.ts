@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
-import { sGood, sNope, sPop, sWin } from '../core/audio'
+import { sGood, sNope, sPop } from '../core/audio'
 import { confetti } from '../core/fx'
 import { useFerme } from '../core/store'
 
@@ -64,6 +64,7 @@ function drop(col: number) {
   tok.style.height = c4.cell + 'px'
   tok.style.left = c4.pad + col * c4.cell + 'px'
   tok.style.top = '-' + c4.cell + 'px'
+  tok.dataset.cell = row + ':' + col
   $('c4Board').appendChild(tok)
   // La gravité : le jeton tombe jusqu'à sa case
   requestAnimationFrame(() => { tok.style.top = c4.pad + row * c4.cell + 'px' })
@@ -74,8 +75,11 @@ function drop(col: number) {
     if (line) {
       c4.running = false
       sGood(); confetti()
-      // Les 4 jetons gagnants scintillent
-      tok.classList.add('c4-win')
+      // Les 4 jetons gagnants scintillent (retrouvés par leur case)
+      for (const [r, c] of line) {
+        const el = document.querySelector<HTMLElement>(`.c4-token[data-cell="${r}:${c}"]`)
+        el?.classList.add('c4-win')
+      }
       $('c4Turn').innerHTML = `🏆 <b>${p.name}</b> gagne !`
       setTimeout(() => {
         ctx.finish({

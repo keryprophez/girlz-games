@@ -197,7 +197,7 @@ function startRound() {
   setPhaseClass('continent')
   $('geoRound').textContent = `🔍 Tour ${geo.round + 1}/${geo.rounds}`
   setBanner('continent', `Coucou, je suis <b>${geo.animal[0]} ${geo.animal[1]}</b> !<br>Tape sur tout le <b class="w-cont">CONTINENT 🌍</b> !`)
-  ctx.say(`Coucou ! Aide ${geo.animal[1]} à rentrer chez lui. D'abord, tape sur tout le continent ${geo.map.continent}.`)
+  ctx.say(`Le continent ${geo.map.continent}.`)
 }
 
 function continentDone() {
@@ -205,7 +205,7 @@ function continentDone() {
   geo.done.continent = true
   sGood(); tone(500, 0.12, 'sine', 0.12)
   setBanner('pays', `Le continent <b>${geo.map.continent}</b>, c'est <b>énorme</b> 🌍<br>Dedans il y a plusieurs <b class="w-pays">PAYS</b>.<br>Trouve <b>son</b> pays 🏳️ !`)
-  ctx.say(`Le continent ${geo.map.continent}, c'est énorme ! Dedans, il y a plusieurs pays. Trouve celui où il habite.`)
+  ctx.say(`Le continent ${geo.map.continent}. Dedans, il y a des pays.`)
   const g = $('geoZoom'); g.classList.remove('geo-boop'); void g.offsetWidth; g.classList.add('geo-boop')
   setTimeout(() => {
     if (!geo || !geo.running) return
@@ -218,7 +218,6 @@ function pickCountry(isTarget: boolean, el: HTMLElement) {
     geo.wrong++; sNope()
     const b = el.querySelector('.geo-country-blob') || el
     ;(b as HTMLElement).classList.remove('shake'); void (b as HTMLElement).offsetWidth; (b as HTMLElement).classList.add('shake')
-    ctx.say(`C'est un autre pays. Regarde où est ${geo.animal[1]} !`)
     return
   }
   geo.busy = true; geo.done.pays = true
@@ -228,7 +227,7 @@ function pickCountry(isTarget: boolean, el: HTMLElement) {
   $('geoInside').classList.add('show') // les régions apparaissent
   setZoom(T.cx, T.cy, 1.5)
   setBanner('region', `Oui ! Le pays <b>${T.name}</b> 🏳️<br>Un pays est <b>dans</b> le continent.<br>Dedans, voici ses <b class="w-region">RÉGIONS 🏞️</b> — trouve la sienne !`)
-  ctx.say(`Oui ! Le pays ${T.name}. Un pays, c'est dans le continent. Et dans un pays, il y a des régions. Trouve la sienne !`)
+  ctx.say(`Le pays ${T.name}. Dans un pays, il y a des régions.`)
   setTimeout(() => {
     if (!geo || !geo.running) return
     geo.phase = 'region'; geo.busy = false; setPhaseClass('region')
@@ -240,7 +239,6 @@ function pickRegion(ri: number) {
     geo.wrong++; sNope()
     const el = document.querySelector(`#geoSvg .geo-region[data-r="${ri}"] .geo-region-blob`)
     if (el) { el.classList.remove('shake'); void (el as HTMLElement).offsetWidth; el.classList.add('shake') }
-    ctx.say(`C'est une autre région. Cherche bien !`)
     return
   }
   geo.busy = true; geo.done.region = true
@@ -252,7 +250,7 @@ function pickRegion(ri: number) {
   })
   setZoom(R.cx, R.cy, 3.4)
   setBanner('ville', `Bravo ! La région <b>${R.name}</b> 🏞️<br>Une région, c'est un <b>morceau</b> du pays.<br>Et dans quelle <b class="w-ville">VILLE 🏘️</b> habite-t-il ?`)
-  ctx.say(`Bravo ! La région ${R.name}. Une région, c'est un morceau du pays. Et maintenant, dans quelle ville habite-t-il ?`)
+  ctx.say(`La région ${R.name}. Dans une région, il y a des villes.`)
   setTimeout(() => {
     if (!geo || !geo.running) return
     geo.phase = 'city'; geo.busy = false; setPhaseClass('city')
@@ -264,7 +262,6 @@ function pickCity(ri: number, ci: number) {
     geo.wrong++; sNope()
     const el = document.querySelector(`#geoSvg .geo-city[data-r="${ri}"][data-c="${ci}"]`)
     if (el) { el.classList.remove('shake'); void (el as HTMLElement).offsetWidth; el.classList.add('shake') }
-    ctx.say(`Ce n'est pas sa ville. Cherche sa petite maison !`)
     return
   }
   geo.busy = true; geo.done.ville = true

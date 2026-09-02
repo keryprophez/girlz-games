@@ -44,7 +44,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
     <section className="screen active">
       <div className="brand">
         <h1>La Ferme Magique</h1>
-        <div className="tag">{GAMES.length} jeux pour rêver, jouer et apprendre ✨</div>
+        <div className="tag">Les jeux de Jade et Joyce ✨</div>
       </div>
 
       <div className="seg-label">Qui joue ?</div>
@@ -180,7 +180,6 @@ function PhotoAdjust({ img, onDone, onCancel }: {
       cv.removeEventListener('pointermove', move)
       cv.removeEventListener('pointerup', up)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [img])
 
   const validate = () => {

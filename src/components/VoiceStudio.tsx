@@ -20,7 +20,7 @@ export function VoiceStudio({ onClose }: { onClose: () => void }) {
   useEffect(() => () => { stopRec(); clearTimeout(timerRef.current) }, [])
 
   const stopRec = () => {
-    try { recRef.current?.state === 'recording' && recRef.current.stop() } catch { /* rien */ }
+    try { if (recRef.current?.state === 'recording') recRef.current.stop() } catch { /* rien */ }
   }
 
   const record = async (key: string) => {

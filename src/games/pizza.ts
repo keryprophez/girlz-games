@@ -143,7 +143,7 @@ function ingredientKitFallback(T: any) {
 /* ---------- Lâcher un ingrédient ---------- */
 function drop(kind: ToolId, x: number, z: number) {
   if (!S || S.inOven) return
-  const { T, scene } = S.stage
+  const { scene } = S.stage
   const CANNON: Cannon = S.CANNON
   const kit = S.kit[kind]
   if (!kit) return
@@ -550,7 +550,12 @@ export const pizza: GameDef = {
           S.doughMat.color.copy(tint(0xFFFFFF, 0xE8C793, 0xB98149))
           S.crustMat.color.copy(tint(0xE9C88A, 0xD79E52, 0x9C6027))
           S.sideMat.color.copy(tint(0xEBD3A2, 0xD8A863, 0xA26B33))
-          for (const m of S.melting) m.obj.scale.set(1 + k * 0.25, Math.max(0.3, 1 - k * 0.7), 1 + k * 0.25)
+          // L'échelle de base vient de fitModel : on la MULTIPLIE, sinon un
+          // glTF ramené à 0.1 repasse à 1 et le fromage avale la pizza
+          for (const m of S.melting) {
+            if (m.base === undefined) m.base = m.obj.scale.x
+            m.obj.scale.set(m.base * (1 + k * 0.25), m.base * Math.max(0.3, 1 - k * 0.7), m.base * (1 + k * 0.25))
+          }
           $('pzState').textContent = k < 0.4 ? '🔥 Ça chauffe…' : k < 0.85 ? '😋 Ça sent bon !' : '🍕 Bien dorée !'
         }
 

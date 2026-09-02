@@ -310,7 +310,7 @@ export const space: GameDef = {
 
     ;(async () => {
       const stage: Stage = await createStage(arena, {
-        sky: '#05060F',
+        sky: '#05060F', ibl: false, // le Soleil est la seule lumière (pas de reflets de pièce)
         cam: [0, 9.5, 19], target: [0, 0, 0], fov: 52,
         hemi: ['#2A3A6A', '#05060F', 0.35],
         noSun: true, exposure: 1.0
@@ -469,7 +469,8 @@ export const space: GameDef = {
         })
       }
 
-      ctx.say('Bienvenue dans l\'espace ! Voici le Soleil, une étoile géante. Autour de lui vivent huit planètes. Touche-en une pour la visiter avec ta fusée !')
+      // Contenu (pas consigne) : le Soleil et les planètes, c'est la leçon
+      ctx.say('Voici le Soleil, une étoile géante. Autour de lui vivent huit planètes.')
 
       /* --- Boucle --- */
       const goal = new T.Vector3()

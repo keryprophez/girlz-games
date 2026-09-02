@@ -32,8 +32,8 @@ const key = (it: Item) => it.kind + it.color + (it.size ?? 1)
 function makeRound(tier: string): { seq: Item[]; answer: Item; options: Item[] } {
   const kinds = shuffle([...KINDS])
   const colors = shuffle([...COLORS])
-  let motif: Item[] = []
-  let repeats = 2
+  let motif: Item[]
+  let repeats: number
   if (tier === 'easy') {
     const A = { kind: kinds[0], color: colors[0] }
     const B = { kind: kinds[1], color: colors[1] }
@@ -89,6 +89,7 @@ function load() {
   r.options.forEach(o => {
     const b = document.createElement('button')
     b.className = 'pt-opt'
+    b.dataset.key = key(o)
     b.innerHTML = shapeSVG(o, 48)
     b.onclick = () => answer(b, o)
     opts.appendChild(b)
@@ -106,7 +107,8 @@ function answer(b: HTMLButtonElement, o: Item) {
   } else {
     b.classList.add('bad'); sNope()
     document.querySelectorAll<HTMLButtonElement>('.pt-opt').forEach(x => {
-      if (x !== b && x.innerHTML === shapeSVG(pt.answer, 48)) x.classList.add('good')
+      // Comparer la clé, pas l'innerHTML : le navigateur re-sérialise le SVG
+      if (x !== b && x.dataset.key === key(pt.answer)) x.classList.add('good')
     })
   }
   $('ptScore').textContent = '⭐ ' + pt.score

@@ -45,7 +45,8 @@ function press(i: number) {
       pn.running = false
       setStatus('Bravo, toute la chanson ! 🎉')
       sWin()
-      setTimeout(() => finish(pn.song.name), 900)
+      const song = pn.song.name
+      setTimeout(() => { if (pn) finish(song) }, 900)
       return
     }
     setStatus(`${pn.song.icon} ${pn.song.name} — ${pn.idx}/${pn.song.seq.length}`)

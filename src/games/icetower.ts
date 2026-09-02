@@ -2,7 +2,6 @@ import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
 import { sNope, sWin, tone } from '../core/audio'
 import { force, impact } from '../core/impact'
-import { shake } from '../core/juice'
 
 /* La Tour de Glace — l'archétype du bon jeu Flash : UN SEUL GESTE, un plafond
    d'adresse infini, un ÉCHEC RÉEL, un réessai immédiat.

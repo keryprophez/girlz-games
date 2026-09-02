@@ -143,18 +143,10 @@ export function characterSVG(photo: string | null, look: Look, widthPx: number):
   </svg>`
 }
 
-/* Aligne un accessoire de tête (dessiné pour la tête de référence : centre x=100,
-   haut y=36) sur une tête placée en (cx, topY) avec un rayon différent. */
-function fitHead(inner: string, cx: number, topY: number, s: number): string {
-  if (!inner) return ''
-  return `<g transform="translate(${cx - 100 * s},${topY - 36 * s}) scale(${s})">${inner}</g>`
-}
-
 /* Tête compacte réutilisable (photo ovale + frange + chapeau/lunettes du look). */
 function miniHead(photo: string | null, look: Look | null, cx: number, cy: number, r: number): string {
   const lk = look || defaultLook()
   const s = r / 32
-  const topY = cy - 36 * s
   const inner = headSVG(photo, lk) + glassesSVG(lk.glasses) + hatSVG(lk.hat)
   return `<g transform="translate(${cx - 100 * s},${cy - 72 * s}) scale(${s})">${inner}</g>`
 }

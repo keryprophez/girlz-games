@@ -1,12 +1,15 @@
 # CLAUDE.md — La Ferme Magique
 
-Webapp PWA de jeux pour **Jade (6 ans)** et **Joyce (8 ans)**, sur tablette.
+Webapp PWA de jeux pour **Jade (6 ans)** et **Joyce (8 ans)**, sur tablette
+(**Samsung Galaxy Tab A9+** : Snapdragon 695, Adreno 619, 1920×1200 — GPU
+milieu de gamme, `pixelRatio` ≤ 1,5, pas de bloom ni de réfraction sans mesure).
 Commanditaire : le père. Il veut un **niveau professionnel** — des vrais jeux,
-pas un catalogue de mini-jeux.
+pas un catalogue de mini-jeux. **Il valide le plan avant tout chantier lourd.**
 
 **Répartition des documents — ne rien dupliquer d'un fichier à l'autre :**
 `CLAUDE.md` = les règles et conventions (ce fichier) · `ROADMAP.md` = où on en
-est et ce qui reste à faire · `README.md` = présentation de l'app.
+est et ce qui reste à faire · `AUDIT.md` = l'état des lieux du 2/09 (verdict
+par jeu) · `README.md` = présentation de l'app.
 
 ---
 
@@ -19,9 +22,12 @@ est et ce qui reste à faire · `README.md` = présentation de l'app.
    demain » · classements ou comparaison entre les deux sœurs au-delà du Défi à
    deux amical · publicité, achats intégrés, analytique tiers, compte en ligne
    pour les enfants. Les étoiles sont un simple retour de fin de partie.
-2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, voix,
-   démonstration visuelle. `core/voice.ts` ne lit que le **contenu pédagogique**
-   (multiplications, heures, noms de lieux), jamais les consignes.
+2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, sons
+   distincts, démonstration visuelle. `core/voice.ts` ne lit que le **contenu
+   pédagogique** (multiplications, heures, noms de lieux), **jamais les
+   consignes** (réaffirmé le 2/09 ; le moteur de voix est gardé pour la suite).
+   Corollaire : dans Apprendre, **aucune sanction** (ni vies, ni chrono, ni
+   bonus de vitesse) ; dans Créer, **aucune note** sur une création.
 3. **Pas de collecte de données enfants.** Photos et voix restent locales.
    Aucun analytique tiers.
 4. **Français uniquement** : textes, commentaires de code, messages de commit.
@@ -35,7 +41,9 @@ le 28/07) : ce qui compte, c'est la **qualité une fois en jeu** — design,
 physique, jouabilité.
 
 **Règle d'arbitrage** : entre « ajouter un jeu » et « amener un jeu existant au
-niveau des jeux 3D », **toujours la seconde option**.
+niveau des jeux 3D », **toujours la seconde option**. Depuis le 2/09 : **un jeu
+par itération**, plein écran, avec enjeu, rampe liée à la performance,
+near-miss et outro (voir `AUDIT.md` §4 pour les huit manques communs).
 
 ---
 
@@ -48,7 +56,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              sprites.ts  ← planches d'assets CC0 chargées à la demande
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
-src/components/  Home · FarmHub · GameHost · PlayTimer · Backup · Album · …
+src/components/  Home · GameHost · PlayTimer · Backup · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
 scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
@@ -85,9 +93,9 @@ caméra, `loadThree()`/`loadPhysics()` + `loader()` pour le chargement à la
 demande, `stage.dispose()` pour le nettoyage GPU (et `stage.keep(tex)` pour les
 textures non attachées à la scène).
 
-Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space` ·
-`icetower` · `catch` · `popcorn` · `ninja` · `fish` · `balloon` · `caterpillar` ·
-`run` · `flappy`.
+Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` (`stand3d` et `icetower`
+contournent encore `createStage` : à migrer en phase 1).
 
 ---
 
@@ -113,13 +121,15 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `igloo` · `pizza` · `space
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
-| **Smoke test + vue ferme** | L'accueil affiche la ferme, pas la grille : `scripts/smoke.mjs` bascule via `.hub-toggle`. Si tu changes l'accueil, mets à jour le smoke test. |
+| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` cliquent les tuiles `.gc:not(.gc-duel)` et lisent le nom dans `.nm`. Si tu changes l'accueil, mets-les à jour. |
+| **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
+| **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
 
 ## Méthode de travail
 
-1. `npm run build` (inclut `tsc -b`).
+1. `npm run build` (inclut `tsc -b`, **strict**) · `npm run lint` · `npm test`.
 2. **Toujours vérifier dans un vrai navigateur** avec Playwright :
    `nohup npx vite preview --port 4188 --strictPort &`, puis un script
    `.verify-*.mjs` en racine. Chromium : `/opt/pw-browsers/chromium`.

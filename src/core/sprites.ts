@@ -72,6 +72,17 @@ export function frameStyle(atlas: Atlas, name: string, px: number): string {
   ].join(';')
 }
 
+/** Même chose pour React : `frameStyle` renvoie du texte CSS, JSX veut un objet. */
+export function frameProps(atlas: Atlas, name: string, px: number): Record<string, string> {
+  const o: Record<string, string> = {}
+  for (const decl of frameStyle(atlas, name, px).split(';')) {
+    const i = decl.indexOf(':')
+    if (i < 0) continue
+    o[decl.slice(0, i).trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = decl.slice(i + 1).trim()
+  }
+  return o
+}
+
 /** Applique un sprite à un élément déjà en place. */
 export function setFrame(el: HTMLElement, atlas: Atlas, name: string, px: number) {
   el.setAttribute('style', (el.dataset.baseStyle || '') + ';' + frameStyle(atlas, name, px))

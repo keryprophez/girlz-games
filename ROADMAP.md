@@ -1,209 +1,104 @@
-# 🗺 Roadmap — passer au niveau professionnel
+# 🗺 Roadmap — moins de jeux, des vrais
 
-> **Les règles du projet sont dans `CLAUDE.md`** (contraintes, contrat d'un jeu,
-> socle 3D, pièges, méthode, git). Ce document ne dit que : **où on en est** et
-> **ce qui reste à faire**. Rien n'y est répété.
+> **Les règles du projet sont dans `CLAUDE.md`**, l'état des lieux détaillé
+> (verdict par jeu, notes, bugs, stack) dans **`AUDIT.md`** du 2 septembre 2026.
+> Ce document ne dit que : **où on en est** et **ce qui reste à faire**.
 
-Objectif : **des vrais jeux, visuels et physique modernes** — pas un catalogue de
-mini-jeux.
-
----
-
-## Où on en est
-
-Le point de départ était ce retour, à prendre au mot :
-
-> « ça fait vraiment petit jeu pourri rempli d'émoticônes, avec des animations
-> flash des 80s »
-
-Cause racine : **aucun asset graphique dans le projet**. Les émoji servaient de
-sprites et les décors étaient dessinés à la main en SVG. En 3D procédurale la
-qualité vient de la lumière, des ombres et des matériaux — la machine produit le
-rendu qu'on ne sait pas dessiner. C'est pourquoi les jeux phares sont passés en
-3D. En 2D, sans assets, **on plafonne** : le rendu *est* le dessin.
-
-### Verdict jeu par jeu
-
-**🔵 Vraie 3D — le niveau attendu** (tous sur `core/three3d.ts`)
-`stand3d` · `snowman` · `igloo` · `pizza` · `space` · `icetower` · `catch` ·
-`popcorn` · `ninja` · `fish` · `balloon` · `caterpillar` · `run` · `flappy`
-
-**🟢 Bons, à garder tels quels** (mécanique juste, pas de dette visuelle bloquante)
-`quiz` · `intrus` · `letters` · `puzzle` · `taquin` · `patterns` · `mirror` ·
-`clock` · `tables` · `additions` · `market` · `maze` · `memory` · `simon` ·
-`connect4` · `battleship` · `piano` · `beatbox` · `coloring` · `mole` (2D mais
-sur de vrais sprites Kenney, avec de vrais trous)
-
-**🟡 Bonne idée, rendu à refaire**
-*(vide — `socks` et `geo` ont été refaits : tricot + jardin pour l'un,
-sprites sur toute la carte pour l'autre)*
-
-**⚪ Sans score, à laisser tranquilles**
-`fireworks` · `dressup`
+Objectif : des jeux **plein écran, avec une vraie boucle** (enjeu, rampe liée à
+la performance, near-miss, outro), au niveau des jeux Flash qu'on aimait. Un
+jeu par itération, livré, joué, capturé.
 
 ---
 
-## Étape A — Les assets réels 🔑 ✅ FAIT (priorité 1)
+## Décisions du 2 septembre (validées)
 
-**Le plus gros saut visuel du projet pour l'effort le plus faible.** Tout est CC0
-(Kenney), donc utilisable sans contrepartie ni attribution obligatoire.
-
-Le tout est automatisé : **`node scripts/import-assets.mjs`** télécharge les zips
-(l'URL directe est lisible dans le HTML de chaque page Kenney), ne garde que les
-planches utilisées, convertit l'atlas XML en JSON et écrit `CREDITS.md`. Pour
-ajouter un pack, éditer le script et le relancer — rien à faire à la main.
-
-**Embarqué aujourd'hui : 563 Ko pour 467 sprites** (`public/assets/`), chargés à
-la demande par `core/sprites.ts` :
-
-| Planche | Sprites | Poids | Source |
-|---|---|---|---|
-| `animals` | 30 | 74 Ko | Animal Pack Remastered |
-| `fish` | 126 | 59 Ko | Fish Pack |
-| `nature` | 80 | 261 Ko | Background Elements |
-| `items` | 59 | 43 Ko | Platformer Art Deluxe |
-| `tiles` | 172 | 126 Ko | Platformer Art Deluxe |
-
-Les **particules** de Kenney ont été écartées : leurs PNG font 512×512 chacun
-(550 Ko à eux seuls) alors que `core/fx.ts` fait déjà le travail en DOM. À
-reprendre quand les jeux d'action passeront sur PixiJS.
-
-<details><summary>Les packs candidats, avec leur poids (référence)</summary>
-
-### Visuels 2D
-
-| Pack | Fichiers | Poids | Pour quoi |
-|---|---|---|---|
-| [`animal-pack-remastered`](https://kenney.nl/assets/animal-pack-remastered) | 240 | 3,4 Mo | Les animaux de la ferme : `mole`, `catch`, album, décor d'accueil. **Le plus utile du lot.** |
-| [`platformer-art-deluxe`](https://kenney.nl/assets/platformer-art-deluxe) | 930 | 6,3 Mo | Sols, plateformes, décors, ennemis : `run`, `flappy`. Contient déjà les spritesheets + atlas XML. |
-| [`physics-assets`](https://kenney.nl/assets/physics-assets) | 215 | 2,5 Mo | Balles, caisses, éléments à faire tomber : `popcorn`, `balloon`. |
-| [`background-elements`](https://kenney.nl/assets/background-elements) | 110 | 1,0 Mo | Arrière-plans en parallaxe pour `run` et `flappy` — ce qui manque le plus à ces deux-là. |
-| [`fish-pack`](https://kenney.nl/assets/fish-pack) | 120 | 0,7 Mo | `fish`, directement. |
-| [`generic-items`](https://kenney.nl/assets/generic-items) | 160 | 2,2 Mo | Objets à attraper dans `catch` et à trancher dans `ninja`. |
-| [`particle-pack`](https://kenney.nl/assets/particle-pack) | 80 | 14,3 Mo | Étincelles, fumée, éclaboussures — le *juice* de tous les jeux d'action. Le plus lourd : à trier, on n'en garde qu'une poignée. |
-| [`emotes-pack`](https://kenney.nl/assets/emotes-pack) | 480 | 0,4 Mo | Retour d'émotion (bravo, raté) sans un mot à lire — utile partout vu la contrainte « aucune lecture ». |
-
-`generic-items` (2,2 Mo) et `physics-assets` (2,5 Mo) ont été écartés : leurs
-sprites s'appellent `genericItem_color_017`, il faut tous les regarder un par un
-pour savoir ce que c'est. Mauvais rapport effort/valeur.
-
-Optionnels : `shape-characters` (0,5 Mo), `sports-pack` (1,3 Mo),
-`jumper-pack` (1,5 Mo), `new-platformer-pack` (3,1 Mo).
-
-### Modèles 3D, pour enrichir les jeux déjà faits
-
-| Pack | Poids | Pour quoi |
-|---|---|---|
-| [`food-kit`](https://kenney.nl/assets/food-kit) | 4,4 Mo | Ingrédients de `pizza` — remplace les formes primitives par de vrais modèles. |
-| [`holiday-kit`](https://kenney.nl/assets/holiday-kit) | 4,3 Mo | Décor de `snowman` et `igloo`. |
-| [`nature-kit`](https://kenney.nl/assets/nature-kit) | 10,0 Mo | Arbres et rochers — remplace les sapins en cônes de `snowman`. |
-| [`space-kit`](https://kenney.nl/assets/space-kit) | 6,4 Mo | Une vraie fusée pour `space`. |
-
-### Sons (étape C)
-
-[`impact-sounds`](https://kenney.nl/assets/impact-sounds) (0,8 Mo) et
-[`interface-sounds`](https://kenney.nl/assets/interface-sounds) (0,8 Mo).
-
-</details>
+- La coupe : de 37 à ~30 entrées, dont 9 à 12 vrais jeux. Sortis : `balloon`,
+  `popcorn`, `fish`, `battleship`, `quiz`, `socks`, `puzzle`, `farmArt`, le mode
+  3D du labyrinthe. Leurs bonnes idées à greffer sont notées dans
+  `src/games/index.ts`.
+- **Aucune lecture, aucune consigne à la voix** : `say()` ne lit que du
+  contenu. Le moteur de voix est gardé, il servira ensuite.
+- Apprendre **sans sanction** : plus de vies, chrono ni bonus de vitesse dans
+  les exercices (à retirer de `intrus` en phase 2 ; `quiz` est sorti).
+- `pizza` **gelée** dans Créer : on n'y investit plus.
+- Tablette cible : **Samsung Galaxy Tab A9+** (Snapdragon 695, Adreno 619,
+  1920×1200). Réglages 3D à mesurer dessus avant de toucher aux ombres.
+- Pas de base cloud : photos et voix restent locales (règle 3). L'export JSON
+  reste le filet ; IndexedDB pour les blobs plus tard.
 
 ---
 
-## Étape B — Moderniser les jeux d'action ✅ FAIT
+## Phase 0 — Couper et assainir ✅ (2/09)
 
-Les huit jeux d'action sont passés en **vraie 3D** sur `core/three3d.ts`, chacun
-vérifié en y jouant (bot Playwright + captures inspectées) :
+- Catalogue coupé et réorganisé ; plus de compteur de jeux à l'accueil.
+- Bugs corrigés : sticker affiché en texte (« dog »), ligne gagnante du
+  Puissance 4, révélation des Suites, échelle des ingrédients à la cuisson,
+  crash du piano au démontage, IBL et voix de l'Espace, consignes de la Loupe.
+- Hygiène : CSS mort (1153 → ~900 lignes), aurore de l'igloo, atlas `tiles`,
+  docs, `strict: true`, ESLint, vitest, `types.ts` conforme à la règle voix.
+- CI : smoke en paysage (viewport Tab A9+), service worker bloqué, échec si
+  un jeu 3D reste sur son écran d'attente ; bots inchangés (ils tournent bien
+  en CI : 2 min 22 s sur le dernier run).
 
-| Jeu | Incarnation |
-|---|---|
-| `mole` → **Tape-Trous** | 2D assumée : sprites Kenney, vrais trous en 3 couches. Le patron du style sprites. |
-| `catch` | Fruits glTF qui tombent (cannon-es), saladier modèle 3D, caisses de marché. |
-| `popcorn` | Vraie poêle glTF, grains qui gigotent, pop-corn qui saute à l'impulsion physique. |
-| `ninja` | Fruits glTF tranchés en vraies moitiés (`-half`), lame-traînée canvas par-dessus. |
-| `fish` | Le poisson glTF EST le curseur, halo sur l'eau, jaillissement en parabole. |
-| `balloon` | Ballon clearcoat qui se déforme à la pompe et explose en lambeaux physiques. |
-| `caterpillar` | Chenille de sphères qui glisse de case en case, fruits glTF, pré en damier. |
-| `run` | Tracteur low-poly, roues qui tournent, fumée, obstacles en volume, parallaxe. |
-| `flappy` | Poussin qui bat des ailes entre des palissades de bois, plumes au choc. |
+## Phase 1 — La coquille de jeu et le moteur d'arcade (à faire, 2-3 sessions)
 
-La règle qui a tout guidé : la **simulation validée ne change pas d'un chiffre**
-(mêmes gravités, fenêtres de collision, cadences) — seule l'incarnation change.
+Le chantier qui change tous les jeux d'un coup. **Plan détaillé à présenter
+avant de coder.**
 
----
+1. **Plein écran immersif** : l'arène = le viewport, titre et sous-titre
+   disparaissent en jeu, HUD en icônes SVG dans la scène, bouton maison
+   discret, plus aucun emoji dans la coquille.
+2. **Cycle de vie** (`GameHost` + `three3d`) : outro gagner/perdre différencié
+   (ralenti, caméra, silence, puis score), pause sur `visibilitychange` et
+   minuteur parental, `unhandledrejection` → écran Oups, loader avec timeout,
+   jeton de partie qui tue les timers orphelins.
+3. **`core/arcade.ts`** : score, vies, combo, rampe liée à la performance,
+   `simMs`, near-miss, barème d'étoiles, HUD standard.
+4. **`core/scene3d.ts`** : sol, décor (kit glTF nature/ferme importé une
+   fois), `toScreen()`, particules GPU, secousse caméra, `follow()`,
+   `timeScale`. `pixelRatio` plafonné à 1,5 pour la Tab A9+, pas de bloom ni
+   de réfraction tant que les fps ne sont pas mesurés.
+5. **`core/rounds.ts`** et **`core/exercise.ts`** : manches sans temps mort,
+   QCM avec second essai, barre de modes.
+6. **Sons de gestes** (tranche, saut, flap, pas, prise, clic ; Kenney CC0) et
+   bus musique / effets / voix avec ducking.
+7. **Preuve** : `icetower` et `ninja` migrés dessus, capturés, comparés.
 
-## Étape C — Le son au niveau 🔊 (impacts ✅)
+## Phase 2 — Un jeu par session (ordre proposé)
 
-La musique générative (`core/music.ts`) est bonne et à garder — elle est unique et
-ne pèse rien.
-- ✅ **Vrais bruitages foley pour les chocs** : 24 sons Kenney (impact-sounds,
-  CC0) branchés dans `core/impact.ts` — la force choisit la variante (léger →
-  lourd), hauteur légèrement variée, synthé en secours pendant le chargement.
-  Tous les jeux qui passent par `impact()` en profitent d'un coup.
-- Reste : clics d'interface, et le mixage (bus musique / bus effets, volumes
-  séparés, *ducking* léger de la musique pendant la voix).
+`icetower` (métronome, porte-à-faux qui casse, rampe, écroulement joué) →
+`ninja` (multi-tranche, plein écran, whoosh) → `mole` (tap à vide coûte,
+rampe par combo, fenêtre prêt/brûlé) → `catch` (vrai panier physique,
+indicateur de chute) → `caterpillar` (corps continu, tic de pas, bords
+tranchés) → `run` + `flappy` sur un socle runner commun → `snowman` (rouler
+jusqu'à la pile, habillage par drag) → `maze` · `taquin` · `memory` · `simon` ·
+`connect4` (polish 2D, IA du Puissance 4) → `clock` · `tables` · `market`
+(drag partout, voix sur les cibles, plateau plein écran) → `intrus` (sans
+chrono) → `dressup` · `beatbox` → `stand3d` (manches enchaînées).
 
----
+Chaque itération : une demi-page de design (geste, enjeu, rampe, outro,
+sons), l'implémentation, un bot qui gagne, une capture de référence.
 
-## Étape D — Base de données 🔑 *(bloquée : dépend de toi)*
+## Phase 3 — Ce qui fait « un jeu » plutôt que vingt
 
-Tout vit aujourd'hui dans `localStorage` (clé `ferme:v2`) : profils, photos en
-dataURL, voix enregistrées, progression. Un nettoyage du navigateur efface tout,
-et le quota (~5 Mo) est atteignable avec quelques photos.
-
-**Filet posé en attendant** : bouton 💾 de l'accueil — export d'un fichier JSON
-complet, réimport protégé par la « question de grand », jauge de quota, et alerte
-quand l'enregistrement échoue (`core/backup.ts`). Ça évite la perte sèche, ça ne
-remplace pas une base.
-
-Pour aller plus loin, il me faut de ta part : **l'URL du projet Supabase + la clé
-`anon` publique** (l'offre gratuite suffit largement). Ensuite :
-- Tables `profiles`, `progress` ; Storage pour les photos et les clips vocaux.
-- Garder le local en cache + synchro opportuniste.
-- RLS strict, aucun analytique tiers (données d'enfants).
-
----
-
-## Étape E — Finitions produit ✨
-
-- **Renommer/modifier les profils** depuis l'interface (`updateProfile()` existe
-  dans le store mais n'est appelé nulle part) ; 3ᵉ profil « invitée ».
-- **Album** : le déblocage prend toujours le premier animal verrouillé de la liste
-  (donc identique pour les deux sœurs). Le rendre aléatoire parmi les restants.
-- **Mode coopération** : les deux jouent en même temps sur la même tablette.
-- Vérifier les perfs sur la vraie tablette (60 fps sur les jeux 3D, sinon baisser
-  la résolution d'ombre / le `pixelRatio`).
+- Personnage partagé glTF animé avec la photo en visage ; `ctx.look` lu.
+- Coopération à deux doigts sur la même tablette (Attrape, Taupe, Ninja).
+- L'Atelier (refonte de `coloring`) : pinceau, tampons, annuler, album.
+- Chargement paresseux par jeu + CSS colocalisé ; IndexedDB pour les blobs.
+- À décider plus tard : `geo`, `letters` (refonte ou sortie).
 
 ---
 
-## Vague « 5 axes » du 28/07 ✅
+## Ce qui est déjà fait et qu'on ne refait pas ✅
 
-- **Les filles dans les jeux** : `avatarMedallion()` (three3d) — la photo de
-  profil en médaillon face caméra, posée sur le tracteur, le poussin et le
-  panier d'Attrape. À étendre aux autres jeux au besoin (3 lignes par jeu).
-- **Univers Apprendre habillé** : Quiz, Intrus et Marché en sprites/icônes.
-  Découverte clé : le Food Kit embarque un rendu 2D par modèle (`Previews/`),
-  importés dans `public/assets/icons/food/` — cohérents avec la 3D.
-- **Difficulté adaptative silencieuse** : `progress.adapt` (par profil × jeu),
-  mis à jour dans `reward()`, appliqué par GameHost (±1 cran max sur le palier
-  parent). Jamais affiché.
-- **socks + geo refaits** (voir verdicts ci-dessus). Nouveau helper
-  `frameDataURL()` (sprites dans du SVG).
-- **Bots de jeu en CI** : `npm run test:play` dans `deploy.yml` — bonhomme
-  joué jusqu'au bout, chenille qui croque, tracteur sur 100 m, poussin sur
-  2 barrières, sauce de pizza cherchée sous le doigt. Crochets `window.__BOT`
-  inertes en prod. La suite se saute si le runner n'a pas de WebGL.
-
----
-
-## Ce qui est déjà fait ✅ (ne pas refaire)
-
-- **Vraie 3D + physique** : les 14 jeux listés en 🔵 ci-dessus, tous sur le socle
-  `core/three3d.ts`. `chamboule` (doublon 2D) supprimé, PixiJS retiré du projet.
-- **Sauvegarde exportable** : `core/backup.ts` + bouton 💾.
-- **Moteur de game feel** : `core/juice.ts` (ressorts, transition iris, secousses).
-- **Musique générative** 6 thèmes + foley synthétisé (`core/music.ts`, `audio.ts`).
-- **Minuteur parental** avec verrou « question de grand » (`PlayTimer.tsx`) — la
-  seule fonctionnalité « adulte » demandée, elle marche, ne pas y toucher.
-- **Ferme d'accueil** décorative, ciel selon l'heure réelle, sans aucun palier.
-- **Anti-crash** : ErrorBoundary + capture des erreurs runtime en jeu.
-- **Maj PWA automatique**, vibrations tactiles, `touch-action` correct.
-- **Smoke test CI** : les 37 jeux sont ouverts et vérifiés à chaque déploiement.
+- Vraie 3D + physique sur `core/three3d.ts` pour 11 jeux ; kits glTF `food`,
+  `holiday`, `space` ; planches Kenney `animals`, `fish`, `nature`, `items` +
+  icônes food, importées par `scripts/import-assets.mjs`.
+- 24 foley Kenney branchés sur `core/impact.ts`.
+- Musique générative 6 thèmes (`core/music.ts`), unique et sans fichier.
+- Minuteur parental avec verrou « question de grand » (`PlayTimer.tsx`).
+- Sauvegarde exportable + alerte quota (`core/backup.ts`).
+- Difficulté adaptative silencieuse (`progress.adapt`).
+- Médaillon photo dans la 3D (`avatarMedallion`).
+- Anti-crash (ErrorBoundary + capture des erreurs runtime), maj PWA auto.
+- Smoke test et bots de jeu en CI.

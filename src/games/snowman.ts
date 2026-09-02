@@ -5,7 +5,7 @@ import { confetti } from '../core/fx'
 import {
   createStage, loadPhysics, loader, fixedStep, orbitCam, snowTex, bumpyNormal, disposeTree,
   loadModel, fitModel,
-  type Stage, type Orbit, type Cannon
+  type Stage, type Cannon
 } from '../core/three3d'
 
 /* ⛄ Bonhomme de neige 3D — on ROULE vraiment une boule dans la neige : elle

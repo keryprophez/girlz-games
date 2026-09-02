@@ -1,5 +1,7 @@
 /* Smoke test : ouvre chaque jeu de la ferme et vérifie qu'il se monte sans
-   erreur JavaScript. Protège les 32 jeux contre les régressions.
+   erreur JavaScript ET qu'il finit de charger (un jeu 3D bloqué sur son
+   écran d'attente est un échec). Tablette en paysage, service worker bloqué
+   (sa maj auto recharge la page en plein test — piège connu).
    Usage : npm run build && npm run test:smoke */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -32,7 +34,11 @@ const browser = await chromium.launch({
     : { channel: 'chrome' }),
   args: ['--no-sandbox']
 })
-const page = await browser.newPage({ viewport: { width: 480, height: 860 } })
+const ctx = await browser.newContext({
+  viewport: { width: 1280, height: 800 }, // Galaxy Tab A9+ en paysage (CSS px)
+  serviceWorkers: 'block'
+})
+const page = await ctx.newPage()
 const pageErrors = []
 page.on('pageerror', e => pageErrors.push(e.message))
 
@@ -53,9 +59,12 @@ for (let i = 0; i < games.length; i++) {
   // Laisse le temps au jeu de se monter (la 3D charge three.js à la demande)
   await page.waitForTimeout(1600)
   const mounted = await page.$eval('.gameroot', el => el.children.length > 0).catch(() => false)
-  if (pageErrors.length || !mounted) {
-    failures.push({ game: games[i], errors: [...pageErrors], mounted })
-    console.error(`✗ ${games[i]} — monté: ${mounted}, erreurs: ${pageErrors.join(' | ') || 'aucune'}`)
+  // L'écran d'attente doit avoir disparu : sinon le chargement 3D a échoué en silence
+  const loaded = await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 12000 })
+    .then(() => true).catch(() => false)
+  if (pageErrors.length || !mounted || !loaded) {
+    failures.push({ game: games[i], errors: [...pageErrors], mounted, loaded })
+    console.error(`✗ ${games[i]} — monté: ${mounted}, chargé: ${loaded}, erreurs: ${pageErrors.join(' | ') || 'aucune'}`)
   } else {
     console.log(`✓ ${games[i]}`)
   }

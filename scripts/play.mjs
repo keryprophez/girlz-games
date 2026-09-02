@@ -62,9 +62,6 @@ if (!gl) {
 const openGame = async (name) => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
-  const who = page.locator('.who-card').first()
-  if (await who.count()) await who.click()
-  await page.waitForTimeout(300)
   await page.locator('.gc:not(.gc-duel)', { hasText: name }).first().click()
   await page.waitForTimeout(3200)
 }

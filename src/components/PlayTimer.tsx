@@ -157,7 +157,6 @@ export function PlayGuard({ onExpire }: { onExpire: () => void }) {
       ;[392, 330, 262].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'sine', 0.1), i * 260))
       say('C\'est l\'heure de la pause ! Tu as très bien joué.')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expired])
 
   if (!expired) return null

@@ -178,24 +178,6 @@ button.chip:active{transform:scale(.92);}
 @keyframes mpulse{50%{transform:rotateY(180deg) scale(1.1);}}
 
 /* ============================================================
-   QUIZ
-   ============================================================ */
-.qbox{padding:24px 18px;width:100%;max-width:560px;text-align:center;}
-.qprompt{font-family:'Baloo 2';font-weight:700;font-size:clamp(19px,4.4vmin,27px);margin-bottom:8px;}
-.qscene{font-size:clamp(23px,6vmin,40px);line-height:1.35;margin:4px 0 16px;letter-spacing:3px;min-height:1.2em;}
-.qopts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-.qopt{border:1px solid var(--line);cursor:pointer;font-family:'Baloo 2';font-weight:700;
-  font-size:clamp(20px,4.4vmin,27px);padding:15px;border-radius:var(--r-md);background:var(--paper);
-  box-shadow:var(--e1);transition:transform .2s var(--spring),background .2s,border-color .2s;}
-.qopt:hover{transform:translateY(-2px);}
-.qopt:active{transform:scale(.95);}
-.qopt.good{background:#E3F7E8;border-color:var(--meadow);animation:goodp .4s var(--spring);}
-.qopt.bad{background:#FFE5E1;border-color:var(--coral);}
-@keyframes goodp{50%{transform:scale(1.07);}}
-.qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:13px;color:var(--ink-soft);font-weight:600;}
-.streak{color:var(--coral);font-weight:700;}
-
-/* ============================================================
    ATTRAPE
    ============================================================ */
 #catchArea{position:relative;width:100%;max-width:540px;height:min(54vh,480px);
@@ -204,13 +186,6 @@ button.chip:active{transform:scale(.92);}
 .hint{position:absolute;top:9px;left:0;right:0;text-align:center;font-size:12.5px;color:var(--ink-soft);font-weight:600;z-index:4;}
 .combo{position:absolute;top:32px;left:0;right:0;text-align:center;font-family:'Baloo 2';font-weight:800;
   font-size:clamp(20px,5vmin,28px);color:var(--mango);opacity:0;transition:opacity .2s;text-shadow:0 1px 0 #fff;}
-.wavemsg{position:absolute;top:44%;left:0;right:0;text-align:center;font-family:'Baloo 2';font-weight:800;
-  font-size:clamp(24px,6vmin,38px);color:#fff;text-shadow:0 2px 10px rgba(69,54,42,.35);opacity:0;}
-.wavemsg.show{animation:waveflash 1.2s ease;}
-@keyframes waveflash{0%{opacity:0;transform:scale(.6);}25%{opacity:1;transform:scale(1);}80%{opacity:1;}100%{opacity:0;transform:scale(1.1);}}
-.powerbadge{position:absolute;top:9px;right:10px;font-family:'Baloo 2';font-weight:700;font-size:13.5px;
-  background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1px solid var(--line);
-  border-radius:99px;padding:5px 11px;display:none;z-index:4;}
 
 /* ============================================================
    INTRUS
@@ -298,23 +273,6 @@ button.chip:active{transform:scale(.92);}
 .run3-arena{background:#2B2140;cursor:pointer;}
 
 /* ============================================================
-   PÊCHE PRÉCISE
-   ============================================================ */
-#fishPond{position:relative;width:100%;max-width:520px;padding:26px 20px 20px;text-align:center;}
-.pondface{font-size:clamp(56px,13vmin,84px);margin-bottom:8px;transition:transform .3s var(--spring);}
-.pondface.caught{animation:fishJump .55s var(--spring);}
-@keyframes fishJump{30%{transform:translateY(-26px) rotate(-16deg) scale(1.15);}}
-.fbar{position:relative;height:26px;border-radius:99px;background:linear-gradient(90deg,#DCEFFC,#C8E7FA);
-  border:1px solid var(--line);overflow:hidden;margin:14px 0 18px;}
-.fzone{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,#7BDD97,var(--meadow));border-radius:99px;opacity:.9;}
-.fcursor{position:absolute;top:-4px;bottom:-4px;width:7px;border-radius:4px;background:var(--ink);
-  box-shadow:0 0 0 2.5px #fff, var(--e1);will-change:left;}
-.fbtn{border:none;cursor:pointer;font-family:'Baloo 2';font-weight:800;font-size:clamp(19px,4.4vmin,25px);
-  padding:16px 34px;border-radius:99px;color:#fff;background:linear-gradient(140deg,#63C1F0,var(--lagoon));
-  box-shadow:var(--e2);transition:transform .18s var(--spring);}
-.fbtn:active{transform:scale(.93);}
-
-/* ============================================================
    RÉSULTAT / ALBUM / TOAST / CONFETTIS
    ============================================================ */
 #result,#album{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
@@ -393,38 +351,8 @@ body.bigplay .g3-bar{max-width:820px;}
 @media(prefers-reduced-motion:reduce){.g3-btn.ready{animation:none;}}
 
 /* ---- Ninja ---- */
-.nj-arena{background:linear-gradient(180deg,#FFF3DD,#FDEBEF);cursor:crosshair;}
-.nj-fruit{position:absolute;font-size:52px;will-change:transform;pointer-events:none;
-  filter:drop-shadow(0 4px 4px rgba(69,54,42,.25));transition:none;z-index:2;}
-.nj-fruit.half{opacity:.95;font-size:52px;}
-.nj-halfclip{display:inline-block;}
-.nj-splash{position:absolute;width:10px;height:10px;border-radius:50%;pointer-events:none;will-change:transform;z-index:1;}
-.nj-blade{position:absolute;inset:0;pointer-events:none;z-index:5;}
-.nj-blade svg{position:absolute;inset:0;width:100%;height:100%;}
-.nj-flash{position:absolute;inset:0;pointer-events:none;z-index:6;opacity:0;background:rgba(255,100,90,.35);transition:opacity .15s;}
-.nj-flash.on{opacity:1;}
-.nj-pts{position:absolute;font-family:'Baloo 2';font-weight:800;font-size:20px;color:#fff;
-  text-shadow:0 2px 4px rgba(0,0,0,.3);pointer-events:none;z-index:7;animation:njPtUp .6s ease-out forwards;}
-@keyframes njPtUp{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-40px);}}
 /* ---- Poussin volant ---- */
 .fl-arena{background:#243550;cursor:pointer;}
-
-/* ============================================================
-   PUZZLE PHOTO (glisser-déposer)
-   ============================================================ */
-#pzWrap{position:relative;touch-action:none;}
-#pzBoard{position:relative;border-radius:var(--r-lg);overflow:hidden;
-  background-size:cover;background-position:center;box-shadow:var(--e2);}
-#pzBoard::before{content:"";position:absolute;inset:0;background:rgba(255,249,240,.82);transition:opacity .6s;}
-#pzBoard.done::before{opacity:0;}
-.pz-cell{position:absolute;border:2px dashed rgba(69,54,42,.18);border-radius:6px;pointer-events:none;}
-#pzBoard.done .pz-cell{display:none;}
-.pz-piece{position:absolute;border-radius:8px;cursor:grab;touch-action:none;
-  box-shadow:var(--e1);border:2px solid #fff;background-repeat:no-repeat;
-  transition:left .25s var(--spring),top .25s var(--spring),transform .2s var(--spring);
-  transform-origin:top left;z-index:3;}
-.pz-piece.drag{transition:none;z-index:9;box-shadow:var(--e2);cursor:grabbing;}
-.pz-piece.set{border-color:transparent;box-shadow:none;border-radius:0;z-index:2;pointer-events:none;}
 
 /* ============================================================
    COLORIAGE
@@ -486,12 +414,6 @@ body.bigplay .g3-bar{max-width:820px;}
 /* ============================================================
    VOIX & DUEL
    ============================================================ */
-.saybtn{position:absolute;top:10px;right:10px;border:1px solid var(--line);background:var(--card);
-  border-radius:50%;width:38px;height:38px;cursor:pointer;font-size:17px;box-shadow:var(--e1);
-  transition:transform .2s var(--spring);}
-.saybtn:active{transform:scale(.88);}
-.qbox{position:relative;}
-.saytext{cursor:pointer;}
 .duel-tag{color:var(--coral);}
 .duelrow{display:flex;align-items:center;gap:12px;justify-content:center;margin:8px 0;}
 .duelname{font-family:'Baloo 2';font-weight:800;font-size:19px;min-width:70px;text-align:left;}
@@ -517,30 +439,6 @@ body.bigplay .g3-bar{max-width:820px;}
 @keyframes pkpulse{50%{filter:brightness(1.22);transform:translateY(-5px);box-shadow:var(--e2),0 0 0 4px rgba(255,206,60,.55);}}
 .pkey.oops{animation:lgshake .3s ease;}
 .pn-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
-
-/* ============================================================
-   CHAUSSETTES
-   ============================================================ */
-#skArea{position:relative;width:100%;max-width:560px;height:min(56vh,480px);
-  background:linear-gradient(180deg,#CDE9FA 0%,#E9F7EE 62%,#CBEAB8 62.4%,#B5DFA0 100%);
-  border:1px solid var(--line);
-  border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--e2);touch-action:manipulation;}
-#skDecor{position:absolute;inset:auto 0 0 0;height:80px;pointer-events:none;z-index:1;}
-.sk-bush{position:absolute;bottom:-6px;opacity:.9;}
-.sk-pin{position:absolute;top:-9px;left:50%;transform:translateX(-50%) rotate(calc(var(--rot,0deg) * -1));z-index:3;}
-.sock.pinned{animation:skSwing 2.6s ease-in-out infinite alternate;}
-@keyframes skSwing{from{transform:rotate(calc(var(--rot,0deg) - 2.5deg));}to{transform:rotate(calc(var(--rot,0deg) + 2.5deg));}}
-@media(prefers-reduced-motion:reduce){.sock.pinned{animation:none;}}
-.sk-line{position:absolute;top:10px;left:0;width:100%;height:30px;z-index:1;}
-.sock{position:absolute;border:none;background:transparent;cursor:pointer;padding:2px;z-index:2;
-  transform:rotate(var(--rot,0deg));
-  transition:left .5s var(--spring),top .5s var(--spring),transform .25s var(--spring);
-  filter:drop-shadow(0 3px 3px rgba(69,54,42,.22));}
-.sock:active{transform:rotate(var(--rot,0deg)) scale(.92);}
-.sock.lifted{transform:rotate(0deg) scale(1.18);z-index:5;
-  filter:drop-shadow(0 8px 10px rgba(69,54,42,.3));}
-.sock.pinned{cursor:default;z-index:3;transform:rotate(var(--rot,0deg)) scale(.8);}
-.sock.shake{animation:lgshake .3s ease;}
 
 /* ============================================================
    SUITES LOGIQUES
@@ -604,22 +502,6 @@ body.bigplay .g3-bar{max-width:820px;}
 .mz-crumb{position:absolute;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:rgba(185,127,63,.42);}
 
 /* ============================================================
-   POP-CORN
-   ============================================================ */
-#pcArea{position:relative;width:100%;max-width:540px;height:min(54vh,470px);
-  background:linear-gradient(180deg,#FFF3DD,#FFE9C7);border:1px solid var(--line);
-  border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--e2);touch-action:manipulation;}
-#pcBox{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;
-  filter:drop-shadow(0 4px 5px rgba(69,54,42,.25));}
-.pc-kernel{position:absolute;border:none;background:transparent;cursor:pointer;padding:6px;z-index:2;
-  transition:left .55s cubic-bezier(.3,-.4,.6,1),top .55s cubic-bezier(.3,-.4,.6,1),opacity .4s;}
-.pc-kernel.ready{animation:kshake .18s linear infinite;}
-@keyframes kshake{0%{transform:rotate(-9deg) scale(1.08);}50%{transform:rotate(9deg) scale(1.12);}100%{transform:rotate(-9deg) scale(1.08);}}
-.pc-kernel.nope{animation:lgshake .3s ease;}
-.pc-kernel.popped{animation:none;transform:scale(1.25);z-index:4;}
-.pc-kernel.burnt{opacity:0;filter:grayscale(1) brightness(.5);}
-
-/* ============================================================
    BOÎTE À RYTHME
    ============================================================ */
 #bbGrid{display:flex;flex-direction:column;gap:7px;width:100%;max-width:480px;
@@ -641,14 +523,6 @@ body.bigplay .g3-bar{max-width:820px;}
 /* ---- Labyrinthe : modes brouillard et 3D ---- */
 .mz-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
 .mz-fog{position:absolute;inset:0;pointer-events:none;z-index:3;transition:background .18s linear;}
-#mz3dCv{display:block;border-radius:var(--r-lg);}
-#mzMap{position:absolute;top:8px;right:8px;border-radius:12px;border:2px solid #fff;
-  box-shadow:var(--e1);z-index:4;}
-.mz3d-btns{position:absolute;bottom:8px;left:0;right:0;display:flex;gap:12px;justify-content:center;z-index:4;}
-.mz3d-btn{width:58px;height:58px;border-radius:50%;border:2px solid rgba(255,255,255,.8);cursor:pointer;
-  background:rgba(255,249,240,.85);backdrop-filter:blur(6px);font-size:24px;box-shadow:var(--e1);
-  transition:transform .15s var(--spring);}
-.mz3d-btn:active{transform:scale(.88);}
 
 /* ---- Réglage photo (zoom sur la tête) ---- */
 .adj-frame{display:flex;justify-content:center;margin:10px 0 4px;}
@@ -704,8 +578,7 @@ body.bigplay .screen{max-width:1100px;}
 body.bigplay .gsub{display:none;}
 body.bigplay .ghostbar{margin-bottom:2px;}
 body.bigplay .halo,body.bigplay .critter{display:none;}
-body.bigplay #catchArea,body.bigplay #pcArea,body.bigplay #runArea,
-body.bigplay #skArea,body.bigplay .arena{
+body.bigplay #catchArea,body.bigplay #runArea,body.bigplay .arena{
   max-width:min(96vw,960px);height:calc(100vh - 200px);max-height:none;}
 body.bigplay .board{max-width:min(92vw,78vh) !important;}
 body.bigplay .igrid{max-width:min(92vw,74vh) !important;}
@@ -753,19 +626,6 @@ body.bigplay .tb-key{max-width:56px;font-size:26px !important;}
 .pdel:active{transform:scale(.85);}
 
 /* ============================================================
-   GONFLE LE BALLON
-   ============================================================ */
-#blArea{position:relative;width:100%;max-width:520px;height:min(56vh,460px);
-  background:linear-gradient(180deg,#E9F6FE,#FDF0F4);border:1px solid var(--line);
-  border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--e2);touch-action:manipulation;cursor:pointer;}
-.bl-balloon{position:absolute;left:50%;bottom:6%;transform:translateX(-50%) scale(.25);
-  transform-origin:bottom center;pointer-events:none;will-change:transform;
-  transition:transform .12s cubic-bezier(.3,1.6,.5,1);filter:drop-shadow(0 8px 10px rgba(69,54,42,.2));}
-.bl-balloon.puff{transition:transform .09s cubic-bezier(.2,2.2,.5,1);}
-.bl-balloon.strain{animation:blstrain .12s linear infinite;}
-@keyframes blstrain{0%{margin-left:-3px;}50%{margin-left:3px;}100%{margin-left:-3px;}}
-
-/* ============================================================
    PUISSANCE 4 DES SŒURS
    ============================================================ */
 .c4-banner{display:flex;align-items:center;gap:10px;justify-content:center;
@@ -784,7 +644,6 @@ body.bigplay .tb-key{max-width:56px;font-size:26px !important;}
 .c4-face{width:80%;height:80%;border-radius:50%;background-size:cover;background-position:center;
   border:3.5px solid;box-shadow:0 2px 5px rgba(69,54,42,.3);display:flex;align-items:center;justify-content:center;
   background-color:#fff;overflow:hidden;}
-.c4-face.c4-drawn{padding:4%;}
 .c4-token.c4-win{animation:c4win .5s ease-in-out infinite alternate;z-index:4;}
 @keyframes c4win{from{transform:scale(1);filter:brightness(1);}to{transform:scale(1.14);filter:brightness(1.25);}}
 
@@ -855,38 +714,6 @@ body.bigplay .mk-coin{width:76px;height:76px;}
 body.bigplay .mk-coin.mk-note{width:116px;height:66px;}
 
 /* ============================================================
-   CACHE-CACHE PRÉ (bataille navale)
-   ============================================================ */
-#btBoard{width:100%;display:flex;flex-direction:column;align-items:center;}
-.bt-pass{display:flex;flex-direction:column;align-items:center;gap:14px;
-  background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);
-  padding:28px 24px;box-shadow:var(--e2);margin-top:14px;max-width:380px;width:100%;}
-.bt-pass-txt{text-align:center;font-size:19px;font-family:'Fredoka';}
-.bt-pass-txt b{font-family:'Baloo 2';}
-.bt-pass-sub{font-size:14px;color:var(--ink-soft);}
-.bt-banner{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;
-  font-size:16px;margin-bottom:10px;min-height:44px;font-family:'Fredoka';}
-.bt-banner b{font-family:'Baloo 2';}
-.bt-fleetrow{display:inline-flex;gap:3px;}
-.bt-fleet{font-size:22px;filter:grayscale(1) opacity(.45);transition:filter .3s;}
-.bt-fleet.found{filter:none;}
-.bt-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;width:100%;max-width:400px;
-  background:linear-gradient(160deg,#BBE3A6,#8FCB74);border-radius:var(--r-lg);
-  padding:10px;box-shadow:var(--e2);border:1px solid #7AB562;}
-.bt-cell{aspect-ratio:1;border:none;border-radius:10px;background:#DDF0CF;cursor:pointer;
-  font-size:clamp(18px,4.6vmin,30px);display:flex;align-items:center;justify-content:center;
-  box-shadow:inset 0 -3px 5px rgba(69,54,42,.12);transition:transform .12s var(--spring);padding:0;}
-.bt-cell:active{transform:scale(.88);}
-.bt-cell.miss{background:#BFE3F5;cursor:default;}
-.bt-cell.hit{background:#FFD9A6;cursor:default;animation:goodp .4s var(--spring);}
-.bt-cell.sunk{background:#FFE08A;cursor:default;animation:goodp .5s var(--spring);}
-body.bigplay .bt-grid{max-width:min(88vw,64vh);}
-body.bigplay .bt-cell{font-size:clamp(24px,5vmin,44px);}
-
-/* ---- Attrape / Poussin en WebGL ---- */
-#catchArea canvas,#flArea canvas{display:block;width:100%;height:100%;touch-action:none;}
-
-/* ============================================================
    BONHOMME DE NEIGE 3D — palette d'habillage
    ============================================================ */
 .sn-tab{padding:8px 13px;font-size:20px;cursor:pointer;}
@@ -894,18 +721,6 @@ body.bigplay .bt-cell{font-size:clamp(24px,5vmin,44px);}
 .sn-optrow{min-height:56px;}
 .sn-optrow .du-opt{min-width:52px;height:52px;font-size:25px;border-radius:16px;touch-action:none;}
 .sn-optrow .du-opt.du-color{min-width:38px;width:38px;height:38px;}
-
-/* ============================================================
-   L'IGLOO 3D — réserve de blocs de glace
-   ============================================================ */
-.ig-arena{background:#132A4C;}
-.ig-cube{display:block;border-radius:5px;border:2px solid #A8CFE8;
-  background:linear-gradient(150deg,#FFFFFF,#D6EEFC 55%,#AFD8F0);
-  box-shadow:inset 0 -3px 6px rgba(120,170,205,.35);}
-.ig-cube.big{width:34px;height:22px;}
-.ig-cube.mid{width:27px;height:18px;}
-.ig-cube.sml{width:20px;height:14px;}
-body.bigplay .ig-pile-stack{transform:scale(1.25);transform-origin:bottom center;margin-top:8px;}
 
 /* ============================================================
    LA LOUPE MAGIQUE (continent → pays → région → ville)
@@ -971,64 +786,6 @@ body.bigplay .ig-pile-stack{transform:scale(1.25);transform-origin:bottom center
 .geo-recap-char{font-size:26px;display:inline-block;margin-left:4px;vertical-align:middle;animation:geoBob 1.4s ease-in-out infinite;}
 body.bigplay #geoArea{max-width:720px;}
 body.bigplay .geo-say{font-size:19px;}
-
-/* ============================================================
-   LA FERME VIVANTE (accueil)
-   ============================================================ */
-
-.hub-wrap{position:relative;width:100%;border-radius:var(--r-xl);overflow:hidden;
-  box-shadow:var(--e2);border:1px solid var(--line);}
-.hub-svg{display:block;width:100%;height:auto;}
-.hub-place{cursor:pointer;transform-box:fill-box;transform-origin:center bottom;
-  transition:transform .25s var(--spring);}
-.hub-place:hover{transform:translateY(-4px) scale(1.02);}
-.hub-place:active{transform:scale(.97);}
-.hub-hit{cursor:pointer;}
-.hub-sign{font-family:'Baloo 2';font-weight:800;font-size:19px;fill:var(--ink);}
-.hub-count{font-family:'Baloo 2';font-weight:800;font-size:15px;fill:#fff;
-  paint-order:stroke;stroke:var(--coral);stroke-width:11px;stroke-linejoin:round;}
-.hub-sun{animation:hubSun 9s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
-@keyframes hubSun{50%{filter:brightness(1.12);}}
-.hub-cloud{animation:hubDrift linear infinite;}
-@keyframes hubDrift{from{transform:translateX(-180px) scale(var(--s,1));}to{transform:translateX(1180px) scale(var(--s,1));}}
-.hub-sway{transform-box:fill-box;transform-origin:center bottom;animation:hubSway 4.5s ease-in-out infinite;}
-@keyframes hubSway{50%{transform:rotate(2deg);}}
-.hub-mill{transform-box:fill-box;transform-origin:center;animation:hubSpin 9s linear infinite;}
-@keyframes hubSpin{to{transform:rotate(360deg);}}
-.hub-float{animation:hubFloat 7s ease-in-out infinite;}
-@keyframes hubFloat{50%{transform:translate(806px,120px);}}
-.hub-bob{animation:rbob 2.4s ease-in-out infinite;}
-.hub-twinkle{animation:spTwinkle 3.4s ease-in-out infinite;}
-.hub-rainbow{animation:hubRainbow 6s ease-in-out infinite;}
-@keyframes hubRainbow{50%{opacity:.62;}}
-.hub-roam{animation:hubRoam 22s ease-in-out infinite;}
-@keyframes hubRoam{0%,100%{transform:translateX(0);}25%{transform:translate(48px,-6px);}
-  50%{transform:translateX(96px) scaleX(-1);}75%{transform:translate(40px,-4px) scaleX(-1);}}
-.hub-walker{position:absolute;bottom:1.5%;display:flex;flex-direction:column;align-items:center;gap:2px;
-  pointer-events:none;filter:drop-shadow(0 3px 4px rgba(69,54,42,.3));}
-.hub-walker.w0{animation:hubWalkA 34s ease-in-out infinite;}
-.hub-walker.w1{animation:hubWalkB 40s ease-in-out infinite;}
-@keyframes hubWalkA{0%{left:8%;}24%{left:62%;}26%{left:62%;}50%{left:26%;}52%{left:26%;}76%{left:78%;}100%{left:8%;}}
-@keyframes hubWalkB{0%{left:70%;}22%{left:22%;}48%{left:86%;}72%{left:44%;}100%{left:70%;}}
-.hub-wname{font-family:'Baloo 2';font-weight:800;font-size:11px;background:rgba(255,249,240,.92);
-  border-radius:99px;padding:1px 8px;box-shadow:var(--e1);white-space:nowrap;}
-.hub-next{width:100%;max-width:460px;margin:12px auto 0;background:var(--card);border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:11px 16px;box-shadow:var(--e1);text-align:center;}
-.hub-next-txt{font-size:14px;font-weight:600;}
-.hub-next-txt b{font-family:'Baloo 2';color:var(--coral);}
-.hub-next-sub{font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:3px;}
-.hub-bar{height:9px;background:var(--paper);border:1px solid var(--line);border-radius:99px;
-  overflow:hidden;margin:7px 0 2px;}
-.hub-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mango),var(--coral));
-  transition:width .8s var(--spring);}
-.hub-sheet{max-width:620px;width:92%;max-height:86vh;overflow:auto;}
-.hub-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:6px;}
-@media(max-width:640px){.hub-grid{grid-template-columns:repeat(3,1fr);gap:7px;}}
-@media(prefers-reduced-motion:reduce){
-  .hub-cloud,.hub-sway,.hub-mill,.hub-float,.hub-roam,.hub-walker,.hub-rainbow,.hub-sun{animation:none;}
-  .hub-walker.w0{left:20%;}.hub-walker.w1{left:64%;}
-}
-body.bigplay .hub-wrap{max-width:1100px;}
 
 /* ============================================================
    JUICE — transition en iris
@@ -1146,8 +903,6 @@ body.bigplay #cpCanvas{max-height:calc(100vh - 220px);}
 @keyframes g3Wave{0%{opacity:0;transform:scale(.6);}25%{opacity:1;transform:scale(1.1);}
   70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.15);}}
 .ca-arena{background:#1D3C5E;}
-.pc-arena{background:#241B12;}
 .nj3-arena{background:#1A2E24;}
 #njBlade{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;}
 .fh-arena{background:#152A42;}
-.bl-arena{background:#2A1E3E;}

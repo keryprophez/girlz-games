@@ -9,6 +9,7 @@ import { playClip } from '../core/clips'
 import { iris } from '../core/juice'
 import { tone } from '../core/audio'
 import { playMusic, stopMusic } from '../core/music'
+import { frameProps, loadAtlas, type Atlas } from '../core/sprites'
 
 interface Result extends FinishPayload {
   newSticker: string | null
@@ -32,6 +33,9 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const [crashed, setCrashed] = useState(false)
   const duelResults = useRef<Result[]>([])
   const store = useFerme()
+  // La planche des animaux, pour montrer le nouveau sticker en vrai sprite
+  const [atlas, setAtlas] = useState<Atlas | null>(null)
+  useEffect(() => { let on = true; loadAtlas('animals').then(a => on && setAtlas(a)); return () => { on = false } }, [])
 
   // Mode grand écran : préférence mémorisée — chaque jeu se monte directement
   // à la bonne taille, plus besoin de basculer (et relancer) en pleine partie
@@ -65,7 +69,6 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     }
     window.addEventListener('error', onErr)
     return () => window.removeEventListener('error', onErr)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // En duel, l'ordre est figé au montage : la joueuse sélectionnée commence
@@ -142,7 +145,6 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
       stopMusic()
       shutUp()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, runId, turn])
 
   const startSecondTurn = () => {
@@ -211,7 +213,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
             </div>
             {result.newSticker && (
               <div className="rewardbox" style={{ display: 'block' }}>
-                <span className="ra">{result.newSticker}</span>
+                <span className="ra">{atlas ? <i className="spr" style={frameProps(atlas, result.newSticker, 64)} /> : '✨'}</span>
                 <span>Nouvel animal pour l'album de {profile.name} !</span>
               </div>
             )}

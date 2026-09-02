@@ -199,7 +199,7 @@ export function disposeTree(T: T3, root: import('three').Object3D) {
   const mats = new Set<any>()
   root.traverse((o: any) => {
     if (o.geometry) geos.add(o.geometry)
-    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m))
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => mats.add(m))
   })
   geos.forEach(g => g.dispose())
   mats.forEach((m: any) => {
@@ -375,34 +375,6 @@ export function iceMaterial(T: T3, stage?: Stage) {
     clearcoat: 0.6, clearcoatRoughness: 0.25,
     normalMap: nrm, normalScale: new T.Vector2(0.35, 0.35)
   })
-}
-
-/** Aurore boréale : rideau de lumière sur un cylindre, vu de l'intérieur. */
-export function aurora(T: T3, radius = 26, height = 14) {
-  const c = document.createElement('canvas')
-  c.width = 512; c.height = 256
-  const g = c.getContext('2d')!
-  for (let b = 0; b < 5; b++) {
-    const x = 40 + b * 95 + Math.random() * 40
-    const grad = g.createLinearGradient(0, 0, 0, 256)
-    const hue = 130 + Math.random() * 90
-    grad.addColorStop(0, `hsla(${hue},85%,65%,0)`)
-    grad.addColorStop(0.45, `hsla(${hue},85%,62%,.55)`)
-    grad.addColorStop(1, `hsla(${hue + 40},80%,60%,0)`)
-    g.fillStyle = grad
-    g.beginPath()
-    g.moveTo(x, 0)
-    g.bezierCurveTo(x + 60, 80, x - 50, 170, x + 20, 256)
-    g.lineTo(x + 60, 256)
-    g.bezierCurveTo(x + 110, 170, x + 20, 80, x + 55, 0)
-    g.closePath(); g.fill()
-  }
-  const t = new T.CanvasTexture(c)
-  t.colorSpace = T.SRGBColorSpace
-  return new T.Mesh(
-    new T.CylinderGeometry(radius, radius, height, 40, 1, true),
-    new T.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.55, side: T.BackSide, depthWrite: false })
-  )
 }
 
 /* ---------- Modèles glTF ----------

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useFerme } from '../core/store'
 import { COLLECT } from '../core/utils'
-import { frameStyle, loadAtlas, type Atlas } from '../core/sprites'
+import { frameProps, loadAtlas, type Atlas } from '../core/sprites'
 
 export function Album({ onClose }: { onClose: () => void }) {
   const store = useFerme()
@@ -22,7 +22,7 @@ export function Album({ onClose }: { onClose: () => void }) {
             return (
               <div key={name} className={'slot ' + (have ? 'have' : 'locked')}>
                 {have && atlas
-                  ? <i className="spr" style={styleOf(atlas, name)} />
+                  ? <i className="spr" style={frameProps(atlas, name, 40)} />
                   : have ? '…' : '❓'}
               </div>
             )
@@ -34,16 +34,4 @@ export function Album({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   )
-}
-
-/** frameStyle renvoie du texte CSS ; React veut un objet. */
-function styleOf(atlas: Atlas, name: string): React.CSSProperties {
-  const o: Record<string, string> = {}
-  for (const decl of frameStyle(atlas, name, 40).split(';')) {
-    const i = decl.indexOf(':')
-    if (i < 0) continue
-    const k = decl.slice(0, i).trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-    o[k] = decl.slice(i + 1).trim()
-  }
-  return o as React.CSSProperties
 }

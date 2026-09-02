@@ -58,8 +58,8 @@ const SHEETS = [
   { out: 'animals', pack: 'animals', png: 'Spritesheet/round.png' },
   { out: 'fish', pack: 'fish', png: 'Spritesheet/spritesheet.png' },
   { out: 'nature', pack: 'background', png: 'Spritesheet/bgElements_spritesheet.png' },
-  { out: 'items', pack: 'platformer', png: 'Base pack/Items/items_spritesheet.png' },
-  { out: 'tiles', pack: 'platformer', png: 'Base pack/Tiles/tiles_spritesheet.png' }
+  { out: 'items', pack: 'platformer', png: 'Base pack/Items/items_spritesheet.png' }
+  // `tiles` (planche de sols du platformer) a été retirée le 2/09 : aucun jeu ne la chargeait.
 ]
 
 /* Modèles 3D : quelques .glb triés dans les kits Kenney. Ils sont minuscules

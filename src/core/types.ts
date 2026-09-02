@@ -19,7 +19,10 @@ export interface GameContext {
   byTier<T>(e: T, m: T, x: T): T
   finish(p: FinishPayload): void
   toast(msg: string): void
-  /** Lit un texte à voix haute (consignes, questions) — essentiel pour les non-lectrices. */
+  /** Lit un texte à voix haute. UNIQUEMENT du contenu pédagogique (une
+      heure, un résultat, un nom de lieu) — jamais une consigne : la règle
+      du projet est « aucune lecture requise », et le moteur de voix est
+      gardé pour la suite. */
   say(text: string): void
 }
 
