@@ -100,7 +100,8 @@ jamais d'emoji.
 rampe par performance, timers simulés `game.after`, HUD en icônes dans
 l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs`) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
-Modèles : `icetower.ts` et `ninja.ts`.
+Modèles : `icetower.ts`, `ninja.ts` et `mole.ts` (sprites Kenney en 3D via
+`spriteFromAtlas`, raycast sur les sprites eux-mêmes).
 
 **Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
 antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,
@@ -114,7 +115,7 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` (`stand3d` et `icetower`
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` (`stand3d` et `icetower`
 contournent encore `createStage` : à migrer en phase 1).
 
 ---

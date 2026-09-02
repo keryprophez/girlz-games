@@ -22,7 +22,6 @@ import { taquin } from './taquin'
 import { connect4 } from './connect4'
 import { snowman } from './snowman'
 import { pizza } from './pizza'
-import { geoGame } from './geo'
 import { space } from './space'
 import { caterpillar } from './caterpillar'
 import { fireworks } from './fireworks'
@@ -32,7 +31,7 @@ import { icetower } from './icetower'
 export const GAMES: GameDef[] = [
   icetower, ninja, moleGame, catchGame, caterpillar, runGame, flappy, maze, taquin, memory, simonGame, stand3d,
   connect4,
-  clock, tables, additions, market, intrus, space, patterns, mirror, letters, geoGame,
+  clock, tables, additions, market, intrus, space, patterns, mirror, letters,
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
 ]
 
@@ -45,7 +44,9 @@ export const GAMES: GameDef[] = [
    battleship, quiz, socks et puzzle du catalogue. Leurs bonnes idées sont
    à greffer : fenêtre « prêt/brûlé » de popcorn → mole, mode « Compte » de
    quiz → additions, paires visibles contre la montre de socks → memory,
-   pièces libres de puzzle → taquin. */
+   pièces libres de puzzle → taquin. La Loupe Magique (geo) est sortie le
+   2/09 : des pays inventés n'apprennent rien, on refera une géographie
+   VRAIE ou rien. */
 export const WORLDS: { id: string; label: string; icon: string; games: GameDef[] }[] = [
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
@@ -56,7 +57,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, tables, additions, market, intrus, space, patterns, mirror, letters, geoGame]
+    games: [clock, tables, additions, market, intrus, space, patterns, mirror, letters]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',

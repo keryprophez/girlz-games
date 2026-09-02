@@ -31,6 +31,7 @@ export const ICON = {
   cube: wrap('<path d="M12 2.5 3.5 7v10l8.5 4.5 8.5-4.5V7z" fill="currentColor"/><path d="M12 11.5 3.5 7M12 11.5l8.5-4.5M12 11.5v10" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6"/>'),
   tap: wrap('<path d="M9.5 12V5.5a2 2 0 0 1 4 0V11l3.6.9A3 3 0 0 1 19.5 15v2.5a4 4 0 0 1-4 4h-3.3a4 4 0 0 1-3.4-1.9L5.4 14a1.8 1.8 0 0 1 2.9-2.1z" fill="currentColor"/><path d="M7.5 5.5a4.5 4.5 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
   blade: wrap('<path d="M3.5 20.5 17 7l3.5-3.5-1 5L6 22z" fill="currentColor"/><path d="m14 10 2.5 2.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
+  mallet: wrap('<path d="M4 12.5 11.5 20 13.8 17.7 6.3 10.2z" fill="currentColor"/><rect x="9" y="2.5" width="12.5" height="8" rx="2" transform="rotate(45 15.25 6.5)" fill="currentColor"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

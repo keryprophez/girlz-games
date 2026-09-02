@@ -76,11 +76,22 @@ sur l'écran de fin, sessions A puis B puis C.
    temps mort, QCM avec second essai) quand les jeux 2D et Apprendre seront
    itérés ; sonde fps `?fps` ; captures de référence par jeu.
 
-## Phase 2 — Un jeu par session (ordre proposé)
+## Phase 2 — Un jeu par session
 
-`icetower` (métronome, porte-à-faux qui casse, rampe, écroulement joué) →
-`ninja` (multi-tranche, plein écran, whoosh) → `mole` (tap à vide coûte,
-rampe par combo, fenêtre prêt/brûlé) → `catch` (vrai panier physique,
+- ✅ **`mole` (Tape-Trous) refait en 3D** (2/09) : pré en vraie 3D avec haie,
+  clôture, fleurs et buissons du kit nature ; trous creusés ; animaux Kenney
+  en sprites face caméra qui jaillissent avec de la terre ; taper un trou
+  vide casse le combo (fini le martelage) ; un animal qui s'échappe casse le
+  combo puis coûte un cœur dès le 3ᵉ cran ; rampe tous les 8 animaux ; plus
+  de chrono, la partie finit aux cœurs ; outro où les animaux ressortent se
+  moquer. Bot CI `taupe-huit-animaux` (8 scénarios).
+- ❌ **`geo` (La Loupe Magique) sortie** : des pays inventés n'apprennent
+  rien. Une vraie géographie (France, régions, villes) ou rien.
+
+Ordre pour la suite :
+
+`icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) →
+`catch` (vrai panier physique,
 indicateur de chute) → `caterpillar` (corps continu, tic de pas, bords
 tranchés) → `run` + `flappy` sur un socle runner commun → `snowman` (rouler
 jusqu'à la pile, habillage par drag) → `maze` · `taquin` · `memory` · `simon` ·
@@ -97,7 +108,7 @@ sons), l'implémentation, un bot qui gagne, une capture de référence.
 - Coopération à deux doigts sur la même tablette (Attrape, Taupe, Ninja).
 - L'Atelier (refonte de `coloring`) : pinceau, tampons, annuler, album.
 - Chargement paresseux par jeu + CSS colocalisé ; IndexedDB pour les blobs.
-- À décider plus tard : `geo`, `letters` (refonte ou sortie).
+- À décider plus tard : `letters` (refonte ou sortie).
 
 ---
 

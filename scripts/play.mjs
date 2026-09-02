@@ -256,6 +256,23 @@ await scenario('ninja-tranche', async () => {
   throw new Error('moins de 2 fruits tranchés en 8 s')
 })
 
+/* 🔨 Tape-Trous : taper 8 animaux sortis (accroche window.__mole), aucun raté. */
+await scenario('taupe-huit-animaux', async () => {
+  await openGame('Tape-Trous')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
+  await page.waitForTimeout(600)
+  let taps = 0
+  for (let i = 0; i < 300 && taps < 8; i++) {
+    const ready = await page.evaluate(() => window.__mole ? window.__mole.ready() : [])
+    if (ready.length) { await page.mouse.click(ready[0].x, ready[0].y); taps++ }
+    await page.waitForTimeout(60)
+  }
+  const score = parseInt(await page.locator('.hud-score b').textContent())
+  if (taps < 8) throw new Error('seulement ' + taps + ' animaux sortis en 18 s')
+  if (score < 8) throw new Error('score ' + score + ' pour 8 taps sur des animaux sortis')
+  if (errors.length) throw new Error('erreurs JS')
+})
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)
