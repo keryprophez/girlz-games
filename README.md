@@ -16,8 +16,10 @@ glace), Taquin photo, Memory, Simon, Puissance 4 avec les têtes des filles en
 jetons.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
-Grand Tableau × et +, le Marché (vrais euros), l'Intrus, Voyage dans l'Espace,
-Suites logiques, le Miroir, Chasse aux lettres, la Loupe Magique.
+Grand Tableau × et +, le Marché (vrais euros), l'Intrus, le Tour du Monde
+(vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
+Voyage dans l'Espace (vraies planètes), Suites logiques, le Miroir, Chasse
+aux lettres.
 
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
 neige), Habille-toi (le look est persisté), Boîte à Rythme, Petit Piano, Feu

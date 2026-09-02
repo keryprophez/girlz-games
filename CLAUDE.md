@@ -101,7 +101,9 @@ rampe par performance, timers simulés `game.after`, HUD en icônes dans
 l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs`) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
 Modèles : `icetower.ts`, `ninja.ts` et `mole.ts` (sprites Kenney en 3D via
-`spriteFromAtlas`, raycast sur les sprites eux-mêmes).
+`spriteFromAtlas`, raycast sur les sprites eux-mêmes). Pour un jeu Apprendre
+en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
+`public/assets/geo/`, voix = noms de lieux uniquement).
 
 **Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
 antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,

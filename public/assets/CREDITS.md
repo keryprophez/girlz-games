@@ -31,3 +31,6 @@ relancer.
   récupérées via Wikimedia Commons et réduites à 1024×512.
 - **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
   `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.
+- **Régions de France** (`geo/regions.geojson`) : IGN Admin Express via
+  `france-geojson` de Grégoire David (<https://github.com/gregoiredavid/france-geojson>),
+  Licence Ouverte Etalab.

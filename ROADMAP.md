@@ -85,9 +85,13 @@ sur l'écran de fin, sessions A puis B puis C.
   combo puis coûte un cœur dès le 3ᵉ cran ; rampe tous les 8 animaux ; plus
   de chrono, la partie finit aux cœurs ; outro où les animaux ressortent se
   moquer. Bot CI `taupe-huit-animaux` (8 scénarios).
-- ❌ **`geo` (La Loupe Magique) sortie** : des pays inventés n'apprennent
-  rien. Une vraie géographie (vrais continents et pays) est en préparation :
-  Terre NASA Blue Marble + pays Natural Earth déjà dans `public/assets/geo/`.
+- ✅ **`geo` refait : Le Tour du Monde**, de la vraie géographie. Un globe
+  avec la Terre NASA (Blue Marble) et les 177 pays de Natural Earth tracés
+  dessus, qu'on fait tourner au doigt ; la France en relief avec ses 13
+  régions (IGN) et 14 grandes villes en épingles (dont Saint-Maximin).
+  Explore (on touche, la voix nomme) et Trouve (un animal → son continent,
+  ou la voix dit un pays, une ville, une région). Deuxième essai puis
+  révélation, aucune sanction. Bot CI `tour-du-monde-vrais-pays`.
 - ✅ **`space` avec de vraies planètes** : textures NASA (Terre) et Solar System
   Scope CC BY 4.0 (Soleil, Mercure, Vénus, Lune, Mars, Jupiter, Saturne et ses
   anneaux, Uranus, Neptune), réduites à 1024×512 pour la tablette. Plus une

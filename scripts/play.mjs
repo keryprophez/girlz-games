@@ -273,6 +273,29 @@ await scenario('taupe-huit-animaux', async () => {
   if (errors.length) throw new Error('erreurs JS')
 })
 
+/* 🌍 Le Tour du Monde : les vrais pays répondent à la bonne longitude/latitude,
+   tous ont un continent, et la question de Trouve se pose bien. */
+await scenario('tour-du-monde-vrais-pays', async () => {
+  await openGame('Tour du Monde')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 30000 })
+  await page.waitForTimeout(800)
+  const r = await page.evaluate(() => ({
+    paris: window.__geo.pick(2.35, 48.85), pekin: window.__geo.pick(116.4, 39.9), rio: window.__geo.pick(-43.2, -22.9),
+    mer: window.__geo.pick(-30, 20), sans: window.__geo.unassigned().length
+  }))
+  if (r.paris !== 'France' || r.pekin !== 'China' || r.rio !== 'Brazil') throw new Error('pays faux : ' + JSON.stringify(r))
+  if (r.mer !== null) throw new Error('la mer renvoie un pays')
+  if (r.sans) throw new Error(r.sans + ' pays sans continent')
+  await page.evaluate(() => window.__geo.setMode('trouve'))
+  await page.waitForTimeout(300)
+  const st = await page.evaluate(() => window.__geo.state())
+  if (st.asked !== 1 || !st.target) throw new Error('pas de question posée')
+  await page.evaluate(() => window.__geo.setMap('france'))
+  await page.waitForTimeout(300)
+  if ((await page.evaluate(() => window.__geo.state())).map !== 'france') throw new Error('la France ne s\'affiche pas')
+  if (errors.length) throw new Error('erreurs JS')
+})
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)
