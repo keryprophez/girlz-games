@@ -20,3 +20,14 @@ des choses — ce travail est offert.
 Les planches ont été **triées** : on ne garde que les sprites réellement utilisés
 par les jeux. Pour en ajouter, modifier `scripts/import-assets.mjs` et le
 relancer.
+
+## Espace et géographie
+
+- **La Terre** (`space/earth.jpg`, `geo/earth.jpg`) : NASA Blue Marble, *Visible Earth*
+  (<https://visibleearth.nasa.gov>), domaine public.
+- **Mercure, Vénus, la Lune, Mars, Jupiter, Saturne et ses anneaux, Uranus, Neptune,
+  le Soleil** (`space/*.jpg`) : textures de **Solar System Scope**
+  (<https://www.solarsystemscope.com/textures/>), licence **CC BY 4.0**,
+  récupérées via Wikimedia Commons et réduites à 1024×512.
+- **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
+  `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.

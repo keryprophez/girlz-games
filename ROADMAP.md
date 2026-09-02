@@ -86,7 +86,12 @@ sur l'écran de fin, sessions A puis B puis C.
   de chrono, la partie finit aux cœurs ; outro où les animaux ressortent se
   moquer. Bot CI `taupe-huit-animaux` (8 scénarios).
 - ❌ **`geo` (La Loupe Magique) sortie** : des pays inventés n'apprennent
-  rien. Une vraie géographie (France, régions, villes) ou rien.
+  rien. Une vraie géographie (vrais continents et pays) est en préparation :
+  Terre NASA Blue Marble + pays Natural Earth déjà dans `public/assets/geo/`.
+- ✅ **`space` avec de vraies planètes** : textures NASA (Terre) et Solar System
+  Scope CC BY 4.0 (Soleil, Mercure, Vénus, Lune, Mars, Jupiter, Saturne et ses
+  anneaux, Uranus, Neptune), réduites à 1024×512 pour la tablette. Plus une
+  seule planète dessinée à la main.
 
 Ordre pour la suite :
 

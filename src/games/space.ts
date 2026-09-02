@@ -13,7 +13,7 @@ import {
    merveille racontée à voix haute à chaque arrivée. */
 
 interface Planet {
-  id: string; name: string
+  id: string; name: string; tex: string
   orbit: number; radius: number; speed: number; tilt: number
   base: string; bands: string[]; spot?: string
   ring?: [number, number, string]
@@ -24,43 +24,43 @@ interface Planet {
 
 const PLANETS: Planet[] = [
   {
-    id: 'mercure', name: 'Mercure', orbit: 2.4, radius: 0.23, speed: 0.30, tilt: 0.02,
+    id: 'mercure', name: 'Mercure', orbit: 2.4, radius: 0.23, speed: 0.30, tilt: 0.02, tex: 'mercury.jpg',
     base: '#9B8C79', bands: ['#7D705F', '#B4A794', '#6E6252'],
     fact: 'Mercure ! La plus petite planète, et la plus rapide autour du Soleil. Le jour il y fait super chaud, et la nuit super froid.'
   },
   {
-    id: 'venus', name: 'Vénus', orbit: 3.1, radius: 0.34, speed: 0.23, tilt: 0.05,
+    id: 'venus', name: 'Vénus', orbit: 3.1, radius: 0.34, speed: 0.23, tilt: 0.05, tex: 'venus.jpg',
     base: '#E8C377', bands: ['#F8E6AE', '#C08A3E', '#FFF0C4', '#D9A44E'],
     fact: 'Vénus ! La planète la plus chaude de toutes, plus chaude qu\'un four, à cause de ses gros nuages tout épais.'
   },
   {
-    id: 'terre', name: 'la Terre', orbit: 3.9, radius: 0.38, speed: 0.19, tilt: 0.41,
+    id: 'terre', name: 'la Terre', orbit: 3.9, radius: 0.38, speed: 0.19, tilt: 0.41, tex: 'earth.jpg',
     base: '#2E6BA8', bands: [], clouds: true, moons: 1,
     fact: 'La Terre, c\'est chez nous ! La seule planète avec de l\'eau bleue, des nuages blancs et plein d\'animaux.'
   },
   {
-    id: 'mars', name: 'Mars', orbit: 4.7, radius: 0.29, speed: 0.16, tilt: 0.44, moons: 2,
+    id: 'mars', name: 'Mars', orbit: 4.7, radius: 0.29, speed: 0.16, tilt: 0.44, moons: 2, tex: 'mars.jpg',
     base: '#B4502E', bands: ['#EE9564', '#8E3620', '#D2703F'],
     fact: 'Mars, la planète rouge ! Elle est couverte de poussière rouge, et des petits robots s\'y promènent pour l\'explorer.'
   },
   {
-    id: 'jupiter', name: 'Jupiter', orbit: 6.0, radius: 0.88, speed: 0.10, tilt: 0.05,
+    id: 'jupiter', name: 'Jupiter', orbit: 6.0, radius: 0.88, speed: 0.10, tilt: 0.05, tex: 'jupiter.jpg',
     base: '#D8B98C', bands: ['#F2D9B4', '#B07A48', '#E6CBA4', '#9C6A3E', '#F6E3C2'], spot: '#C4522F',
     moons: 3,
     fact: 'Jupiter, la plus GROSSE planète ! Si grande qu\'elle pourrait avaler mille Terres. Elle a une tempête géante toute rouge.'
   },
   {
-    id: 'saturne', name: 'Saturne', orbit: 7.3, radius: 0.74, speed: 0.075, tilt: 0.47,
+    id: 'saturne', name: 'Saturne', orbit: 7.3, radius: 0.74, speed: 0.075, tilt: 0.47, tex: 'saturn.jpg',
     base: '#E2CE9C', bands: ['#F4E6BC', '#C7A45A', '#EFDDAE'], ring: [1.35, 2.35, '#E4D2A4'],
     fact: 'Saturne et ses magnifiques anneaux ! Ils sont faits de glace et de cailloux qui brillent dans la lumière du Soleil.'
   },
   {
-    id: 'uranus', name: 'Uranus', orbit: 8.5, radius: 0.52, speed: 0.055, tilt: 1.71,
+    id: 'uranus', name: 'Uranus', orbit: 8.5, radius: 0.52, speed: 0.055, tilt: 1.71, tex: 'uranus.jpg',
     base: '#8FD4DC', bands: ['#C4F0F0', '#6BAEC4'], ring: [1.5, 1.9, '#BFE6EC'],
     fact: 'Uranus ! Elle est couchée sur le côté et roule comme une bille. Brrr, c\'est une planète toute bleue et très très froide.'
   },
   {
-    id: 'neptune', name: 'Neptune', orbit: 9.5, radius: 0.50, speed: 0.042, tilt: 0.5,
+    id: 'neptune', name: 'Neptune', orbit: 9.5, radius: 0.50, speed: 0.042, tilt: 0.5, tex: 'neptune.jpg',
     base: '#2A4FA0', bands: ['#6FA8F0', '#1D3570', '#4C7FD0'],
     fact: 'Neptune, la planète la plus loin du Soleil ! Elle est toute bleue, avec les vents les plus rapides de tout le système solaire.'
   }
@@ -71,81 +71,26 @@ const SUN_FACT = 'Le Soleil ! Une étoile géante toute brillante. Toutes les pl
 let ctx: GameContext
 let S: any = null
 
-/* ---------- Textures de planètes, dessinées à la volée ---------- */
-function planetTex(T: any, p: Planet) {
-  const c = document.createElement('canvas')
-  c.width = 512; c.height = 256
-  const g = c.getContext('2d')!
-  g.fillStyle = p.base; g.fillRect(0, 0, 512, 256)
-
-  if (p.id === 'terre') {
-    // Océans + continents + calottes polaires
-    for (let i = 0; i < 22; i++) {
-      g.fillStyle = `hsl(${96 + Math.random() * 34},${38 + Math.random() * 26}%,${32 + Math.random() * 22}%)`
-      const x = Math.random() * 512, y = 40 + Math.random() * 176
-      g.beginPath()
-      for (let k = 0; k < 9; k++) {
-        const a = (k / 9) * Math.PI * 2
-        const r = 18 + Math.random() * 46
-        g.lineTo(x + Math.cos(a) * r * 1.5, y + Math.sin(a) * r * 0.8)
-      }
-      g.closePath(); g.fill()
-    }
-    g.fillStyle = 'rgba(255,255,255,.9)'
-    g.fillRect(0, 0, 512, 18); g.fillRect(0, 238, 512, 18)
-  } else {
-    // Bandes horizontales floues : c'est ce qui fait « planète »
-    p.bands.forEach((col, i) => {
-      const n = p.bands.length
-      const h = 256 / n
-      const y = i * h
-      const grad = g.createLinearGradient(0, y, 0, y + h)
-      grad.addColorStop(0, col + '00')
-      grad.addColorStop(0.5, col)
-      grad.addColorStop(1, col + '00')
-      g.fillStyle = grad
-      g.fillRect(0, y - h * 0.25, 512, h * 1.5)
-    })
-    // Turbulences
-    for (let i = 0; i < 900; i++) {
-      const y = Math.random() * 256
-      g.strokeStyle = `rgba(255,255,255,${Math.random() * 0.09})`
-      g.lineWidth = 1 + Math.random() * 3
-      g.beginPath()
-      const x = Math.random() * 512
-      g.moveTo(x, y)
-      g.lineTo(x + 20 + Math.random() * 70, y + (Math.random() - 0.5) * 4)
-      g.stroke()
-    }
-    // Cratères pour les petites planètes rocheuses
-    if (p.id === 'mercure' || p.id === 'mars') {
-      for (let i = 0; i < 90; i++) {
-        const x = Math.random() * 512, y = Math.random() * 256
-        const r = 3 + Math.random() * 12
-        g.fillStyle = 'rgba(0,0,0,.16)'
-        g.beginPath(); g.arc(x, y, r, 0, 7); g.fill()
-        g.fillStyle = 'rgba(255,255,255,.12)'
-        g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.7, 0, 7); g.fill()
-      }
-      if (p.id === 'mars') {
-        g.fillStyle = 'rgba(255,255,255,.85)'
-        g.fillRect(0, 0, 512, 12); g.fillRect(0, 244, 512, 12)
-      }
-    }
-    if (p.spot) {
-      const grad = g.createRadialGradient(340, 150, 4, 340, 150, 46)
-      grad.addColorStop(0, p.spot)
-      grad.addColorStop(0.7, p.spot)
-      grad.addColorStop(1, p.spot + '00')
-      g.fillStyle = grad
-      g.save(); g.translate(340, 150); g.scale(1.5, 1); g.translate(-340, -150)
-      g.beginPath(); g.arc(340, 150, 46, 0, 7); g.fill(); g.restore()
-    }
-  }
-  const t = new T.CanvasTexture(c)
+/* ---------- Textures : de VRAIES images (NASA Blue Marble pour la Terre,
+   Solar System Scope CC BY 4.0 pour les autres, voir CREDITS.md) ---------- */
+function realTex(T: any, stage: Stage, file: string) {
+  const t = new T.TextureLoader().load(`${import.meta.env.BASE_URL}assets/space/${file}`)
   t.colorSpace = T.SRGBColorSpace
   t.anisotropy = 4
-  return t
+  return stage.keep(t)
+}
+
+/** Anneau : la texture est une bande radiale (transparence incluse) ; on
+    recalcule les UV du RingGeometry pour qu'elle s'enroule du bord intérieur
+    au bord extérieur. */
+function ringUVs(T: any, geo: any, ri: number, ro: number) {
+  const pos = geo.attributes.position, uv = geo.attributes.uv
+  const v = new T.Vector3()
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i)
+    uv.setXY(i, (v.length() - ri) / (ro - ri), 0.5)
+  }
+  uv.needsUpdate = true
 }
 
 function cloudTex(T: any) {
@@ -168,27 +113,6 @@ function cloudTex(T: any) {
   return t
 }
 
-/** Anneaux : un dégradé radial en bandes, avec des trous — la division de Cassini. */
-function ringTex(T: any, color: string) {
-  const c = document.createElement('canvas')
-  c.width = 256; c.height = 8
-  const g = c.getContext('2d')!
-  for (let x = 0; x < 256; x++) {
-    const t = x / 256
-    const gap = Math.abs(t - 0.62) < 0.035 || Math.abs(t - 0.28) < 0.02
-    const a = gap ? 0.05 : 0.35 + Math.sin(t * 44) * 0.16 + (1 - t) * 0.35
-    g.fillStyle = color
-    g.globalAlpha = Math.max(0, Math.min(0.95, a))
-    g.fillRect(x, 0, 1, 8)
-  }
-  const t = new T.CanvasTexture(c)
-  t.colorSpace = T.SRGBColorSpace
-  return t
-}
-
-/* ---------- La fusée ---------- */
-/** La vraie fusée du kit space de Kenney : trois étages empilés (moteur,
-    réservoir, coiffe), mesurés à la Box3 — plus la flamme, qui reste à nous. */
 async function makeRocket(T: any) {
   const stackParts = await Promise.all(
     ['rocket_baseA', 'rocket_fuelA', 'rocket_topA'].map(n => loadModel('space', n))
@@ -340,7 +264,7 @@ export const space: GameDef = {
       /* --- Le Soleil : la seule source de lumière du système --- */
       const sun = new T.Mesh(
         new T.SphereGeometry(0.92, 34, 24),
-        new T.MeshBasicMaterial({ color: 0xFFD98A })
+        new T.MeshBasicMaterial({ map: realTex(T, stage, 'sun.jpg'), color: 0xFFE9B8 })
       )
       scene.add(sun)
       const glow = new T.Sprite(new T.SpriteMaterial({
@@ -371,7 +295,7 @@ export const space: GameDef = {
         const grp = new T.Group()
         const mesh = new T.Mesh(
           new T.SphereGeometry(def.radius, 40, 28),
-          new T.MeshStandardMaterial({ map: stage.keep(planetTex(T, def)), roughness: 0.88, metalness: 0.02 })
+          new T.MeshStandardMaterial({ map: realTex(T, stage, def.tex), roughness: 0.88, metalness: 0.02 })
         )
         mesh.rotation.z = def.tilt
         grp.add(mesh)
@@ -379,7 +303,7 @@ export const space: GameDef = {
           const cl = new T.Mesh(
             new T.SphereGeometry(def.radius * 1.03, 32, 22),
             new T.MeshStandardMaterial({
-              map: stage.keep(cloudTex(T)), transparent: true, opacity: 0.75, roughness: 1, depthWrite: false
+              map: stage.keep(cloudTex(T)), transparent: true, opacity: 0.45, roughness: 1, depthWrite: false
             })
           )
           cl.rotation.z = def.tilt
@@ -388,15 +312,16 @@ export const space: GameDef = {
         }
         if (def.ring) {
           const [ri, ro, col] = def.ring
+          const rgeo = new T.RingGeometry(def.radius * ri, def.radius * ro, 96, 1)
+          ringUVs(T, rgeo, def.radius * ri, def.radius * ro)
           const rg = new T.Mesh(
-            new T.RingGeometry(def.radius * ri, def.radius * ro, 96, 1),
+            rgeo,
             new T.MeshBasicMaterial({
-              map: stage.keep(ringTex(T, col)), transparent: true, side: T.DoubleSide, depthWrite: false
+              map: realTex(T, stage, 'saturn_ring.png'), color: col, transparent: true, side: T.DoubleSide, depthWrite: false
             })
           )
+          // L'anneau est dans le plan équatorial : une seule inclinaison, portée par le holder
           rg.rotation.x = -Math.PI / 2 + 0.02
-          rg.rotation.z = def.tilt
-          rg.rotation.y = def.tilt
           const holder = new T.Group()
           holder.rotation.z = def.tilt
           holder.add(rg)
@@ -406,8 +331,10 @@ export const space: GameDef = {
         const moons: any[] = []
         for (let k = 0; k < (def.moons || 0); k++) {
           const m = new T.Mesh(
-            new T.SphereGeometry(def.radius * (0.14 + k * 0.03), 12, 10),
-            new T.MeshStandardMaterial({ color: 0xB8B2A8, roughness: 0.95 })
+            new T.SphereGeometry(def.radius * (0.14 + k * 0.03), 14, 12),
+            def.id === 'terre'
+              ? new T.MeshStandardMaterial({ map: realTex(T, stage, 'moon.jpg'), roughness: 0.95 })
+              : new T.MeshStandardMaterial({ color: 0xB8B2A8, roughness: 0.95 })
           )
           grp.add(m)
           moons.push({ m, d: def.radius * (1.9 + k * 0.7), s: 0.8 + k * 0.4, ph: Math.random() * 6 })
