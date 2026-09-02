@@ -1,4 +1,5 @@
 import { isSoundOn } from './audio'
+import { duckMusic } from './music'
 
 /* Synthèse vocale française — uniquement pour lire du CONTENU pédagogique
    (multiplications, heures), jamais des consignes.
@@ -34,10 +35,13 @@ export function say(text: string) {
     u.rate = 0.95
     u.pitch = 1.1
     if (frVoice) u.voice = frVoice
+    duckMusic(true)
+    u.onend = u.onerror = () => duckMusic(false)
     speechSynthesis.speak(u)
   } catch { /* pas de synthèse dispo : le visuel suffit */ }
 }
 
 export function shutUp() {
   try { if ('speechSynthesis' in window) speechSynthesis.cancel() } catch { /* rien */ }
+  duckMusic(false)
 }

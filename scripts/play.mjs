@@ -217,6 +217,45 @@ await scenario('pizza-sauce-sous-le-doigt', async () => {
   if (!ok) throw new Error('pas de sauce détectée sous le point touché')
 })
 
+/* 🏔 La Tour de Glace : lâcher 3 blocs quand le balancier passe au centre. */
+await scenario('tour-trois-blocs', async () => {
+  await openGame('La Tour de Glace')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
+  await page.waitForTimeout(800)
+  const box = await page.locator('#itArena').boundingBox()
+  for (let k = 0; k < 3; k++) {
+    let dropped = false
+    for (let i = 0; i < 300; i++) {
+      const x = await page.evaluate(() => window.__towerX)
+      if (typeof x === 'number' && Math.abs(x) < 0.08) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); dropped = true; break }
+      await page.waitForTimeout(16)
+    }
+    if (!dropped) throw new Error('le balancier ne passe jamais au centre')
+    await page.waitForTimeout(1600)
+  }
+  const score = parseInt(await page.locator('.hud-score b').textContent())
+  if (!(score >= 3)) throw new Error('score ' + score + ' après 3 blocs posés')
+  if (errors.length) throw new Error('erreurs JS')
+})
+
+/* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
+await scenario('ninja-tranche', async () => {
+  await openGame('Ninja Verger')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
+  const box = await page.locator('#njArena').boundingBox()
+  const cx = box.x + box.width / 2, cy = box.y + box.height * 0.55
+  for (let k = 0; k < 24; k++) {
+    await page.mouse.move(cx - box.width * 0.35, cy + 60)
+    await page.mouse.down()
+    for (let i = 1; i <= 8; i++) { await page.mouse.move(cx - box.width * 0.35 + i * box.width * 0.09, cy + 60 - i * 22); await page.waitForTimeout(12) }
+    await page.mouse.up()
+    await page.waitForTimeout(220)
+    const score = parseInt(await page.locator('.hud-score b').textContent())
+    if (score >= 2) return
+  }
+  throw new Error('moins de 2 fruits tranchés en 8 s')
+})
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)

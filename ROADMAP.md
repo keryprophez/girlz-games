@@ -56,18 +56,25 @@ sur l'écran de fin, sessions A puis B puis C.
    `ctx.after/every`, `pixelRatio` ≤ 1,5, manifest en paysage + invite à
    tourner la tablette. Reste pour la phase 2 : les HUD des jeux (chips
    emoji, `.g3-hint` en texte) passent par `core/arcade.ts` jeu par jeu.
-2. **Session B — `core/arcade.ts`** : score, vies, combo, rampe liée à la performance,
-   `simMs`, near-miss, barème d'étoiles, HUD standard.
-3. **`core/scene3d.ts`** : sol, décor (kit glTF nature/ferme importé une
-   fois), `toScreen()`, particules GPU, secousse caméra, `follow()`,
-   `timeScale`. `pixelRatio` plafonné à 1,5 pour la Tab A9+, pas de bloom ni
-   de réfraction tant que les fps ne sont pas mesurés.
-4. **`core/rounds.ts`** et **`core/exercise.ts`** : manches sans temps mort,
-   QCM avec second essai, barre de modes.
-5. **Sons de gestes** (tranche, saut, flap, pas, prise, clic ; Kenney CC0) et
-   bus musique / effets / voix avec ducking.
-6. **Session B/C — preuves** : `icetower` puis `ninja` migrés dessus, capturés,
-   comparés ; sonde fps ; captures de référence par jeu.
+2. ✅ **Session B — le moteur d'arcade et la scène partagée** :
+   `core/arcade.ts` (score, vies, combo, rampe liée à la performance, temps
+   simulé, timers `after`, HUD en icônes dans l'arène, mot-image `flash`,
+   barème d'étoiles, `end()` avec outro) ; `core/scene3d.ts` (sol, décor
+   depuis le kit glTF nature importé, `shade` contre le délavage ACES,
+   particules GPU en `Points`, secousse de caméra, projection monde → écran) ;
+   `core/sfx.ts` (34 échantillons Kenney : tranche, whoosh, pas, tic, clic…
+   sur un bus effets) ; ducking de la musique sous la voix ; `stage.timeScale`
+   pour les ralentis. **`icetower`** migré : vrais sapins, tic de balancier,
+   rampe par bloc posé, particules, écroulement joué en outro au ralenti.
+3. ✅ **Session C — `ninja`** migré : HUD d'arcade avec chrono, fruits sur
+   toute la largeur de l'écran (et en travers depuis les bords aux crans
+   élevés), bonus multi-tranche avec ralenti et « ×N », moitiés coupées dans
+   le sens du geste, jus en particules dans la scène, tranche et whoosh
+   échantillonnés, lame nette (DPR), rampe tous les 6 fruits. Deux bots de
+   plus en CI (tour, ninja) : 7 scénarios. Confettis en papier (plus d'emoji).
+4. À faire en fond : `core/rounds.ts` et `core/exercise.ts` (manches sans
+   temps mort, QCM avec second essai) quand les jeux 2D et Apprendre seront
+   itérés ; sonde fps `?fps` ; captures de référence par jeu.
 
 ## Phase 2 — Un jeu par session (ordre proposé)
 

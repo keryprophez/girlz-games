@@ -96,12 +96,22 @@ barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
 carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
 jamais d'emoji.
 
+**Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
+rampe par performance, timers simulés `game.after`, HUD en icônes dans
+l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs`) et de
+`core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
+Modèles : `icetower.ts` et `ninja.ts`.
+
 **Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
 antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,
 lumières et brouillard. Puis `fixedStep()` pour la physique, `orbitCam()` pour la
 caméra, `loadThree()`/`loadPhysics()` + `loader()` pour le chargement à la
 demande, `stage.dispose()` pour le nettoyage GPU (et `stage.keep(tex)` pour les
-textures non attachées à la scène).
+textures non attachées à la scène). Puis **`core/scene3d.ts`** : `ground()`,
+`decor()` (modèles du kit `nature` ou `holiday`, avec `shade` pour assombrir
+les kits clairs), `particles()` (GPU, dans la scène — plus de divs au-dessus du
+canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()`.
+`stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
 `catch` · `ninja` · `caterpillar` · `run` · `flappy` (`stand3d` et `icetower`

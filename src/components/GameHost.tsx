@@ -269,7 +269,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
             : undefined}>
           <div className="modal">
             <h2>{result.title}</h2>
-            <p>{result.msg}{!creative && `  (+${result.starsEarned})`}</p>
+            <p>{result.msg}{!creative && <span className="earned"> +{result.starsEarned}<Svg html={ICON.star} /></span>}</p>
             {!creative && <Svg className="stars" html={starsHTML(result.stars)} />}
             {result.newSticker && (
               <div className="rewardbox" style={{ display: 'block' }}>

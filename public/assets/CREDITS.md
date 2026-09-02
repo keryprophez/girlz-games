@@ -13,6 +13,9 @@ des choses — ce travail est offert.
 - **Impact Sounds** — <https://kenney.nl/assets/impact-sounds>
 - **Holiday Kit (3D)** — <https://kenney.nl/assets/holiday-kit>
 - **Space Kit (3D)** — <https://kenney.nl/assets/space-kit>
+- **Nature Kit (3D)** — <https://kenney.nl/assets/nature-kit>
+- **RPG Audio** — <https://kenney.nl/assets/rpg-audio>
+- **Interface Sounds** — <https://kenney.nl/assets/interface-sounds>
 
 Les planches ont été **triées** : on ne garde que les sprites réellement utilisés
 par les jeux. Pour en ajouter, modifier `scripts/import-assets.mjs` et le

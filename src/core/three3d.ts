@@ -68,6 +68,9 @@ export interface Stage {
   arena: HTMLElement
   /** Passe à false au démontage : toute boucle doit s'arrêter dessus. */
   alive: boolean
+  /** Ralenti : 1 = temps réel, 0.3 = outro au ralenti. Multiplie le `dt`
+      transmis à `update` ; `now` reste l'horloge murale. */
+  timeScale: number
   /** Démarre la boucle de rendu. `dt` est borné à 100 ms (onglet en arrière-plan). */
   start(update: (dt: number, now: number) => void): void
   /** Enregistre une ressource GPU non attachée à la scène (texture, cible de rendu). */
@@ -155,7 +158,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   let unPause: () => void = () => {}
 
   const stage: Stage = {
-    T, renderer, scene, camera, sun, arena, alive: true,
+    T, renderer, scene, camera, sun, arena, alive: true, timeScale: 1,
     keep(r) { extras.push(r); return r },
     start(update) {
       last = performance.now()
@@ -163,7 +166,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         if (!stage.alive) return
         if (isPaused()) { raf = 0; return } // figé : la pause relancera la boucle
         const now = performance.now()
-        const dt = Math.min(0.1, (now - last) / 1000)
+        const dt = Math.min(0.1, (now - last) / 1000) * stage.timeScale
         last = now
         try { update(dt, now) } catch (e) { stage.alive = false; throw e }
         if (!stage.alive) return

@@ -28,6 +28,9 @@ export const ICON = {
   timer: wrap('<path d="M7 3h10v3.5c0 2.4-2 3.8-3.6 5.5 1.6 1.7 3.6 3.1 3.6 5.5V21H7v-3.5c0-2.4 2-3.8 3.6-5.5C9 10.3 7 8.9 7 6.5z" fill="currentColor"/>'),
   save: wrap('<path d="M4 4.5h12l3.5 3.5v11.5A1.5 1.5 0 0 1 18 21H4a1.5 1.5 0 0 1-1.5-1.5v-13A2 2 0 0 1 4 4.5z" fill="currentColor"/><rect x="7" y="13" width="10" height="6" fill="#fff"/><rect x="7" y="4.5" width="7" height="4" fill="#fff"/>'),
   rotate: wrap('<rect x="3" y="7" width="18" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 2.5 15 5l-3 2.5M12 21.5 9 19l3-2.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),
+  cube: wrap('<path d="M12 2.5 3.5 7v10l8.5 4.5 8.5-4.5V7z" fill="currentColor"/><path d="M12 11.5 3.5 7M12 11.5l8.5-4.5M12 11.5v10" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6"/>'),
+  tap: wrap('<path d="M9.5 12V5.5a2 2 0 0 1 4 0V11l3.6.9A3 3 0 0 1 19.5 15v2.5a4 4 0 0 1-4 4h-3.3a4 4 0 0 1-3.4-1.9L5.4 14a1.8 1.8 0 0 1 2.9-2.1z" fill="currentColor"/><path d="M7.5 5.5a4.5 4.5 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
+  blade: wrap('<path d="M3.5 20.5 17 7l3.5-3.5-1 5L6 22z" fill="currentColor"/><path d="m14 10 2.5 2.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

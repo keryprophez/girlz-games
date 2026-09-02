@@ -70,12 +70,22 @@ let nextT = 0
 let step = 0
 let lastMel = 0
 
+const MASTER_VOL = 0.55
+let ducked = false
 function ensureMaster(ac: AudioContext): GainNode {
   if (master) return master
   master = ac.createGain()
-  master.gain.value = 0.55
+  master.gain.value = ducked ? MASTER_VOL * 0.3 : MASTER_VOL
   master.connect(ac.destination)
   return master
+}
+
+/** Ducking : la musique se fait discrète pendant que la voix parle. */
+export function duckMusic(on: boolean) {
+  ducked = on
+  const ac = getCtx()
+  if (!ac || !master) return
+  master.gain.setTargetAtTime(on ? MASTER_VOL * 0.3 : MASTER_VOL, ac.currentTime, on ? 0.08 : 0.4)
 }
 
 /* ---- Instruments (tous discrets, routés vers master) ---- */

@@ -77,12 +77,14 @@ export function fxAt(el: Element, colors: string[], count?: number) {
 }
 
 export function confetti() {
-  const chars = ['🎉', '⭐', '🌟', '🎊', '🐔', '🥕', '🌈', '🦋']
-  for (let i = 0; i < 26; i++) {
+  // Des papiers de couleur qui tombent en tournant — pas d'emoji (règle de la coquille)
+  const colors = JUICE.mix
+  for (let i = 0; i < 34; i++) {
     const c = document.createElement('div')
     c.className = 'confetti'
-    c.textContent = chars[(Math.random() * chars.length) | 0]
-    c.style.left = Math.random() * 100 + 'vw'
+    const w = 8 + Math.random() * 8, h = 10 + Math.random() * 10
+    c.style.cssText = `left:${Math.random() * 100}vw;width:${w}px;height:${h}px;background:${colors[i % colors.length]};
+      border-radius:${Math.random() < 0.4 ? '50%' : '2px'};`
     c.style.animationDuration = 1.8 + Math.random() * 1.7 + 's'
     c.style.animationDelay = Math.random() * 0.5 + 's'
     document.body.appendChild(c)

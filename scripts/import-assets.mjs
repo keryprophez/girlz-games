@@ -49,6 +49,18 @@ const PACKS = {
   space: {
     slug: 'space-kit', title: 'Space Kit (3D)',
     url: 'https://kenney.nl/media/pages/assets/space-kit/20874c75ac-1677698978/kenney_space-kit.zip'
+  },
+  nature3d: {
+    slug: 'nature-kit', title: 'Nature Kit (3D)',
+    url: 'https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip'
+  },
+  rpg: {
+    slug: 'rpg-audio', title: 'RPG Audio',
+    url: 'https://kenney.nl/media/pages/assets/rpg-audio/8e99002d76-1677590336/kenney_rpg-audio.zip'
+  },
+  ui: {
+    slug: 'interface-sounds', title: 'Interface Sounds',
+    url: 'https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip'
   }
 }
 
@@ -89,6 +101,18 @@ const MODELS = [
   // (matériaux embarqués, pas de colormap dans ce kit)
   { pack: 'space', dir: 'Models/GLTF format', out: 'space', files: [
     'rocket_baseA.glb', 'rocket_fuelA.glb', 'rocket_topA.glb'
+  ] },
+  // Le décor partagé de core/scene3d.ts : arbres, rochers, buissons, fleurs,
+  // clôtures (matériaux embarqués). Une seule famille visuelle pour tous les
+  // jeux 3D, à la place des trois recettes d'arbres en cônes.
+  { pack: 'nature3d', dir: 'Models/GLTF format', out: 'nature', files: [
+    'tree_default.glb', 'tree_oak.glb', 'tree_fat.glb', 'tree_detailed.glb', 'tree_cone.glb',
+    'tree_pineRoundA.glb', 'tree_pineRoundC.glb', 'tree_pineDefaultA.glb',
+    'rock_smallA.glb', 'rock_largeA.glb', 'rock_tallB.glb',
+    'plant_bush.glb', 'plant_bushLarge.glb', 'grass.glb', 'grass_large.glb',
+    'flower_redA.glb', 'flower_yellowA.glb', 'flower_purpleA.glb',
+    'mushroom_red.glb', 'stump_round.glb', 'log.glb',
+    'fence_simple.glb', 'fence_planks.glb'
   ] }
 ]
 
@@ -117,6 +141,17 @@ const SOUNDS = {
   pate: ['impactSoft_medium_001', 'impactSoft_medium_003', 'impactSoft_heavy_001', 'impactSoft_heavy_003'],
   metal: ['impactMetal_light_000', 'impactMetal_medium_000', 'impactMetal_medium_002', 'impactMetal_heavy_000'],
   sourd: ['impactPunch_medium_000', 'impactPunch_medium_002', 'impactPunch_heavy_000', 'impactPunch_heavy_002']
+}
+
+/* Sons de GESTES et d'interface pour core/sfx.ts (RPG Audio + Interface
+   Sounds, CC0). Un jeu Flash, c'est 50 % de son : tranche, pas, clic, tic…
+   Les noms de sortie sont ceux que sfx() connaît. */
+const GESTURES = {
+  rpg: ['knifeSlice', 'knifeSlice2', 'drawKnife1', 'drawKnife2', 'chop', 'cloth1', 'cloth2',
+    'footstep00', 'footstep01', 'footstep02', 'footstep03', 'metalClick', 'handleCoins', 'creak1'],
+  ui: ['click_001', 'click_002', 'click_003', 'tick_001', 'tick_002', 'pluck_001', 'pluck_002',
+    'confirmation_001', 'confirmation_002', 'error_001', 'error_004', 'drop_001', 'drop_002',
+    'switch_001', 'bong_001', 'glass_001', 'glass_002', 'select_001', 'maximize_001', 'minimize_001']
 }
 
 /* Particules : PAS embarquées pour l'instant. Les PNG de Kenney font 512×512
@@ -234,7 +269,16 @@ for (const m of MODELS) {
       n++
     }
   }
-  console.log(`✓ sons — ${n} bruitages foley`)
+  for (const [pack, files] of Object.entries(GESTURES)) {
+    for (const f of files) {
+      const from = join(TMP, pack, 'Audio', f + '.ogg')
+      if (!existsSync(from)) { console.error(`✗ son introuvable : ${from}`); process.exit(1) }
+      cpSync(from, join(dst, f + '.ogg'))
+      total += readFileSync(from).length
+      n++
+    }
+  }
+  console.log(`✓ sons — ${n} bruitages (foley + gestes + interface)`)
 }
 
 writeFileSync(join(OUT, 'CREDITS.md'), `# Crédits des assets
