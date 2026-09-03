@@ -58,7 +58,7 @@ interface State {
 let mo: State | null = null
 let ctx: GameContext
 
-const RISE_S = 0.16, HIDE_S = 0.14, BONK_S = 0.28
+const RISE_S = 0.16, HIDE_S = 0.14, BONK_S = 0.34
 const SPRITE = 0.8
 
 /** Un habitant sort d'un trou libre. */
@@ -306,10 +306,13 @@ export const moleGame: GameDef = {
             sp.position.y = top + (bottom - top) * k * k
             if (k >= 1) clearHole(me, h)
           } else if (h.phase === 'bonked') {
+            // Tapé : un coup d'écrasement, puis il RETOMBE dans son trou
             const k = Math.min(1, h.t / BONK_S)
-            sp.scale.y = h.size * Math.max(0.25, 1 - k * 1.4) // écrasé…
-            sp.scale.x = h.size * (1 + k * 0.5)
-            sp.position.y = top - k * 0.15
+            const sq = k < 0.3 ? k / 0.3 : Math.max(0, 1 - (k - 0.3) / 0.25)
+            sp.scale.y = h.size * (1 - sq * 0.35)
+            sp.scale.x = h.size * (1 + sq * 0.3)
+            const f = Math.max(0, (k - 0.3) / 0.7)
+            sp.position.y = top + (bottom - top) * f * f
             if (k >= 1) clearHole(me, h)
           }
         }

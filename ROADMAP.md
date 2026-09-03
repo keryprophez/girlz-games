@@ -141,6 +141,15 @@ sur l'écran de fin, sessions A puis B puis C.
   `bonhomme-parcours-complet` : trois boules roulées à la pile, un chapeau
   glissé sur la tête.
 
+- ✅ **Retours de la tablette du 3/09** : bouton son dans la barre de jeu
+  (coupe musique, bruitages et voix à tout moment) ; les plateaux 2D sont
+  centrés verticalement ; les boutons de réponse (`.qopt` : heures, tables)
+  ont enfin un style ; les moitiés de fruits du Ninja ne cognent plus les
+  fruits entiers ; l'écran de fin laisse voir la partie figée derrière (le
+  jeu reste monté, en pause, jusqu'au rejouer) ; le plein écran reste d'un
+  jeu à l'autre et le jeu se monte après le passage en plein écran (plus de
+  saut) ; l'animal tapé du Tape-Trous retombe dans son trou.
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler

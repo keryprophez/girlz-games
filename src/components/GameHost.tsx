@@ -12,7 +12,6 @@ import { playMusic, stopMusic } from '../core/music'
 import { frameProps, loadAtlas, type Atlas } from '../core/sprites'
 import { ICON, starsHTML } from '../core/icons'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
-import { exitFullscreen } from '../App'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
    Le jeu ne voit que `ctx` ; tout ce qui est commun à 30 jeux vit ici. */
@@ -54,13 +53,15 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const [atlas, setAtlas] = useState<Atlas | null>(null)
   useEffect(() => { let on = true; loadAtlas('animals').then(a => on && setAtlas(a)); return () => { on = false } }, [])
 
-  // Mode jeu : la coquille passe en plein écran (CSS), on en sort en rentrant
+  // Mode jeu : la coquille passe en plein écran (CSS). Le plein écran du
+  // navigateur, lui, reste d'un jeu à l'autre : chaque entrée/sortie faisait
+  // sauter toute la page (vécu sur tablette). On en sort par le geste du
+  // navigateur (glisser depuis le bord), pas en rentrant au menu.
   useEffect(() => {
     document.body.classList.add('playing')
     return () => {
       document.body.classList.remove('playing')
       setPaused(false)
-      exitFullscreen()
     }
   }, [])
 
@@ -170,7 +171,11 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         const outroMs = payload.outroMs ?? 0
         if (outroMs > 0) { setOutro(true); stopMusic(outroMs / 1000) }
         window.setTimeout(() => {
-          safeCleanup()
+          // Le jeu reste MONTÉ et figé derrière l'écran de fin : on voit sa
+          // partie, pas un fond vide. Il sera démonté au rejouer / au menu.
+          sessionRef.current?.end()
+          sessionRef.current = null
+          setPaused(true)
           ceremony(res)
           setTimeout(() => playClip(p.id, payload.stars >= 2 ? 'bravo' : 'retry'), 800)
           if (!duel) { setResult(res); return }
@@ -180,17 +185,31 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         }, outroMs)
       }
     }
-    // Monté après le rendu pour que les dimensions soient mesurables
-    const raf = requestAnimationFrame(() => {
-      try {
-        cleanupRef.current = game.mount(ctx)
-      } catch (err) {
-        console.error(err)
-        setCrashed(true)
-      }
-    })
+    // Monté après le rendu pour que les dimensions soient mesurables — et
+    // après le passage en plein écran (fenêtre qui change de taille), sinon
+    // l'arène est mesurée trop petite puis saute. Le carton titre couvre.
+    let mounted = false
+    let raf = 0
+    const doMount = () => {
+      if (mounted) return
+      mounted = true
+      document.removeEventListener('fullscreenchange', doMount)
+      raf = requestAnimationFrame(() => {
+        try {
+          cleanupRef.current = game.mount(ctx)
+        } catch (err) {
+          console.error(err)
+          setCrashed(true)
+        }
+      })
+    }
+    const waitFs = document.fullscreenEnabled && !document.fullscreenElement && runId === 0 && turn === 0
+    if (waitFs) document.addEventListener('fullscreenchange', doMount)
+    const mountT = window.setTimeout(doMount, waitFs ? 350 : 0)
     return () => {
       cancelAnimationFrame(raf)
+      clearTimeout(mountT)
+      document.removeEventListener('fullscreenchange', doMount)
       clearTimeout(cardT)
       safeCleanup()
       stopMusic()
@@ -198,14 +217,16 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     }
   }, [gameId, runId, turn])
 
-  const replay = () => { setResult(null); setRunId(r => r + 1) }
+  const replay = () => { setPaused(false); setResult(null); setRunId(r => r + 1) }
 
   const startSecondTurn = () => {
+    setPaused(false)
     setInterstitial(null)
     setTurn(1)
   }
 
   const restartDuel = () => {
+    setPaused(false)
     duelResults.current = []
     setDuelDone(null)
     setInterstitial(null)
@@ -227,6 +248,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         <button className="pbtn" onClick={goHome} aria-label="Menu"><Svg html={ICON.home} /></button>
         {duel && <span className="playbar-who"><Face p={profile} px={30} /><b>{profile.name}</b></span>}
         <span className="playbar-right">
+          <button className="pbtn" onClick={() => { store.toggleSound(); if (store.sound) shutUp() }} aria-label="Son"><Svg html={store.sound ? ICON.sound : ICON.mute} /></button>
           <button className="pbtn" onClick={() => setPaused(true)} aria-label="Pause"><Svg html={ICON.pause} /></button>
           <button className="pbtn" onClick={replay} aria-label="Rejouer"><Svg html={ICON.replay} /></button>
         </span>
@@ -241,7 +263,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         </div>
       )}
 
-      {paused && !result && !crashed && (
+      {paused && !result && !crashed && !interstitial && !duelDone && (
         <div className="pausewall" onClick={() => setPaused(false)}>
           <button className="pbtn pbtn-big" aria-label="Reprendre"><Svg html={ICON.play} /></button>
         </div>

@@ -151,6 +151,10 @@ function slice(me: State, f: Fruit, dirX: number, dirY: number) {
       0
     )
     body.angularVelocity.set(0, 0, side * rnd(6, 11))
+    // Les moitiés qui retombent ne cognent RIEN : ni les fruits en l'air, ni
+    // entre elles — sinon un fruit entier dévie au moment de le trancher
+    body.collisionFilterGroup = 2
+    body.collisionFilterMask = 0
     me.world.addBody(body)
     me.halves.push({ obj: h, body })
   }
