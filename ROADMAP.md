@@ -104,11 +104,20 @@ sur l'écran de fin, sessions A puis B puis C.
   rampe tous les 8 fruits (gravité et cadence) ; plus de chrono ; verger du
   kit nature. Bot CI `attrape-six-fruits` (10 scénarios).
 
+- ✅ **`caterpillar` (La Chenille) refait** sur `core/arcade.ts` : corps
+  continu (courbe Catmull-Rom, anneaux à espacement constant qui ondulent),
+  pas sur l'horloge simulée (plus de saut de phase à chaque fruit), la
+  clôture du kit nature est un vrai mur (on cogne, on perd un cœur, on
+  repart), se mordre coûte un cœur et raccourcit ; vrais fruits du kit food,
+  fraise bonus 5 s qui vaut 3 ; tic à chaque pas, accélération par fruit ;
+  outro au ralenti. Le compteur est le nombre de fruits (`plainScore`), pas
+  un score à combo. Bot `chenille-croque-des-fruits` qui ne fait plus
+  demi-tour dans le mur.
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) →
-`caterpillar` (corps continu, tic de pas, bords
-tranchés) → `run` + `flappy` sur un socle runner commun → `snowman` (rouler
+`run` + `flappy` sur un socle runner commun → `snowman` (rouler
 jusqu'à la pile, habillage par drag) → `maze` · `taquin` · `memory` · `simon` ·
 `connect4` (polish 2D, IA du Puissance 4) → `clock` · `tables` · `market`
 (drag partout, voix sur les cibles, plateau plein écran) → `intrus` (sans

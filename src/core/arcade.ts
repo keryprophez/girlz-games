@@ -43,6 +43,8 @@ export interface ArcadeOpts {
   timer?: number
   /** Rampe : un cran tous les `every` succès, `max` crans. */
   ramp?: { every: number; max: number }
+  /** Pas de multiplicateur de combo : le score reste un simple compte (fruits croqués…). */
+  plainScore?: boolean
   /** Barème d'étoiles, calculé à `end()`. */
   stars: (s: ArcadeState) => 1 | 2 | 3
   onLevel?: (level: number) => void
@@ -115,7 +117,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
       s.hits++
       s.combo += h.perfect ? 2 : 1
       s.bestCombo = Math.max(s.bestCombo, s.combo)
-      const mult = Math.min(5, 1 + Math.floor(s.combo / 3))
+      const mult = o.plainScore ? 1 : Math.min(5, 1 + Math.floor(s.combo / 3))
       s.score += points * mult
       paint()
       replay(scoreEl, 'bump')

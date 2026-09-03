@@ -39,6 +39,7 @@ export const ICON = {
   check: wrap('<path d="m4.5 12.5 5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>'),
   pin: wrap('<path d="M12 22s-7-6.6-7-12a7 7 0 0 1 14 0c0 5.4-7 12-7 12z" fill="currentColor"/><circle cx="12" cy="10" r="2.8" fill="#fff"/>'),
   basket: wrap('<path d="M3 9.5h18l-1.8 9.2a2 2 0 0 1-2 1.6H6.8a2 2 0 0 1-2-1.6z" fill="currentColor"/><path d="M8 9.5 12 3l4 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13v4M12 13v4M15 13v4" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>'),
+  apple: wrap('<path d="M12 7.5c2-2.2 5.5-2 7 .8 2 3.6-.6 9.7-3.4 12.2-1.2 1-2.4.5-3.6.5s-2.4.5-3.6-.5C5.6 18 3 11.9 5 8.3c1.5-2.8 5-3 7-.8z" fill="currentColor"/><path d="M12 7V4.5c0-1 .8-2 2.5-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

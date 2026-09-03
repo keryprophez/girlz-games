@@ -128,11 +128,18 @@ await scenario('chenille-croque-des-fruits', async () => {
     })
     if (!st) break
     if (st.eaten >= 2) return
-    let key = null
-    if (st.hx !== st.fx && st.d.x !== 0) key = st.fx > st.hx ? 'ArrowRight' : 'ArrowLeft'
-    else if (st.hy !== st.fy) key = st.fy > st.hy ? 'ArrowDown' : 'ArrowUp'
-    else if (st.hx !== st.fx) key = st.fx > st.hx ? 'ArrowRight' : 'ArrowLeft'
-    if (key) await page.keyboard.press(key)
+    // Cap voulu ; la clôture est un vrai mur et le demi-tour est interdit,
+    // donc si le fruit est derrière on tourne d'abord de côté.
+    const wx = Math.sign(st.fx - st.hx), wy = Math.sign(st.fy - st.hy)
+    let want = null
+    if (wx && st.d.x === 0) want = { x: wx, y: 0 }
+    else if (wy && st.d.y === 0) want = { x: 0, y: wy }
+    else if (wx && wx !== st.d.x) want = { x: 0, y: wy || (st.hy > 5 ? -1 : 1) }
+    else if (wy && wy !== st.d.y) want = { x: wx || (st.hx > 6 ? -1 : 1), y: 0 }
+    if (want) {
+      const key = want.x ? (want.x > 0 ? 'ArrowRight' : 'ArrowLeft') : (want.y > 0 ? 'ArrowDown' : 'ArrowUp')
+      await page.keyboard.press(key)
+    }
     await page.mouse.move(300 + (i % 5) * 40, 300)
     await page.waitForTimeout(200)
   }
