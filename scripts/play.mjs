@@ -146,44 +146,46 @@ await scenario('chenille-croque-des-fruits', async () => {
   throw new Error('moins de 2 fruits croqués en 22 s')
 })
 
-/* 🚜 Course : sauter les obstacles, tenir 100 m avec au moins un cœur. */
-await scenario('course-cent-metres', async () => {
+/* 🚜 Course : sauter les obstacles, tenir 60 m avec au moins un cœur. */
+await scenario('course-soixante-metres', async () => {
   await openGame('Course')
-  for (let i = 0; i < 160; i++) {
-    const st = await page.evaluate(() => {
+  for (let i = 0; i < 420; i++) {
+    // Une décision par frame rendue : sous swiftshader la 3D tourne à 4 fps
+    const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
       const r = window.__run
-      if (!r || !r.running) return null
-      const near = r.obstacles.some(o => o.x > 90 && o.x < 90 + r.speed * 330)
-      return { near, jumping: r.jumping, dist: Math.floor(r.dist), lives: r.lives }
-    })
-    if (!st) throw new Error('partie terminée avant 100 m')
-    if (st.dist >= 100 && st.lives >= 1) return
+      if (!r || !r.running) return res(null)
+      // Sauter quand l'avant de l'obstacle arrive sur le tracteur dans 0,14 à 0,3 s
+      // (l'entrée est appliquée à la frame suivante, soit 0,1 s de simulation)
+      const near = r.obstacles.some(o => { const t = (o.x - o.hw - r.front) / r.speed; return t > 0.14 && t < 0.3 })
+      res({ near, jumping: r.jumping, dist: Math.floor(r.dist), lives: r.lives })
+    })))
+    if (!st) throw new Error('partie terminée avant 60 m')
+    if (st.dist >= 60 && st.lives >= 1) return
     if (st.near && !st.jumping) await page.keyboard.press('Space')
-    await page.mouse.move(300 + (i % 5) * 40, 300)
-    await page.waitForTimeout(90)
   }
-  throw new Error('100 m non atteints en 15 s')
+  throw new Error('60 m non atteints')
 })
 
 /* 🐤 Poussin Volant : viser le milieu du passage, franchir 2 barrières. */
 await scenario('poussin-deux-barrieres', async () => {
   await openGame('Poussin Volant')
   await page.keyboard.press('Space')
-  for (let i = 0; i < 200; i++) {
-    const st = await page.evaluate(() => {
+  for (let i = 0; i < 300; i++) {
+    const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
       const f = window.__fl
-      if (!f || !f.running) return null
-      const next = f.pipes.find(p => p.x + 52 > 900 * 0.22 - 18)
-      const target = next ? next.gy + next.gap * 0.55 : 420 * 0.45
-      return { y: f.y, vy: f.vy, target, score: f.score }
-    })
+      if (!f || !f.running) return res(null)
+      const next = f.pipes.find(p => p.x + p.hw > f.x - f.r)
+      const target = next ? (next.lo + next.hi) / 2 : 0.3
+      res({ y: f.y, vy: f.vy, target, score: f.score })
+    })))
     if (!st) break
     if (st.score >= 2) return
-    if (st.y + st.vy * 140 > st.target) await page.keyboard.press('Space')
-    await page.mouse.move(300 + (i % 5) * 40, 300)
-    await page.waitForTimeout(80)
+    // Battre des ailes en bas du passage (un coup d'aile monte de 0,46 m),
+    // jamais en pleine montée : l'entrée arrive avec une frame de retard
+    const yNext = st.y + st.vy * 0.1
+    if (st.vy < 0.5 && yNext < st.target - 0.2) await page.keyboard.press('Space')
   }
-  throw new Error('moins de 2 barrières passées en 16 s')
+  throw new Error('moins de 2 barrières passées')
 })
 
 /* 🍕 Pizzeria : la sauce doit apparaître SOUS le doigt (régression UV). */

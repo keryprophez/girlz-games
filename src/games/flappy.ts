@@ -1,53 +1,101 @@
 import type { GameContext, GameDef } from '../core/types'
 import { impact } from '../core/impact'
 import { $ } from '../core/utils'
-import { sCatch, sJump, sNope, sWin } from '../core/audio'
+import { ICON } from '../core/icons'
+import { sfx, preloadSfx } from '../core/sfx'
+import { arcade, type Arcade } from '../core/arcade'
+import { runner, type Runner } from '../core/runner'
+import { ground, decor, particles, camShake, type Particles, type CamShake } from '../core/scene3d'
 import {
   createStage, loadThree, loader, woodTex, avatarMedallion,
-  type Stage
+  type Stage, type T3
 } from '../core/three3d'
 
-/* 🐤 Poussin Volant, en 3D — un vrai poussin en volume qui bat des ailes,
-   pique du nez quand il tombe, et se faufile entre des palissades de bois
-   dans la lumière du soir. Plumes qui volent au choc, prairie fleurie qui
-   défile, nuages moelleux en parallaxe.
+/* 🐤 Poussin Volant — un poussin en volume qui bat des ailes et se faufile
+   entre des palissades de bois, dans une prairie de fin d'après-midi.
 
-   La PHYSIQUE validée ne change pas d'un chiffre : y mesuré depuis le haut,
-   gravité, impulsion, plafond, sol, fenêtres de collision — tout tourne dans
-   les mêmes « pixels virtuels », seul le rendu les traduit en mètres. */
+   Refonte sur core/runner.ts + core/arcade.ts :
+   - en mètres, y vers le haut, une seule boucle ;
+   - une RAMPE : tous les 4 passages, ça va un peu plus vite et le passage
+     se resserre un peu (borné) — avant, la difficulté ne bougeait pas ;
+   - le sol : on rebondit, mais ça coûte un cœur ; le plafond retient ;
+   - le near-miss : passer à un cheveu d'un chapeau de palissade, ça fait
+     un « Ouf ! » et une petite plume ;
+   - au dernier cœur, le poussin dégringole au ralenti dans un nuage de
+     plumes, et le titre de fin ne fête plus une chute. */
 
-const W = 900             // largeur virtuelle en px (fixe : le feel ne dépend plus de l'écran)
-const H = 420             // hauteur virtuelle
-const PX = 0.008          // 1 px virtuel → mètres
-const R = 18              // rayon du poussin en px
-const PW = 52             // largeur d'une palissade en px
+const CHICK_X = -1.7
+const SPAWN_X = 4.2
+const DESPAWN_X = -3.8
+const GROUND_Y = -0.95
+const CEIL_Y = 1.62
+const R = 0.145            // rayon du poussin (m)
+const PW = 0.42            // largeur d'une palissade
+const GRAVITY = 11.2
+const FLAP_V = 3.2
 
-const wx = (x: number) => (x - W / 2) * PX
-const wy = (y: number) => (H / 2 - y) * PX   // y virtuel = depuis le HAUT
+interface PipeData { lo: number; hi: number; minClear: number }
+interface Cfg { speed: number; inc: number; gap: number; gapDec: number; space: number }
 
-let fl: any = null
-let ctx: GameContext
-
-function hit() {
-  if (!fl || fl.invuln > 0) return
-  fl.lives--; fl.invuln = 1200; sNope()
-  impact(0.8, { matter: 'sourd' })
-  fl.feathers()
-  $('flHearts').textContent = '❤️'.repeat(fl.lives) + '🖤'.repeat(3 - fl.lives)
-  if (fl.lives <= 0) { fl.running = false; setTimeout(() => fl && finish(), 400) }
+interface State {
+  stage: Stage
+  game: Arcade
+  run: Runner<PipeData>
+  fx: Particles
+  shake: CamShake
+  cfg: Cfg
+  y: number
+  vy: number
+  started: boolean
+  flapT: number
+  over: boolean
+  spin: number
+  tapHint: HTMLElement
+  chick: import('three').Group
 }
 
-function finish() {
-  const score = fl ? fl.score : 0
-  if (fl) fl.running = false
-  sWin()
+let fl: State | null = null
+let ctx: GameContext
+
+function flap(me: State) {
+  if (me.over) return
+  if (!me.started) { me.started = true; me.tapHint.classList.add('off') }
+  me.vy = FLAP_V
+  me.flapT = 1
+  sfx('cloth', { vol: 0.45, rate: 1.6, spread: 0.1 })
+}
+
+function feathers(me: State, n: number) {
+  me.fx.burst({ x: CHICK_X, y: me.y, z: 0 }, { count: n, color: [0xE8B93C, 0xF5EED8], speed: 1.6, life: 0.9, size: 0.07, gravity: 2.5, spread: 1 })
+}
+
+function hurt(me: State, what: 'sol' | 'bois') {
+  if (me.over || me.run.invuln > 0) return
+  impact(0.8, { matter: what === 'sol' ? 'sourd' : 'bois', noShake: true })
+  me.shake.hit(0.7)
+  feathers(me, 14)
+  me.game.flash(ICON.heartEmpty, 'bad')
+  if (me.game.hurt()) { finish(me); return }
+  me.run.hurt(1.2)
+}
+
+function finish(me: State) {
+  if (me.over) return
+  me.over = true
+  me.stage.timeScale = 0.35
+  me.vy = Math.min(me.vy, 0.5)
+  feathers(me, 24)
+  const n = me.game.s.score
   const th = ctx.byTier([10, 6], [14, 8], [18, 11])
-  const stars = score >= th[0] ? 3 : score >= th[1] ? 2 : 1
-  ctx.finish({ title: 'Bel envol !', msg: `${ctx.playerName} a passé ${score} barrières 🐤`, stars, starsEarned: stars })
+  me.game.end({
+    title: n >= th[0] ? 'Grand envol !' : n >= th[1] ? 'Bel envol !' : 'Le poussin est tombé !',
+    msg: `${ctx.playerName} a passé ${n} barrière${n > 1 ? 's' : ''}`,
+    outroMs: 1300
+  })
 }
 
 /** Le poussin : corps rond, ailes articulées, bec, yeux, houppette. */
-function makeChick(T: any) {
+function makeChick(T: T3) {
   const g = new T.Group()
   const yellow = new T.MeshStandardMaterial({ color: 0xE8B93C, roughness: 0.65 })
   const orange = new T.MeshStandardMaterial({ color: 0xD97B2E, roughness: 0.6 })
@@ -70,7 +118,7 @@ function makeChick(T: any) {
     g.add(eye, pupil)
   }
   // Les ailes : pivot à l'épaule pour battre
-  const wings: any[] = []
+  const wings: { pivot: import('three').Group; side: number }[] = []
   for (const s of [-1, 1]) {
     const pivot = new T.Group()
     const wing = new T.Mesh(new T.SphereGeometry(0.1, 12, 10), yellow)
@@ -82,7 +130,6 @@ function makeChick(T: any) {
     g.add(pivot)
     wings.push({ pivot, side: s })
   }
-  // Pattes
   for (const s of [-1, 1]) {
     const leg = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.07, 6), orange)
     leg.position.set(0.02, -0.16, s * 0.05)
@@ -93,245 +140,204 @@ function makeChick(T: any) {
 
 export const flappy: GameDef = {
   id: 'flappy', name: 'Poussin Volant', icon: '🐤', sq: 'sq-lilac', cat: 'action',
-  subtitle: 'Tape ou ESPACE pour battre des ailes !',
+  subtitle: 'Tape pour battre des ailes !',
   mount(c) {
     ctx = c
     let dead = false
-    c.root.innerHTML = `
-      <div class="topbar">
-        <div class="hearts" id="flHearts">❤️❤️❤️</div>
-        <div class="chip" id="flScore">🐤 0</div>
-      </div>
-      <div id="flArea" class="arena g3-arena fl-arena">
-        <div class="hint g3-hint" id="flStart">Tape pour voler ! 🐤</div>
-      </div>`
+    c.root.innerHTML = `<div id="flArea" class="arena g3-arena fl-arena"></div>`
     const area = $('flArea')
-    const startMsg = $('flStart')
     const hideLoader = loader(area, '🐤')
-    const cfg = c.byTier(
-      { gap: 0.36, sp: 0.15, space: 0.66 },
-      { gap: 0.31, sp: 0.19, space: 0.58 },
-      { gap: 0.26, sp: 0.23, space: 0.5 }
+    preloadSfx(['cloth', 'whoosh', 'confirm', 'pluck'])
+    const cfg: Cfg = c.byTier(
+      { speed: 1.2, inc: 0.07, gap: 1.25, gapDec: 0.03, space: 4.4 },
+      { speed: 1.5, inc: 0.09, gap: 1.05, gapDec: 0.03, space: 3.9 },
+      { speed: 1.85, inc: 0.1, gap: 0.9, gapDec: 0.03, space: 3.4 }
     )
-    const groundH = H * 0.22
-    const groundTop = H - groundH
 
     ;(async () => {
       const T = await loadThree()
       if (dead) return
       const stage: Stage = await createStage(area, {
-        sky: '#243550',
-        fog: [4.5, 10], fogColor: '#243550',
-        cam: [0, 0.45, 4.5], target: [0, -0.05, 0], fov: 44,
-        hemi: ['#F5DCB8', '#20304A', 0.75],
-        sun: { pos: [2.5, 5, 3.5], color: '#FFDCA8', intensity: 1.8, area: 6, far: 15 },
-        fill: 0.35, exposure: 0.93, iblIntensity: 0.55
+        sky: '#7FB8E0',
+        fog: [6, 14], fogColor: '#BFD9EE',
+        cam: [0, 0.45, 4.6], target: [0, 0.1, 0], fov: 44,
+        hemi: ['#EAF4FF', '#4E7A3C', 0.9],
+        sun: { pos: [2.5, 5, 3.5], color: '#FFEBC8', intensity: 1.9, area: 7, far: 18 },
+        fill: 0.35, exposure: 1.0, iblIntensity: 0.55
       })
       if (dead) { stage.dispose(); return }
-      hideLoader()
       const scene = stage.scene
 
-      /* La prairie : un sol vert sombre au niveau du sol virtuel, fleurs qui
-         défilent — c'est le sol qui donne la vitesse. */
-      const groundY = wy(groundTop)
-      const grass = new T.Mesh(
-        new T.PlaneGeometry(18, 8),
-        new T.MeshStandardMaterial({ color: 0x27452C, roughness: 0.95 })
-      )
-      grass.rotation.x = -Math.PI / 2
-      grass.position.set(0, groundY, 1)
-      grass.receiveShadow = true
-      scene.add(grass)
-      const flowers: any[] = []
-      const stemMat = new T.MeshStandardMaterial({ color: 0x3A6B40, roughness: 0.9 })
-      const petalMats = [0xC46A8A, 0xC9A227, 0xB6604A].map(col =>
-        new T.MeshStandardMaterial({ color: col, roughness: 0.7 }))
-      for (let i = 0; i < 16; i++) {
-        const f = new T.Group()
-        const stem = new T.Mesh(new T.CylinderGeometry(0.012, 0.015, 0.16, 5), stemMat)
-        stem.position.y = 0.08
-        const head = new T.Mesh(new T.SphereGeometry(0.04, 8, 6), petalMats[i % 3])
-        head.position.y = 0.18
-        f.add(stem, head)
-        f.position.set(-6 + i * 0.85, groundY, 0.4 + (i % 3) * 0.5)
-        scene.add(f)
-        flowers.push(f)
-      }
+      /* La prairie : un sol, et des fleurs, buissons, herbes du kit nature qui défilent */
+      const g = ground(stage, { radius: 26, color: 0x4F8F3A, roughness: 0.98 })
+      g.position.set(0, GROUND_Y, 2)
+      const span = 16
+      const front = Array.from({ length: 12 }, (_, i) => ({ model: `nature/${['flower_redA', 'flower_yellowA', 'flower_purpleA', 'grass_large', 'plant_bush', 'mushroom_red'][i % 6]}`, x: -7 + i * (span / 12) + Math.random() * 0.6, z: 0.4 + Math.random() * 0.7, size: 0.13 + Math.random() * 0.1, tint: 0xFFFFFF }))
+      const trees = Array.from({ length: 7 }, (_, i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat', 'tree_detailed'][i % 4]}`, x: -7 + i * (span / 7) + Math.random(), z: -3 - Math.random() * 1.6, size: 2 + Math.random() * 1.1, tint: 0x6EAE48 }))
+      const bushes = Array.from({ length: 6 }, (_, i) => ({ model: `nature/${['plant_bushLarge', 'rock_smallA', 'stump_round'][i % 3]}`, x: -7 + i * (span / 6) + Math.random(), z: -1.6 - Math.random() * 0.8, size: 0.4 + Math.random() * 0.3, tint: 0x8FB56A }))
+
       // Nuages moelleux : grappes de sphères, parallaxe lente
-      const cloudMat = new T.MeshStandardMaterial({ color: 0xB8BED4, roughness: 1 })
-      const clouds: any[] = []
-      for (let i = 0; i < 4; i++) {
+      const cloudMat = new T.MeshStandardMaterial({ color: 0xF4F6FA, roughness: 1 })
+      const cloudGeo = new T.SphereGeometry(1, 10, 8)
+      const clouds: import('three').Group[] = []
+      for (let i = 0; i < 5; i++) {
         const cl = new T.Group()
-        for (let j = 0; j < 3; j++) {
-          const b = new T.Mesh(new T.SphereGeometry(0.22 - j * 0.05, 10, 8), cloudMat)
-          b.position.set(j * 0.25 - 0.25, (j % 2) * 0.08, 0)
+        for (let j = 0; j < 5; j++) {
+          const b = new T.Mesh(cloudGeo, cloudMat)
+          const r = 0.16 + Math.random() * 0.14
+          b.scale.setScalar(r)
+          b.position.set(j * 0.22 - 0.44, (j % 2) * 0.09 + Math.random() * 0.05, (Math.random() - 0.5) * 0.2)
           cl.add(b)
         }
-        cl.position.set(-5 + i * 3, 1 + (i % 2) * 0.6, -2.5)
-        cl.scale.setScalar(0.8 + (i % 3) * 0.3)
+        cl.position.set(-6 + i * 3, 1.1 + (i % 3) * 0.35, -4)
+        cl.scale.setScalar(1.1 + (i % 3) * 0.4)
         scene.add(cl)
         clouds.push(cl)
       }
 
-      /* Les palissades : tours de bois avec chapeau, du plafond et du sol */
-      const wood = woodTex(T, '#A87848')
-      stage.keep(wood)
+      /* Les palissades : tours de bois avec chapeau, depuis le plafond et depuis le sol */
+      const wood = stage.keep(woodTex(T, '#A87848'))
       const woodMat = new T.MeshStandardMaterial({ map: wood, roughness: 0.8 })
       const capMat = new T.MeshStandardMaterial({ color: 0x6B4A32, roughness: 0.75 })
-      // Le fût déborde largement du cadre (EXTRA) : une palissade doit sortir
-      // de l'écran, pas flotter en l'air — seul le chapeau marque le passage.
-      const EXTRA = 1.6
-      const makeTower = (hPx: number, capAtBottom: boolean) => {
-        const g = new T.Group()
-        const h = hPx * PX
-        const body = new T.Mesh(new T.BoxGeometry(PW * PX, h + EXTRA, 0.5), woodMat)
-        body.position.y = capAtBottom ? -h + (h + EXTRA) / 2 : h - (h + EXTRA) / 2
-        body.castShadow = true
-        const cap = new T.Mesh(new T.BoxGeometry(PW * PX * 1.35, 0.12, 0.58), capMat)
-        cap.position.y = capAtBottom ? -h + 0.06 : h - 0.06
-        cap.castShadow = true
-        g.add(body, cap)
-        return g
+      const EXTRA = 1.6 // le fût déborde du cadre : une palissade sort de l'écran, elle ne flotte pas
+      const makePair = (lo: number, hi: number) => {
+        const grp = new T.Group()
+        const hTop = CEIL_Y + 0.3 - hi
+        const top = new T.Mesh(new T.BoxGeometry(PW, hTop + EXTRA, 0.5), woodMat)
+        top.position.y = hi + (hTop + EXTRA) / 2
+        const capT = new T.Mesh(new T.BoxGeometry(PW * 1.35, 0.12, 0.58), capMat)
+        capT.position.y = hi + 0.06
+        const hBot = lo - GROUND_Y
+        const bot = new T.Mesh(new T.BoxGeometry(PW, hBot + 0.3, 0.5), woodMat)
+        bot.position.y = lo - (hBot + 0.3) / 2
+        const capB = new T.Mesh(new T.BoxGeometry(PW * 1.35, 0.12, 0.58), capMat)
+        capB.position.y = lo - 0.06
+        for (const m of [top, capT, bot, capB]) m.castShadow = true
+        grp.add(top, capT, bot, capB)
+        return grp
       }
 
-      /* Le poussin */
+      /* Le poussin, et c'est ELLE */
       const { g: chick, wings } = makeChick(T)
       chick.scale.setScalar(1.15) // un peu plus gros que sa hitbox : plus lisible, plus indulgent
+      chick.position.x = CHICK_X
       scene.add(chick)
-      // Le poussin, c'est ELLE : médaillon photo au-dessus de la houppette
-      avatarMedallion(T, c.avatar, 0.14).then(med => {
-        if (med && fl) { med.position.set(0, 0.34, 0); chick.add(med) }
+      avatarMedallion(T, c.avatar, 0.14).then(med => { if (med && fl) { med.position.set(0, 0.34, 0); chick.add(med) } })
+
+      hideLoader()
+      const tapHint = document.createElement('div')
+      tapHint.className = 'tap-hint'
+      tapHint.innerHTML = ICON.tap
+      area.appendChild(tapHint)
+
+      const game = arcade(c, {
+        host: area,
+        lives: c.byTier(5, 3, 3),
+        scoreIcon: ICON.check,
+        plainScore: true,
+        ramp: { every: 4, max: 6 },
+        onLevel: lv => { me.run.speed = cfg.speed + cfg.inc * lv; sfx('confirm', { vol: 0.5, rate: 1.2 }) },
+        stars: s => { const th = c.byTier([10, 6], [14, 8], [18, 11]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
       })
+      const run = runner<PipeData>(stage, { speed: cfg.speed, spawnX: SPAWN_X, despawnX: DESPAWN_X, playerX: CHICK_X })
+      const me: State = {
+        stage, game, run, fx: particles(stage, 400), shake: camShake(stage), cfg,
+        y: 0.3, vy: 0, started: false, flapT: 0, over: false, spin: 0, tapHint, chick
+      }
+      fl = me
+      run.layer(clouds, 0.2, 15, -8)
+      decor(stage, [...front, ...trees, ...bushes]).then(grp => {
+        if (fl !== me) return
+        grp.position.y = GROUND_Y
+        const kids = grp.children
+        run.layer(kids.slice(0, front.length), 1, span, -8)
+        run.layer(kids.slice(front.length, front.length + trees.length), 0.5, span, -9)
+        run.layer(kids.slice(front.length + trees.length), 0.8, span, -8.5)
+      }).catch(() => { /* sans décor, le jeu tourne */ })
 
-      /* Plumes : petites sphères jaunes qui voltigent au choc */
-      const featherGeo = new T.SphereGeometry(0.03, 6, 5)
-      const featherMats = [
-        new T.MeshBasicMaterial({ color: 0xE8B93C, transparent: true }),
-        new T.MeshBasicMaterial({ color: 0xF5EED8, transparent: true })
-      ]
-      const parts: any[] = []
-
-      fl = {
-        stage, cfg,
-        y: H * 0.45, vy: 0, score: 0, lives: 3,
-        running: true, started: false, pipes: [], invuln: 0, flapT: 0,
-        feathers() {
-          for (let i = 0; i < 10; i++) {
-            const m = new T.Mesh(featherGeo, featherMats[i % 2])
-            m.position.copy(chick.position)
-            scene.add(m)
-            const a = Math.random() * Math.PI * 2
-            const v = 0.5 + Math.random() * 1.6
-            parts.push({ m, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 0.8, life: 1 })
-          }
-        }
+      const spawn = () => {
+        const gap = Math.max(cfg.gap - 0.35, cfg.gap - cfg.gapDec * game.s.level)
+        // Le passage peut être n'importe où entre le ciel et le sol
+        const lo = GROUND_Y + 0.35 + Math.random() * (CEIL_Y - GROUND_Y - gap - 0.7)
+        const hi = lo + gap
+        run.spawn(makePair(lo, hi), PW / 2, { lo, hi, minClear: 9 })
       }
 
       // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
-      if ((window as any).__BOT) (window as any).__fl = fl
-      const cx = W * 0.22
-      const spawnPipe = () => {
-        const gap = H * cfg.gap
-        // Le passage peut être n'importe où entre le ciel et le sol
-        const gy = H * 0.06 + Math.random() * (groundTop - gap - H * 0.12)
-        const top = makeTower(gy, true)
-        top.position.set(wx(W + PW / 2), wy(0), 0)
-        const bot = makeTower(groundTop - gy - gap, false)
-        bot.position.set(wx(W + PW / 2), wy(groundTop), 0)
-        scene.add(top, bot)
-        fl.pipes.push({ top, bot, x: W, gy, gap, counted: false })
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        ;(window as unknown as { __fl: unknown }).__fl = {
+          get running() { return !me.over }, get started() { return me.started }, get y() { return me.y }, get vy() { return me.vy },
+          get score() { return game.s.score }, get lives() { return game.s.lives }, x: CHICK_X, r: R,
+          get pipes() { return run.obstacles.map(o => ({ x: o.x, hw: o.hw, lo: o.data.lo, hi: o.data.hi })) }
+        }
       }
 
-      const flap = (e?: Event) => {
-        if (e) e.preventDefault()
-        if (!fl || !fl.running) return
-        fl.started = true; fl.vy = -0.40; fl.flapT = 1; sJump()
-        startMsg.style.display = 'none'
-      }
-      const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.key === 'ArrowUp') flap(e) }
-      area.addEventListener('pointerdown', flap)
-      window.addEventListener('keydown', onKey)
-
-      /* --- Boucle : simulation en px virtuels, rendu en mètres --- */
-      stage.start((dtS, t) => {
-        if (!fl || !fl.running) return
-        const dt = Math.min(40, dtS * 1000)
-
-        // fl.y est mesuré DEPUIS LE HAUT : la gravité augmente y (le poussin
-        // tombe), battre des ailes le diminue (il monte)
-        if (fl.started) { fl.vy += 0.0014 * dt; fl.y += fl.vy * dt }
-        else fl.y = H * 0.45 + Math.sin(t * 0.004) * 8
-
-        if (fl.y < R) { fl.y = R; fl.vy = 0 } // plafond
-        if (fl.y > groundTop - R) { fl.y = groundTop - R; if (fl.started) hit(); if (!fl) return; fl.vy = -0.30 }
-
-        chick.position.set(wx(cx), wy(fl.y), 0)
-        chick.rotation.z = -Math.max(-0.52, Math.min(0.87, (fl.vy || 0) * 1.6))
-        // Les ailes battent fort au coup d'aile, doucement en plané
-        fl.flapT = Math.max(0, fl.flapT - dt * 0.004)
-        const beat = fl.flapT > 0 ? Math.sin(fl.flapT * Math.PI * 3) * 1 : Math.sin(t * 0.01) * 0.25
-        for (const wgn of wings) wgn.pivot.rotation.x = wgn.side * beat * 0.9
-        if (fl.invuln > 0) { fl.invuln -= dt; chick.visible = Math.floor(t / 90) % 2 === 0 }
-        else chick.visible = true
-
-        const lastX = fl.pipes.length ? fl.pipes[fl.pipes.length - 1].x : -1e9
-        if (fl.started && (fl.pipes.length === 0 || lastX < W - W * cfg.space)) spawnPipe()
-
-        for (let i = fl.pipes.length - 1; i >= 0; i--) {
-          const p = fl.pipes[i]
-          p.x -= cfg.sp * dt
-          p.top.position.x = wx(p.x + PW / 2)
-          p.bot.position.x = wx(p.x + PW / 2)
-          if (!p.counted && p.x + PW < cx - R) {
-            p.counted = true; fl.score++; sCatch()
-            impact(0.25, { matter: 'neige', noShake: true })
-            $('flScore').textContent = '🐤 ' + fl.score
+      /* --- Boucle --- */
+      stage.start((dt, now) => {
+        if (fl !== me) return
+        game.tick(dt)
+        if (me.started) {
+          me.vy -= GRAVITY * dt
+          me.y += me.vy * dt
+        } else me.y = 0.3 + Math.sin(now * 0.004) * 0.06
+        if (me.y > CEIL_Y - R) { me.y = CEIL_Y - R; me.vy = Math.min(me.vy, 0) }
+        if (me.y < GROUND_Y + R) {
+          me.y = GROUND_Y + R
+          if (me.started && !me.over) { hurt(me, 'sol'); me.vy = FLAP_V } // le sol coûte un cœur, et relance comme un coup d'aile
+          else me.vy = 0
+        }
+        if (me.started && !me.over) {
+          const last = run.last()
+          const space = Math.max(2.6, cfg.space - game.s.level * 0.15)
+          if (!last || last.x < SPAWN_X - space) spawn()
+        }
+        run.update(dt, {
+          onPass: ob => {
+            if (me.over) return
+            const close = ob.data.minClear < 0.09
+            game.hit(1, { perfect: close })
+            if (close) { sfx('whoosh', { vol: 0.45, rate: 1.2 }); game.flash(ICON.bolt, 'good'); feathers(me, 3) }
+            impact(0.2, { matter: 'neige', noShake: true })
           }
-          if (fl.invuln <= 0 && p.x < cx + R && p.x + PW > cx - R) {
-            if (fl.y - R < p.gy || fl.y + R > p.gy + p.gap) hit()
-            if (!fl) return
-          }
-          if (p.x < -70) { scene.remove(p.top); scene.remove(p.bot); fl.pipes.splice(i, 1) }
+        })
+        // Collision : le disque du poussin contre les deux fûts
+        if (!me.over) for (const ob of run.obstacles) {
+          const inX = ob.x + ob.hw > CHICK_X - R && ob.x - ob.hw < CHICK_X + R
+          if (!inX) continue
+          ob.data.minClear = Math.min(ob.data.minClear, me.y - R - ob.data.lo, ob.data.hi - (me.y + R))
+          if (me.y - R < ob.data.lo || me.y + R > ob.data.hi) { hurt(me, 'bois'); if (fl !== me) return; me.vy = Math.max(me.vy, 1.4); break }
         }
-
-        // Prairie et nuages : défilement + parallaxe
-        const v = cfg.sp * dt * PX
-        for (const f of flowers) {
-          f.position.x -= v
-          if (f.position.x < -7) f.position.x += 14
-        }
-        for (const cl of clouds) {
-          cl.position.x -= v * 0.3
-          if (cl.position.x < -6.5) cl.position.x = 6.5
-        }
-
-        // Vie des plumes
-        for (let i = parts.length - 1; i >= 0; i--) {
-          const p = parts[i]
-          p.life -= dtS * 1.4
-          p.vy -= dtS * 4
-          p.m.position.x += p.vx * dtS
-          p.m.position.y += p.vy * dtS
-          p.m.material.opacity = Math.max(0, p.life)
-          if (p.life <= 0) { scene.remove(p.m); parts.splice(i, 1) }
-        }
+        // Le poussin : hauteur, piqué, battement, culbute d'outro
+        chick.position.y = me.y
+        if (me.over) { me.spin += dt * 9; chick.rotation.z = me.spin; chick.rotation.x = Math.sin(me.spin) * 0.4 }
+        else chick.rotation.z = Math.max(-0.9, Math.min(0.5, me.vy * 0.28))
+        me.flapT = Math.max(0, me.flapT - dt * 4)
+        const beat = me.flapT > 0 ? Math.sin(me.flapT * Math.PI * 3) : Math.sin(now * 0.01) * 0.25
+        for (const w of wings) w.pivot.rotation.x = w.side * beat * 0.9
+        run.blink(chick, now)
+        stage.camera.position.set(0, 0.45, 4.6)
+        stage.camera.lookAt(0, 0.1, 0)
+        me.shake.apply(dt)
+        me.fx.update(dt)
       })
 
-      fl.cleanup = () => {
-        area.removeEventListener('pointerdown', flap)
+      const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); flap(me) } }
+      const onTap = (e: Event) => { e.preventDefault(); flap(me) }
+      area.addEventListener('pointerdown', onTap)
+      window.addEventListener('keydown', onKey)
+
+      stage.keep({ dispose() {
+        area.removeEventListener('pointerdown', onTap)
         window.removeEventListener('keydown', onKey)
-        featherGeo.dispose()
-        stage.dispose()
-      }
-    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+        cloudGeo.dispose(); cloudMat.dispose(); woodMat.dispose(); capMat.dispose()
+        me.fx.dispose()
+        me.game.dispose()
+      } })
+    })().catch(err => { if (!dead) throw err })
 
     return () => {
       dead = true
-      if (fl) {
-        fl.running = false
-        try { fl.cleanup?.() } catch { /* déjà démonté */ }
-        fl = null
-      }
+      if (fl) { fl.stage.dispose(); fl = null }
     }
   }
 }

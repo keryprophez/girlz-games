@@ -114,10 +114,24 @@ sur l'écran de fin, sessions A puis B puis C.
   un score à combo. Bot `chenille-croque-des-fruits` qui ne fait plus
   demi-tour dans le mur.
 
+- ✅ **`run` (Course) et `flappy` (Poussin Volant) refaits sur un socle
+  runner commun** (`core/runner.ts` : monde qui défile en mètres, obstacles
+  comptés au passage et retirés derrière la caméra, couches de décor en
+  parallaxe, invulnérabilité qui clignote, texture de sol qui défile).
+  Course : une seule boucle en mètres, saut de 0,95 m proportionné aux
+  obstacles (vrais rondins, rochers, souches du kit nature), tampon d'entrée,
+  vitesse qui monte tous les 5 sauts avec des doubles aux paliers hauts,
+  near-miss « Ouf ! » quand on frôle ou qu'on atterrit juste derrière,
+  obstacle percuté qui valse, tracteur qui se renverse au ralenti. Poussin :
+  rampe tous les 4 passages (vitesse et passage borné), le sol coûte un cœur
+  et relance, near-miss à un cheveu d'un chapeau, culbute au ralenti dans un
+  nuage de plumes, titre de fin qui ne fête plus une chute, prairie et nuages
+  de jour. Bots `course-soixante-metres` et `poussin-deux-barrieres`
+  synchronisés sur la frame (la 3D tourne à 4 fps sous swiftshader).
+
 Ordre pour la suite :
 
-`icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) →
-`run` + `flappy` sur un socle runner commun → `snowman` (rouler
+`icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler
 jusqu'à la pile, habillage par drag) → `maze` · `taquin` · `memory` · `simon` ·
 `connect4` (polish 2D, IA du Puissance 4) → `clock` · `tables` · `market`
 (drag partout, voix sur les cibles, plateau plein écran) → `intrus` (sans

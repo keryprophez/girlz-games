@@ -56,6 +56,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              sprites.ts  ← planches d'assets CC0 chargées à la demande
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
+             arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
+             runner.ts   ← socle des jeux qui défilent (Course, Poussin Volant)
 src/components/  Home · GameHost · PlayTimer · Backup · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -101,7 +103,13 @@ rampe par performance, timers simulés `game.after`, HUD en icônes dans
 l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs`) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
 Modèles : `icetower.ts`, `ninja.ts` et `mole.ts` (sprites Kenney en 3D via
-`spriteFromAtlas`, raycast sur les sprites eux-mêmes). Pour un jeu Apprendre
+`spriteFromAtlas`, raycast sur les sprites eux-mêmes). **Un jeu qui défile**
+(la joueuse reste à x = 0, le monde avance vers −x) part en plus de
+`core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
+obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
+derrière la caméra), les couches de décor en parallaxe (`layer`), et le
+clignotement d'invulnérabilité (`hurt`/`blink`) ; `scrollTex` fait une
+texture de sol qui défile. Modèles : `run.ts` et `flappy.ts`. Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 `public/assets/geo/`, voix = noms de lieux uniquement).
 
@@ -146,6 +154,7 @@ contournent encore `createStage` : à migrer en phase 1).
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
 | **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` cliquent les tuiles `.gc:not(.gc-duel)` et lisent le nom dans `.nm`. Si tu changes l'accueil, mets-les à jour. |
 | **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
+| **Bots à 4 fps** | Sous swiftshader la 3D rend 3 à 4 images/s et `dt` est borné à 100 ms : la simulation tourne au ralenti et une entrée n'est appliquée qu'à la frame suivante. Un bot qui sonde toutes les 60 ms voit le même état plusieurs fois et double ses commandes. Sonder **une fois par frame** (`evaluate` qui résout dans un `requestAnimationFrame`), anticiper d'une frame, et compter en temps simulé (mètres, pas secondes murales). Une capture d'écran prend 1,5 s : lancée après la mort, elle rate l'outro — la déclencher juste avant. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---

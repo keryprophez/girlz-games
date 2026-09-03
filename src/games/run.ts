@@ -1,84 +1,101 @@
 import type { GameContext, GameDef } from '../core/types'
 import { impact } from '../core/impact'
 import { $ } from '../core/utils'
-import { sJump, sNope, sWin } from '../core/audio'
+import { ICON } from '../core/icons'
+import { sfx, preloadSfx } from '../core/sfx'
+import { arcade, type Arcade } from '../core/arcade'
+import { runner, scrollTex, type Runner } from '../core/runner'
+import { ground, decor, particles, camShake, type Particles, type CamShake } from '../core/scene3d'
 import {
-  createStage, loadThree, loader, woodTex, avatarMedallion,
-  type Stage
+  createStage, loadThree, loader, loadModel, fitModel, avatarMedallion,
+  type Stage, type T3
 } from '../core/three3d'
 
-/* 🚜 Course, en 3D — un vrai tracteur low-poly qui fonce sur un chemin de
-   terre au crépuscule : roues qui tournent, fumée qui sort de la cheminée,
-   bottes de foin, rochers et caisses à sauter, nuage de poussière à
-   l'atterrissage.
+/* 🚜 Course — un tracteur low-poly fonce sur un chemin de terre au crépuscule
+   et saute rondins, rochers, souches et bottes de foin.
 
-   La SIMULATION ne change pas d'un chiffre : mêmes gravité, impulsion de
-   saut, cadence d'apparition, fenêtre de collision et invulnérabilité que
-   la version validée — elle tourne toujours en « pixels virtuels », seul le
-   rendu les traduit en mètres. */
+   Refonte sur core/runner.ts + core/arcade.ts :
+   - une seule boucle, en mètres et en secondes (plus de pixels virtuels) ;
+   - le score, c'est le nombre d'obstacles sautés ; la vitesse monte tous
+     les 5 sauts, et des DOUBLES arrivent aux paliers hauts ;
+   - un saut de 0,95 m pour des obstacles de 0,3 à 0,45 m — proportionné,
+     avec un tampon d'entrée : taper juste avant d'atterrir, ça ressaute ;
+   - le near-miss : frôler un obstacle ou atterrir juste derrière, ça fait
+     « Ouf ! » ; percuter, ça envoie l'obstacle valser, secoue la caméra,
+     coûte un cœur ; au dernier cœur, le tracteur se renverse au ralenti. */
 
-const PX = 0.008          // 1 pixel virtuel → mètres du monde 3D
-const TX = 78             // position x du tracteur en px virtuels (comme avant)
-const W = 900             // largeur virtuelle de la piste
+const PLAYER_X = 0
+const SPAWN_X = 9.5
+const DESPAWN_X = -4.5
+const JUMP_V = 5.2       // m/s → 0,95 m de haut, 0,73 s de vol
+const GRAVITY = 14.2
+const TRACTOR = { back: -0.24, front: 0.36 } // l'empreinte en x qui compte pour la collision
 
-let run: any = null
-let ctx: GameContext
+interface ObData { h: number; knocked: boolean; vx: number; vy: number; rot: number; minClear: number; kind: string }
+interface Cfg { speed: number; inc: number; gapMin: number; gapVar: number; doubleFrom: number }
 
-function loop(t: number) {
-  if (!run || !run.running) return
-  const dt = Math.min(50, t - run.lastT); run.lastT = t
-  if (run.jumping) {
-    run.y += run.vy * dt
-    run.vy -= 0.0032 * dt
-    if (run.y <= 0) {
-      run.y = 0; run.jumping = false; run.vy = 0
-      run.puffDust(1)
-      impact(0.35, { matter: 'sourd', noShake: true })
-    }
-  }
-  run.dist += run.speed * dt * 0.06
-  run.speed += dt * 0.0000075
-  const d = Math.floor(run.dist)
-  $('runScore').textContent = '🚜 ' + d + ' m'
-  run.sinceSpawn += dt
-  if (run.sinceSpawn >= run.nextSpawn) {
-    run.sinceSpawn = 0
-    run.nextSpawn = run.cfg.gapMin + Math.random() * run.cfg.gapVar
-    run.spawn()
-  }
-  if (run.invuln > 0) { run.invuln -= dt; run.tractor.visible = Math.floor(t / 90) % 2 === 0 }
-  else run.tractor.visible = true
-  for (let i = run.obstacles.length - 1; i >= 0; i--) {
-    const o = run.obstacles[i]
-    o.x -= run.speed * dt
-    o.mesh.position.x = (o.x + 21 - TX) * PX
-    const overlapX = Math.abs(o.x + 21 - TX) < 46
-    const onGroundLevel = run.y < 34
-    if (overlapX && onGroundLevel && run.invuln <= 0) {
-      run.lives--; run.invuln = 1200
-      $('runHearts').textContent = '❤️'.repeat(run.lives) + '🖤'.repeat(3 - run.lives)
-      sNope()
-      // Percuter un obstacle : choc plein, ressenti comme partout ailleurs
-      impact(0.85, { matter: 'sourd' })
-      if (run.lives <= 0) { finish(); return }
-    }
-    if (o.x < -60) { run.scene.remove(o.mesh); run.obstacles.splice(i, 1) }
-  }
-  requestAnimationFrame(loop)
+interface State {
+  stage: Stage
+  game: Arcade
+  run: Runner<ObData>
+  fx: Particles
+  shake: CamShake
+  cfg: Cfg
+  y: number
+  vy: number
+  jumping: boolean
+  buffered: number      // tampon d'entrée : secondes restantes pour ressauter à l'atterrissage
+  nextAt: number        // distance (m) à laquelle naît le prochain obstacle
+  over: boolean
+  tapHint: HTMLElement
+  tractor: import('three').Group
 }
 
-function finish() {
-  if (!run || !run.running) return
-  run.running = false
-  const d = Math.floor(run.dist)
-  sWin()
-  const th = ctx.byTier([140, 70], [180, 100], [220, 120])
-  const stars = d >= th[0] ? 3 : d >= th[1] ? 2 : 1
-  ctx.finish({ title: 'Fin de course !', msg: `${ctx.playerName} a parcouru ${d} mètres 🚜`, stars, starsEarned: stars })
+let rn: State | null = null
+let ctx: GameContext
+
+function jump(me: State) {
+  if (me.over) return
+  if (me.jumping) { me.buffered = 0.16; return }
+  me.jumping = true
+  me.vy = JUMP_V
+  sfx('cloth', { vol: 0.5, rate: 1.3 })
+  me.fx.burst({ x: -0.1, y: 0.04, z: 0 }, { count: 6, color: [0xA8845E, 0x7A5C3E], speed: 1.2, life: 0.5, size: 0.06, gravity: 3, dir: { x: -0.6, y: 0.6, z: 0 } })
+  me.tapHint.classList.add('off')
+}
+
+function crash(me: State, ob: import('../core/runner').Obstacle<ObData>) {
+  const d = ob.data
+  d.knocked = true
+  d.vx = me.run.speed * 1.6 + 1.5
+  d.vy = 3.2
+  d.rot = 6 + Math.random() * 4
+  impact(0.85, { matter: 'sourd', noShake: true })
+  me.shake.hit(0.8)
+  sfx('bong', { vol: 0.6, rate: 0.8 })
+  me.fx.burst({ x: ob.x, y: d.h * 0.6, z: 0 }, { count: 22, color: [0xA8845E, 0xD9B784, 0x6E6A66], speed: 2.6, life: 0.7, size: 0.06, gravity: 6 })
+  me.game.flash(ICON.heartEmpty, 'bad')
+  me.y = Math.max(me.y, 0.05); me.vy = 2.2; me.jumping = true // le choc soulève le tracteur
+  if (me.game.hurt()) { finish(me); return }
+  me.run.hurt(1.2)
+}
+
+function finish(me: State) {
+  if (me.over) return
+  me.over = true
+  me.stage.timeScale = 0.35
+  const n = me.game.s.score
+  const m = Math.floor(me.run.dist)
+  const th = ctx.byTier([18, 9], [24, 12], [30, 15])
+  me.game.end({
+    title: n >= th[0] ? 'Champion du volant !' : n >= th[1] ? 'Belle course !' : 'Le tracteur a versé !',
+    msg: `${ctx.playerName} a sauté ${n} obstacle${n > 1 ? 's' : ''} sur ${m} mètres`,
+    outroMs: 1300
+  })
 }
 
 /** Le tracteur : caisses et cylindres low-poly, roues séparées pour tourner. */
-function makeTractor(T: any) {
+function makeTractor(T: T3) {
   const g = new T.Group()
   const red = new T.MeshStandardMaterial({ color: 0xB6382E, roughness: 0.5, metalness: 0.15 })
   const dark = new T.MeshStandardMaterial({ color: 0x22201E, roughness: 0.7 })
@@ -94,7 +111,7 @@ function makeTractor(T: any) {
   roof.position.set(-0.14, 0.76, 0)
   const pipe = new T.Mesh(new T.CylinderGeometry(0.035, 0.035, 0.26, 8), dark)
   pipe.position.set(0.36, 0.5, 0.1)
-  const wheels: any[] = []
+  const wheels: import('three').Group[] = []
   const mkWheel = (r: number, x: number, z: number) => {
     const w = new T.Group()
     const tire = new T.Mesh(new T.CylinderGeometry(r, r, 0.12, 18), dark)
@@ -103,253 +120,246 @@ function makeTractor(T: any) {
     cap.rotation.x = Math.PI / 2
     w.add(tire, cap)
     w.position.set(x, r, z)
-    w.traverse((m: any) => { m.castShadow = true })
     g.add(w)
     wheels.push(w)
   }
   mkWheel(0.24, -0.18, 0.2); mkWheel(0.24, -0.18, -0.2)
   mkWheel(0.15, 0.34, 0.19); mkWheel(0.15, 0.34, -0.19)
   g.add(body, hood, cab, roof, pipe)
-  g.traverse((m: any) => { if (m.isMesh) m.castShadow = true })
-  return { g, wheels, pipeTip: new T.Vector3(0.36, 0.66, 0.1) }
+  g.traverse(m => { if ((m as import('three').Mesh).isMesh) m.castShadow = true })
+  return { g, wheels }
 }
 
 export const runGame: GameDef = {
   id: 'run', name: 'Course', icon: '🚜', sq: 'sq-mint', cat: 'action',
-  subtitle: 'Tape ou ESPACE pour sauter les obstacles',
+  subtitle: 'Tape pour sauter les obstacles',
   mount(c) {
     ctx = c
     let dead = false
-    c.root.innerHTML = `
-      <div class="topbar">
-        <div class="hearts" id="runHearts">❤️❤️❤️</div>
-        <div class="chip" id="runScore">🚜 0 m</div>
-      </div>
-      <div class="arena g3-arena run3-arena" id="runArea">
-        <div class="hint g3-hint">Tape pour sauter ! 🚜</div>
-      </div>`
+    c.root.innerHTML = `<div class="arena g3-arena run3-arena" id="runArea"></div>`
     const area = $('runArea')
     const hideLoader = loader(area, '🚜')
+    preloadSfx(['cloth', 'bong', 'whoosh', 'confirm', 'pluck'])
 
     ;(async () => {
       const T = await loadThree()
       if (dead) return
       const stage: Stage = await createStage(area, {
-        sky: '#2B2140',
-        fog: [7, 16], fogColor: '#2B2140',
-        cam: [0.4, 1.5, 4.4], target: [0.7, 0.7, 0], fov: 42,
-        hemi: ['#FFD9B0', '#241C36', 0.7],
-        sun: { pos: [3, 4.5, 3], color: '#FFC98A', intensity: 1.8, area: 6, far: 15 },
-        fill: 0.35, exposure: 0.92, iblIntensity: 0.5
+        sky: '#3B2E5C',
+        fog: [9, 20], fogColor: '#3B2E5C',
+        cam: [0.5, 1.5, 4.6], target: [0.9, 0.6, 0], fov: 42,
+        hemi: ['#FFD9B0', '#241C36', 0.75],
+        sun: { pos: [3, 4.5, 3], color: '#FFC98A', intensity: 1.9, area: 7, far: 18 },
+        fill: 0.35, exposure: 0.95, iblIntensity: 0.5
       })
       if (dead) { stage.dispose(); return }
-      hideLoader()
       const scene = stage.scene
 
-      /* Le chemin de terre : une bande dont la texture DÉFILE — c'est elle
-         qui donne la vitesse, le tracteur ne bouge pas. */
-      // Bois nettement plus clair que la route : sinon rondin et caisse se fondent
-      const dirtTex = woodTex(T, '#B98E58')
-      const road = new T.Mesh(
-        new T.PlaneGeometry(16, 1.9),
-        new T.MeshStandardMaterial({ color: 0x6B4A32, roughness: 0.95 })
-      )
+      /* Le chemin de terre : sa texture DÉFILE, c'est elle qui donne la vitesse */
+      const dirt = stage.keep(scrollTex(T, '#5E4530', '#3C2A1B', 8))
+      const road = new T.Mesh(new T.PlaneGeometry(22, 1.9), new T.MeshStandardMaterial({ map: dirt, roughness: 0.95 }))
       road.rotation.x = -Math.PI / 2
+      road.position.set(2, 0.002, 0)
       road.receiveShadow = true
       scene.add(road)
-      // Traces de roues : deux lignes plus sombres
-      for (const z of [-0.2, 0.2]) {
-        const rut = new T.Mesh(
-          new T.PlaneGeometry(16, 0.14),
-          new T.MeshStandardMaterial({ color: 0x543A26, roughness: 1 })
-        )
-        rut.rotation.x = -Math.PI / 2
-        rut.position.set(0, 0.002, z)
-        scene.add(rut)
-      }
-      // Prés de chaque côté
-      for (const z of [-4.4, 4.4]) {
-        const grass = new T.Mesh(
-          new T.PlaneGeometry(16, 7),
-          new T.MeshStandardMaterial({ color: 0x2C4A2E, roughness: 0.95 })
-        )
-        grass.rotation.x = -Math.PI / 2
-        grass.position.set(0, -0.005, z)
-        grass.receiveShadow = true
-        scene.add(grass)
-      }
-      // Cailloux du bord de route qui défilent : le sol « avance »
-      const pebbles: any[] = []
-      const pebGeo = new T.DodecahedronGeometry(0.045, 0)
-      const pebMat = new T.MeshStandardMaterial({ color: 0x8A7460, roughness: 0.9 })
-      for (let i = 0; i < 14; i++) {
-        const p = new T.Mesh(pebGeo, pebMat)
-        p.position.set(-7 + i * 1.1, 0.03, (i % 2 ? 1 : -1) * (0.95 + (i % 3) * 0.1))
-        p.rotation.set(i, i * 2, 0)
-        scene.add(p)
-        pebbles.push(p)
-      }
-      // Arbres au fond, en deux rangées de parallaxe
-      const trees: any[] = []
-      const trunkMat = new T.MeshStandardMaterial({ color: 0x4A3423, roughness: 0.9 })
-      const leafMat = new T.MeshStandardMaterial({ color: 0x24422A, roughness: 0.85 })
-      const leafMat2 = new T.MeshStandardMaterial({ color: 0x1D3623, roughness: 0.85 })
-      for (let i = 0; i < 12; i++) {
-        const far2 = i >= 6
-        const tr = new T.Group()
-        const trunk = new T.Mesh(new T.CylinderGeometry(0.06, 0.09, 0.5, 7), trunkMat)
-        trunk.position.y = 0.25
-        const crown = new T.Mesh(new T.ConeGeometry(0.42, 0.95, 8), far2 ? leafMat2 : leafMat)
-        crown.position.y = 0.95
-        tr.add(trunk, crown)
-        const s = far2 ? 0.75 : 1.1
-        tr.scale.setScalar(s)
-        tr.position.set(-7 + (i % 6) * 2.6 + (far2 ? 1.2 : 0), 0, far2 ? -4.6 : -2.9)
-        tr.traverse((m: any) => { if (m.isMesh) m.castShadow = true })
-        scene.add(tr)
-        trees.push({ g: tr, depth: far2 ? 0.35 : 0.6, span: 15.6, off: far2 ? 1.2 : 0 })
-      }
+      const g = ground(stage, { radius: 26, color: 0x2C4A2E, roughness: 0.98 })
+      g.position.set(2, -0.004, 0)
 
-      /* Le tracteur */
-      const { g: tractor, wheels } = makeTractor(T)
-      tractor.position.set(0, 0, 0)
-      scene.add(tractor)
-      // C'est ELLE qui conduit : son médaillon photo flotte au-dessus de la cabine
-      avatarMedallion(T, c.avatar, 0.26).then(med => {
-        if (med && run) { med.position.set(-0.14, 1.02, 0); tractor.add(med) }
+      /* Le décor du kit nature en deux couches qui bouclent : arbres proches et lointains */
+      const span = 18
+      // Les arbres proches restent DERRIÈRE le chemin : devant, ils boucheraient la vue
+      const near = Array.from({ length: 7 }, (_, i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat', 'tree_pineRoundA'][i % 4]}`, x: -6 + i * (span / 7) + Math.random(), z: -(1.9 + Math.random() * 0.9), size: 1.5 + Math.random() * 0.6, tint: 0x5E9A3C }))
+      const far = Array.from({ length: 8 }, (_, i) => ({ model: `nature/${['tree_pineDefaultA', 'tree_cone', 'tree_pineRoundC'][i % 3]}`, x: -8 + i * (span / 8), z: -4.2 - Math.random() * 1.5, size: 2.2 + Math.random(), tint: 0x4C7F38 }))
+      const bits = Array.from({ length: 10 }, (_, i) => {
+        const side = i % 2 ? 1 : -1
+        return { model: `nature/${['rock_smallA', 'plant_bush', 'grass_large', 'flower_yellowA', 'mushroom_red'][i % 5]}`, x: -7 + i * (span / 10) + Math.random() * 0.8, z: side * (1.15 + Math.random() * 0.3), size: 0.22 + Math.random() * 0.14, tint: 0x8FB56A }
       })
 
-      /* Fumée de cheminée + poussière : petites sphères recyclées */
-      const puffGeo = new T.SphereGeometry(0.05, 8, 6)
-      const puffs: any[] = []
-      const smokeMat = new T.MeshBasicMaterial({ color: 0x9A93A8, transparent: true, opacity: 0.5 })
-      const dustMat = new T.MeshBasicMaterial({ color: 0xA8845E, transparent: true, opacity: 0.6 })
-      const puff = (x: number, y: number, mat: any, vy: number, n: number) => {
-        for (let i = 0; i < n; i++) {
-          const m = new T.Mesh(puffGeo, mat)
-          m.position.set(x + (Math.random() - 0.5) * 0.15, y, (Math.random() - 0.5) * 0.3)
-          scene.add(m)
-          puffs.push({ m, vx: -0.4 - Math.random() * 0.4, vy: vy + Math.random() * 0.3, t: 0 })
-        }
+      /* Les obstacles : vrais modèles du kit nature + une botte de foin maison */
+      const protos: { g: import('three').Object3D; h: number; hw: number; kind: string }[] = []
+      const mk = async (name: string, h: number, hw: number, tint: number, rot = 0) => {
+        const m = await loadModel('nature', name)
+        fitModel(T, m, h)
+        const col = new T.Color(tint)
+        m.traverse(o => {
+          const mesh = o as import('three').Mesh
+          if (!mesh.isMesh) return
+          const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
+          mat.color.multiply(col)
+          mesh.material = mat
+          mesh.castShadow = true
+        })
+        const box = new T.Box3().setFromObject(m)
+        const wrap = new T.Group()
+        m.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2)
+        m.rotation.y = rot
+        wrap.add(m)
+        protos.push({ g: wrap, h, hw, kind: name })
       }
-
-      /* Les obstacles : botte de foin, rocher, caisse, rondin */
+      await Promise.all([
+        mk('log', 0.34, 0.24, 0xB89468, Math.PI / 2),
+        mk('rock_smallA', 0.32, 0.22, 0xA89A88),
+        mk('stump_round', 0.36, 0.2, 0xB08A5E),
+        mk('rock_largeA', 0.44, 0.26, 0x9C9288)
+      ])
       const hayMat = new T.MeshStandardMaterial({ color: 0xB08D3E, roughness: 0.9 })
-      const rockMat = new T.MeshStandardMaterial({ color: 0x6E6A66, roughness: 0.85 })
-      const crateMat = new T.MeshStandardMaterial({ roughness: 0.8, map: dirtTex })
-      stage.keep(dirtTex)
-      const makers = [
-        () => { // botte de foin couchée
-          const m = new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 0.4, 14), hayMat)
-          m.rotation.x = Math.PI / 2
-          m.position.y = 0.22
-          return m
-        },
-        () => { // rocher
-          const m = new T.Mesh(new T.DodecahedronGeometry(0.26, 0), rockMat)
-          m.position.y = 0.2
-          m.rotation.set(0.4, 0.8, 0)
-          return m
-        },
-        () => { // caisse en bois
-          const m = new T.Mesh(new T.BoxGeometry(0.4, 0.4, 0.4), crateMat)
-          m.position.y = 0.2
-          return m
-        },
-        () => { // rondin
-          const m = new T.Mesh(new T.CylinderGeometry(0.16, 0.16, 0.55, 10), crateMat)
-          m.rotation.x = Math.PI / 2
-          m.position.y = 0.16
-          return m
-        }
-      ]
+      const hay = new T.Group()
+      const hm = new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 0.42, 14), hayMat)
+      hm.rotation.x = Math.PI / 2; hm.position.y = 0.22; hm.castShadow = true
+      hay.add(hm)
+      protos.push({ g: hay, h: 0.44, hw: 0.22, kind: 'hay' })
+      if (dead) { stage.dispose(); return }
 
-      const cfg = c.byTier(
-        { sp: 0.21, gapMin: 1400, gapVar: 900 },
-        { sp: 0.27, gapMin: 1150, gapVar: 800 },
-        { sp: 0.34, gapMin: 900, gapVar: 700 }
+      /* Le tracteur, et c'est ELLE qui conduit */
+      const { g: tractor, wheels } = makeTractor(T)
+      scene.add(tractor)
+      avatarMedallion(T, c.avatar, 0.26).then(med => { if (med && rn) { med.position.set(-0.14, 1.02, 0); tractor.add(med) } })
+
+      hideLoader()
+      const tapHint = document.createElement('div')
+      tapHint.className = 'tap-hint'
+      tapHint.innerHTML = ICON.tap
+      area.appendChild(tapHint)
+
+      const cfg: Cfg = c.byTier(
+        { speed: 2.1, inc: 0.2, gapMin: 3.4, gapVar: 2.4, doubleFrom: 99 },
+        { speed: 2.6, inc: 0.22, gapMin: 2.9, gapVar: 2.0, doubleFrom: 3 },
+        { speed: 3.1, inc: 0.24, gapMin: 2.5, gapVar: 1.8, doubleFrom: 2 }
       )
-      run = {
-        scene, tractor, obstacles: [],
-        y: 0, vy: 0, jumping: false,
-        speed: cfg.sp, cfg, dist: 0, lives: 3, running: true,
-        lastT: performance.now(), nextSpawn: 900, sinceSpawn: 0, invuln: 0,
-        spawn() {
-          const wrap = new T.Group()
-          wrap.add(makers[Math.floor(Math.random() * makers.length)]())
-          wrap.position.set((W + 40 + 21 - TX) * PX, 0, 0)
-          wrap.traverse((m: any) => { if (m.isMesh) m.castShadow = true })
-          scene.add(wrap)
-          run.obstacles.push({ mesh: wrap, x: W + 40 })
-        },
-        puffDust(n: number) { puff(-0.1, 0.06, dustMat, 0.5, 4 * n) }
+      const game = arcade(c, {
+        host: area,
+        lives: c.byTier(5, 3, 3),
+        scoreIcon: ICON.bolt,
+        plainScore: true,
+        ramp: { every: 5, max: 8 },
+        onLevel: lv => { me.run.speed = cfg.speed + cfg.inc * lv; sfx('confirm', { vol: 0.5, rate: 1.2 }) },
+        stars: s => { const th = c.byTier([18, 9], [24, 12], [30, 15]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
+      })
+      const run = runner<ObData>(stage, { speed: cfg.speed, spawnX: SPAWN_X, despawnX: DESPAWN_X, playerX: PLAYER_X })
+      const me: State = {
+        stage, game, run, fx: particles(stage, 400), shake: camShake(stage), cfg,
+        y: 0, vy: 0, jumping: false, buffered: 0, nextAt: 4, over: false, tapHint, tractor
       }
-      $('runHearts').textContent = '❤️❤️❤️'
-      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
-      if ((window as any).__BOT) (window as any).__run = run
+      rn = me
 
-      const jump = () => {
-        if (!run || !run.running) return
-        // 1.18 (et pas 0.95 comme en 2D) : sur le rendu 3D le saut paraissait
-        // riquiqui — retour joueur. Plus haut ET plus de temps de vol.
-        if (!run.jumping) { run.jumping = true; run.vy = 1.18; sJump() }
+      decor(stage, [...near, ...far, ...bits]).then(grp => {
+        if (rn !== me) return
+        const kids = grp.children
+        run.layer(kids.slice(0, near.length), 1, span, -8)
+        run.layer(kids.slice(near.length, near.length + far.length), 0.45, span, -10)
+        run.layer(kids.slice(near.length + far.length), 1, span, -8)
+      }).catch(() => { /* sans décor, le jeu tourne */ })
+
+      const spawnOne = (x: number) => {
+        const p = protos[Math.floor(Math.random() * protos.length)]
+        const obj = p.g.clone(true)
+        run.spawn(obj, p.hw, { h: p.h, knocked: false, vx: 0, vy: 0, rot: 0, minClear: 9, kind: p.kind }, x)
       }
-      const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); jump() } }
-      const onTap = (e: Event) => { e.preventDefault(); jump() }
+      const spawn = () => {
+        const lv = game.s.level
+        spawnOne(SPAWN_X)
+        if (lv >= cfg.doubleFrom && Math.random() < 0.3) spawnOne(SPAWN_X + 0.78)
+        me.nextAt = run.dist + Math.max(2.1, cfg.gapMin - lv * 0.1) + Math.random() * cfg.gapVar
+      }
+
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        ;(window as unknown as { __run: unknown }).__run = {
+          get running() { return !me.over }, get speed() { return run.speed }, get y() { return me.y },
+          get jumping() { return me.jumping }, get dist() { return run.dist }, get lives() { return game.s.lives },
+          get score() { return game.s.score },
+          get obstacles() { return run.obstacles.filter(o => !o.data.knocked).map(o => ({ x: o.x, hw: o.hw, h: o.data.h })) },
+          front: TRACTOR.front
+        }
+      }
+
+      /* --- Boucle --- */
+      let smokeAt = 0
+      let tilt = 0
+      stage.start((dt, now) => {
+        if (rn !== me) return
+        game.tick(dt)
+        // Le saut
+        if (me.jumping) {
+          me.y += me.vy * dt
+          me.vy -= GRAVITY * dt
+          if (me.y <= 0) {
+            me.y = 0; me.jumping = false; me.vy = 0
+            if (!me.over) {
+              me.fx.burst({ x: -0.1, y: 0.04, z: 0 }, { count: 10, color: [0xA8845E, 0x7A5C3E], speed: 1.4, life: 0.5, size: 0.06, gravity: 3, dir: { x: -0.6, y: 0.5, z: 0 } })
+              impact(0.35, { matter: 'sourd', noShake: true })
+              // Atterrir juste derrière un obstacle : c'est le near-miss
+              const justBehind = run.obstacles.find(o => o.passed && !o.data.knocked && PLAYER_X + TRACTOR.back - (o.x + o.hw) < 0.3)
+              if (justBehind && justBehind.data.minClear < 0.16) { sfx('whoosh', { vol: 0.5 }); game.flash(ICON.bolt, 'good') }
+              if (me.buffered > 0) { me.buffered = 0; jump(me) }
+            }
+          }
+        }
+        if (me.buffered > 0) me.buffered -= dt
+        // Le monde avance (l'outro le ralentit avec timeScale)
+        const v = run.speed * dt
+        run.update(dt, {
+          onPass: ob => {
+            if (ob.data.knocked || me.over) return
+            const close = ob.data.minClear < 0.16
+            game.hit(1, { perfect: close })
+            if (close) { sfx('whoosh', { vol: 0.5, rate: 1.1 }) }
+          }
+        })
+        dirt.offset.x += v / (22 / 8)
+        for (const w of wheels) w.rotation.z -= v / 0.2
+        if (!me.over && run.dist >= me.nextAt) spawn()
+        // Collision : empreinte du tracteur contre la boîte de l'obstacle ;
+        // un obstacle percuté vole et tourne
+        for (const ob of run.obstacles) {
+          const d = ob.data
+          if (d.knocked) {
+            d.vx *= 0.99; d.vy -= GRAVITY * dt
+            ob.obj.position.y += d.vy * dt; ob.x += d.vx * dt
+            ob.obj.rotation.z += d.rot * dt
+            continue
+          }
+          if (me.over) continue
+          const overlap = ob.x + ob.hw > PLAYER_X + TRACTOR.back && ob.x - ob.hw < PLAYER_X + TRACTOR.front
+          if (!overlap) continue
+          d.minClear = Math.min(d.minClear, me.y - d.h)
+          if (me.y < d.h - 0.06 && run.invuln <= 0) { crash(me, ob); break }
+        }
+        // Le tracteur : hauteur, cabrage, trépidation, renversement d'outro
+        tractor.position.y = me.y + (me.jumping ? 0 : Math.abs(Math.sin(now / 90)) * 0.012)
+        if (me.over) { tilt = Math.min(1.1, tilt + dt * 2.2); tractor.rotation.z = tilt; tractor.position.y = me.y + Math.sin(tilt) * 0.3 }
+        else tractor.rotation.z = me.jumping ? Math.max(-0.35, Math.min(0.3, me.vy * 0.07)) : Math.sin(now / 60) * 0.008
+        run.blink(tractor, now)
+        // Fumée de cheminée : un pof régulier, plus dense quand ça va vite
+        if (now - smokeAt > Math.max(120, 300 - run.speed * 40)) {
+          smokeAt = now
+          me.fx.burst({ x: 0.36, y: me.y + 0.66, z: 0.1 }, { count: 1, color: 0x9A93A8, speed: 0.5, spread: 0.2, life: 0.9, size: 0.14, gravity: -0.6, dir: { x: -0.7, y: 1, z: 0 } })
+        }
+        // La caméra recule un peu avec la vitesse, et tremble aux chocs
+        const back = (run.speed - cfg.speed) * 0.25
+        stage.camera.position.set(0.5 + back * 0.3, 1.5 + back * 0.2, 4.6 + back)
+        stage.camera.lookAt(0.9 + back * 0.4, 0.6, 0)
+        me.shake.apply(dt)
+        me.fx.update(dt)
+      })
+
+      const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); jump(me) } }
+      const onTap = (e: Event) => { e.preventDefault(); jump(me) }
       window.addEventListener('keydown', onKey)
       area.addEventListener('pointerdown', onTap)
 
-      /* --- Rendu : la simulation tourne dans loop(), ici on incarne --- */
-      let smokeAt = 0
-      stage.start((dt, now) => {
-        if (!run || !run.running) return
-        // Le tracteur : hauteur de saut, cabrage, trépidation, roues
-        tractor.position.y = run.y * PX
-        tractor.rotation.z = run.jumping ? Math.min(0.3, run.vy * 0.35) : Math.sin(now / 60) * 0.008
-        if (!run.jumping) tractor.position.y += Math.abs(Math.sin(now / 90)) * 0.012
-        for (const w of wheels) w.rotation.z -= run.speed * dt * 1000 * PX / 0.2
-        // La route défile : cailloux et arbres reculent, et bouclent
-        const v = run.speed * dt * 1000 * PX
-        for (const p of pebbles) {
-          p.position.x -= v
-          if (p.position.x < -7.5) p.position.x += 15
-        }
-        for (const t2 of trees) {
-          t2.g.position.x -= v * t2.depth
-          if (t2.g.position.x < -8) t2.g.position.x += t2.span
-        }
-        // Fumée : un pof régulier, plus dense quand ça va vite
-        if (now - smokeAt > Math.max(140, 320 - run.speed * 400)) {
-          smokeAt = now
-          puff(0.36, (run.y * PX) + 0.68, smokeMat, 0.8, 1)
-        }
-        for (let i = puffs.length - 1; i >= 0; i--) {
-          const s = puffs[i]
-          s.t += dt
-          s.m.position.x += s.vx * dt
-          s.m.position.y += s.vy * dt
-          s.m.scale.multiplyScalar(1 + dt * 1.6)
-          if (s.t > 0.9) { scene.remove(s.m); puffs.splice(i, 1) }
-        }
-      })
-
-      requestAnimationFrame(loop)
-
-      run.cleanup = () => {
+      stage.keep({ dispose() {
         window.removeEventListener('keydown', onKey)
         area.removeEventListener('pointerdown', onTap)
-        puffGeo.dispose(); pebGeo.dispose()
-        stage.dispose()
-      }
-    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+        hm.geometry.dispose(); hayMat.dispose()
+        me.fx.dispose()
+        me.game.dispose()
+      } })
+    })().catch(err => { if (!dead) throw err })
 
     return () => {
       dead = true
-      if (run) {
-        run.running = false
-        try { run.cleanup?.() } catch { /* déjà démonté */ }
-        run = null
-      }
+      if (rn) { rn.stage.dispose(); rn = null }
     }
   }
 }

@@ -221,7 +221,7 @@ button.chip:active{transform:scale(.92);}
 /* ============================================================
    COURSE
    ============================================================ */
-.run3-arena{background:#2B2140;cursor:pointer;}
+.run3-arena{background:#3B2E5C;cursor:pointer;}
 
 /* ============================================================
    RÉSULTAT / ALBUM / TOAST / CONFETTIS
@@ -304,7 +304,7 @@ body.playing .g3-bar{max-width:820px;}
 
 /* ---- Ninja ---- */
 /* ---- Poussin volant ---- */
-.fl-arena{background:#243550;cursor:pointer;}
+.fl-arena{background:#7FB8E0;cursor:pointer;}
 
 /* ============================================================
    COLORIAGE
