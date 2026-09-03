@@ -82,28 +82,45 @@ const scenario = async (name, fn) => {
    Protège le blocage vécu (barre de pose hors écran). */
 await scenario('bonhomme-parcours-complet', async () => {
   await openGame('Bonhomme de neige')
-  const box = await page.locator('#snArena').boundingBox()
-  const cx = box.x + box.width / 2, cy = box.y + box.height / 2
-  for (let k = 0; k < 40; k++) {
-    await page.mouse.move(cx - 160, cy + 40)
+  const sn = () => page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
+    const s = window.__sn
+    res(s ? { phase: s.phase, r: s.r, min: s.minPose, stack: s.stack, ball: s.ball(), pile: s.pile() } : null)
+  })))
+  // Rouler : d'abord en rond pour grossir, puis droit sur la pile ; trois fois
+  for (let k = 0; k < 60; k++) {
+    const st = await sn()
+    if (!st) throw new Error('le bonhomme ne répond pas')
+    if (st.phase === 'deco') break
+    if (st.phase !== 'roll' || !st.ball) { await page.waitForTimeout(150); continue }
+    const grow = st.r < st.min
+    const to = grow ? { x: st.ball.x + (k % 2 ? 140 : -140), y: st.ball.y + 30 } : st.pile
+    await page.mouse.move(st.ball.x, st.ball.y)
     await page.mouse.down()
-    for (let i = 0; i <= 10; i++) { await page.mouse.move(cx - 160 + i * 32, cy + 40 - i * 5, { steps: 2 }); await page.waitForTimeout(14) }
+    for (let i = 1; i <= 8; i++) {
+      await page.mouse.move(st.ball.x + (to.x - st.ball.x) * i / 8, st.ball.y + (to.y - st.ball.y) * i / 8)
+      await page.waitForTimeout(16)
+    }
     await page.mouse.up()
-    await page.waitForTimeout(50)
-    const deco = await page.evaluate(() => {
-      const d = document.getElementById('snDeco')
-      return d && d.style.display !== 'none'
-    })
-    if (deco) break
   }
-  const deco = await page.evaluate(() => {
-    const d = document.getElementById('snDeco')
-    const a = document.getElementById('snArena').getBoundingClientRect()
-    const r = d.getBoundingClientRect()
-    return { visible: d.style.display !== 'none', dansArene: r.bottom <= a.bottom + 2 }
+  const deco = await sn()
+  if (!deco || deco.phase !== 'deco') throw new Error(`pas d'habillage après 60 coups (phase ${deco && deco.phase}, ${deco && deco.stack} boules)`)
+  // Habiller : glisser le haut-de-forme du plateau sur la tête
+  await page.waitForTimeout(400)
+  const where = await page.evaluate(() => {
+    const s = window.__sn
+    const hat = s.items().find(i => i.kind === 'hat' && i.variant === 'tophat')
+    return { from: hat.screen, to: s.head() }
   })
-  if (!deco.visible) throw new Error('la phase déco n\'est pas apparue (pose des boules cassée ?)')
-  if (!deco.dansArene) throw new Error('le panneau déco sort de l\'arène')
+  await page.mouse.move(where.from.x, where.from.y)
+  await page.mouse.down()
+  for (let i = 1; i <= 10; i++) {
+    await page.mouse.move(where.from.x + (where.to.x - where.from.x) * i / 10, where.from.y + (where.to.y - where.from.y) * i / 10)
+    await page.waitForTimeout(16)
+  }
+  await page.mouse.up()
+  await page.waitForTimeout(300)
+  const placed = await page.evaluate(() => window.__sn.items().find(i => i.variant === 'tophat').placed)
+  if (!placed) throw new Error('le chapeau glissé sur la tête ne s\'est pas posé')
   await page.locator('#snDone').click()
   await page.waitForTimeout(1200)
   const fini = await page.evaluate(() => document.body.innerText.includes('beau bonhomme'))

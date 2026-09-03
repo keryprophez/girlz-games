@@ -40,6 +40,9 @@ export const ICON = {
   pin: wrap('<path d="M12 22s-7-6.6-7-12a7 7 0 0 1 14 0c0 5.4-7 12-7 12z" fill="currentColor"/><circle cx="12" cy="10" r="2.8" fill="#fff"/>'),
   basket: wrap('<path d="M3 9.5h18l-1.8 9.2a2 2 0 0 1-2 1.6H6.8a2 2 0 0 1-2-1.6z" fill="currentColor"/><path d="M8 9.5 12 3l4 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13v4M12 13v4M15 13v4" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>'),
   apple: wrap('<path d="M12 7.5c2-2.2 5.5-2 7 .8 2 3.6-.6 9.7-3.4 12.2-1.2 1-2.4.5-3.6.5s-2.4.5-3.6-.5C5.6 18 3 11.9 5 8.3c1.5-2.8 5-3 7-.8z" fill="currentColor"/><path d="M12 7V4.5c0-1 .8-2 2.5-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
+  dice: wrap('<rect x="3" y="3" width="18" height="18" rx="4.5" fill="currentColor"/><circle cx="8" cy="8" r="1.9" fill="#fff"/><circle cx="16" cy="8" r="1.9" fill="#fff"/><circle cx="12" cy="12" r="1.9" fill="#fff"/><circle cx="8" cy="16" r="1.9" fill="#fff"/><circle cx="16" cy="16" r="1.9" fill="#fff"/>'),
+  turnLeft: wrap('<path d="M18.5 12a6.5 6.5 0 1 1-2.2-4.9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M15 3.5v5.5h5.5z" fill="currentColor"/>'),
+  turnRight: wrap('<path d="M5.5 12a6.5 6.5 0 1 0 2.2-4.9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M9 3.5v5.5H3.5z" fill="currentColor"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

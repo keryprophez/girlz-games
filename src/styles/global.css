@@ -297,9 +297,18 @@ body.playing .g3-bar{max-width:820px;}
 .sn-overlay{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:6;
   width:auto;max-width:94%;margin:0;padding:9px 14px;border-radius:18px;
   background:rgba(255,255,255,.78);backdrop-filter:blur(6px);box-shadow:var(--e2);}
-/* Le panneau d'habillage se range sur le côté : il ne cache pas le bonhomme */
-#snDeco.sn-overlay{left:auto;right:10px;bottom:10px;transform:none;
-  max-width:236px;max-height:calc(100% - 20px);overflow-y:auto;}
+/* Bonhomme de neige : jauge de la boule et pastilles des trois boules */
+.sn-overlay .sn-dots{display:flex;gap:8px;align-items:center;}
+.sn-dot{width:16px;height:16px;border-radius:50%;background:rgba(69,54,42,.14);border:2px solid rgba(69,54,42,.25);}
+.sn-dot.on{background:var(--lagoon);border-color:var(--lagoon);}
+/* Outils d'habillage : colonne d'icônes à droite, rien à lire */
+.sn-tools{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:6;}
+.sn-tool{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;
+  background:rgba(255,255,255,.86);backdrop-filter:blur(6px);box-shadow:var(--e2);color:var(--ink);font-size:28px;
+  transition:transform .2s var(--spring);touch-action:manipulation;}
+.sn-tool:active{transform:scale(.9);}
+.sn-tool.go{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
+.sn-arena{background:#AEDCF5;touch-action:none;}
 @media(prefers-reduced-motion:reduce){.g3-btn.ready{animation:none;}}
 
 /* ---- Ninja ---- */
@@ -783,11 +792,6 @@ body.playing .mk-coin.mk-note{width:116px;height:66px;}
 /* ============================================================
    BONHOMME DE NEIGE 3D — palette d'habillage
    ============================================================ */
-.sn-tab{padding:8px 13px;font-size:20px;cursor:pointer;}
-.sn-tab.sel{background:linear-gradient(135deg,var(--mango),var(--coral));border-color:transparent;}
-.sn-optrow{min-height:56px;}
-.sn-optrow .du-opt{min-width:52px;height:52px;font-size:25px;border-radius:16px;touch-action:none;}
-.sn-optrow .du-opt.du-color{min-width:38px;width:38px;height:38px;}
 
 /* ============================================================
    JUICE — transition en iris

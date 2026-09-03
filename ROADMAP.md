@@ -129,6 +129,18 @@ sur l'écran de fin, sessions A puis B puis C.
   de jour. Bots `course-soixante-metres` et `poussin-deux-barrieres`
   synchronisés sur la frame (la 3D tourne à 4 fps sous swiftshader).
 
+- ✅ **`snowman` (Bonhomme de neige) refait** : la boule ne se téléporte
+  plus, on la ROULE jusqu'à la pile (un anneau au sol, une flèche quand elle
+  est assez grosse), elle y monte en arc puis tombe et s'écrase avec la
+  physique ; chaque boule est plafonnée à 78 % de la précédente. L'habillage
+  n'est plus un formulaire à six onglets : un plateau de seize vrais objets
+  3D accroché à la caméra, qu'on glisse sur le bonhomme (chaque objet
+  connaît sa place, une seule pièce par famille, on peut les reprendre), un
+  dé pour une tenue surprise, des flèches pour tourner autour. Chocs sur
+  `impact`, particules GPU, plein écran, aucune note. Bot
+  `bonhomme-parcours-complet` : trois boules roulées à la pile, un chapeau
+  glissé sur la tête.
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler
