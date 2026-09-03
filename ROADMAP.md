@@ -97,11 +97,17 @@ sur l'écran de fin, sessions A puis B puis C.
   anneaux, Uranus, Neptune), réduites à 1024×512 pour la tablette. Plus une
   seule planète dessinée à la main.
 
+- ✅ **`catch` (Attrape) refait** : un VRAI panier physique (fond et bords
+  cinématiques qui poussent les fruits), les fruits rebondissent et se posent
+  dedans ou en ressortent par le bord ; une ombre au sol dit où chaque fruit
+  va tomber ; un fruit par terre coûte un cœur, un piment attrapé aussi ;
+  rampe tous les 8 fruits (gravité et cadence) ; plus de chrono ; verger du
+  kit nature. Bot CI `attrape-six-fruits` (10 scénarios).
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) →
-`catch` (vrai panier physique,
-indicateur de chute) → `caterpillar` (corps continu, tic de pas, bords
+`caterpillar` (corps continu, tic de pas, bords
 tranchés) → `run` + `flappy` sur un socle runner commun → `snowman` (rouler
 jusqu'à la pile, habillage par drag) → `maze` · `taquin` · `memory` · `simon` ·
 `connect4` (polish 2D, IA du Puissance 4) → `clock` · `tables` · `market`

@@ -296,6 +296,27 @@ await scenario('tour-du-monde-vrais-pays', async () => {
   if (errors.length) throw new Error('erreurs JS')
 })
 
+/* 🧺 Attrape : suivre le fruit le plus bas avec le panier, en ramasser 6. */
+await scenario('attrape-six-fruits', async () => {
+  await openGame('Attrape')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
+  for (let i = 0; i < 400; i++) {
+    const st = await page.evaluate(() => window.__catch ? window.__catch.state() : null)
+    if (!st) throw new Error('pas d\'accroche __catch')
+    if (st.over) throw new Error('partie finie trop tôt')
+    const score = parseInt(await page.locator('.hud-score b').textContent())
+    if (score >= 6) return
+    const good = st.fruits.filter(f => !f.bad).sort((a, b) => a.y - b.y)[0]
+    const bad = st.fruits.filter(f => f.bad).sort((a, b) => a.y - b.y)[0]
+    let x = good ? good.x : st.basketX
+    // Un piment plus bas que le fruit visé : on s'en écarte
+    if (bad && (!good || bad.y < good.y) && Math.abs(bad.x - x) < 0.6) x = bad.x + (bad.x > 0 ? -0.9 : 0.9)
+    await page.evaluate(x => window.__catch.want(x), x)
+    await page.waitForTimeout(50)
+  }
+  throw new Error('moins de 6 fruits attrapés en 20 s')
+})
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)

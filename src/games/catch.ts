@@ -1,132 +1,150 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
-import { sPower, sWin, tone } from '../core/audio'
-import { impact } from '../core/impact'
+import { impact, force } from '../core/impact'
 import {
-  createStage, loadPhysics, loader, fixedStep, loadModel, fitModel, avatarMedallion,
-  type Stage, type Cannon
+  createStage, loadPhysics, loader, fixedStep, loadModel, fitModel,
+  type Stage, type Cannon, type T3
 } from '../core/three3d'
+import { arcade, type Arcade } from '../core/arcade'
+import { ground, decor, particles, camShake, type Particles, type CamShake } from '../core/scene3d'
+import { ICON } from '../core/icons'
+import { sfx, preloadSfx } from '../core/sfx'
 
-/* 🧺 Attrape la Récolte, en 3D — la récolte TOMBE pour de vrai : chaque fruit
-   est un modèle glTF avec son corps physique, il rebondit sur le bord du
-   panier, roule et peut en ressortir. Le doigt fait glisser le panier.
+/* 🧺 Attrape la Récolte, refait le 2/09 — la récolte TOMBE pour de vrai, et
+   le panier est un VRAI panier : un corps physique avec un fond et des bords.
+   Un fruit qui arrive dedans rebondit, roule, se pose ; un fruit qui touche
+   le bord peut ressortir. C'est là que naît l'adresse : viser le milieu.
 
-   Un seul geste. Attraper un piment coûte un cœur — trois piments et c'est
-   fini, avant le chrono. Rater un fruit ne coûte pas de cœur mais casse la
-   série : c'est le combo qui fait le plafond d'adresse, pas la punition. Les
-   vagues accélèrent la chute et resserrent les envois. */
+   La boucle :
+   - un fruit posé dans le panier = points × combo ;
+   - un fruit qui tombe par terre = un cœur ; un piment attrapé = un cœur ;
+   - un piment qui tombe par terre = rien (c'est ce qu'on voulait) ;
+   - une ombre au sol sous chaque fruit dit OÙ il va tomber ;
+   - la rampe suit la performance : tous les 8 fruits, ils tombent plus vite
+     et plus souvent. Pas de chrono : la partie finit aux cœurs.
 
-const G = 16              // gravité franche : une chute molle n'a aucun poids
-const LANE = 2.5          // demi-largeur du terrain
-const BASKET_Y = 0.1
-const FLOOR_Y = -0.6
+   Quatrième jeu sur core/arcade.ts + core/scene3d.ts. */
+
+const LANE = 2.6          // demi-largeur du terrain
+const FLOOR_Y = 0
+const SPAWN_Y = 3.9
 
 /* La récolte : que du bon, sauf le piment. Aucun texte à lire, la forme suffit. */
 const CROPS = ['apple', 'carrot', 'banana', 'orange', 'strawberry', 'pear', 'broccoli', 'leek', 'pineapple', 'eggplant', 'avocado']
 const BAD = 'pepper'
 
-let ca: any = null
+type Body = import('cannon-es').Body
+type Obj = import('three').Object3D
+interface Item { obj: Obj; body: Body; bad: boolean; shadow: import('three').Mesh; caught: number; done: boolean }
+interface Cfg { every: number; bad: number; g: number }
+
+interface State {
+  stage: Stage
+  T: T3
+  CANNON: Cannon
+  world: import('cannon-es').World
+  models: Record<string, Obj>
+  items: Item[]
+  basket: Obj
+  basketBody: Body
+  game: Arcade
+  fx: Particles
+  shake: CamShake
+  cfg: Cfg
+  basketX: number
+  wantX: number
+  over: boolean
+  tapHint: HTMLElement
+  shadowGeo: import('three').CircleGeometry
+  shadowMat: import('three').MeshBasicMaterial
+}
+
+let ca: State | null = null
 let ctx: GameContext
 
-function hud() {
-  $('caScore').textContent = '🧺 ' + ca.score
-  $('caLives').textContent = '❤️'.repeat(Math.max(0, ca.lives)) || '—'
-  const c = $('caCombo')
-  c.textContent = ca.combo >= 3 ? `×${Math.min(5, Math.floor(ca.combo / 3) + 1)}` : ''
-  c.classList.toggle('on', ca.combo >= 3)
-}
-
-function flash(txt: string) {
-  const w = $('caWave')
-  w.textContent = txt
-  w.classList.remove('show'); void w.offsetWidth; w.classList.add('show')
-}
-
 /** Lâche un fruit (ou un piment) quelque part au-dessus du terrain. */
-function spawn() {
-  if (!ca || !ca.running) return
-  const CANNON: Cannon = ca.CANNON
-  const bad = Math.random() < ca.cfg.bad
+function spawn(me: State) {
+  const { CANNON, T } = me
+  const bad = Math.random() < me.cfg.bad
   const kind = bad ? BAD : pick(CROPS)
-  const proto = ca.models[kind]
+  const proto = me.models[kind]
   if (!proto) return
   const obj = proto.clone(true)
-  const x = (Math.random() * 2 - 1) * (LANE - 0.35)
-  obj.position.set(x, 2.9, 0)
-  ca.stage.scene.add(obj)
-  const body = new CANNON.Body({
-    mass: 0.4, material: ca.matFood,
-    shape: new CANNON.Sphere(0.13),
-    position: new CANNON.Vec3(x, 2.9, 0)
-  })
+  const x = (Math.random() * 2 - 1) * (LANE - 0.4)
+  obj.position.set(x, SPAWN_Y, 0)
+  me.stage.scene.add(obj)
+  const body = new CANNON.Body({ mass: 0.4, shape: new CANNON.Sphere(0.17), position: new CANNON.Vec3(x, SPAWN_Y, 0) })
   body.linearDamping = 0.02
   body.angularVelocity.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6)
-  body.velocity.set(0, -ca.cfg.speed, 0)
-  ca.world.addBody(body)
-  ca.items.push({ obj, body, bad, done: false })
+  me.world.addBody(body)
+  // L'ombre au sol : elle dit où ça va tomber, et grossit à l'approche
+  const shadow = new T.Mesh(me.shadowGeo, me.shadowMat)
+  shadow.rotation.x = -Math.PI / 2
+  shadow.position.set(x, FLOOR_Y + 0.012, 0)
+  me.stage.scene.add(shadow)
+  me.items.push({ obj, body, bad, shadow, caught: 0, done: false })
 }
 
-/** Le fruit est-il tombé DANS le panier ? Test sur le volume de la corbeille. */
-function inBasket(p: any) {
-  return Math.abs(p.x - ca.basketX) < 0.42 && p.y < BASKET_Y + 0.34 && p.y > BASKET_Y - 0.3
+/** Le fruit est-il posé DANS le panier ? Dans le volume, et calme. */
+function inBasket(me: State, it: Item) {
+  const p = it.body.position, v = it.body.velocity
+  return Math.abs(p.x - me.basketX) < 0.42 && p.y > 0.02 && p.y < 0.4 && Math.abs(v.y) < 2.4
 }
 
-function caught(it: any) {
+function caught(me: State, it: Item) {
   it.done = true
+  it.caught = 0.001
+  const p = it.body.position
   if (it.bad) {
-    ca.lives--
-    ca.combo = 0
-    impact(0.85, { matter: 'sourd' })
-    hud()
-    if (ca.lives <= 0) { drop(it); finish(true); return }
-    ctx.toast(`🌶️ Trop piquant ! ${'❤️'.repeat(ca.lives)}`)
-  } else {
-    ca.combo++
-    ca.bestCombo = Math.max(ca.bestCombo, ca.combo)
-    ca.score += Math.min(5, Math.floor(ca.combo / 3) + 1)
-    tone(560 + Math.min(10, ca.combo) * 55, 0.09, 'triangle', 0.12)
-    impact(0.3, { matter: 'neige', noShake: true })
-    hud()
+    impact(0.85, { matter: 'sourd', noShake: true })
+    me.shake.hit(0.8)
+    me.fx.burst(p, { count: 22, color: [0xC63B2A, 0x7A1E12, 0xFF7A4D], speed: 2.6, life: 0.7, size: 0.08 })
+    me.game.flash(ICON.heartEmpty, 'bad')
+    if (me.game.hurt()) finish(me, true)
+    return
   }
-  drop(it)
+  sfx('drop', { vol: 0.6, rate: 1.1 + Math.min(10, me.game.s.combo) * 0.03 })
+  impact(force(Math.abs(it.body.velocity.y), 1, 8) * 0.5, { matter: 'bois', noShake: true })
+  me.fx.burst({ x: p.x, y: p.y + 0.1, z: 0.3 }, { count: 12, color: [0xFFE08A, 0xFFFFFF, 0xC3E88D], speed: 1.8, life: 0.55, size: 0.07, gravity: 4 })
+  me.game.hit(1, { silent: true })
+  if (me.game.s.combo >= 5 && me.game.s.combo % 5 === 0) me.game.flash('×' + me.game.s.combo)
+  me.tapHint.classList.add('off')
 }
 
-/** Un fruit perdu casse la série, mais ne coûte PAS de cœur.
-    Rater une chute est normal à six ans ; ce qui doit se payer, c'est
-    d'attraper ce qu'on ne devait pas. Sinon la partie meurt en quatre
-    secondes et personne ne comprend pourquoi. */
-function missed(it: any) {
+/** Tombé par terre : un bon fruit perdu coûte un cœur, un piment perdu, rien. */
+function missed(me: State, it: Item) {
   it.done = true
+  it.caught = 0.001
+  const p = it.body.position
   if (!it.bad) {
-    ca.combo = 0
-    impact(0.45, { matter: 'pate' })
-    hud()
+    impact(0.45, { matter: 'pate', noShake: true })
+    me.fx.burst({ x: p.x, y: FLOOR_Y + 0.1, z: 0.2 }, { count: 12, color: [0x8A6238, 0xB08050], speed: 1.4, life: 0.5, size: 0.06 })
+    me.game.flash(ICON.heartEmpty, 'bad')
+    if (me.game.hurt()) finish(me, false)
   } else {
     impact(0.2, { matter: 'pate', noShake: true })
+    me.fx.burst({ x: p.x, y: FLOOR_Y + 0.1, z: 0.2 }, { count: 6, color: 0x8A6238, speed: 1, life: 0.4, size: 0.05 })
   }
-  drop(it)
 }
 
-function drop(it: any) {
-  ca.world.removeBody(it.body)
-  ca.stage.scene.remove(it.obj)
-  const i = ca.items.indexOf(it)
-  if (i >= 0) ca.items.splice(i, 1)
+function drop(me: State, it: Item) {
+  me.world.removeBody(it.body)
+  me.stage.scene.remove(it.obj)
+  me.stage.scene.remove(it.shadow)
+  const i = me.items.indexOf(it)
+  if (i >= 0) me.items.splice(i, 1)
 }
 
-function finish(piquant: boolean) {
-  if (!ca || !ca.running) return
-  ca.running = false
-  clearInterval(ca.timer)
-  clearTimeout(ca.spawnT)
-  sWin()
-  const th = ctx.byTier([26, 13], [36, 18], [48, 24])
-  const stars = ca.score >= th[0] ? 3 : ca.score >= th[1] ? 2 : 1
-  ctx.finish({
-    title: piquant ? 'Aïe, le piment ! 🌶️' : ca.score >= th[0] ? 'Quelle récolte !' : 'Récolte rentrée !',
-    msg: `${ctx.playerName} a marqué ${ca.score} points`
-      + (ca.bestCombo >= 3 ? ` — ${ca.bestCombo} d'affilée !` : ''),
-    stars: stars as 1 | 2 | 3, starsEarned: stars
+function finish(me: State, piquant: boolean) {
+  if (me.over) return
+  me.over = true
+  me.stage.timeScale = 0.45
+  const s = me.game.s
+  const th = ctx.byTier([30, 15], [42, 21], [56, 28])
+  me.game.end({
+    title: piquant ? 'Aïe, le piment !' : s.score >= th[0] ? 'Quelle récolte !' : s.score >= th[1] ? 'Récolte rentrée !' : 'La récolte est tombée…',
+    msg: `${ctx.playerName} a marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
+    outroMs: 1200
   })
 }
 
@@ -136,110 +154,112 @@ export const catchGame: GameDef = {
   mount(c) {
     ctx = c
     let dead = false
-    c.root.innerHTML = `
-      <div class="topbar">
-        <div class="chip" id="caScore">🧺 0</div>
-        <div class="chip" id="caLives">❤️❤️❤️</div>
-      </div>
-      <div class="g3-combo" id="caCombo"></div>
-      <div class="tbar" style="max-width:520px"><div class="tfill" id="caTimer"></div></div>
-      <div class="arena g3-arena ca-arena" id="caArena">
-        <div class="hint g3-hint" id="caHint">Glisse ton doigt pour déplacer le panier 🧺</div>
-        <div class="g3-wave" id="caWave"></div>
-      </div>`
-
+    c.root.innerHTML = `<div class="arena g3-arena ca-arena" id="caArena"></div>`
     const arena = $('caArena')
     const hideLoader = loader(arena, '🧺')
+    preloadSfx(['drop', 'error', 'confirm', 'pluck'])
 
     ;(async () => {
-      const [, CANNON] = await loadPhysics()
+      const [T, CANNON] = await loadPhysics()
       if (dead) return
       const stage: Stage = await createStage(arena, {
-        sky: '#1D3C5E',
-        fog: [7, 20], fogColor: '#1D3C5E',
-        cam: [0, 1.35, 5.0], target: [0, 1.1, 0], fov: 46,
-        hemi: ['#CFE4FF', '#22384F', 0.9],
-        sun: { pos: [2.6, 6, 4.5], color: '#FFF2D8', intensity: 2.2, area: 5, far: 16 },
-        fill: 0.35, exposure: 0.95, iblIntensity: 0.55
+        sky: '#8FCDEB', fog: [12, 30], fogColor: '#B9E0F2',
+        cam: [0, 2.0, 5.8], target: [0, 1.35, 0], fov: 46,
+        hemi: ['#DFF3FF', '#4E7A3C', 0.95],
+        sun: { pos: [2.6, 7, 4.5], color: '#FFF4D6', intensity: 2.0, area: 5, far: 20 },
+        fill: 0.35, exposure: 1.0, iblIntensity: 0.5
       })
       if (dead) { stage.dispose(); return }
-      hideLoader()
-      const T = stage.T
       const scene = stage.scene
 
-      /* Sol sombre : c'est la récolte qui doit ressortir, pas le décor */
-      const ground = new T.Mesh(
-        new T.PlaneGeometry(26, 26),
-        new T.MeshStandardMaterial({ color: 0x1F4433, roughness: 0.95 })
-      )
-      ground.rotation.x = -Math.PI / 2
-      ground.position.y = FLOOR_Y
-      ground.receiveShadow = true
-      scene.add(ground)
-
-      /* Décor : des caisses de marché et un fond de grange. Sans lui, le panier
-         flotte dans le vide et rien ne donne l'échelle de la chute. */
-      const crateMat = new T.MeshStandardMaterial({ color: 0x6B4A2E, roughness: 0.85 })
-      for (const [x, z, sc] of [[-2.4, -1.2, 0.5], [2.5, -1.4, 0.62], [-3.1, -2.2, 0.42], [3.2, -2.4, 0.48]] as [number, number, number][]) {
-        const crate = new T.Mesh(new T.BoxGeometry(sc, sc * 0.8, sc), crateMat)
-        crate.position.set(x, FLOOR_Y + sc * 0.4, z)
-        crate.rotation.y = Math.random()
-        crate.castShadow = true; crate.receiveShadow = true
-        scene.add(crate)
-      }
-      const barn = new T.Mesh(
-        new T.PlaneGeometry(20, 2.2),
-        new T.MeshStandardMaterial({ color: 0x3A2A1E, roughness: 1 })
-      )
-      barn.position.set(0, FLOOR_Y + 1.1, -4.5)
-      scene.add(barn)
+      /* Un verger : herbe, clôture, arbres derrière — le panier a une échelle */
+      const g = ground(stage, { radius: 22, color: 0x4F8F3A, roughness: 0.98 })
+      g.position.y = FLOOR_Y
+      const back = -3.2
+      const items3d = [
+        ...[-5.2, -2.6, 0.4, 3.2, 5.8].map((x, i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat', 'tree_detailed'][i % 4]}`, x, z: back - 1.6 - Math.random(), size: 2.4 + Math.random() * 1.2, tint: 0x6EAE48 })),
+        ...[-4.5, -3, -1.5, 0, 1.5, 3, 4.5].map(x => ({ model: 'nature/fence_simple', x, z: back, size: 0.7, rot: 0, tint: 0xC9A874 })),
+        ...[[-3.4, -1.2], [3.5, -1.4], [-4.2, 0.6], [4.3, 0.8]].map(([x, z]) => ({ model: 'nature/plant_bush', x, z, size: 0.55, tint: 0x6EAE48 })),
+        ...[[-2.4, 0.9], [2.6, 1.1], [-3.8, -0.4], [3.9, -0.2]].map(([x, z], i) => ({ model: `nature/${['flower_redA', 'flower_yellowA', 'flower_purpleA'][i % 3]}`, x, z, size: 0.36, tint: 0xFFFFFF }))
+      ]
+      decor(stage, items3d).then(grp => grp.position.y = FLOOR_Y).catch(() => { /* sans décor, le jeu tourne */ })
 
       /* Monde physique */
-      const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) })
+      const cfg: Cfg = c.byTier(
+        { every: 1350, bad: 0.1, g: 7.5 },
+        { every: 1050, bad: 0.17, g: 9 },
+        { every: 820, bad: 0.24, g: 10.5 }
+      )
+      const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -cfg.g, 0) })
       world.broadphase = new CANNON.SAPBroadphase(world)
-      ;(world.solver as any).iterations = 8
+      ;(world.solver as unknown as { iterations: number }).iterations = 10
       const matFood = new CANNON.Material('food')
-      world.addContactMaterial(new CANNON.ContactMaterial(matFood, matFood, { friction: 0.4, restitution: 0.18 }))
+      world.addContactMaterial(new CANNON.ContactMaterial(matFood, matFood, { friction: 0.5, restitution: 0.22 }))
+      world.defaultContactMaterial.friction = 0.5
+      world.defaultContactMaterial.restitution = 0.22
       world.addBody(new CANNON.Body({
         type: CANNON.Body.STATIC, material: matFood, shape: new CANNON.Plane(),
         position: new CANNON.Vec3(0, FLOOR_Y, 0),
         quaternion: new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0)
       }))
 
-      /* Le panier : un vrai modèle, piloté au doigt */
+      /* Le panier : un vrai modèle ET un vrai corps — fond + deux bords.
+         Cinématique : il pousse les fruits, rien ne le pousse. */
       const basket = await loadModel('food', 'bowl')
-      fitModel(T, basket, 0.9)
-      basket.position.set(0, BASKET_Y, 0)
+      fitModel(T, basket, 1.2)
+      const bb = new T.Box3().setFromObject(basket)
+      basket.position.set(0, -bb.min.y, 0)
       scene.add(basket)
+      const basketBody = new CANNON.Body({ type: CANNON.Body.KINEMATIC, material: matFood })
+      basketBody.addShape(new CANNON.Box(new CANNON.Vec3(0.52, 0.04, 0.45)), new CANNON.Vec3(0, 0.04, 0))
+      basketBody.addShape(new CANNON.Box(new CANNON.Vec3(0.05, 0.22, 0.45)), new CANNON.Vec3(-0.56, 0.22, 0))
+      basketBody.addShape(new CANNON.Box(new CANNON.Vec3(0.05, 0.22, 0.45)), new CANNON.Vec3(0.56, 0.22, 0))
+      basketBody.position.set(0, 0, 0)
+      world.addBody(basketBody)
 
       /* Toute la récolte préchargée : un fruit ne doit jamais faire attendre */
-      const models: Record<string, any> = {}
+      const models: Record<string, Obj> = {}
       await Promise.all([...CROPS, BAD].map(async k => {
-        const g = await loadModel('food', k)
-        fitModel(T, g, k === BAD ? 0.24 : 0.3)
-        models[k] = g
+        const m = await loadModel('food', k)
+        fitModel(T, m, k === BAD ? 0.34 : 0.42)
+        models[k] = m
       }))
       if (dead) { stage.dispose(); return }
+      hideLoader()
 
-      const cfg = c.byTier(
-        { speed: 0.1, every: 1250, bad: 0.1 },
-        { speed: 0.5, every: 980, bad: 0.17 },
-        { speed: 1.0, every: 780, bad: 0.24 }
-      )
-      ca = {
-        stage, CANNON, world, matFood, models, basket,
-        items: [], score: 0, lives: 3, combo: 0, bestCombo: 0,
-        basketX: 0, wantX: 0, timeLeft: 45, wave: 1, running: true,
-        cfg: { ...cfg }, step: fixedStep()
+      const tapHint = document.createElement('div')
+      tapHint.className = 'tap-hint'
+      tapHint.innerHTML = ICON.tap
+      arena.appendChild(tapHint)
+
+      const game = arcade(c, {
+        host: arena,
+        lives: c.byTier(5, 3, 3),
+        scoreIcon: ICON.basket,
+        ramp: { every: 8, max: 8 },
+        onLevel: () => {
+          me.cfg.every = Math.max(450, me.cfg.every * 0.88)
+          me.cfg.bad = Math.min(0.32, me.cfg.bad + 0.03)
+          me.cfg.g += 1.0
+          world.gravity.set(0, -me.cfg.g, 0)
+          me.game.flash(ICON.bolt)
+        },
+        stars: s => { const th = c.byTier([30, 15], [42, 21], [56, 28]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
+      })
+      const me: State = {
+        stage, T, CANNON, world, models, items: [], basket, basketBody, game,
+        fx: particles(stage, 500), shake: camShake(stage), cfg: { ...cfg },
+        basketX: 0, wantX: 0, over: false, tapHint,
+        shadowGeo: new T.CircleGeometry(0.16, 20),
+        shadowMat: new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false })
       }
-      hud()
+      ca = me
 
       /* --- Un seul geste : glisser --- */
       const moveTo = (clientX: number) => {
         const r = stage.renderer.domElement.getBoundingClientRect()
         const t = (clientX - r.left) / r.width
-        ca.wantX = Math.max(-1, Math.min(1, t * 2 - 1)) * (LANE - 0.45)
-        $('caHint').style.opacity = '0'
+        me.wantX = Math.max(-1, Math.min(1, t * 2 - 1)) * (LANE - 0.5)
       }
       let dragging = false
       const onDown = (e: PointerEvent) => { dragging = true; moveTo(e.clientX) }
@@ -251,76 +271,81 @@ export const catchGame: GameDef = {
       window.addEventListener('pointercancel', onUp)
 
       const spawner = () => {
-        if (!ca || !ca.running) return
-        spawn()
-        ca.spawnT = setTimeout(spawner, ca.cfg.every * (0.75 + Math.random() * 0.5))
+        if (ca !== me || me.over) return
+        spawn(me)
+        game.after(me.cfg.every * (0.75 + Math.random() * 0.5), spawner)
       }
       spawner()
 
-      ca.timer = setInterval(() => {
-        if (!ca || !ca.running) return
-        ca.timeLeft--
-        $('caTimer').style.width = (ca.timeLeft / 45) * 100 + '%'
-        if (ca.timeLeft === 34 || ca.timeLeft === 22 || ca.timeLeft === 11) {
-          ca.wave++
-          ca.cfg.speed = ca.cfg.speed * 1.25 + 0.3
-          ca.cfg.every = Math.max(420, ca.cfg.every * 0.82)
-          ca.cfg.bad = Math.min(0.32, ca.cfg.bad + 0.05)
-          flash('Vague ' + ca.wave + ' !'); sPower()
+      // Accroche pour les bots : où tombent les fruits, où est le panier
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        ;(window as unknown as { __catch: unknown }).__catch = {
+          state: () => ({ basketX: me.basketX, over: me.over, fruits: me.items.filter(i => !i.done).map(i => ({ x: i.body.position.x, y: i.body.position.y, bad: i.bad })) }),
+          want: (x: number) => { me.wantX = Math.max(-(LANE - 0.5), Math.min(LANE - 0.5, x)) }
         }
-        if (ca.timeLeft <= 0) finish(false)
-      }, 1000)
+      }
 
-      /* --- Boucle --- */
-      // C'est SON panier : médaillon photo qui l'accompagne (hors du groupe
-      // remis à l'échelle par fitModel, il suit dans la boucle)
-      let med: any = null
-      avatarMedallion(T, c.avatar, 0.28).then(m => {
-        if (m && ca) { med = m; scene.add(m) }
-      })
-
+      const step = fixedStep()
       stage.start(dt => {
-        if (!ca || !ca.running) return
-        // Le panier suit le doigt en douceur : un suivi sec donnerait du zapping
-        ca.basketX += (ca.wantX - ca.basketX) * Math.min(1, dt * 16)
-        basket.position.x = ca.basketX
-        basket.rotation.z = (ca.wantX - ca.basketX) * 0.5   // il penche : ça lui donne du poids
-        if (med) med.position.set(ca.basketX, basket.position.y + 0.62, 0)
+        if (ca !== me) return
+        game.tick(dt)
+        // Le panier suit le doigt en douceur : un suivi sec donnerait du zapping.
+        // Cinématique : on lui donne une VITESSE, la physique le déplace et
+        // pousse les fruits qui sont dedans.
+        basketBody.velocity.set((me.wantX - me.basketX) * 14, 0, 0)
 
-        ca.step(dt, () => {
+        step(dt, () => {
           world.step(1 / 60)
-          // Terrain plat : rien ne doit partir vers le fond
-          for (const it of ca.items) { it.body.position.z = 0; it.body.velocity.z = 0 }
+          for (const it of me.items) { it.body.position.z = 0; it.body.velocity.z = 0 }
         })
+        me.basketX = basketBody.position.x
+        basket.position.x = me.basketX
+        basket.rotation.z = (me.wantX - me.basketX) * 0.35   // il penche : ça lui donne du poids
 
-        for (let i = ca.items.length - 1; i >= 0; i--) {
-          const it = ca.items[i]
-          if (it.done) continue
-          it.obj.position.copy(it.body.position as any)
-          it.obj.quaternion.copy(it.body.quaternion as any)
-          if (inBasket(it.body.position)) { caught(it); if (!ca || !ca.running) return; continue }
-          if (it.body.position.y < FLOOR_Y + 0.22) { missed(it); if (!ca || !ca.running) return }
+        for (let i = me.items.length - 1; i >= 0; i--) {
+          const it = me.items[i]
+          it.obj.position.copy(it.body.position as unknown as import('three').Vector3)
+          it.obj.quaternion.copy(it.body.quaternion as unknown as import('three').Quaternion)
+          if (it.done) {
+            // Ramassé ou perdu : il rétrécit un quart de seconde, puis s'en va
+            it.caught += dt
+            const k = Math.max(0, 1 - it.caught / 0.28)
+            it.obj.scale.setScalar(k)
+            it.shadow.visible = false
+            if (k <= 0) drop(me, it)
+            continue
+          }
+          // L'ombre suit et grossit à l'approche du sol
+          const h = Math.max(0, it.body.position.y - FLOOR_Y)
+          it.shadow.position.x = it.body.position.x
+          const s = 0.7 + Math.max(0, 1 - h / (SPAWN_Y - FLOOR_Y)) * 1.4
+          it.shadow.scale.setScalar(s)
+          if (!me.over) {
+            if (inBasket(me, it)) { caught(me, it); continue }
+            // Par terre = bas ET hors du panier (dedans, un fruit peut être bas mais encore en mouvement)
+            if (it.body.position.y < FLOOR_Y + 0.2 && Math.abs(it.body.position.x - me.basketX) > 0.5) missed(me, it)
+          }
         }
+        me.fx.update(dt)
+        stage.camera.position.set(me.basketX * 0.12, 2.0, 5.8)
+        stage.camera.lookAt(me.basketX * 0.1, 1.35, 0)
+        me.shake.apply(dt)
       })
 
-      ca.cleanup = () => {
+      stage.keep({ dispose() {
         stage.renderer.domElement.removeEventListener('pointerdown', onDown)
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', onUp)
-        clearInterval(ca.timer)
-        clearTimeout(ca.spawnT)
-        stage.dispose()
-      }
-    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+        me.shadowGeo.dispose(); me.shadowMat.dispose()
+        me.fx.dispose()
+        me.game.dispose()
+      } })
+    })().catch(err => { if (!dead) throw err })
 
     return () => {
       dead = true
-      if (ca) {
-        ca.running = false
-        try { ca.cleanup?.() } catch { /* déjà démonté */ }
-        ca = null
-      }
+      if (ca) { ca.stage.dispose(); ca = null }
     }
   }
 }
