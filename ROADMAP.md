@@ -159,6 +159,14 @@ sur l'écran de fin, sessions A puis B puis C.
   étirement à la sortie et dépassement, respiration, moquerie avant de
   replonger, écrasement puis chute en vrille quand on tape.
 
+- ✅ **`maze` (Labyrinthe) poli** : plein écran (le plateau prend toute la
+  hauteur), modes en colonne d'icônes soleil/lune/flocon, manches en
+  pastilles, plus rien à lire ; le doigt rapide ne décroche plus (la case
+  visée est rejointe en suivant le couloir si elle est à moins de six pas) ;
+  un mur heurté se sent (choc, écrasement, poussière) ; retrouver la poule
+  est une fête (câlin, cœurs) ; glace givrée ; timers de partie, état typé.
+  Bot `labyrinthe-doigt-rapide` (chemin BFS tracé un point sur trois).
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler

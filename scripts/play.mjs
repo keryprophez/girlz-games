@@ -269,6 +269,42 @@ await scenario('tour-trois-blocs', async () => {
   if (errors.length) throw new Error('erreurs JS')
 })
 
+/* 🌀 Labyrinthe : le chemin le plus court (BFS), tracé au doigt en peu de
+   points — c'est le suivi de trait (Bresenham) qu'on vérifie, pas la patience. */
+await scenario('labyrinthe-doigt-rapide', async () => {
+  await openGame('Labyrinthe')
+  await page.waitForFunction(() => window.__mz && window.__mz.n > 0, null, { timeout: 15000 })
+  await page.waitForTimeout(600)
+  const st = await page.evaluate(() => ({ grid: window.__mz.grid, n: window.__mz.n }))
+  const n = st.n
+  const D = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+  const prev = new Map([['0:0', null]])
+  const queue = [[0, 0]]
+  while (queue.length) {
+    const [x, y] = queue.shift()
+    if (x === n - 1 && y === n - 1) break
+    for (let d = 0; d < 4; d++) {
+      if (st.grid[y][x][d]) continue
+      const k = (x + D[d][0]) + ':' + (y + D[d][1])
+      if (!prev.has(k)) { prev.set(k, x + ':' + y); queue.push([x + D[d][0], y + D[d][1]]) }
+    }
+  }
+  const path = []
+  for (let k = (n - 1) + ':' + (n - 1); k; k = prev.get(k)) path.unshift(k.split(':').map(Number))
+  if (path.length < 2) throw new Error('pas de chemin trouvé')
+  // On ne passe le doigt que sur un point sur trois : les cases sautées
+  // doivent être rattrapées par le suivi de trait
+  const pts = await page.evaluate(p => p.map(([x, y]) => window.__mz.cellCenter(x, y)), path)
+  await page.mouse.move(pts[0].x, pts[0].y)
+  await page.mouse.down()
+  for (let i = 1; i < pts.length; i += 3) { await page.mouse.move(pts[i].x, pts[i].y); await page.waitForTimeout(12) }
+  await page.mouse.move(pts[pts.length - 1].x, pts[pts.length - 1].y)
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  const round = await page.evaluate(() => window.__mz.round)
+  if (round < 1) throw new Error('la poule n\'a pas été retrouvée avec un doigt rapide')
+})
+
 /* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
 await scenario('ninja-tranche', async () => {
   await openGame('Ninja Verger')
