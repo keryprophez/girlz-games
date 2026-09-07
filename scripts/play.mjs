@@ -251,15 +251,20 @@ await scenario('tour-trois-blocs', async () => {
   const box = await page.locator('#itArena').boundingBox()
   for (let k = 0; k < 3; k++) {
     let dropped = false
-    for (let i = 0; i < 300; i++) {
-      const x = await page.evaluate(() => window.__towerX)
-      if (typeof x === 'number' && Math.abs(x) < 0.08) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); dropped = true; break }
-      await page.waitForTimeout(16)
+    for (let i = 0; i < 400; i++) {
+      // Une lecture par frame : __towerX vaut NaN tant que le bloc précédent tombe
+      const x = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => res(window.__towerX))))
+      if (typeof x === 'number' && Math.abs(x) < 0.12) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); dropped = true; break }
     }
     if (!dropped) throw new Error('le balancier ne passe jamais au centre')
-    await page.waitForTimeout(1600)
+    await page.waitForTimeout(400)
   }
-  const score = parseInt(await page.locator('.hud-score b').textContent())
+  // Le troisième bloc met du temps à se poser (la 3D tourne au ralenti ici)
+  let score = 0
+  for (let i = 0; i < 60 && score < 3; i++) {
+    await page.waitForTimeout(250)
+    score = parseInt(await page.locator('.hud-score b').textContent()) || 0
+  }
   if (!(score >= 3)) throw new Error('score ' + score + ' après 3 blocs posés')
   if (errors.length) throw new Error('erreurs JS')
 })

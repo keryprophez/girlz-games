@@ -150,6 +150,15 @@ sur l'écran de fin, sessions A puis B puis C.
   jeu à l'autre et le jeu se monte après le passage en plein écran (plus de
   saut) ; l'animal tapé du Tape-Trous retombe dans son trou.
 
+- ✅ **Retours du 7/09** : les déploiements échouaient depuis trois commits
+  (bot de la Tour de Glace instable : crochet périmé, corrigé) — le site
+  était resté à la version de la Chenille. Le plein écran natif de l'app
+  installée (`display: fullscreen`) remplace la demande de plein écran et
+  son message du navigateur. Tape-Trous : les animaux sont des panneaux
+  verticaux ancrés aux pieds (`standeeFromAtlas`) qui SORTENT du trou, avec
+  étirement à la sortie et dépassement, respiration, moquerie avant de
+  replonger, écrasement puis chute en vrille quand on tape.
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler

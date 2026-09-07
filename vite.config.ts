@@ -16,7 +16,7 @@ export default defineConfig({
         description: 'Les jeux de Joyce et Jade',
         theme_color: '#FFF9F0',
         background_color: '#FFF9F0',
-        display: 'standalone',
+        display: 'fullscreen', // installée sur l'écran d'accueil : plein écran natif, sans message du navigateur
         // Tout en paysage (décision du 2/09) : la tablette est posée ainsi pour la 3D
         orientation: 'landscape',
         lang: 'fr',

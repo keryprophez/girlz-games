@@ -12,6 +12,10 @@ import { ICON } from './core/icons'
    même, et le bouton maison ressort du plein écran. */
 function enterFullscreen() {
   try {
+    // Installée sur l'écran d'accueil, l'app est déjà en plein écran (manifest) :
+    // ne rien demander, sinon Chrome affiche son message « glisser pour quitter »
+    if (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return
+    if (document.fullscreenElement) return
     const p = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
     p?.then(() => {
       const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }

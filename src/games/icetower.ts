@@ -311,6 +311,9 @@ export const icetower: GameDef = {
         // Le bloc se balance tant qu'on ne l'a pas lâché ; un « tic » à chaque
         // extrémité : le rythme s'entend, une enfant de 6 ans joue à l'oreille
         const s = me.swing
+        // Accroche pour les tests : NaN quand aucun bloc ne se balance, sinon
+        // le bot cliquait sur une valeur périmée pendant la chute du précédent
+        if (!s || s.dropped) (window as unknown as { __towerX: number }).__towerX = NaN
         if (s && !s.dropped) {
           s.t += dt * me.swingSpeed
           const x = Math.sin(s.t) * me.swingSpan

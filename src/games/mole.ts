@@ -4,7 +4,7 @@ import { impact } from '../core/impact'
 import { loadAtlas, FARM_ANIMALS, type Atlas } from '../core/sprites'
 import { createStage, loader, loadThree, picker, type Stage, type T3 } from '../core/three3d'
 import { arcade, type Arcade } from '../core/arcade'
-import { ground, decor, particles, camShake, spriteFromAtlas, type Particles, type CamShake } from '../core/scene3d'
+import { ground, decor, particles, camShake, standeeFromAtlas, faceCamera, type Particles, type CamShake } from '../core/scene3d'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 
@@ -29,7 +29,7 @@ interface Hole {
   z: number
   disc: import('three').Mesh
   hit: import('three').Mesh
-  sprite: import('three').Sprite | null
+  sprite: import('three').Mesh | null
   kind: 'animal' | 'cactus' | null
   /** down = vide ; rising/up/hiding = un habitant ; bonked = tapé. */
   phase: 'down' | 'rising' | 'up' | 'hiding' | 'bonked'
@@ -37,6 +37,10 @@ interface Hole {
   t: number
   upFor: number
   size: number
+  /** La poussière de la chute a déjà giclé (phase bonked). */
+  dusted?: boolean
+  /** Largeur / hauteur du panneau. */
+  aspect?: number
 }
 
 interface Cfg { up: number; gap: number; cactus: number; multi: number }
@@ -58,7 +62,7 @@ interface State {
 let mo: State | null = null
 let ctx: GameContext
 
-const RISE_S = 0.16, HIDE_S = 0.14, BONK_S = 0.34
+const RISE_S = 0.22, HIDE_S = 0.2, BONK_S = 0.42
 const SPRITE = 0.8
 
 /** Un habitant sort d'un trou libre. */
@@ -68,9 +72,11 @@ function popOne(me: State) {
   const h = pick(free)
   const cactus = Math.random() < me.cfg.cactus
   const sp = cactus
-    ? spriteFromAtlas(me.stage, me.items, 'cactus', SPRITE * 0.95)
-    : spriteFromAtlas(me.stage, me.animals, pick(FARM_ANIMALS), SPRITE)
-  sp.position.set(h.x, -SPRITE * 0.6, h.z)
+    ? standeeFromAtlas(me.stage, me.items, 'cactus', SPRITE * 0.95)
+    : standeeFromAtlas(me.stage, me.animals, pick(FARM_ANIMALS), SPRITE)
+  // Un panneau debout, pieds au fond du trou : le sol cache ce qui est dessous
+  sp.position.set(h.x, -SPRITE, h.z)
+  faceCamera(me.stage, sp)
   me.stage.scene.add(sp)
   h.sprite = sp
   h.kind = cactus ? 'cactus' : 'animal'
@@ -78,6 +84,7 @@ function popOne(me: State) {
   h.t = 0
   h.upFor = me.cfg.up / 1000 * (0.85 + Math.random() * 0.3)
   h.size = sp.scale.y
+  h.aspect = sp.scale.x / sp.scale.y
   // De la terre qui gicle, et un petit « tic » : on entend sortir
   me.fx.burst({ x: h.x, y: 0.05, z: h.z }, { count: 8, color: [0x6B4A2A, 0x8A6238], speed: 1.4, life: 0.45, size: 0.05, spread: 0.8 })
   sfx('tick', { vol: 0.3, rate: 0.8 })
@@ -96,10 +103,16 @@ function hideOne(me: State, h: Hole, escaped: boolean) {
 }
 
 function clearHole(me: State, h: Hole) {
-  if (h.sprite) { me.stage.scene.remove(h.sprite); h.sprite.material.dispose(); h.sprite = null }
+  if (h.sprite) {
+    me.stage.scene.remove(h.sprite)
+    ;(h.sprite.material as import('three').Material).dispose()
+    h.sprite.geometry.dispose()
+    h.sprite = null
+  }
   h.kind = null
   h.phase = 'down'
   h.t = 0
+  h.dusted = false
 }
 
 function whack(me: State, h: Hole) {
@@ -112,7 +125,7 @@ function whack(me: State, h: Hole) {
     me.fx.burst({ x: h.x, y: 0.05, z: h.z }, { count: 5, color: 0x8A6238, speed: 0.9, life: 0.35, size: 0.04 })
     return
   }
-  const p = { x: h.x, y: h.size * 0.5, z: h.z }
+  const p = { x: h.x, y: h.size * 0.55, z: h.z }
   if (h.kind === 'cactus') {
     impact(0.8, { matter: 'sourd', noShake: true })
     me.shake.hit(0.7)
@@ -289,32 +302,53 @@ export const moleGame: GameDef = {
           if (!h.sprite) continue
           h.t += dt
           const sp = h.sprite
-          const top = h.size * 0.5, bottom = -h.size * 0.6
+          const top = 0, bottom = -h.size // les pieds : au sol quand il est sorti, au fond du trou sinon
+          // Un sprite plat qui glisse, c'est mort ; ce qui vit, c'est
+          // l'étirement, l'écrasement, le dépassement et le petit balancement
+          let sx = 1, sy = 1, y = top, rot = 0
           if (h.phase === 'rising') {
             const k = Math.min(1, h.t / RISE_S)
-            const e = 1 - Math.pow(1 - k, 3) // sortie vive, avec un petit dépassement
-            sp.position.y = bottom + (top - bottom) * e + Math.sin(k * Math.PI) * 0.12
+            const c1 = 1.7, c3 = c1 + 1 // sortie vive avec dépassement (ease-out-back)
+            const e = 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2)
+            y = bottom + (top - bottom) * e
+            const st = Math.sin(k * Math.PI)
+            sy = 1 + st * 0.3; sx = 1 - st * 0.18 // étiré pendant la montée
+            rot = Math.sin(k * Math.PI * 2) * 0.08
             if (k >= 1) { h.phase = 'up'; h.t = 0 }
           } else if (h.phase === 'up') {
-            // Il respire : un petit balancement, et il frémit juste avant de repartir
             const left = h.upFor - h.t
-            sp.position.y = top + Math.sin(h.t * 9) * 0.02
-            sp.scale.x = (h.size * (left < 0.25 ? 1 + Math.sin(h.t * 60) * 0.06 : 1)) * (me.animals.frames[FARM_ANIMALS[0]] ? 1 : 1)
+            // Il respire, regarde à droite à gauche, et se moque juste avant de replonger
+            y = top + Math.sin(h.t * 7) * 0.015
+            sy = 1 + Math.sin(h.t * 7) * 0.03; sx = 1 - Math.sin(h.t * 7) * 0.03
+            rot = Math.sin(h.t * 3.2) * 0.1
+            if (left < 0.32) {
+              const hop = Math.abs(Math.sin(h.t * 32))
+              y += hop * 0.09; sy += hop * 0.12; sx -= hop * 0.08
+              rot = Math.sin(h.t * 32) * 0.16
+            }
             if (h.t >= h.upFor) hideOne(me, h, true)
           } else if (h.phase === 'hiding') {
+            // Anticipation : un petit bond, puis plongeon
             const k = Math.min(1, h.t / HIDE_S)
-            sp.position.y = top + (bottom - top) * k * k
+            if (k < 0.3) { const a = k / 0.3; y = top + Math.sin(a * Math.PI) * 0.1; sy = 1 + a * 0.25; sx = 1 - a * 0.15 }
+            else { const f = (k - 0.3) / 0.7; y = top + (bottom - top) * f * f; sy = 1.25 - f * 0.25; sx = 0.85 + f * 0.15 }
             if (k >= 1) clearHole(me, h)
           } else if (h.phase === 'bonked') {
-            // Tapé : un coup d'écrasement, puis il RETOMBE dans son trou
+            // Tapé : écrasé à plat, puis il dégringole dans le trou en vrille
             const k = Math.min(1, h.t / BONK_S)
-            const sq = k < 0.3 ? k / 0.3 : Math.max(0, 1 - (k - 0.3) / 0.25)
-            sp.scale.y = h.size * (1 - sq * 0.35)
-            sp.scale.x = h.size * (1 + sq * 0.3)
-            const f = Math.max(0, (k - 0.3) / 0.7)
-            sp.position.y = top + (bottom - top) * f * f
+            if (k < 0.22) { const a = k / 0.22; sy = 1 - a * 0.55; sx = 1 + a * 0.5; y = top - a * 0.12 }
+            else {
+              const f = (k - 0.22) / 0.78
+              sy = 0.45 + Math.min(1, f * 3) * 0.55; sx = 1.5 - Math.min(1, f * 3) * 0.5
+              y = top - 0.12 + (bottom - top + 0.12) * f * f
+              rot = f * 1.3 * (h.x < 0 ? -1 : 1)
+              if (f > 0.55 && !h.dusted) { h.dusted = true; me.fx.burst({ x: h.x, y: 0.06, z: h.z }, { count: 8, color: [0x6B4A2A, 0x8A6238], speed: 1.2, life: 0.4, size: 0.05, spread: 0.9 }) }
+            }
             if (k >= 1) clearHole(me, h)
           }
+          sp.position.y = y
+          sp.scale.set(h.size * (h.aspect ?? 1) * sx, h.size * sy, 1)
+          sp.rotation.z = rot // il se penche depuis les pieds
         }
         me.fx.update(dt)
         stage.camera.position.set(0, 4.3, 4.9)
