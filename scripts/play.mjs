@@ -343,6 +343,29 @@ await scenario('taquin-remis-en-ordre', async () => {
   if (!fini) throw new Error(`l'écran de fin n'est pas apparu après ${taps.length} coups`)
 })
 
+/* 🃏 Memory : le bot connaît le paquet, il retourne les paires dans l'ordre
+   sur les trois manches — l'écran de fin doit venir. */
+await scenario('memory-toutes-les-paires', async () => {
+  await openGame('Memory')
+  await page.waitForFunction(() => window.__mem && window.__mem.deck.length > 0, null, { timeout: 15000 })
+  const rounds = await page.evaluate(() => window.__mem.rounds)
+  for (let r = 0; r < rounds; r++) {
+    // La manche suivante est DISTRIBUÉE une seconde après la dernière paire : attendre le nouveau paquet
+    await page.waitForFunction(rr => window.__mem.dealt === rr + 1 && !window.__mem.lock, r, { timeout: 15000 })
+    const deck = await page.evaluate(() => window.__mem.deck)
+    const seen = new Map()
+    for (let i = 0; i < deck.length; i++) {
+      if (seen.has(deck[i])) {
+        await page.evaluate(([a, b]) => { window.__mem.flip(a); window.__mem.flip(b) }, [seen.get(deck[i]), i])
+        await page.waitForTimeout(450)
+      } else seen.set(deck[i], i)
+    }
+  }
+  await page.waitForTimeout(1500)
+  const fini = await page.evaluate(() => document.body.innerText.includes('paires trouvées'))
+  if (!fini) throw new Error('l\'écran de fin du Memory n\'est pas apparu')
+})
+
 /* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
 await scenario('ninja-tranche', async () => {
   await openGame('Ninja Verger')

@@ -173,6 +173,15 @@ button.chip:active{transform:scale(.92);}
   backface-visibility:hidden;font-size:clamp(23px,5.8vmin,40px);box-shadow:var(--e1);}
 .back{background:linear-gradient(150deg,#FFC98A,var(--mango));color:rgba(255,255,255,.9);font-size:clamp(17px,4vmin,26px);}
 .front{background:var(--card);border:1px solid var(--line);transform:rotateY(180deg);}
+/* Memory plein écran : grille centrée, cartes dimensionnées par le jeu, dos à motif */
+.mem-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#FBEFE0;touch-action:manipulation;}
+.mem-board{width:auto;gap:14px;}
+.mem-board .back{display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 30% 25%,#FFD9A8,transparent 55%),linear-gradient(150deg,#FFC06B,var(--mango));
+  color:rgba(255,255,255,.75);font-size:44%;}
+.mem-board .back .ico{width:42%;height:42%;opacity:.85;}
+.mcard.nope .mcinner{animation:tqnope .3s ease;}
+.mem-dots{display:flex;gap:8px;padding:8px 12px;border-radius:99px;background:rgba(255,255,255,.78);backdrop-filter:blur(6px);box-shadow:var(--e1);}
 .mcard.matched .mcinner{transform:rotateY(180deg) scale(.93);}
 .mcard.matched .front{background:#EAF9EE;border-color:var(--meadow);animation:mpulse .5s var(--spring);}
 @keyframes mpulse{50%{transform:rotateY(180deg) scale(1.1);}}

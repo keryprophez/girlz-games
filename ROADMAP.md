@@ -176,6 +176,13 @@ sur l'écran de fin, sessions A puis B puis C.
   typé, timers de partie. Bot `taquin-remis-en-ordre` (recherche en
   largeur puis tuiles tapées dans l'ordre).
 
+- ✅ **`memory` poli** : plein écran (cartes aussi grandes que la place le
+  permet, manches en pastilles et compteur sur le côté, plus rien à lire) ;
+  vrai dos de carte à motif étoile (plus de « ? ») ; l'aperçu ne vide plus
+  le défi (long en douce, bref en normale, absent en experte) ; paire
+  trouvée qui brille, mauvaise paire qui se secoue ; sons de gestes, état
+  typé, timers de partie. Bot `memory-toutes-les-paires` (trois manches).
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler
