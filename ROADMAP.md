@@ -167,6 +167,15 @@ sur l'écran de fin, sessions A puis B puis C.
   est une fête (câlin, cœurs) ; glace givrée ; timers de partie, état typé.
   Bot `labyrinthe-doigt-rapide` (chemin BFS tracé un point sur trois).
 
+- ✅ **`taquin` poli** : plein écran (plateau carré sur toute la hauteur,
+  colonne d'icônes image/nombres/ma tête/la ferme, modèle et compteur sur
+  le côté, plus rien à lire) ; taper une tuile alignée avec le trou fait
+  glisser toute la rangée ; un coup impossible secoue la tuile ; le par est
+  la vraie distance à la solution (Manhattan) ; l'image de base est
+  dessinée avec les vrais animaux de la ferme (plus de SVG à emoji) ; état
+  typé, timers de partie. Bot `taquin-remis-en-ordre` (recherche en
+  largeur puis tuiles tapées dans l'ordre).
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler

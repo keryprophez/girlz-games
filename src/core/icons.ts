@@ -46,6 +46,9 @@ export const ICON = {
   sun: wrap('<circle cx="12" cy="12" r="4.6" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
   moon: wrap('<path d="M14.5 2.8a9 9 0 1 0 6.7 12.6A7.5 7.5 0 0 1 14.5 2.8z" fill="currentColor"/>'),
   snowflake: wrap('<path d="M12 2.5v19M3.8 7.3l16.4 9.4M3.8 16.7l16.4-9.4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M9.2 4.4 12 6.6l2.8-2.2M9.2 19.6 12 17.4l2.8 2.2M4 10.4l2.9 1.9L4 14.2M20 10.4l-2.9 1.9L20 14.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'),
+  photo: wrap('<rect x="2.5" y="4" width="19" height="16" rx="3" fill="currentColor"/><path d="M5 17.5 9.5 12l3.2 3.6 2.3-2.4 4 4.3z" fill="#fff"/><circle cx="16.5" cy="8.8" r="1.9" fill="#fff"/>'),
+  digits: wrap('<text x="12" y="17" text-anchor="middle" font-family="Baloo 2, Arial, sans-serif" font-weight="800" font-size="15" fill="currentColor">123</text>'),
+  flower: wrap('<circle cx="12" cy="6" r="3.2" fill="currentColor"/><circle cx="18" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="18" r="3.2" fill="currentColor"/><circle cx="6" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="12" r="3" fill="#fff"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

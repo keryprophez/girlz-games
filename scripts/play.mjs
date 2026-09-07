@@ -305,6 +305,44 @@ await scenario('labyrinthe-doigt-rapide', async () => {
   if (round < 1) throw new Error('la poule n\'a pas été retrouvée avec un doigt rapide')
 })
 
+/* 🖼 Taquin : résoudre par recherche en largeur (grille 3×3, mélange court
+   en douce), puis taper les tuiles dans l'ordre — l'écran de fin doit venir. */
+await scenario('taquin-remis-en-ordre', async () => {
+  await openGame('Taquin')
+  await page.waitForFunction(() => window.__tq && window.__tq.cells, null, { timeout: 15000 })
+  await page.waitForTimeout(500)
+  const { cells, size } = await page.evaluate(() => ({ cells: window.__tq.cells, size: window.__tq.size }))
+  const n = size * size
+  const goal = [...Array(n - 1).keys()].map(i => i + 1).concat([0]).join(',')
+  const key = a => a.join(',')
+  const prev = new Map([[key(cells), null]])
+  const queue = [cells]
+  let found = null
+  while (queue.length && !found) {
+    const cur = queue.shift()
+    const b = cur.indexOf(0), r = Math.floor(b / size), c = b % size
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const nr = r + dr, nc = c + dc
+      if (nr < 0 || nc < 0 || nr >= size || nc >= size) continue
+      const j = nr * size + nc
+      const next = [...cur]; next[b] = next[j]; next[j] = 0
+      const k = key(next)
+      if (prev.has(k)) continue
+      prev.set(k, { from: key(cur), tile: cur[j] })
+      if (k === goal) { found = k; break }
+      queue.push(next)
+    }
+    if (prev.size > 200000) throw new Error('taquin trop mélangé pour le bot')
+  }
+  if (!found) throw new Error('pas de solution trouvée')
+  const taps = []
+  for (let k = found; prev.get(k); k = prev.get(k).from) taps.unshift(prev.get(k).tile)
+  for (const t of taps) { await page.evaluate(v => window.__tq.tap(v), t); await page.waitForTimeout(60) }
+  await page.waitForTimeout(1500)
+  const fini = await page.evaluate(() => document.body.innerText.includes('reconstituée'))
+  if (!fini) throw new Error(`l'écran de fin n'est pas apparu après ${taps.length} coups`)
+})
+
 /* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
 await scenario('ninja-tranche', async () => {
   await openGame('Ninja Verger')
