@@ -1,7 +1,8 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd, shuffle } from '../core/utils'
-import { sGood, sNope, sWin } from '../core/audio'
+import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
+import { ICON } from '../core/icons'
 
 /* Suites logiques — qu'est-ce qui vient après ? Formes dessinées en SVG,
    zéro lecture. Motifs AB/AABB en douce, ABC en normale, tailles qui
@@ -82,7 +83,7 @@ function load() {
   const r = makeRound(ctx.tier)
   pt.answer = r.answer
   $('ptRound').textContent = `${pt.round + 1}/${pt.total}`
-  $('ptSeq').innerHTML = r.seq.map(it => `<span class="pt-cell">${shapeSVG(it, 44)}</span>`).join('')
+  $('ptSeq').innerHTML = r.seq.map(it => `<span class="pt-cell">${shapeSVG(it, 64)}</span>`).join('')
     + `<span class="pt-cell pt-q">?</span>`
   const opts = $('ptOpts')
   opts.innerHTML = ''
@@ -90,7 +91,7 @@ function load() {
     const b = document.createElement('button')
     b.className = 'pt-opt'
     b.dataset.key = key(o)
-    b.innerHTML = shapeSVG(o, 48)
+    b.innerHTML = shapeSVG(o, 70)
     b.onclick = () => answer(b, o)
     opts.appendChild(b)
   })
@@ -101,31 +102,30 @@ function answer(b: HTMLButtonElement, o: Item) {
   if (!pt || !pt.running || pt.lock) return
   pt.lock = true
   if (key(o) === key(pt.answer)) {
-    b.classList.add('good'); pt.score++; sGood(); fxAt(b, JUICE.green, 12)
+    b.classList.add('good'); pt.score++; sfx('confirm', { vol: 0.7 }); fxAt(b, JUICE.green, 12)
     const q = document.querySelector('.pt-q') as HTMLElement
-    q.innerHTML = shapeSVG(pt.answer, 44); q.classList.add('found')
+    q.innerHTML = shapeSVG(pt.answer, 64); q.classList.add('found')
   } else {
-    b.classList.add('bad'); sNope()
+    b.classList.add('bad'); sfx('drop', { vol: 0.4, rate: 0.8 })
     document.querySelectorAll<HTMLButtonElement>('.pt-opt').forEach(x => {
       // Comparer la clé, pas l'innerHTML : le navigateur re-sérialise le SVG
       if (x !== b && x.dataset.key === key(pt.answer)) x.classList.add('good')
     })
   }
-  $('ptScore').textContent = '⭐ ' + pt.score
+  $('ptScore').innerHTML = `${ICON.star} ${pt.score}`
   pt.round++
-  setTimeout(() => {
+  ctx.after(1100, () => {
     if (!pt || !pt.running) return
     if (pt.round < pt.total) load()
     else finish()
-  }, 1100)
+  })
 }
 
 function finish() {
-  sWin()
   const stars = pt.score >= pt.total - 1 ? 3 : pt.score >= pt.total - 3 ? 2 : 1
   ctx.finish({
     title: 'Sacré sens logique !',
-    msg: `${ctx.playerName} a trouvé ${pt.score} suites sur ${pt.total} 🔷`,
+    msg: `${ctx.playerName} a trouvé ${pt.score} suites sur ${pt.total}`,
     stars, starsEarned: stars
   })
 }
@@ -138,13 +138,14 @@ export const patterns: GameDef = {
     c.root.innerHTML = `
       <div class="topbar">
         <div class="chip" id="ptRound">1/6</div>
-        <div class="chip" id="ptScore">⭐ 0</div>
+        <div class="chip" id="ptScore">${ICON.star} 0</div>
       </div>
       <div class="panel pt-box">
         <div class="pt-seq" id="ptSeq"></div>
         <div class="pt-opts" id="ptOpts"></div>
       </div>`
     pt = { round: 0, total: 6, score: 0, lock: false, running: true }
+    preloadSfx(['confirm', 'drop'])
     load()
     return () => { if (pt) { pt.running = false; pt = null } }
   }

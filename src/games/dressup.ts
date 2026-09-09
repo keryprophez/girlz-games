@@ -1,7 +1,8 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
-import { sPop, sWin } from '../core/audio'
+import { sfx, preloadSfx } from '../core/sfx'
 import { confetti } from '../core/fx'
+import { ICON } from '../core/icons'
 import {
   characterSVG, defaultLook, hatIcon, glassesIcon, heldIcon,
   HAIR_COLORS, OUTFIT_COLORS, type Look
@@ -13,10 +14,10 @@ import { useFerme } from '../core/store'
    suit ensuite dans les autres jeux (Poussin, Course, Attrape). */
 
 const BGS = [
-  { icon: '🌳', css: 'linear-gradient(180deg,#CBEBFD,#BFE8B0)' },
-  { icon: '🏖️', css: 'linear-gradient(180deg,#BDE3FA,#FFE8B0)' },
-  { icon: '🌌', css: 'linear-gradient(180deg,#4C4177,#B197FC)' },
-  { icon: '🌈', css: 'linear-gradient(180deg,#FFD3E0,#CDEFD6,#CFE8FB)' }
+  { css: 'linear-gradient(180deg,#CBEBFD,#BFE8B0)' },
+  { css: 'linear-gradient(180deg,#BDE3FA,#FFE8B0)' },
+  { css: 'linear-gradient(180deg,#4C4177,#B197FC)' },
+  { css: 'linear-gradient(180deg,#FFD3E0,#CDEFD6,#CFE8FB)' }
 ]
 const HATS: Look['hat'][] = ['none', 'crown', 'cap', 'sunhat', 'party']
 const GLASSES: Look['glasses'][] = ['none', 'round', 'sun']
@@ -32,19 +33,21 @@ function render() {
   })
 }
 
+/** Chaque geste est sauvé : quitter sans « fini » ne perd plus le look. */
+function save() { useFerme.getState().setLook(du.profileId, { ...du.look }) }
+
 function setLookProp(k: keyof Look, v: string) {
   if (!du || !du.running) return
   du.look[k] = v
-  sPop(); render()
+  sfx('cloth', { vol: 0.4, rate: 1.3 }); render(); save()
 }
 
 function finish() {
-  sWin(); confetti()
-  // Le look est persisté : elle le portera dans les autres jeux
-  useFerme.getState().setLook(du.profileId, { ...du.look })
+  confetti()
+  save()
   ctx.finish({
     title: 'Superbe look !',
-    msg: `${ctx.playerName} portera ce look dans les autres jeux ✨`,
+    msg: `${ctx.playerName} portera ce look dans les autres jeux`,
     stars: 3, starsEarned: 3
   })
 }
@@ -62,9 +65,9 @@ export const dressup: GameDef = {
 
     c.root.innerHTML = `
       <div class="topbar">
-        ${BGS.map((b, i) => `<button class="chip du-bg${i === 0 ? ' sel' : ''}" data-i="${i}">${b.icon}</button>`).join('')}
-        <button class="chip" id="duRandom">🎲</button>
-        <button class="chip" id="duReset" title="Look de base">↺</button>
+        ${BGS.map((b, i) => `<button class="chip du-bg du-swatch${i === 0 ? ' sel' : ''}" data-i="${i}" style="background:${b.css}" aria-label="Fond"></button>`).join('')}
+        <button class="chip" id="duRandom" aria-label="Surprise">${ICON.dice}</button>
+        <button class="chip" id="duReset" aria-label="Look de base">${ICON.replay}</button>
       </div>
       <div class="du-stage" id="duStage" style="background:${BGS[0].css}">
         <div class="du-doll" id="duDoll"></div>
@@ -90,7 +93,8 @@ export const dressup: GameDef = {
           ${HELD.map(h => `<button class="du-opt" data-k="held" data-v="${h}">${heldIcon(h)}</button>`).join('')}
         </div>
       </div>
-      <button class="bigbtn primary" id="duDone" style="margin-top:12px">✨ C'est parfait !</button>`
+      <button class="sn-tool go" id="duDone" style="margin-top:12px" aria-label="Fini">${ICON.check}</button>`
+    preloadSfx(['cloth', 'click', 'confirm'])
 
     document.querySelectorAll<HTMLElement>('.du-opt').forEach(b => {
       b.onclick = () => setLookProp(b.dataset.k as keyof Look, b.dataset.v!)
@@ -100,7 +104,7 @@ export const dressup: GameDef = {
         if (!du || !du.running) return
         $('duStage').style.background = BGS[parseInt(b.dataset.i!)].css
         document.querySelectorAll('.du-bg').forEach(x => x.classList.remove('sel'))
-        b.classList.add('sel'); sPop()
+        b.classList.add('sel'); sfx('click', { vol: 0.4 })
       }
     })
     ;($('duRandom') as HTMLButtonElement).onclick = () => {
@@ -111,14 +115,14 @@ export const dressup: GameDef = {
         hat: pick(HATS), glasses: pick(GLASSES), held: pick(HELD)
       }
       $('duStage').style.background = pick(BGS).css
-      sPop(); render()
+      sfx('confirm', { vol: 0.6 }); render(); save()
     }
     ;($('duReset') as HTMLButtonElement).onclick = () => {
       if (!du || !du.running) return
       du.look = defaultLook()
       $('duStage').style.background = BGS[0].css
       document.querySelectorAll('.du-bg').forEach((x, i) => x.classList.toggle('sel', i === 0))
-      sPop(); render()
+      sfx('click', { vol: 0.4 }); render(); save()
     }
     ;($('duDone') as HTMLButtonElement).onclick = () => du && du.running && finish()
     render()

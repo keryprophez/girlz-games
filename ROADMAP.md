@@ -206,13 +206,26 @@ sur l'écran de fin, sessions A puis B puis C.
   positif et dite par la voix), tuiles plein écran. Bots
   `horloge-huit-heures`, `tableau-huit-cases`, `intrus-six-manches`.
 
+- ✅ **Lot Réflexion/Créer poli : `market`, `letters`, `patterns`, `mirror`,
+  `piano`, `dressup`, `coloring`, `beatbox`, `fireworks`**. Marché : la voix
+  dit le total à chaque pièce posée ou retirée, modes et validation en icônes.
+  Chasse aux lettres : le mot est montré 3 s, dit par la voix et illustré par
+  l'animal de la planche avant d'être cherché. Suites : réponse révélée en
+  place dans la suite. Miroir : la case fausse tremble (aucune sanction).
+  Piano : chansons numérotées, crash au démontage corrigé (timer de partie).
+  Habille-toi : la tenue est enregistrée à chaque geste, fonds en pastilles.
+  Coloriage : le dessin est gardé par joueuse et par scène, scènes choisies
+  sur des mini-dessins, panneau qui tient dans la hauteur. Boîte à rythme :
+  horloge accumulée sans dérive, vrais animaux de la planche sur les lignes.
+  Feu d'artifice : canvas à la densité de l'écran, village en silhouette,
+  compteur de fusées et bouquet final en icônes.
+
 Ordre pour la suite :
 
-`icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler
-jusqu'à la pile, habillage par drag) → `maze` · `taquin` · `memory` · `simon` ·
-`connect4` (polish 2D, IA du Puissance 4) → `clock` · `tables` · `market`
-(drag partout, voix sur les cibles, plateau plein écran) → `intrus` (sans
-chrono) → `dressup` · `beatbox` → `stand3d` (manches enchaînées).
+`stand3d` (manches enchaînées, migration sur `createStage`) → `icetower`
+(porte-à-faux qui casse, migration sur `createStage`) → `pizza` (échelle des
+ingrédients à la cuisson) → `ninja` (rampe) → tuiles de l'accueil encore en
+emoji → sonde de fréquence d'images sur la tablette.
 
 Chaque itération : une demi-page de design (geste, enjeu, rampe, outro,
 sons), l'implémentation, un bot qui gagne, une capture de référence.

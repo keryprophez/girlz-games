@@ -1,7 +1,8 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd } from '../core/utils'
-import { sBoomReal, sPopReal, sWin, tone } from '../core/audio'
+import { sBoomReal, sPopReal, tone } from '../core/audio'
 import { confetti } from '../core/fx'
+import { ICON } from '../core/icons'
 
 /* Feu d'Artifice — tape dans le ciel : une fusée siffle, monte et explose en
    gerbe de couleurs (boule, anneau, cœur, étoile filante…). Zéro échec, pure
@@ -67,6 +68,7 @@ function loop() {
   // Voile léger pour les traînées lumineuses
   c.fillStyle = 'rgba(20,14,44,.22)'
   c.fillRect(0, 0, fw.w, fw.h)
+  drawTown(c, fw.w, fw.h)
 
   // Fusées qui montent
   for (let i = fw.rockets.length - 1; i >= 0; i--) {
@@ -96,11 +98,41 @@ function loop() {
   fw.raf = requestAnimationFrame(loop)
 }
 
+/** Le village en silhouette : des maisons, un clocher, des sapins, quelques fenêtres allumées. */
+function drawTown(c: CanvasRenderingContext2D, w: number, h: number) {
+  const base = h - 4
+  c.fillStyle = '#0B0818'
+  c.beginPath()
+  c.moveTo(0, h)
+  c.lineTo(0, base - 18)
+  let x = 0
+  let i = 0
+  while (x < w) {
+    const kind = i % 5
+    if (kind === 2) { // sapin
+      const s = 34 + (i % 3) * 8
+      c.lineTo(x, base - 6); c.lineTo(x + s / 2, base - s * 1.7); c.lineTo(x + s, base - 6); x += s + 10
+    } else if (kind === 4) { // clocher
+      c.lineTo(x, base - 10); c.lineTo(x, base - 70); c.lineTo(x + 14, base - 100); c.lineTo(x + 28, base - 70); c.lineTo(x + 28, base - 10); x += 40
+    } else { // maison
+      const hw = 46 + (i % 4) * 10, hh = 28 + (i % 3) * 10
+      c.lineTo(x, base - hh); c.lineTo(x + hw / 2, base - hh - 22); c.lineTo(x + hw, base - hh); x += hw + 12
+    }
+    c.lineTo(x, base - 6)
+    i++
+  }
+  c.lineTo(w, h)
+  c.closePath()
+  c.fill()
+  // Fenêtres allumées, toujours aux mêmes endroits
+  c.fillStyle = 'rgba(255,214,120,.85)'
+  for (let k = 20; k < w; k += 57) c.fillRect(k, base - 30 + ((k / 57) % 3) * 6, 5, 6)
+}
+
 function bouquet() {
   if (!fw || !fw.running || fw.finale) return
   fw.finale = true
   $('fwFinal').style.display = 'none'
-  $('fwHint').textContent = '✨ BOUQUET FINAL ! ✨'
   const N = 10
   for (let i = 0; i < N; i++) {
     setTimeout(() => {
@@ -111,10 +143,10 @@ function bouquet() {
   setTimeout(() => {
     if (!fw || !fw.running) return
     explode(fw.w / 2, fw.h * 0.3, 'burst', ['#FFD34D', '#FFFFFF', '#FF9E7A'], true)
-    sWin(); confetti()
+    confetti()
     setTimeout(() => fw && fw.running && ctx.finish({
       title: 'Quel spectacle !',
-      msg: `${ctx.playerName} a illuminé tout le ciel 🎆`,
+      msg: `${ctx.playerName} a illuminé tout le ciel`,
       stars: 3, starsEarned: 3
     }), 1600)
   }, N * 420 + 500)
@@ -127,21 +159,26 @@ export const fireworks: GameDef = {
     ctx = c
     const need = c.byTier(8, 10, 12)
     c.root.innerHTML = `
-      <div class="topbar">
-        <div class="chip" id="fwCount">🎆 0</div>
-        <button class="chip" id="fwFinal" style="display:none">✨ Bouquet final !</button>
-      </div>
       <div class="arena fw-arena" id="fwArena">
-        <div class="hint fw-hint" id="fwHint">Tape dans le ciel !</div>
         <canvas id="fwCanvas"></canvas>
-        <div class="fw-town">🏠🏡🏠⛪🏠🌲🏡</div>
+        <div class="tap-hint" id="fwHint">${ICON.tap}</div>
+        <div class="tq-side">
+          <div class="tq-moves" id="fwCount">${ICON.bolt}<span>0</span></div>
+          <button class="sn-tool go fw-final" id="fwFinal" style="display:none" aria-label="Bouquet final">${ICON.star}</button>
+        </div>
       </div>`
     const arena = $('fwArena')
     const canvas = $('fwCanvas') as unknown as HTMLCanvasElement
-    canvas.width = arena.clientWidth
-    canvas.height = arena.clientHeight
+    // Net sur tablette : le canvas a la densité de l'écran (plafonnée), le dessin reste en px CSS
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    canvas.width = Math.round(arena.clientWidth * dpr)
+    canvas.height = Math.round(arena.clientHeight * dpr)
+    canvas.style.width = arena.clientWidth + 'px'
+    canvas.style.height = arena.clientHeight + 'px'
+    const c2d = canvas.getContext('2d')!
+    c2d.setTransform(dpr, 0, 0, dpr, 0, 0)
     fw = {
-      c2d: canvas.getContext('2d'), w: canvas.width, h: canvas.height,
+      c2d, w: arena.clientWidth, h: arena.clientHeight,
       rockets: [], parts: [], count: 0, finale: false, running: true, raf: 0
     }
     // Fond de nuit initial
@@ -153,11 +190,9 @@ export const fireworks: GameDef = {
       const r = canvas.getBoundingClientRect()
       launch(e.clientX - r.left, e.clientY - r.top)
       fw.count++
-      $('fwCount').textContent = `🎆 ${fw.count}`
-      if (fw.count === need) {
-        $('fwFinal').style.display = ''
-        $('fwHint').textContent = 'Encore, ou lance le bouquet final !'
-      }
+      $('fwHint').classList.add('off')
+      $('fwCount').innerHTML = `${ICON.bolt}<span>${fw.count}</span>`
+      if (fw.count === need) $('fwFinal').style.display = ''
     }
     ;($('fwFinal') as HTMLButtonElement).onclick = bouquet
     loop()

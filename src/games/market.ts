@@ -1,8 +1,9 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, rnd } from '../core/utils'
 import { foodImg } from '../core/sprites'
-import { sGood, sNope, sPop, sWin } from '../core/audio'
+import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
+import { ICON } from '../core/icons'
 
 /* Le Marché de la Ferme — apprendre l'argent avec de vraies pièces en euros
    dessinées (cuivre, or, bicolores) et des billets. Trois façons de jouer :
@@ -109,7 +110,9 @@ function renderTray() {
     b.innerHTML = moneySVG(v)
     b.onclick = () => {
       if (!mk || !mk.running || mk.lock) return
-      mk.tray.splice(i, 1); sPop(); renderTray()
+      mk.tray.splice(i, 1); sfx('coins', { vol: 0.4, rate: 0.9 }); renderTray()
+      const sum = mk.tray.reduce((a: number, b: number) => a + b, 0)
+      if (sum) ctx.say(speak(sum))
     }
     tray.appendChild(b)
   })
@@ -123,32 +126,34 @@ function renderTray() {
 function tapBank(v: number, b: HTMLElement) {
   if (!mk || !mk.running || mk.lock) return
   if (mk.mode === 'explore') {
-    sPop(); fxAt(b, JUICE.warm, 6)
+    sfx('coins', { vol: 0.6 }); fxAt(b, JUICE.warm, 6)
     b.classList.remove('boing'); void b.offsetWidth; b.classList.add('boing')
     ctx.say(speak(v))
     mk.seen.add(v)
     return
   }
   mk.tray.push(v)
-  sPop()
+  sfx('coins', { vol: 0.6, rate: 1 + Math.random() * 0.1 })
   renderTray()
   const sum = mk.tray.reduce((a: number, b: number) => a + b, 0)
   if (sum === mk.goal) return success()
-  if (sum > mk.goal) { mk.mistakes++; sNope() }
+  if (sum > mk.goal) { mk.mistakes++; sfx('drop', { vol: 0.4, rate: 0.8 }) }
+  // Le geste pédagogique du marché : on dit le total courant à chaque pièce
+  ctx.say(speak(sum))
 }
 
 function success() {
   mk.lock = true
-  sGood()
+  sfx('confirm', { vol: 0.8 })
   fxAt($('mkTray'), JUICE.green, 14)
   ctx.say(speak(mk.goal))
   mk.q++
-  setTimeout(() => {
+  ctx.after(1300, () => {
     if (!mk || !mk.running) return
     mk.lock = false
     if (mk.q >= mk.totalQ) return finish()
     nextRound()
-  }, 1300)
+  })
 }
 
 function nextRound() {
@@ -166,7 +171,7 @@ function nextRound() {
     mk.goal = note - price
     $('mkItem').innerHTML = `${foodImg(item, 52)}
       <span class="mk-price">${fmt(price)}</span>
-      <span class="mk-paid">payé avec ${moneySVG(note)}</span>
+      <span class="mk-paid">${ICON.turnLeft} ${moneySVG(note)}</span>
       <span class="mk-sub">${mk.q + 1}/${mk.totalQ}</span>`
   }
   renderTray()
@@ -183,24 +188,19 @@ function setMode(mode: string) {
   $('mkDone').style.display = explore ? '' : 'none'
   if (explore) {
     mk.seen = new Set()
-    $('mkPrompt').textContent = 'Tape une pièce pour entendre sa valeur 🔎'
     buildBank(DENOMS.map(d => d.v))
   } else {
     mk.totalQ = mode === 'pay' ? 4 : 3
-    $('mkPrompt').textContent = mode === 'pay'
-      ? '🛒 Mets les pièces dans le panier pour payer le prix exact !'
-      : '💰 Le client a payé : rends-lui la monnaie exacte !'
     buildBank(bankDenoms())
     nextRound()
   }
 }
 
 function finish() {
-  sWin()
   const stars = mk.mistakes === 0 ? 3 : mk.mistakes <= 2 ? 2 : 1
   ctx.finish({
     title: mk.mode === 'pay' ? 'Le compte est bon !' : 'Monnaie rendue !',
-    msg: `${ctx.playerName} a réussi ${mk.q} paiements (${mk.mistakes} dépassement${mk.mistakes > 1 ? 's' : ''}) 💶`,
+    msg: `${ctx.playerName} a réussi ${mk.q} paiement${mk.q > 1 ? 's' : ''}`,
     stars, starsEarned: stars
   })
 }
@@ -212,28 +212,27 @@ export const market: GameDef = {
     ctx = c
     c.root.innerHTML = `
       <div class="topbar">
-        <button class="chip mk-mode sel" data-m="explore">🔎 Découvre</button>
-        <button class="chip mk-mode" data-m="pay">🛒 Paye</button>
-        <button class="chip mk-mode" data-m="change">💰 La monnaie</button>
+        <button class="chip mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}</button>
+        <button class="chip mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}</button>
+        <button class="chip mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}</button>
       </div>
-      <div class="gsub" id="mkPrompt"></div>
       <div class="mk-item" id="mkItem"></div>
       <div class="mk-traywrap" id="mkTrayWrap">
         <div class="mk-tray" id="mkTray"></div>
         <div class="mk-total" id="mkTotal">—</div>
       </div>
       <div class="mk-bank" id="mkBank"></div>
-      <button class="bigbtn primary" id="mkDone" style="margin-top:10px">✨ J'ai tout écouté</button>`
+      <button class="sn-tool go" id="mkDone" style="margin-top:10px" aria-label="Fini">${ICON.check}</button>`
+    preloadSfx(['coins', 'confirm', 'drop'])
     mk = { running: true, lock: false, tray: [], seen: new Set() }
     document.querySelectorAll<HTMLElement>('.mk-mode').forEach(b => {
       b.onclick = () => mk && mk.running && setMode(b.dataset.m!)
     })
     ;($('mkDone') as HTMLButtonElement).onclick = () => {
       if (!mk || !mk.running || mk.mode !== 'explore') return
-      sWin()
       ctx.finish({
         title: 'Belle découverte !',
-        msg: `${ctx.playerName} a écouté ${mk.seen.size} pièces et billets 💶`,
+        msg: `${ctx.playerName} a écouté ${mk.seen.size} pièces et billets`,
         stars: 3, starsEarned: 3
       })
     }

@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, rnd, pick } from '../core/utils'
-import { sGood, sPop, sWin } from '../core/audio'
+import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 
 /* Le Miroir — la moitié gauche montre un motif de pixels, il faut peindre la
@@ -74,7 +74,7 @@ function buildRound() {
       mr.color = COLORS[i]
       pal.querySelectorAll('.mr-chip').forEach(x => x.classList.remove('sel'))
       b.classList.add('sel')
-      sPop()
+      sfx('click', { vol: 0.4 })
     }
     pal.appendChild(b)
   }
@@ -87,11 +87,15 @@ function tapCell(el: any) {
   const next = cur === mr.color ? '' : mr.color
   if (next) { mr.state[key] = next; el.style.background = next; el.classList.add('mr-on') }
   else { delete mr.state[key]; el.style.background = ''; el.classList.remove('mr-on') }
-  sPop()
-  // La bonne couleur au bon endroit ? Sinon on compte une hésitation
+  // La bonne couleur au bon endroit ? Sinon la case tremble : une enfant
+  // bloquée voit tout de suite où ça cloche (aucune sanction pour autant)
   const { size } = conf()
   const want = mr.target[el._r + ':' + (size - 1 - el._c)] || ''
-  if (next && next !== want) mr.mistakes++
+  if (next && next !== want) {
+    mr.mistakes++
+    sfx('drop', { vol: 0.35, rate: 0.8 })
+    el.classList.remove('mr-wrong'); void el.offsetWidth; el.classList.add('mr-wrong')
+  } else sfx('tick', { vol: 0.35, rate: 1.3 })
   checkDone()
 }
 
@@ -107,24 +111,23 @@ function checkDone() {
   }
   // Symétrie parfaite !
   mr.done = true
-  sGood()
+  sfx('confirm', { vol: 0.8 })
   fxAt($('mrGrid'), pick([JUICE.green, JUICE.blue, JUICE.warm]), 16)
   $('mrGrid').classList.add('mr-win')
   mr.round++
-  setTimeout(() => {
+  ctx.after(1100, () => {
     if (!mr || !mr.running) return
     $('mrGrid').classList.remove('mr-win')
     if (mr.round >= mr.rounds) return finish()
     buildRound()
-  }, 1100)
+  })
 }
 
 function finish() {
-  sWin()
   const stars = mr.mistakes <= 2 ? 3 : mr.mistakes <= 7 ? 2 : 1
   ctx.finish({
     title: 'Miroir, joli miroir !',
-    msg: `${ctx.playerName} a complété ${mr.rounds} symétries 🪞`,
+    msg: `${ctx.playerName} a complété ${mr.rounds} symétries`,
     stars, starsEarned: stars
   })
 }
@@ -141,6 +144,7 @@ export const mirror: GameDef = {
       </div>
       <div class="mr-wrap"><div id="mrGrid"></div></div>`
     mr = { round: 0, rounds: 3, mistakes: 0, running: true }
+    preloadSfx(['tick', 'drop', 'confirm'])
     buildRound()
     return () => { if (mr) { mr.running = false; mr = null } }
   }

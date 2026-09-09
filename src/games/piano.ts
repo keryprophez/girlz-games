@@ -1,6 +1,8 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
-import { sWin, tone } from '../core/audio'
+import { tone } from '../core/audio'
+import { sfx, preloadSfx } from '../core/sfx'
+import { ICON } from '../core/icons'
 import { fxAt, JUICE } from '../core/fx'
 
 /* Petit Piano — mode libre + mélodies guidées « suis les lumières ».
@@ -43,13 +45,15 @@ function press(i: number) {
     fxAt(key, JUICE.mix, 6)
     if (pn.idx >= pn.song.seq.length) {
       pn.running = false
-      setStatus('Bravo, toute la chanson ! 🎉')
-      sWin()
+      setStatus('Bravo, toute la chanson !')
+      sfx('confirm', { vol: 0.8 })
       const song = pn.song.name
-      setTimeout(() => { if (pn) finish(song) }, 900)
+      const me = pn
+      // Timer de partie, et on vérifie que c'est TOUJOURS cette partie (crash vécu)
+      ctx.after(900, () => { if (pn === me) finish(song) })
       return
     }
-    setStatus(`${pn.song.icon} ${pn.song.name} — ${pn.idx}/${pn.song.seq.length}`)
+    setStatus(`${pn.song.name} — ${pn.idx}/${pn.song.seq.length}`)
     pulseTarget()
   } else {
     key.classList.remove('oops'); void key.offsetWidth; key.classList.add('oops')
@@ -61,7 +65,7 @@ function startSong(si: number) {
   pn.song = SONGS[si]
   pn.idx = 0
   document.querySelectorAll('.pn-mode').forEach((b, k) => b.classList.toggle('sel', k === si + 1))
-  setStatus(`${pn.song.icon} ${pn.song.name} — suis la touche qui brille !`)
+  setStatus(pn.song.name)
   pulseTarget()
 }
 
@@ -70,15 +74,15 @@ function startFree() {
   pn.idx = 0
   document.querySelectorAll('.pn-mode').forEach((b, k) => b.classList.toggle('sel', k === 0))
   document.querySelectorAll('.pkey').forEach(k => k.classList.remove('pulse'))
-  setStatus('Joue ce que tu veux ! 🎶')
+  setStatus('')
 }
 
 function finish(songName?: string) {
   ctx.finish({
     title: songName ? 'Quelle musicienne !' : 'Joli concert !',
     msg: songName
-      ? `${ctx.playerName} a joué « ${songName} » en entier 🎹`
-      : `${ctx.playerName} a joué ${pn ? pn.played : 0} notes 🎶`,
+      ? `${ctx.playerName} a joué « ${songName} » en entier`
+      : `${ctx.playerName} a joué ${pn ? pn.played : 0} notes`,
     stars: 3, starsEarned: 3
   })
 }
@@ -90,17 +94,18 @@ export const piano: GameDef = {
     ctx = c
     c.root.innerHTML = `
       <div class="topbar">
-        <button class="chip pn-mode sel">🎶 Libre</button>
-        ${SONGS.map((s, i) => `<button class="chip pn-mode" data-s="${i}">${s.icon}</button>`).join('')}
+        <button class="chip pn-mode sel" aria-label="Libre">${ICON.sound}</button>
+        ${SONGS.map((s, i) => `<button class="chip pn-mode pn-song" data-s="${i}" aria-label="${s.name}">${i + 1}</button>`).join('')}
       </div>
-      <div class="simonstatus" id="pnStatus">Joue ce que tu veux ! 🎶</div>
+      <div class="simonstatus" id="pnStatus"></div>
       <div id="pnKeys">
         ${NOTES.map((_, i) => `
           <button class="pkey" data-i="${i}" style="--kc:${KEY_COLORS[i]}">
             <span class="pkname">${NAMES[i]}</span>
           </button>`).join('')}
       </div>
-      <button class="bigbtn primary" id="pnDone" style="margin-top:16px">✨ Fin du concert !</button>`
+      <button class="sn-tool go" id="pnDone" style="margin-top:16px" aria-label="Fini">${ICON.check}</button>`
+    preloadSfx(['confirm'])
     pn = { mode: 'free', song: null, idx: 0, played: 0, running: true }
     document.querySelectorAll<HTMLElement>('.pkey').forEach(k => {
       k.addEventListener('pointerdown', e => { e.preventDefault(); press(parseInt(k.dataset.i!)) })

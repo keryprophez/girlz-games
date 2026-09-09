@@ -1,6 +1,8 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, } from '../core/utils'
-import { sMoo, sWin, tone } from '../core/audio'
+import { $ } from '../core/utils'
+import { sMoo, tone } from '../core/audio'
+import { ICON } from '../core/icons'
+import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
 
 /* Boîte à Rythme de la Ferme — une grille de 8 temps × 4 animaux :
    on allume des cases, on appuie sur play, la ferme fait de la musique. */
@@ -69,29 +71,39 @@ function render() {
 }
 
 function tick() {
-  if (!bb || !bb.playing) return
   bb.step = (bb.step + 1) % STEPS
   document.querySelectorAll<HTMLElement>('.bb-cell').forEach(cell => {
     cell.classList.toggle('now', +cell.dataset.s! === bb.step)
   })
   ROWS.forEach((row, r) => { if (bb.grid[r][bb.step]) row.play() })
-  bb.timer = setTimeout(tick, bb.tempo)
+}
+
+/* L'horloge : une frame d'avance sur `performance.now()`, le temps du
+   prochain pas est ACCUMULÉ (plus de dérive de setTimeout) ; en pause d'onglet
+   on ne rattrape pas en rafale. */
+function clock(now: number) {
+  if (!bb || !bb.playing) return
+  if (now >= bb.nextAt) {
+    tick()
+    bb.nextAt += bb.tempo
+    if (now - bb.nextAt > bb.tempo * 2) bb.nextAt = now + bb.tempo
+  }
+  bb.raf = requestAnimationFrame(clock)
 }
 
 function setPlaying(on: boolean) {
   bb.playing = on
-  clearTimeout(bb.timer)
-  $('bbPlay').textContent = on ? '⏸ Pause' : '▶️ Joue !'
-  if (on) { bb.step = -1; tick() }
+  cancelAnimationFrame(bb.raf)
+  $('bbPlay').innerHTML = on ? ICON.pause : ICON.play
+  if (on) { bb.step = -1; bb.nextAt = performance.now(); bb.raf = requestAnimationFrame(clock) }
   else document.querySelectorAll('.bb-cell').forEach(c => c.classList.remove('now'))
 }
 
 function finish() {
   const notes = bb.grid.flat().filter(Boolean).length
-  sWin()
   ctx.finish({
     title: 'Quel orchestre !',
-    msg: `${ctx.playerName} a composé un rythme avec ${notes} sons de la ferme 🥁`,
+    msg: `${ctx.playerName} a composé un rythme avec ${notes} sons de la ferme`,
     stars: 3, starsEarned: 3
   })
 }
@@ -101,28 +113,34 @@ export const beatbox: GameDef = {
   subtitle: 'Allume des cases, appuie sur Joue : la ferme fait de la musique !',
   mount(c) {
     ctx = c
+    const ANIMALS = ['cow', 'pig', 'duck', 'chicken']
     c.root.innerHTML = `
       <div class="topbar">
-        <button class="chip" id="bbPlay">▶️ Joue !</button>
-        <button class="chip bb-tempo" data-t="500">🐢</button>
-        <button class="chip bb-tempo sel" data-t="340">🚶</button>
-        <button class="chip bb-tempo" data-t="230">⚡</button>
-        <button class="chip" id="bbClear">🧹</button>
+        <button class="chip bb-big" id="bbPlay" aria-label="Joue">${ICON.play}</button>
+        <button class="chip bb-tempo" data-t="500" aria-label="Lent">${ICON.timer}<i class="bb-dots">•</i></button>
+        <button class="chip bb-tempo sel" data-t="340" aria-label="Moyen">${ICON.timer}<i class="bb-dots">••</i></button>
+        <button class="chip bb-tempo" data-t="230" aria-label="Rapide">${ICON.timer}<i class="bb-dots">•••</i></button>
+        <button class="chip" id="bbClear" aria-label="Effacer">${ICON.replay}</button>
       </div>
       <div id="bbGrid">
         ${ROWS.map((row, r) => `
           <div class="bb-row">
-            <button class="bb-animal" data-r="${r}" style="--rc:${row.color}">${row.icon}</button>
+            <button class="bb-animal" data-r="${r}" data-a="${ANIMALS[r]}" style="--rc:${row.color}">${row.icon}</button>
             ${Array.from({ length: STEPS }, (_, s) =>
               `<button class="bb-cell${s % 4 === 0 ? ' bar' : ''}" data-r="${r}" data-s="${s}" style="--rc:${row.color}"></button>`).join('')}
           </div>`).join('')}
       </div>
       <div class="bb-presets">
-        <button class="chip" data-p="p1">🎵 Rythme 1</button>
-        <button class="chip" data-p="p2">🎵 Rythme 2</button>
+        <button class="chip" data-p="p1" aria-label="Rythme 1">${ICON.sound} 1</button>
+        <button class="chip" data-p="p2" aria-label="Rythme 2">${ICON.sound} 2</button>
       </div>
-      <button class="bigbtn primary" id="bbDone" style="margin-top:12px">✨ Ma musique est prête !</button>`
-    bb = { grid: ROWS.map(() => Array(STEPS).fill(0)), playing: false, step: -1, tempo: 340, running: true }
+      <button class="sn-tool go" id="bbDone" style="margin-top:12px" aria-label="Fini">${ICON.check}</button>`
+    bb = { grid: ROWS.map(() => Array(STEPS).fill(0)), playing: false, step: -1, tempo: 340, running: true, raf: 0, nextAt: 0 }
+    // Les vrais animaux de la planche sur les boutons de ligne
+    loadAtlas('animals').then((a: Atlas) => {
+      if (!bb) return
+      document.querySelectorAll<HTMLElement>('.bb-animal').forEach(b => { b.innerHTML = spriteSpan(a, b.dataset.a!, 40) })
+    })
     document.querySelectorAll<HTMLElement>('.bb-cell').forEach(cell => {
       cell.onclick = () => {
         if (!bb) return
@@ -154,6 +172,6 @@ export const beatbox: GameDef = {
     ;($('bbPlay') as HTMLButtonElement).onclick = () => bb && setPlaying(!bb.playing)
     ;($('bbClear') as HTMLButtonElement).onclick = () => { if (bb) { bb.grid = ROWS.map(() => Array(STEPS).fill(0)); render() } }
     ;($('bbDone') as HTMLButtonElement).onclick = () => { if (bb) { setPlaying(false); finish() } }
-    return () => { if (bb) { clearTimeout(bb.timer); bb = null } }
+    return () => { if (bb) { cancelAnimationFrame(bb.raf); bb = null } }
   }
 }
