@@ -183,6 +183,18 @@ sur l'écran de fin, sessions A puis B puis C.
   trouvée qui brille, mauvaise paire qui se secoue ; sons de gestes, état
   typé, timers de partie. Bot `memory-toutes-les-paires` (trois manches).
 
+- ✅ **`simon` poli** : quatre grands pads plein écran avec les vrais animaux,
+  plus de texte (oreille pendant l'écoute, main quand c'est à toi, pads
+  grisés pendant l'écoute), l'animal qui chante saute, fausse note qui
+  secoue en rouge et montre la bonne, titre de fin selon la longueur ;
+  timers pause-safe, état typé. Bot `simon-cinq-tours`.
+- ✅ **`connect4` poli + IA** : grille plein écran, **jouer seule contre la
+  poule** (minimax alpha-bêta, profondeur 2/4/6 selon le palier, un brin de
+  hasard), tour signalé par la tête en grand qui saute (plus de phrase),
+  jeton fantôme qui suit le doigt, chute avec choc, colonne pleine qui
+  secoue, les quatre jetons gagnants scintillent. Bot
+  `puissance4-contre-la-poule` (même IA des deux côtés).
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler

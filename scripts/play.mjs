@@ -366,6 +366,40 @@ await scenario('memory-toutes-les-paires', async () => {
   if (!fini) throw new Error('l\'écran de fin du Memory n\'est pas apparu')
 })
 
+/* 🎵 Simon : le bot lit la mélodie sur le crochet et la rejoue, cinq tours. */
+await scenario('simon-cinq-tours', async () => {
+  await openGame('Simon')
+  await page.waitForFunction(() => window.__simon, null, { timeout: 15000 })
+  for (let tour = 0; tour < 5; tour++) {
+    await page.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 20000 })
+    const seq = await page.evaluate(() => window.__simon.seq)
+    for (const v of seq) { await page.evaluate(i => window.__simon.press(i), v); await page.waitForTimeout(120) }
+    await page.waitForTimeout(300)
+    const st = await page.evaluate(() => ({ best: window.__simon.best, over: window.__simon.over }))
+    if (st.over) throw new Error('fausse note du bot au tour ' + (tour + 1))
+  }
+  const best = await page.evaluate(() => window.__simon.best)
+  if (best < 5) throw new Error('mélodie de ' + best + ' notes seulement')
+})
+
+/* 🔴 Puissance 4 : contre la poule, le bot joue avec la même IA (profondeur 4)
+   jusqu'à la fin de partie — l'écran de fin doit venir, quel que soit le vainqueur. */
+await scenario('puissance4-contre-la-poule', async () => {
+  await openGame('Puissance 4')
+  await page.waitForFunction(() => window.__c4, null, { timeout: 15000 })
+  await page.locator('.c4-mode[data-m="solo"]').click()
+  await page.waitForTimeout(300)
+  for (let i = 0; i < 42; i++) {
+    const st = await page.evaluate(() => ({ over: window.__c4.over, turn: window.__c4.turn, lock: window.__c4.lock }))
+    if (st.over) break
+    if (st.turn === 0 && !st.lock) await page.evaluate(() => window.__c4.drop(window.__c4.ai(4)))
+    await page.waitForTimeout(900)
+  }
+  await page.waitForTimeout(2200)
+  const fini = await page.evaluate(() => /gagn|galit/.test(document.body.innerText))
+  if (!fini) throw new Error('la partie contre la poule ne s\'est pas terminée')
+})
+
 /* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
 await scenario('ninja-tranche', async () => {
   await openGame('Ninja Verger')
