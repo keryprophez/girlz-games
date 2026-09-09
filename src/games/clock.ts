@@ -1,21 +1,49 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, boardSize, rnd, shuffle } from '../core/utils'
-import { sGood, sNope, sPop, sWin } from '../core/audio'
+import { $, rnd, shuffle } from '../core/utils'
+import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
+import { ICON } from '../core/icons'
 
-/* Quelle heure ? — apprendre à LIRE l'heure pas à pas, en 5 modes :
-   🔎 Découvre (manipule l'horloge, elle dit l'heure),
-   🕐 Les heures (la petite aiguille seule),
-   ⏱ Les minutes (la grande aiguille + anneau des minutes),
-   🎯 Quiz (lire l'heure complète),
-   🤲 Règle (déplacer les aiguilles pour faire l'heure demandée).
-   La voix ne lit que les heures (du contenu, jamais de consignes). */
+/* Quelle heure ? — apprendre à LIRE l'heure pas à pas, en cinq modes :
+   Découvre (manipule l'horloge, elle dit l'heure), Les heures (la petite
+   aiguille seule), Les minutes (la grande aiguille + anneau des minutes),
+   Quiz (lire l'heure complète), Règle (déplacer les aiguilles pour faire
+   l'heure demandée). La voix ne lit que les heures, jamais de consignes.
 
-interface FaceOpts {
-  minuteRing?: boolean // anneau 5,10,…60 autour du cadran
-  hideMinute?: boolean // concentre sur la petite aiguille
-  fadeHour?: boolean   // concentre sur la grande aiguille
+   Polish du 9/09 (phase 2, Apprendre) :
+   - plein écran : l'horloge prend toute la hauteur, les modes sont une
+     colonne d'icônes, les manches des pastilles — plus une ligne à lire ;
+   - les aiguilles se déplacent au doigt dans TOUS les modes où on règle
+     (Découvre et Règle), plus seulement dans le plus dur ;
+   - « une heure », « une heure moins le quart » : la voix parle français ;
+   - aucune sanction : pas de vies, pas de chrono ; timers de partie. */
+
+type Mode = 'discover' | 'hours' | 'minutes' | 'quiz' | 'set'
+interface FaceOpts { minuteRing?: boolean; hideMinute?: boolean; fadeHour?: boolean }
+
+interface State {
+  mode: Mode
+  h: number
+  m: number
+  th: number
+  tm: number
+  round: number
+  total: number
+  score: number
+  lock: boolean
+  touched: number
 }
+
+let ck: State | null = null
+let ctx: GameContext
+
+const MODES: { id: Mode; icon: string }[] = [
+  { id: 'discover', icon: ICON.search },
+  { id: 'hours', icon: ICON.clock },
+  { id: 'minutes', icon: ICON.timer },
+  { id: 'quiz', icon: ICON.target },
+  { id: 'set', icon: ICON.tap }
+]
 
 function clockSVG(h: number, m: number, px: number, o: FaceOpts = {}): string {
   const hourAngle = ((h % 12) + m / 60) * 30 - 90
@@ -49,76 +77,93 @@ function clockSVG(h: number, m: number, px: number, o: FaceOpts = {}): string {
   </svg>`
 }
 
+/** L'heure comme on la dit : « une heure et quart », « midi », « deux heures moins le quart ». */
 function timeSpoken(h: number, m: number): string {
-  const hh = `${h} heure${h > 1 ? 's' : ''}`
+  const hourWord = (x: number) => x === 12 ? 'midi' : x === 1 ? 'une heure' : `${x} heures`
+  const hh = hourWord(h)
   if (m === 0) return hh
   if (m === 15) return `${hh} et quart`
   if (m === 30) return `${hh} et demie`
-  if (m === 45) return `${(h % 12) + 1} heures moins le quart`
+  if (m === 45) return `${hourWord((h % 12) + 1)} moins le quart`
   return `${hh} ${m}`
 }
 const digital = (h: number, m: number) => `${h}:${String(m).padStart(2, '0')}`
 
-const MODE_SUBS: Record<string, string> = {
-  discover: 'Appuie sur les boutons : regarde les aiguilles bouger et écoute l\'heure',
-  hours: 'La PETITE aiguille noire montre les heures — quelle heure est-il ?',
-  minutes: 'La GRANDE aiguille rouge montre les minutes — combien de minutes ?',
-  quiz: 'Lis l\'horloge en entier et choisis la bonne heure',
-  set: 'Déplace les aiguilles avec ton doigt pour faire l\'heure demandée !'
+function facePx(): number {
+  const w = $('ckWrap')
+  return Math.max(220, Math.min(w.clientHeight - 150, w.clientWidth - 320))
 }
 
-let ck: any = null
-let ctx: GameContext
-
-function facePx() { return boardSize(250) }
-
-function renderFace(o: FaceOpts = {}) {
-  $('ckFace').innerHTML = clockSVG(ck.h, ck.m, facePx(), o)
+function faceOpts(me: State): FaceOpts {
+  if (me.mode === 'minutes') return { minuteRing: true, fadeHour: true }
+  if (me.mode === 'quiz') return { minuteRing: ctx.tier !== 'exp' }
+  if (me.mode === 'hours') return {}
+  return { minuteRing: true }
 }
 
-function setMode(mode: string) {
-  ck.mode = mode
-  ck.round = 0; ck.score = 0; ck.mistakes = 0; ck.lock = false
-  document.querySelectorAll<HTMLElement>('.ck-mode').forEach(b => b.classList.toggle('sel', b.dataset.m === mode))
-  $('ckSub').textContent = MODE_SUBS[mode]
-  $('ckRound').style.display = mode === 'discover' ? 'none' : ''
-  $('ckScore').style.display = mode === 'discover' ? 'none' : ''
+function renderFace(me: State) {
+  $('ckFace').innerHTML = clockSVG(me.h, me.m, facePx(), faceOpts(me))
+}
+
+function paintSide(me: State) {
+  const quiz = me.mode !== 'discover'
+  $('ckDots').style.display = quiz ? '' : 'none'
+  $('ckDots').innerHTML = quiz ? Array.from({ length: me.total }, (_, i) => `<i class="sn-dot${i < me.round ? ' on' : ''}"></i>`).join('') : ''
+  $('ckScore').style.display = quiz ? '' : 'none'
+  $('ckScore').innerHTML = `${ICON.star}<span>${me.score}</span>`
+}
+
+function setMode(me: State, mode: Mode) {
+  me.mode = mode
+  me.round = 0; me.score = 0; me.lock = false
+  document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => b.classList.toggle('sel', b.dataset.m === mode))
   $('ckDone').style.display = mode === 'discover' ? '' : 'none'
-  if (mode === 'discover') loadDiscover()
-  if (mode === 'hours') nextHours()
-  if (mode === 'minutes') nextMinutes()
-  if (mode === 'quiz') nextQuiz()
-  if (mode === 'set') nextSet()
+  if (mode === 'discover') loadDiscover(me)
+  if (mode === 'hours') nextHours(me)
+  if (mode === 'minutes') nextMinutes(me)
+  if (mode === 'quiz') nextQuiz(me)
+  if (mode === 'set') nextSet(me)
+  paintSide(me)
 }
 
-/* ---- 🔎 Découvre : manipuler et écouter ---- */
-function refreshDiscover() {
-  renderFace({ minuteRing: true })
-  $('ckDigital').textContent = digital(ck.h, ck.m)
+/* ---- Découvre : manipuler et écouter ---- */
+function refreshDiscover(me: State) {
+  renderFace(me)
+  $('ckDigital').textContent = digital(me.h, me.m)
 }
-function loadDiscover() {
-  ck.h = 3; ck.m = 0; ck.touched = 0
-  $('ckDigital').style.display = ''
-  // Les boutons sont créés UNE fois : seuls le cadran et l'affichage bougent
+function adjustButtons(me: State, withCheck: boolean) {
   $('ckOpts').innerHTML = `
-    <button class="ck-btn" id="ckPlusH">+1 heure 🕐</button>
-    <button class="ck-btn ck-btn-min" id="ckPlusM">+5 minutes ⏱</button>`
+    <button class="ck-btn" id="ckPlusH">+1 ${ICON.clock}</button>
+    <button class="ck-btn ck-btn-min" id="ckPlusM">+5 ${ICON.timer}</button>
+    ${withCheck ? `<button class="ck-btn ck-check" id="ckCheck">${ICON.check}</button>` : ''}`
   ;($('ckPlusH') as HTMLButtonElement).onclick = () => {
-    if (!ck || !ck.running) return
-    ck.h = (ck.h % 12) + 1; ck.touched++
-    sPop(); refreshDiscover(); ctx.say(timeSpoken(ck.h, ck.m))
+    if (ck !== me || me.lock) return
+    me.h = (me.h % 12) + 1; me.touched++
+    sfx('tick', { vol: 0.4, rate: 1.2 })
+    afterAdjust(me)
   }
   ;($('ckPlusM') as HTMLButtonElement).onclick = () => {
-    if (!ck || !ck.running) return
-    ck.m += 5; ck.touched++
-    if (ck.m >= 60) { ck.m = 0; ck.h = (ck.h % 12) + 1 }
-    sPop(); refreshDiscover(); ctx.say(timeSpoken(ck.h, ck.m))
+    if (ck !== me || me.lock) return
+    me.m += 5; me.touched++
+    if (me.m >= 60) { me.m = 0; me.h = (me.h % 12) + 1 }
+    sfx('tick', { vol: 0.4, rate: 1.5 })
+    afterAdjust(me)
   }
-  refreshDiscover()
+  if (withCheck) ($('ckCheck') as HTMLButtonElement).onclick = () => checkSet(me)
+}
+function afterAdjust(me: State) {
+  if (me.mode === 'discover') { refreshDiscover(me); ctx.say(timeSpoken(me.h, me.m)) }
+  else renderFace(me)
+}
+function loadDiscover(me: State) {
+  me.h = 3; me.m = 0; me.touched = 0
+  $('ckDigital').style.display = ''
+  adjustButtons(me, false)
+  refreshDiscover(me)
 }
 
-/* ---- Quiz génériques (heures / minutes / complet) ---- */
-function askOptions(opts: string[], good: string, onGood: () => void) {
+/* ---- Quiz (heures / minutes / complet) ---- */
+function askOptions(me: State, opts: string[], good: string, onDone: () => void) {
   const box = $('ckOpts')
   box.innerHTML = ''
   shuffle([...opts]).forEach(t => {
@@ -126,121 +171,102 @@ function askOptions(opts: string[], good: string, onGood: () => void) {
     b.className = 'qopt'
     b.textContent = t
     b.onclick = () => {
-      if (!ck || !ck.running || ck.lock) return
-      ck.lock = true
-      if (t === good) { b.classList.add('good'); ck.score++; sGood(); fxAt(b, JUICE.warm, 12); onGood() }
+      if (ck !== me || me.lock) return
+      me.lock = true
+      if (t === good) { b.classList.add('good'); me.score++; sfx('confirm', { vol: 0.7 }); fxAt(b, JUICE.warm, 12) }
       else {
-        b.classList.add('bad'); sNope()
+        b.classList.add('bad'); sfx('drop', { vol: 0.4, rate: 0.8 })
         document.querySelectorAll<HTMLButtonElement>('.qopt').forEach(x => { if (x.textContent === good) x.classList.add('good') })
-        onGood()
       }
-      $('ckScore').textContent = '⭐ ' + ck.score
+      paintSide(me)
+      onDone()
     }
     box.appendChild(b)
   })
 }
 
-function advance(next: () => void) {
-  ck.round++
-  setTimeout(() => {
-    if (!ck || !ck.running) return
-    if (ck.round < ck.total) next()
-    else finishQuizMode()
-  }, 1500)
+function advance(me: State, next: (me: State) => void) {
+  me.round++
+  paintSide(me)
+  ctx.after(1500, () => {
+    if (ck !== me) return
+    if (me.round < me.total) next(me)
+    else finishQuizMode(me)
+  })
 }
 
-function nextHours() {
-  ck.total = 8
-  ck.h = rnd(1, 12); ck.m = 0
-  $('ckRound').textContent = `${ck.round + 1}/${ck.total}`
+function nextHours(me: State) {
+  me.total = 8
+  me.h = rnd(1, 12); me.m = 0
   $('ckDigital').style.display = 'none'
-  renderFace({ hideMinute: false })
-  const opts = new Set([String(ck.h)])
+  renderFace(me)
+  const opts = new Set([String(me.h)])
   while (opts.size < 3) opts.add(String(rnd(1, 12)))
-  askOptions([...opts].map(x => x + ' h'), ck.h + ' h', () => {
-    ctx.say(timeSpoken(ck.h, 0))
-    advance(nextHours)
-  })
-  ck.lock = false
+  askOptions(me, [...opts].map(x => x + ' h'), me.h + ' h', () => { ctx.say(timeSpoken(me.h, 0)); advance(me, nextHours) })
+  me.lock = false
 }
 
-function nextMinutes() {
-  ck.total = 8
+function nextMinutes(me: State) {
+  me.total = 8
   const mins = ctx.byTier([0, 15, 30, 45], [0, 5, 10, 15, 20, 30, 40, 45, 50], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
-  ck.h = rnd(1, 12); ck.m = mins[rnd(0, mins.length - 1)]
-  $('ckRound').textContent = `${ck.round + 1}/${ck.total}`
+  me.h = rnd(1, 12); me.m = mins[rnd(0, mins.length - 1)]
   $('ckDigital').style.display = 'none'
-  renderFace({ minuteRing: true, fadeHour: true })
-  const opts = new Set([String(ck.m)])
+  renderFace(me)
+  const opts = new Set([String(me.m)])
   while (opts.size < 4) opts.add(String(mins[rnd(0, mins.length - 1)]))
-  askOptions([...opts].map(x => x + ' min'), ck.m + ' min', () => {
-    ctx.say(ck.m === 0 ? 'zéro minute' : `${ck.m} minutes`)
-    advance(nextMinutes)
+  askOptions(me, [...opts].map(x => x + ' min'), me.m + ' min', () => {
+    ctx.say(me.m === 0 ? 'zéro minute' : `${me.m} minutes`)
+    advance(me, nextMinutes)
   })
-  ck.lock = false
+  me.lock = false
 }
 
-function nextQuiz() {
-  ck.total = 8
+function nextQuiz(me: State) {
+  me.total = 8
   const mins = ctx.byTier([0], [0, 30], [0, 15, 30, 45])
-  ck.h = rnd(1, 12); ck.m = mins[rnd(0, mins.length - 1)]
-  $('ckRound').textContent = `${ck.round + 1}/${ck.total}`
+  me.h = rnd(1, 12); me.m = mins[rnd(0, mins.length - 1)]
   $('ckDigital').style.display = 'none'
-  renderFace({ minuteRing: ctx.tier !== 'exp' })
-  const opts = new Set([digital(ck.h, ck.m)])
+  renderFace(me)
+  const opts = new Set([digital(me.h, me.m)])
   let guard = 0
   while (opts.size < 4 && guard++ < 60) opts.add(digital(rnd(1, 12), mins[rnd(0, mins.length - 1)]))
-  askOptions([...opts], digital(ck.h, ck.m), () => {
-    ctx.say(timeSpoken(ck.h, ck.m))
-    advance(nextQuiz)
-  })
-  ck.lock = false
+  askOptions(me, [...opts], digital(me.h, me.m), () => { ctx.say(timeSpoken(me.h, me.m)); advance(me, nextQuiz) })
+  me.lock = false
 }
 
-/* ---- 🤲 Règle l'horloge : elle déplace les aiguilles ---- */
-function nextSet() {
-  ck.total = 6
+/* ---- Règle l'horloge : elle déplace les aiguilles ---- */
+function nextSet(me: State) {
+  me.total = 6
   const mins = ctx.byTier([0], [0, 30], [0, 15, 30, 45])
-  ck.th = rnd(1, 12); ck.tm = mins[rnd(0, mins.length - 1)]
-  ck.h = 12; ck.m = 0
-  $('ckRound').textContent = `${ck.round + 1}/${ck.total}`
+  me.th = rnd(1, 12); me.tm = mins[rnd(0, mins.length - 1)]
+  me.h = 12; me.m = 0
   $('ckDigital').style.display = ''
-  $('ckDigital').textContent = '🎯 ' + digital(ck.th, ck.tm)
-  renderFace({ minuteRing: true })
-  $('ckOpts').innerHTML = `
-    <button class="ck-btn" id="ckPlusH">+1 heure 🕐</button>
-    <button class="ck-btn ck-btn-min" id="ckPlusM">+5 minutes ⏱</button>
-    <button class="ck-btn ck-check" id="ckCheck">✔ C'est ça !</button>`
-  ;($('ckPlusH') as HTMLButtonElement).onclick = () => { if (ck && ck.running) { ck.h = (ck.h % 12) + 1; sPop(); renderFace({ minuteRing: true }) } }
-  ;($('ckPlusM') as HTMLButtonElement).onclick = () => {
-    if (!ck || !ck.running) return
-    ck.m = (ck.m + 5) % 60
-    sPop(); renderFace({ minuteRing: true })
-  }
-  ;($('ckCheck') as HTMLButtonElement).onclick = checkSet
-  ck.lock = false
+  $('ckDigital').innerHTML = `${ICON.target} ${digital(me.th, me.tm)}`
+  renderFace(me)
+  adjustButtons(me, true)
+  me.lock = false
 }
 
-function checkSet() {
-  if (!ck || !ck.running || ck.lock) return
-  if (ck.h === ck.th && ck.m === ck.tm) {
-    ck.lock = true
-    ck.score++; sGood()
+function checkSet(me: State) {
+  if (ck !== me || me.lock) return
+  if (me.h === me.th && me.m === me.tm) {
+    me.lock = true
+    me.score++
+    sfx('confirm', { vol: 0.8 })
     fxAt($('ckFace'), JUICE.green, 16)
-    ctx.say(timeSpoken(ck.th, ck.tm))
-    $('ckScore').textContent = '⭐ ' + ck.score
-    advance(nextSet)
+    ctx.say(timeSpoken(me.th, me.tm))
+    advance(me, nextSet)
   } else {
-    ck.mistakes++; sNope()
+    sfx('drop', { vol: 0.4, rate: 0.8 })
     const f = $('ckFace')
-    f.classList.remove('shake'); void (f as any).offsetWidth; f.classList.add('shake')
+    f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake')
   }
 }
 
-/* Déplacement des aiguilles au doigt (mode Règle) :
+/* Déplacement des aiguilles au doigt (Découvre et Règle) :
    près du centre = petite aiguille (heures), vers le bord = grande (minutes) */
-function dragHands(e: PointerEvent) {
-  if (!ck || !ck.running || ck.mode !== 'set') return
+function dragHands(me: State, e: PointerEvent) {
+  if (me.mode !== 'set' && me.mode !== 'discover') return
   const svg = $('ckFace').querySelector('svg')
   if (!svg) return
   const r = svg.getBoundingClientRect()
@@ -251,21 +277,19 @@ function dragHands(e: PointerEvent) {
   const ang = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360
   if (dist < 0.45) {
     const h = Math.round(ang / 30) % 12 || 12
-    if (h !== ck.h) { ck.h = h; sPop(); renderFace({ minuteRing: true }) }
+    if (h !== me.h) { me.h = h; sfx('tick', { vol: 0.3, rate: 1.2 }); me.touched++; renderFace(me); if (me.mode === 'discover') $('ckDigital').textContent = digital(me.h, me.m) }
   } else {
     const m = (Math.round(ang / 30) * 5) % 60
-    if (m !== ck.m) { ck.m = m; sPop(); renderFace({ minuteRing: true }) }
+    if (m !== me.m) { me.m = m; sfx('tick', { vol: 0.3, rate: 1.5 }); me.touched++; renderFace(me); if (me.mode === 'discover') $('ckDigital').textContent = digital(me.h, me.m) }
   }
 }
 
-/* ---- Fins de partie ---- */
-function finishQuizMode() {
-  sWin()
-  const names: Record<string, string> = { hours: 'heures 🕐', minutes: 'minutes ⏱', quiz: 'heures complètes 🎯', set: 'horloges réglées 🤲' }
-  const stars = ck.score >= ck.total - 1 ? 3 : ck.score >= ck.total - 3 ? 2 : 1
+function finishQuizMode(me: State) {
+  const names: Record<Mode, string> = { discover: '', hours: 'heures', minutes: 'minutes', quiz: 'heures complètes', set: 'horloges réglées' }
+  const stars = me.score >= me.total - 1 ? 3 : me.score >= me.total - 3 ? 2 : 1
   ctx.finish({
     title: 'Maîtresse du temps !',
-    msg: `${ctx.playerName} : ${ck.score}/${ck.total} ${names[ck.mode]}`,
+    msg: `${ctx.playerName} : ${me.score} sur ${me.total} ${names[me.mode]}`,
     stars, starsEarned: stars
   })
 }
@@ -276,49 +300,61 @@ export const clock: GameDef = {
   mount(c) {
     ctx = c
     c.root.innerHTML = `
-      <div class="topbar">
-        <button class="chip ck-mode sel" data-m="discover">🔎</button>
-        <button class="chip ck-mode" data-m="hours">🕐</button>
-        <button class="chip ck-mode" data-m="minutes">⏱</button>
-        <button class="chip ck-mode" data-m="quiz">🎯</button>
-        <button class="chip ck-mode" data-m="set">🤲</button>
-        <div class="chip" id="ckRound">1/8</div>
-        <div class="chip" id="ckScore">⭐ 0</div>
-      </div>
-      <div class="gsub" id="ckSub"></div>
-      <div class="panel ck-box">
-        <div class="ck-digital" id="ckDigital"></div>
-        <div id="ckFace"></div>
-        <div class="qopts ck-opts" id="ckOpts"></div>
-      </div>
-      <button class="bigbtn primary" id="ckDone" style="margin-top:10px">✨ J'ai bien regardé !</button>`
-    ck = { mode: 'discover', h: 3, m: 0, round: 0, total: 8, score: 0, mistakes: 0, lock: false, running: true, touched: 0 }
-    document.querySelectorAll<HTMLElement>('.ck-mode').forEach(b => {
-      b.onclick = () => ck && ck.running && setMode(b.dataset.m!)
+      <div class="arena ck-wrap" id="ckWrap">
+        <div class="ck-main">
+          <div class="ck-digital" id="ckDigital"></div>
+          <div id="ckFace"></div>
+          <div class="qopts ck-opts" id="ckOpts"></div>
+        </div>
+        <div class="tq-tools">
+          ${MODES.map((m, i) => `<button class="sn-tool ck-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.id}">${m.icon}</button>`).join('')}
+        </div>
+        <div class="tq-side">
+          <div class="tq-moves" id="ckScore"></div>
+          <div class="mem-dots" id="ckDots"></div>
+          <button class="sn-tool go" id="ckDone" aria-label="Fini">${ICON.check}</button>
+        </div>
+      </div>`
+    preloadSfx(['tick', 'confirm', 'drop'])
+    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0 }
+    ck = me
+    document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => {
+      b.onclick = () => { if (ck === me) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
     })
     ;($('ckDone') as HTMLButtonElement).onclick = () => {
-      if (!ck || !ck.running || ck.mode !== 'discover') return
-      sWin()
+      if (ck !== me || me.mode !== 'discover') return
       ctx.finish({
         title: 'Belle découverte !',
-        msg: `${ctx.playerName} a fait tourner les aiguilles ${ck.touched} fois 🔎`,
+        msg: `${ctx.playerName} a fait tourner les aiguilles ${me.touched} fois`,
         stars: 3, starsEarned: 3
       })
     }
     const face = $('ckFace')
     let dragging = false
-    const pd = (e: PointerEvent) => { dragging = true; dragHands(e) }
-    const pm = (e: PointerEvent) => { if (dragging) dragHands(e) }
-    const pu = () => { dragging = false }
+    const pd = (e: PointerEvent) => { dragging = true; dragHands(me, e) }
+    const pm = (e: PointerEvent) => { if (dragging) dragHands(me, e) }
+    const pu = () => {
+      if (dragging && me.mode === 'discover' && ck === me) ctx.say(timeSpoken(me.h, me.m))
+      dragging = false
+    }
+    const onResize = () => { if (ck === me) renderFace(me) }
     face.addEventListener('pointerdown', pd)
     window.addEventListener('pointermove', pm)
     window.addEventListener('pointerup', pu)
-    setMode('discover')
+    window.addEventListener('resize', onResize)
+    // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+    if ((window as unknown as { __BOT?: boolean }).__BOT) {
+      ;(window as unknown as { __ck: unknown }).__ck = {
+        get h() { return me.h }, get m() { return me.m }, get mode() { return me.mode }, get round() { return me.round }, get score() { return me.score }, get lock() { return me.lock }
+      }
+    }
+    setMode(me, 'discover')
     return () => {
-      if (ck) { ck.running = false; ck = null }
+      if (ck === me) ck = null
       face.removeEventListener('pointerdown', pd)
       window.removeEventListener('pointermove', pm)
       window.removeEventListener('pointerup', pu)
+      window.removeEventListener('resize', onResize)
     }
   }
 }

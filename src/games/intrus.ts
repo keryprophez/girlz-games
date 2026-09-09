@@ -1,11 +1,23 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick, shuffle } from '../core/utils'
-import { sGood, sNope, sWin } from '../core/audio'
+import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
+import { ICON } from '../core/icons'
 import { foodImg, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
 
-/* Chaque proposition est un VRAI visuel : sprite de la planche animals (a),
-   poisson de la planche fish (f), ou icône food (i) — plus d'emoji. */
+/* L'Intrus — parmi des choses qui vont ensemble, une seule ne va pas.
+
+   Polish du 9/09 (phase 2, Apprendre) :
+   - plus de chrono ni de bonus de vitesse ni de série : un exercice, pas
+     une course (règle « Apprendre sans sanction ») ;
+   - plus d'énoncé en négation à lire : la grille elle-même montre la
+     famille ; un petit titre positif (« Les oiseaux ») reste pour celles
+     qui lisent, et la voix dit la famille (du contenu, pas une consigne) ;
+   - plein écran : les tuiles sont aussi grandes que la place le permet,
+     manches en pastilles sur le côté ; timers de partie, état typé.
+
+   Chaque proposition est un VRAI visuel : sprite de la planche animals (a),
+   poisson de la planche fish (f), ou icône food (i). */
 type It = { k: 'a' | 'f' | 'i'; n: string }
 const A = (n: string): It => ({ k: 'a', n })
 const F = (n: string): It => ({ k: 'f', n })
@@ -22,92 +34,93 @@ const P_OBJECTS = ['pot', 'plate-dinner', 'cup', 'bread', 'cake', 'loaf-baguette
 const P_YELLOW = [I('banana'), I('corn'), I('cheese'), I('lemon'), A('chick')]
 const P_NONYELLOW = [I('apple'), I('strawberry'), I('broccoli'), I('tomato'), A('pig'), A('frog'), A('whale'), I('grapes')]
 const I_FOODS = ['apple', 'bread', 'cheese', 'cookie', 'strawberry', 'muffin', 'corn', 'cake', 'watermelon'].map(I)
+/* La famille (la majorité) et les intrus possibles ; `q` nomme la famille, en positif */
 const CATS = [
-  { q: "Lequel vit dans l'eau ?", maj: P_LAND, intr: P_WATER },
-  { q: 'Lequel est un oiseau ?', maj: P_NONBIRD, intr: P_BIRD },
-  { q: "Lequel n'est PAS jaune ?", maj: P_YELLOW, intr: P_NONYELLOW },
-  { q: "Lequel n'est PAS un fruit ?", maj: I_FRUITS, intr: I_VEG },
-  { q: "Lequel n'est PAS un animal ?", maj: P_ANIMALS, intr: P_OBJECTS },
-  { q: "Lequel n'est PAS à manger ?", maj: I_FOODS, intr: P_ANIMALS }
+  { q: 'Les animaux de la terre', maj: P_LAND, intr: P_WATER },
+  { q: 'Les animaux de l\'eau', maj: P_WATER, intr: P_LAND },
+  { q: 'Les oiseaux', maj: P_BIRD, intr: P_NONBIRD },
+  { q: 'Les choses jaunes', maj: P_YELLOW, intr: P_NONYELLOW },
+  { q: 'Les fruits', maj: I_FRUITS, intr: I_VEG },
+  { q: 'Les légumes', maj: I_VEG, intr: I_FRUITS },
+  { q: 'Les animaux', maj: P_ANIMALS, intr: P_OBJECTS },
+  { q: 'À manger', maj: I_FOODS, intr: P_ANIMALS }
 ]
 const same = (a: It, b: It) => a.k === b.k && a.n === b.n
 
-let intr: any = {}
+interface State {
+  round: number
+  total: number
+  score: number
+  lock: boolean
+  animals: Atlas | null
+  fish: Atlas | null
+  intruder: number
+}
+
+let intr: State | null = null
 let ctx: GameContext
 
-function load() {
-  $('intRound').textContent = `${intr.round + 1}/${intr.total}`
-  $('intScore').textContent = '⭐ ' + intr.score
-  const size = ctx.byTier(intr.round >= 3 ? 6 : 4, intr.round >= 3 ? 9 : 6, intr.round >= 2 ? 12 : 9)
+function paintSide(me: State) {
+  $('intDots').innerHTML = Array.from({ length: me.total }, (_, i) => `<i class="sn-dot${i < me.round ? ' on' : ''}"></i>`).join('')
+  $('intScore').innerHTML = `${ICON.star}<span>${me.score}</span>`
+}
+
+function load(me: State) {
+  paintSide(me)
+  const size = ctx.byTier(me.round >= 3 ? 6 : 4, me.round >= 3 ? 9 : 6, me.round >= 2 ? 12 : 9)
   const cat = pick(CATS)
   const members = shuffle([...cat.maj]).slice(0, Math.min(size - 1, cat.maj.length))
   const intruderE = pick(cat.intr.filter(e => !members.some(m => same(m, e))))
   const items = shuffle([...members.map(e => ({ e, intruder: false })), { e: intruderE, intruder: true }])
+  me.intruder = items.findIndex(i => i.intruder)
   $('intQ').textContent = cat.q
+  ctx.say(cat.q)
   const grid = $('intGrid')
   const n = items.length, cols = n <= 4 ? 2 : n <= 6 ? 3 : 4
-  grid.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`
-  grid.style.maxWidth = cols * 104 + 'px'
+  const rows = Math.ceil(n / cols)
+  const wrap = $('intWrap')
+  const gap = 14
+  const px = Math.floor(Math.min((wrap.clientWidth - 280 - gap * (cols - 1)) / cols, (wrap.clientHeight - 90 - gap * (rows - 1)) / rows, 220))
+  grid.style.gridTemplateColumns = `repeat(${cols},${px}px)`
   grid.innerHTML = ''
-  intr.lock = false
-  items.forEach(item => {
-    const b = document.createElement('button') as any
+  me.lock = false
+  items.forEach((item, i) => {
+    const b = document.createElement('button')
     b.className = 'itile'
-    b.innerHTML = item.e.k === 'i' ? foodImg(item.e.n, 54)
-      : spriteSpan(item.e.k === 'a' ? intr.animals : intr.fish, item.e.n, 54)
-    b._isIntruder = item.intruder
-    b.onclick = () => pickTile(b, item.intruder)
+    b.style.width = b.style.height = px + 'px'
+    const sp = Math.round(px * 0.62)
+    b.innerHTML = item.e.k === 'i' ? foodImg(item.e.n, sp) : spriteSpan(item.e.k === 'a' ? me.animals! : me.fish!, item.e.n, sp)
+    b.dataset.i = String(i)
+    b.onclick = () => pickTile(me, b, item.intruder)
     grid.appendChild(b)
   })
-  const limit = ctx.byTier(9000, 7000, 5000)
-  intr.tStart = performance.now(); intr.tLimit = limit
-  const fill = $('intTimer')
-  fill.style.width = '100%'
-  clearInterval(intr.tInt)
-  intr.tInt = setInterval(() => {
-    const left = Math.max(0, 1 - (performance.now() - intr.tStart) / limit)
-    fill.style.width = left * 100 + '%'
-    if (left <= 0) { clearInterval(intr.tInt); if (!intr.lock) onTimeout() }
-  }, 80)
 }
 
-function pickTile(btn: any, isIntruder: boolean) {
-  if (intr.lock) return
-  intr.lock = true; clearInterval(intr.tInt)
+function pickTile(me: State, btn: HTMLButtonElement, isIntruder: boolean) {
+  if (intr !== me || me.lock) return
+  me.lock = true
   if (isIntruder) {
-    const fast = performance.now() - intr.tStart < intr.tLimit * 0.5
-    btn.classList.add('good'); intr.score++; intr.streak++; sGood()
+    btn.classList.add('good'); me.score++
+    sfx('confirm', { vol: 0.7 })
     fxAt(btn, JUICE.warm, 14)
-    if (fast) { intr.score++; ctx.toast('⚡ Rapide ! +1') }
-    else if (intr.streak >= 3) ctx.toast('🔥 Série de ' + intr.streak + ' !')
   } else {
-    btn.classList.add('bad'); intr.streak = 0; sNope()
-    document.querySelectorAll<any>('.itile').forEach(t => { if (t._isIntruder) t.classList.add('reveal') })
+    btn.classList.add('bad')
+    sfx('drop', { vol: 0.4, rate: 0.8 })
+    const t = document.querySelector<HTMLElement>(`.itile[data-i="${me.intruder}"]`)
+    t?.classList.add('reveal')
   }
-  $('intScore').textContent = '⭐ ' + intr.score
-  advance(isIntruder ? 700 : 1100)
+  paintSide(me)
+  me.round++
+  ctx.after(isIntruder ? 800 : 1300, () => {
+    if (intr !== me) return
+    if (me.round < me.total) load(me)
+    else finish(me)
+  })
 }
 
-function onTimeout() {
-  intr.lock = true; intr.streak = 0; sNope()
-  document.querySelectorAll<any>('.itile').forEach(t => { if (t._isIntruder) t.classList.add('reveal') })
-  ctx.toast('⏰ Trop tard !')
-  advance(1100)
-}
-
-function advance(delay: number) {
-  intr.round++
-  setTimeout(() => {
-    if (!intr.running) return
-    if (intr.round < intr.total) load()
-    else finish()
-  }, delay)
-}
-
-function finish() {
-  sWin()
-  const stars = intr.score >= 9 ? 3 : intr.score >= 6 ? 2 : 1
-  ctx.finish({ title: "Bravo l'inspecteur !", msg: `${intr.score} points sur 6 manches 🔍`, stars, starsEarned: stars })
+function finish(me: State) {
+  const stars = me.score >= me.total - 1 ? 3 : me.score >= me.total - 2 ? 2 : 1
+  ctx.finish({ title: 'Bravo l\'inspectrice !', msg: `${ctx.playerName} a trouvé ${me.score} intrus sur ${me.total}`, stars, starsEarned: stars })
 }
 
 export const intrus: GameDef = {
@@ -116,18 +129,28 @@ export const intrus: GameDef = {
   mount(c) {
     ctx = c
     c.root.innerHTML = `
-      <div class="topbar">
-        <div class="chip" id="intRound">1/6</div>
-        <div class="chip" id="intScore">⭐ 0</div>
-      </div>
-      <div class="gsub saytext" id="intQ"></div>
-      <div class="tbar" style="max-width:420px"><div class="tfill" id="intTimer"></div></div>
-      <div class="igrid" id="intGrid"></div>`
-    intr = { round: 0, total: 6, score: 0, streak: 0, lock: false, tInt: null, running: true }
-    // Les planches d'abord : les manches se construisent avec les sprites
+      <div class="arena int-wrap" id="intWrap">
+        <div class="int-main">
+          <div class="int-q saytext" id="intQ"></div>
+          <div class="igrid int-grid" id="intGrid"></div>
+        </div>
+        <div class="tq-side">
+          <div class="tq-moves" id="intScore"></div>
+          <div class="mem-dots" id="intDots"></div>
+        </div>
+      </div>`
+    preloadSfx(['confirm', 'drop'])
+    const me: State = { round: 0, total: 6, score: 0, lock: false, animals: null, fish: null, intruder: -1 }
+    intr = me
+    // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+    if ((window as unknown as { __BOT?: boolean }).__BOT) {
+      ;(window as unknown as { __int: unknown }).__int = {
+        get intruder() { return me.intruder }, get round() { return me.round }, get lock() { return me.lock }, get total() { return me.total }
+      }
+    }
     Promise.all([loadAtlas('animals'), loadAtlas('fish')]).then(([a, f]: Atlas[]) => {
-      if (intr.running) { intr.animals = a; intr.fish = f; load() }
+      if (intr === me) { me.animals = a; me.fish = f; load(me) }
     })
-    return () => { intr.running = false; clearInterval(intr.tInt) }
+    return () => { if (intr === me) intr = null }
   }
 }

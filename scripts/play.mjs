@@ -400,6 +400,53 @@ await scenario('puissance4-contre-la-poule', async () => {
   if (!fini) throw new Error('la partie contre la poule ne s\'est pas terminée')
 })
 
+/* 🕐 Quelle heure : mode « les heures », huit bonnes réponses lues sur le crochet. */
+await scenario('horloge-huit-heures', async () => {
+  await openGame('Quelle heure')
+  await page.waitForFunction(() => window.__ck, null, { timeout: 15000 })
+  await page.locator('.ck-tool[data-m="hours"]').click()
+  for (let i = 0; i < 8; i++) {
+    await page.waitForFunction(r => window.__ck.round === r && !window.__ck.lock, i, { timeout: 15000 })
+    const h = await page.evaluate(() => window.__ck.h)
+    await page.locator('.qopt', { hasText: new RegExp('^' + h + ' h$') }).click()
+    await page.waitForTimeout(200)
+  }
+  await page.waitForTimeout(2200)
+  const fini = await page.evaluate(() => document.body.innerText.includes('Maîtresse du temps'))
+  if (!fini) throw new Error('l\'écran de fin de l\'horloge n\'est pas apparu')
+})
+
+/* ✖️ Grand Tableau : mode « trouve », la case cible tapée huit fois. */
+await scenario('tableau-huit-cases', async () => {
+  await openGame('Grand Tableau ×')
+  await page.waitForFunction(() => window.__tb, null, { timeout: 15000 })
+  await page.locator('.tb-tool[data-m="find"]').click()
+  for (let i = 0; i < 8; i++) {
+    await page.waitForFunction(q => window.__tb.q === q && !window.__tb.lock, i, { timeout: 15000 })
+    const ok = await page.evaluate(() => window.__tb.find(window.__tb.target))
+    if (!ok) throw new Error('cible introuvable dans la grille')
+    await page.waitForTimeout(200)
+  }
+  await page.waitForTimeout(2000)
+  const fini = await page.evaluate(() => document.body.innerText.includes('Chasse aux cases'))
+  if (!fini) throw new Error('l\'écran de fin du tableau n\'est pas apparu')
+})
+
+/* 🔍 L'Intrus : six manches, l'intrus lu sur le crochet. */
+await scenario('intrus-six-manches', async () => {
+  await openGame("L'Intrus")
+  await page.waitForFunction(() => window.__int && window.__int.intruder >= 0, null, { timeout: 15000 })
+  for (let i = 0; i < 6; i++) {
+    await page.waitForFunction(r => window.__int.round === r && !window.__int.lock, i, { timeout: 15000 })
+    const k = await page.evaluate(() => window.__int.intruder)
+    await page.locator(`.itile[data-i="${k}"]`).click()
+    await page.waitForTimeout(200)
+  }
+  await page.waitForTimeout(2200)
+  const fini = await page.evaluate(() => document.body.innerText.includes('inspectrice'))
+  if (!fini) throw new Error('l\'écran de fin de l\'Intrus n\'est pas apparu')
+})
+
 /* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
 await scenario('ninja-tranche', async () => {
   await openGame('Ninja Verger')

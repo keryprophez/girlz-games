@@ -200,6 +200,10 @@ button.chip:active{transform:scale(.92);}
    INTRUS
    ============================================================ */
 .igrid{display:grid;gap:clamp(8px,1.9vmin,13px);width:100%;justify-content:center;}
+.int-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#FFF6E3;touch-action:manipulation;}
+.int-main{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.int-grid{width:auto;gap:14px;}
+.int-q{font-family:'Baloo 2';font-weight:800;font-size:clamp(18px,3.6vmin,26px);color:var(--ink-soft);}
 /* Sprites et icônes insérés dans du HTML (quiz, intrus, marché) */
 .spr{display:inline-block;vertical-align:middle;margin:2px;pointer-events:none;
   filter:drop-shadow(0 2px 2px rgba(69,54,42,.18));}
@@ -441,30 +445,38 @@ body.playing .g3-bar{max-width:820px;}
 /* ============================================================
    QUELLE HEURE ?
    ============================================================ */
-.ck-box{width:100%;max-width:480px;padding:20px 16px;text-align:center;}
-#ckFace{display:flex;justify-content:center;margin-bottom:16px;}
+.ck-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#FFF3E0;touch-action:manipulation;}
+.ck-main{display:flex;flex-direction:column;align-items:center;gap:6px;}
 #ckFace svg{filter:drop-shadow(0 4px 8px rgba(69,54,42,.15));}
 
 /* ============================================================
    GRAND TABLEAU (tables de multiplication)
    ============================================================ */
-#tbGrid{display:grid;grid-template-columns:repeat(11,1fr);gap:2.5px;width:100%;max-width:460px;
-  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:7px;box-shadow:var(--e2);}
+/* Grand Tableau plein écran : grille carrée dimensionnée par le jeu, cases lisibles */
+.tb-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#EEF6EA;touch-action:manipulation;}
+.tb-wrap #tbGrid{margin-right:160px;} /* la colonne de droite (consigne, pavé) a sa place */
+#tbGrid{display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);gap:3px;
+  background:var(--card);border:1px solid var(--line);border-radius:22px;padding:8px;box-shadow:var(--e2);}
 .tb-h{display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;
-  font-size:clamp(10px,2.4vmin,14px);color:var(--ink-soft);aspect-ratio:1;}
+  font-size:.9em;color:var(--ink-soft);}
 .tb-corner{color:var(--mango);}
-.tb-cell{aspect-ratio:1;border:none;border-radius:6px;cursor:pointer;background:var(--cc,#FFE08A);
-  opacity:.28;font-family:'Baloo 2';font-weight:800;font-size:clamp(8.5px,2.2vmin,13px);color:#fff;
+.tb-cell{border:none;border-radius:8px;cursor:pointer;background:var(--cc,#FFE08A);
+  opacity:.45;font-family:'Baloo 2';font-weight:800;font-size:1em;color:#fff;
   text-shadow:0 1px 1px rgba(69,54,42,.3);transition:transform .15s var(--spring),opacity .2s;padding:0;}
 .tb-cell:active{transform:scale(.88);}
 .tb-cell.shown{opacity:1;}
-.tb-cell.good{box-shadow:0 0 0 2.5px var(--meadow);animation:goodp .4s var(--spring);}
-.tb-cell.bad{box-shadow:0 0 0 2.5px var(--coral);}
-.tb-cell.want{opacity:1;background:#fff;box-shadow:0 0 0 2.5px var(--mango);animation:lgpulse 1s ease-in-out infinite;}
-.tb-target{font-size:1.35em;color:var(--coral);}
-.tb-sub{color:var(--ink-soft);font-size:.85em;}
+.tb-cell.good{box-shadow:0 0 0 3px var(--meadow);animation:goodp .4s var(--spring);}
+.tb-cell.bad{box-shadow:0 0 0 3px var(--coral);}
+.tb-cell.want{opacity:1;background:#fff;box-shadow:0 0 0 3px var(--mango);animation:lgpulse 1s ease-in-out infinite;}
+.tb-side{width:260px;gap:12px;}
+.tb-prompt{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;font-family:'Baloo 2';font-weight:800;color:var(--ink);}
+.tb-prompt .ico{font-size:34px;color:var(--coral);}
+.tb-big{font-size:clamp(34px,7vmin,52px);line-height:1;}
+.tb-target{color:var(--coral);}
+.tb-target.shake{display:inline-block;animation:lgshake .3s ease;}
+#tbTyped{color:var(--lagoon);min-width:1.2em;display:inline-block;}
 .tb-optsrow{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;min-height:10px;}
-.tb-opt{min-width:64px;padding:10px 14px !important;font-size:clamp(17px,3.6vmin,22px) !important;}
+.tb-opt{min-width:70px;padding:10px 14px !important;font-size:clamp(20px,4vmin,26px) !important;}
 
 /* ============================================================
    LABYRINTHE — plein écran : le plateau prend toute la hauteur,
@@ -531,7 +543,6 @@ body.playing .g3-bar{max-width:820px;}
 #tbTyped{color:var(--lagoon);min-width:1.2em;display:inline-block;}
 
 /* ---- Quelle heure ? : modes didactiques ---- */
-.ck-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
 .ck-digital{font-family:'Baloo 2';font-weight:800;font-size:clamp(26px,6vmin,36px);
   color:var(--lagoon);margin-bottom:6px;min-height:1.2em;letter-spacing:1px;}
 /* Boutons de réponse (heures, tables…) : gros, ronds, espacés, bon/mauvais en couleur */
@@ -543,12 +554,12 @@ body.playing .g3-bar{max-width:820px;}
 .qopt.good{background:#E3F7E8;border-color:var(--meadow);color:#2E7D4C;animation:goodp .45s var(--spring);}
 .qopt.bad{background:#FFE5E1;border-color:var(--coral);color:var(--coral);}
 .ck-opts{margin-top:14px;}
-.ck-btn{border:1px solid var(--line);border-radius:99px;background:var(--paper);cursor:pointer;
+.ck-btn{border:1px solid var(--line);border-radius:99px;background:var(--paper);cursor:pointer;display:inline-flex;align-items:center;gap:6px;
   font-family:'Baloo 2';font-weight:700;font-size:clamp(15px,3.4vmin,18px);padding:13px 18px;
   box-shadow:var(--e1);transition:transform .18s var(--spring);}
 .ck-btn:active{transform:scale(.92);}
 .ck-btn-min{color:var(--coral);}
-.ck-check{background:linear-gradient(140deg,#6ED88B,var(--meadow));color:#fff;border:none;}
+.ck-check{background:linear-gradient(140deg,#6ED88B,var(--meadow));color:#fff;border:none;font-size:26px;}
 #ckFace{display:flex;justify-content:center;margin-bottom:4px;touch-action:none;}
 #ckFace svg{filter:drop-shadow(0 4px 8px rgba(69,54,42,.15));}
 #ckFace.shake{animation:lgshake .3s ease;}
@@ -596,7 +607,6 @@ body.playing #catchArea,body.playing #runArea,body.playing .arena{
   flex:1;width:100%;max-width:none;height:auto;max-height:none;min-height:0;border-radius:20px;}
 /* Les plateaux 2D : aussi grands que la hauteur le permet */
 body.playing .board{max-width:min(92vw,78vh) !important;}
-body.playing .igrid{max-width:min(92vw,74vh) !important;}
 body.playing .lg-grid{max-width:min(90vw,60vh) !important;}
 body.playing .lg-slot{width:clamp(40px,6vmin,60px);height:clamp(50px,7.5vmin,72px);}
 body.playing .colpanel{max-width:780px;}
@@ -607,12 +617,9 @@ body.playing .bb-cell{max-width:70px;border-radius:14px;}
 body.playing .bb-animal{width:58px;height:58px;}
 body.playing .du-stage{max-width:600px;height:min(52vh,420px);}
 body.playing .du-doll{transform:translateX(-50%) scale(1.4);transform-origin:bottom center;}
-body.playing .pt-box,body.playing .ck-box{max-width:720px;}
-body.playing #tbGrid{max-width:min(92vw,66vh);}
+body.playing .pt-box{max-width:720px;}
 body.playing .tbar{max-width:800px !important;}
 body.playing .g3-bar{max-width:820px;margin-top:4px;}
-body.playing .tb-pad{max-width:640px;gap:8px;}
-body.playing .tb-key{max-width:56px;font-size:26px !important;}
 body.playing #mrGrid{max-width:min(88vw,68vh);}
 body.playing .mk-bank,body.playing .mk-traywrap{max-width:760px;}
 body.playing .mk-coin{width:76px;height:76px;}
@@ -732,12 +739,10 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 
 /* ---- Taquin : mode chiffres + chips ---- */
 /* ---- Grand Tableau : réglette numérique sur UNE ligne ---- */
-.tb-optsrow{margin:0 0 10px;width:100%;}
-.tb-pad{display:flex;gap:5px;justify-content:center;width:100%;max-width:520px;margin:0 auto;}
-.tb-key{flex:1;max-width:46px;aspect-ratio:1;padding:0;display:flex;align-items:center;justify-content:center;}
+.tb-optsrow{margin:0;width:100%;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.tb-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:230px;margin:0 auto;}
+.tb-key{aspect-ratio:1;padding:0;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;font-size:26px;}
 .tb-key.del{background:#FFE5E1;color:var(--coral);max-width:52px;}
-body.playing .tb-pad{max-width:640px;gap:8px;}
-body.playing .tb-key{max-width:56px;font-size:26px !important;}
 
 /* ---- Retour à la photo par défaut sur la carte profil ---- */
 .pdel{position:absolute;top:8px;left:10px;width:22px;height:22px;border-radius:50%;

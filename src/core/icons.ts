@@ -49,6 +49,7 @@ export const ICON = {
   photo: wrap('<rect x="2.5" y="4" width="19" height="16" rx="3" fill="currentColor"/><path d="M5 17.5 9.5 12l3.2 3.6 2.3-2.4 4 4.3z" fill="#fff"/><circle cx="16.5" cy="8.8" r="1.9" fill="#fff"/>'),
   digits: wrap('<text x="12" y="17" text-anchor="middle" font-family="Baloo 2, Arial, sans-serif" font-weight="800" font-size="15" fill="currentColor">123</text>'),
   flower: wrap('<circle cx="12" cy="6" r="3.2" fill="currentColor"/><circle cx="18" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="18" r="3.2" fill="currentColor"/><circle cx="6" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="12" r="3" fill="#fff"/>'),
+  pencil: wrap('<path d="M4 20.5 5 15.5 16.5 4a2.1 2.1 0 0 1 3 0l.5.5a2.1 2.1 0 0 1 0 3L8.5 19z" fill="currentColor"/><path d="m14.5 6 3.5 3.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

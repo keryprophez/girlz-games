@@ -195,6 +195,17 @@ sur l'écran de fin, sessions A puis B puis C.
   secoue, les quatre jetons gagnants scintillent. Bot
   `puissance4-contre-la-poule` (même IA des deux côtés).
 
+- ✅ **Apprendre poli : `clock`, `tables`/`additions`, `intrus`**. Horloge :
+  plein écran (cadran sur toute la hauteur, modes en icônes, manches en
+  pastilles, plus une ligne à lire), aiguilles au doigt dans Découvre et
+  Règle, « une heure », « midi », « moins le quart » corrects. Grand Tableau :
+  grille carrée plein écran aux cases enfin lisibles, consigne remplacée par
+  un grand nombre-cible ou l'opération sur le côté, pavé numérique en
+  colonne. Intrus : plus de chrono, de bonus vitesse ni de série (Apprendre
+  sans sanction), plus d'énoncé en négation (la famille est nommée en
+  positif et dite par la voix), tuiles plein écran. Bots
+  `horloge-huit-heures`, `tableau-huit-cases`, `intrus-six-manches`.
+
 Ordre pour la suite :
 
 `icetower` (porte-à-faux qui casse) → `ninja` (déjà bien avancé) → `snowman` (rouler
