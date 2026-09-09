@@ -657,6 +657,8 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
   font-size:clamp(36px,9vmin,72px);color:#fff;text-shadow:0 3px 0 var(--mango),0 6px 16px rgba(0,0,0,.3);
   opacity:0;pointer-events:none;z-index:6;}
 .hud-flash.go{animation:hudFlash .85s ease-out both;}
+.hud-flash.gold{color:#FFD34D;text-shadow:0 3px 0 #C98A12,0 6px 18px rgba(0,0,0,.3);}
+.hud-flash.near{color:#fff;text-shadow:0 3px 0 var(--sky),0 6px 16px rgba(0,0,0,.3);}
 .hud-flash.bad{text-shadow:0 3px 0 var(--coral),0 6px 16px rgba(0,0,0,.3);}
 @keyframes hudFlash{0%{opacity:0;transform:scale(.5);}20%{opacity:1;transform:scale(1.15);}35%{transform:scale(1);}75%{opacity:1;}100%{opacity:0;transform:translateY(-30px) scale(1.05);}}
 /* Invite gestuelle : une main qui tape, sans un mot ; disparaît au premier geste */
@@ -936,10 +938,8 @@ body.playing #cpCanvas{max-height:calc(100vh - 220px);}
 /* ============================================================
    LE STAND 3D (Three.js + cannon-es)
    ============================================================ */
-.s3-arena{background:linear-gradient(180deg,#BFE3F5,#DCEFF9);cursor:grab;touch-action:none;}
+.s3-arena{cursor:grab;}
 .s3-arena:active{cursor:grabbing;}
-.s3-arena canvas{display:block;width:100%;height:100%;}
-.s3-hint{z-index:3;color:#45362A;text-shadow:0 1px 4px rgba(255,255,255,.8);}
 
 /* ---- Sauvegarde (fenêtre parents) ---- */
 .bk-meter{width:100%;max-width:320px;height:12px;border-radius:99px;background:rgba(69,54,42,.1);

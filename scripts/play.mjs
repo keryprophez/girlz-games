@@ -526,6 +526,30 @@ await scenario('attrape-six-fruits', async () => {
   throw new Error('moins de 6 fruits attrapés en 20 s')
 })
 
+/* 🎯 Le Stand 3D : tirer la balle vers le bas depuis sa position à l'écran,
+   manche après manche, jusqu'à coucher 6 caisses. Un lancer trop mou fait
+   perdre un cœur : le bot doit viser juste. */
+await scenario('stand-six-caisses', async () => {
+  await openGame('Le Stand 3D')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 30000 })
+  await page.waitForTimeout(600)
+  const st = () => page.evaluate(() => new Promise(res => requestAnimationFrame(() => res(window.__stand ? window.__stand.state() : null))))
+  for (let k = 0; k < 60; k++) {
+    const s = await st()
+    if (!s) throw new Error('pas d\'accroche __stand')
+    if (s.over) throw new Error('partie finie trop tôt (score ' + s.score + ')')
+    if (s.score >= 6) return
+    if (s.thrown || s.building) { await page.waitForTimeout(250); continue }
+    const b = await page.evaluate(() => ({ ...window.__stand.ball(), dx: window.__stand.aimPx() }))
+    await page.mouse.move(b.x, b.y)
+    await page.mouse.down()
+    for (let i = 1; i <= 8; i++) { await page.mouse.move(b.x + b.dx * i / 8, b.y + b.norm * 0.85 * i / 8); await page.waitForTimeout(16) }
+    await page.mouse.up()
+    await page.waitForTimeout(600)
+  }
+  throw new Error('moins de 6 caisses tombées en 100 s')
+})
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)

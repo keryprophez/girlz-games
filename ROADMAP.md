@@ -220,10 +220,20 @@ sur l'écran de fin, sessions A puis B puis C.
   Feu d'artifice : canvas à la densité de l'écran, village en silhouette,
   compteur de fusées et bouquet final en icônes.
 
+- ✅ **`stand3d` refait sur le socle** : `createStage` + `arcade` +
+  `scene3d` (plus de renderer maison, nettoyage GPU complet). Manches
+  enchaînées : une pile tombée en entier = la suivante, plus de caisses,
+  plus lourdes, plus loin. Un lancer qui ne couche rien coûte un cœur ; les
+  caisses tombées d'un même lancer font monter le combo ; une caisse qui
+  vacille et se rattrape = « presque ». Le geste est montré par la
+  trajectoire qui pulse avant le premier lancer, puissance normalisée à la
+  hauteur de l'arène. Décor du kit nature, auvent, particules GPU, secousse
+  et suivi de caméra, outro au ralenti sur les caisses restantes. Bot
+  `stand-six-caisses` (vise la caisse debout la plus basse).
+
 Ordre pour la suite :
 
-`stand3d` (manches enchaînées, migration sur `createStage`) → `icetower`
-(porte-à-faux qui casse, migration sur `createStage`) → `pizza` (échelle des
+`icetower` (porte-à-faux qui casse, migration sur `createStage`) → `pizza` (échelle des
 ingrédients à la cuisson) → `ninja` (rampe) → tuiles de l'accueil encore en
 emoji → sonde de fréquence d'images sur la tablette.
 

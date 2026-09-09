@@ -102,8 +102,9 @@ jamais d'emoji.
 rampe par performance, timers simulés `game.after`, HUD en icônes dans
 l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs`) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
-Modèles : `icetower.ts`, `ninja.ts` et `mole.ts` (sprites Kenney en 3D via
-`spriteFromAtlas`, raycast sur les sprites eux-mêmes). **Un jeu qui défile**
+Modèles : `icetower.ts`, `ninja.ts`, `mole.ts` (sprites Kenney en 3D via
+`spriteFromAtlas`, raycast sur les sprites eux-mêmes) et `stand3d.ts`
+(manches enchaînées, near-miss, démonstration du geste par la trajectoire). **Un jeu qui défile**
 (la joueuse reste à x = 0, le monde avance vers −x) part en plus de
 `core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
 obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
@@ -125,8 +126,10 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` (`stand3d` et `icetower`
-contournent encore `createStage` : à migrer en phase 1).
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` (`icetower`
+contourne encore `createStage` : à migrer). Pour un jeu de physique rigide
+(cannon-es) sur le socle, `stand3d.ts` est le modèle : `loadPhysics()`,
+`fixedStep` autour de `world.step`, corps figé avec `mass = 0`.
 
 ---
 
