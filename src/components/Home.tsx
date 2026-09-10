@@ -8,6 +8,7 @@ import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
 import type { Tier } from '../core/types'
 import { ICON, starsHTML } from '../core/icons'
+import { BADGE, WORLD_BADGE } from '../core/badges'
 
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
@@ -97,13 +98,13 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
       <div className="cats">
         {WORLDS.map(w => (
           <div className="cat" key={w.id}>
-            <div className="eyebrow">{w.icon} {w.label}</div>
+            <div className="eyebrow">{WORLD_BADGE[w.id] ? <Svg className="eyebrow-badge" html={WORLD_BADGE[w.id]} /> : w.icon} {w.label}</div>
             <div className="grid">
               {w.games.map(g => {
                 const best = prog.bestStars[g.id] || 0
                 return (
                   <button className="gc" key={g.id} onClick={() => onPlay(g.id)}>
-                    <span className={'sq ' + g.sq}>{g.icon}</span>
+                    <span className={'sq ' + g.sq}>{BADGE[g.id] ? <Svg html={BADGE[g.id]} /> : g.icon}</span>
                     <span className="nm">{g.name}</span>
                     {w.id !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}
                   </button>

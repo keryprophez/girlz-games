@@ -55,6 +55,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              sprites.ts  ← planches d'assets CC0 chargées à la demande
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
+             badges.ts   ← une vignette SVG dessinée par jeu (accueil, carton titre)
              arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
              runner.ts   ← socle des jeux qui défilent (Course, Poussin Volant)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
@@ -103,7 +104,10 @@ En jeu, `body.playing` met la coquille en **plein écran** :
 l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
 barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
 carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
-jamais d'emoji.
+jamais d'emoji — et **les tuiles de l'accueil ont leur vignette dessinée**
+dans `core/badges.ts` (`BADGE[id]`, `viewBox 0 0 48 48`, formes pleines,
+palette de `global.css`). Un jeu sans entrée retombe sur son emoji : ajouter
+la vignette en même temps que le jeu.
 
 **Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
 rampe par performance, timers simulés `game.after`, HUD en icônes dans

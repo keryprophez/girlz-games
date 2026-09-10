@@ -253,6 +253,13 @@ sur l'écran de fin, sessions A puis B puis C.
   (fleur, éclair, flamme), dernier niveau retenu par jeu, bouton de la barre
   en jeu pour en changer.
 
+- ✅ **Les 30 tuiles de l'accueil dessinées** (`core/badges.ts`) : plus un seul
+  emoji sur l'accueil, les cartons titre ni le choix de niveau. Une vignette
+  SVG par jeu dans la palette de l'app, lisible à 46 px, plus les trois
+  univers (éclair, livre, palette). Cinq vignettes redessinées après lecture
+  des captures : la Tour trop pâle, l'Attrape qui ressemblait à un cupcake,
+  le Labyrinthe illisible, le Ninja sans découpe, le Marché sans monnaie.
+
 Ordre pour la suite :
 
 `pizza` (échelle des

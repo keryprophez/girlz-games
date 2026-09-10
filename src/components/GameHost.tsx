@@ -11,6 +11,7 @@ import { tone } from '../core/audio'
 import { playMusic, stopMusic } from '../core/music'
 import { frameProps, loadAtlas, type Atlas } from '../core/sprites'
 import { ICON, starsHTML } from '../core/icons'
+import { BADGE } from '../core/badges'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
@@ -239,7 +240,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       {/* Le choix du niveau remplace le carton titre : même carte, trois boutons */}
       {!tier && (
         <div className="tierpick">
-          <span className={'titlecard-sq ' + game.sq}>{game.icon}</span>
+          <span className={'titlecard-sq ' + game.sq}>{BADGE[game.id] ? <Svg html={BADGE[game.id]} /> : game.icon}</span>
           <span className="titlecard-name">{game.name}</span>
           <div className="tierrow">
             {TIERS.map(t => (
@@ -255,7 +256,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
 
       {tier && card && (
         <div className="titlecard" aria-hidden="true">
-          <span className={'titlecard-sq ' + game.sq}>{game.icon}</span>
+          <span className={'titlecard-sq ' + game.sq}>{BADGE[game.id] ? <Svg html={BADGE[game.id]} /> : game.icon}</span>
           <span className="titlecard-name">{game.name}</span>
         </div>
       )}
