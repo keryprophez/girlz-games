@@ -260,6 +260,12 @@ sur l'écran de fin, sessions A puis B puis C.
   des captures : la Tour trop pâle, l'Attrape qui ressemblait à un cupcake,
   le Labyrinthe illisible, le Ninja sans découpe, le Marché sans monnaie.
 
+- ✅ **Ninja Verger en survie** : le chrono de 45 s est supprimé — la partie
+  finit quand les cœurs sont épuisés, le plafond d'adresse est infini. Un
+  fruit laissé tomber casse la série et, une fois la cadence montée (cran 3
+  en douce, 2 en normale, 1 en expert), coûte un cœur. Frôler un piment sans
+  le trancher déclenche un « ouf » : le near-miss qui manquait.
+
 Ordre pour la suite :
 
 `pizza` (échelle des

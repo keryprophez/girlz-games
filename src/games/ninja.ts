@@ -15,15 +15,19 @@ import { sfx, preloadSfx } from '../core/sfx'
    il se SÉPARE en ses deux vraies moitiés (les modèles -half du kit, chair
    visible), coupées dans le sens du geste, qui partent chacune de leur côté.
 
-   Trancher le piment coûte un cœur — trois piments et c'est fini. Un fruit
-   raté casse la série, sans punition. Le plafond d'adresse : trancher
-   PLUSIEURS fruits d'un seul trait (bonus, ralenti, « ×3 » qui claque), et
-   la cadence qui monte avec la performance, pas avec l'horloge.
+   Trancher le piment coûte un cœur. Un fruit qui retombe sans être tranché
+   casse la série — et, une fois la cadence montée, coûte lui aussi un cœur :
+   à partir de là on ne peut plus laisser passer. **Pas de chrono** : la
+   partie finit quand les cœurs sont épuisés (10/09), le plafond d'adresse est
+   donc infini. Le geste qui paie : trancher PLUSIEURS fruits d'un seul trait
+   (bonus, ralenti, « ×3 » qui claque). Et le « presque » : frôler un piment
+   sans le toucher fait « ouf ».
 
    Deuxième jeu sur core/arcade.ts + core/scene3d.ts (2/09). */
 
 const G = 11
-const ROUND_S = 45
+/** Cran de rampe à partir duquel un fruit raté coûte un cœur (par palier). */
+const STRICT_AT = { easy: 3, med: 2, exp: 1 }
 
 /* Chaque fruit connaît sa moitié et la couleur de son jus. */
 const FRUITS = [
@@ -36,7 +40,9 @@ const BAD = 'pepper'
 
 type Body = import('cannon-es').Body
 type Obj = import('three').Object3D
-interface Fruit { obj: Obj; body: Body; bad: boolean; def: typeof FRUITS[number] | null; sliced: boolean }
+interface Fruit { obj: Obj; body: Body; bad: boolean; def: typeof FRUITS[number] | null; sliced: boolean
+  /** Piment déjà frôlé : le « ouf » ne se joue qu'une fois par piment. */
+  grazed?: boolean }
 interface Half { obj: Obj; body: Body }
 interface Cfg { min: number; max: number; every: number; bad: number; side: number }
 
@@ -57,6 +63,8 @@ interface State {
   trail: { x: number; y: number; t: number }[]
   /** Fruits tranchés dans le trait en cours (bonus multi-tranche). */
   stroke: number
+  /** Cran de rampe à partir duquel un fruit raté coûte un cœur. */
+  strictAt: number
   over: boolean
   lastWhoosh: number
 }
@@ -273,9 +281,8 @@ export const ninja: GameDef = {
       )
       const game = arcade(c, {
         host: arena,
-        lives: 3,
+        lives: c.byTier(5, 3, 3),
         scoreIcon: ICON.blade,
-        timer: ROUND_S,
         // La rampe suit la performance : tous les 6 fruits, plus de fruits, plus vite
         ramp: { every: 6, max: 6 },
         onLevel: () => {
@@ -285,13 +292,12 @@ export const ninja: GameDef = {
           me.cfg.side = Math.min(0.45, me.cfg.side + 0.08)
           me.game.flash(ICON.bolt)
         },
-        onTimeUp: () => finish(me, false),
         stars: s => { const th = c.byTier([22, 12], [32, 17], [44, 24]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
       })
       const me: State = {
         stage, T, CANNON, world, models, fruits: [], halves: [], game,
         fx: particles(stage, 700), shake: camShake(stage), cfg: { ...cfg }, lane,
-        trail: [], stroke: 0, over: false, lastWhoosh: 0
+        trail: [], stroke: 0, strictAt: STRICT_AT[c.tier], over: false, lastWhoosh: 0
       }
       nj = me
 
@@ -323,12 +329,18 @@ export const ninja: GameDef = {
         me.trail.push({ x: cur.x, y: cur.y, t: now })
         // Un « whoosh » quand la lame file vite, jamais plus de 6 par seconde
         if (len > 26 && now - me.lastWhoosh > 160) { me.lastWhoosh = now; sfx('whoosh', { vol: 0.35, rate: 1.15 }) }
-        // La lame tranche tout fruit dont la projection écran croise le segment
+        // La lame tranche tout fruit dont la projection écran croise le segment.
+        // Entre 46 et 78 px d'un PIMENT : on l'a frôlé — « ouf ! », une fois.
         for (const f of [...me.fruits]) {
           const s = toScreen(stage, f.obj.position)
-          if (segDist(s.x, s.y, last.x, last.y, cur.x, cur.y) < 46) {
+          const d = segDist(s.x, s.y, last.x, last.y, cur.x, cur.y)
+          if (d < 46) {
             slice(me, f, dx / len, dy / len)
             if (nj !== me || me.over) return
+          } else if (f.bad && !f.grazed && d < 78) {
+            f.grazed = true
+            sfx('whoosh', { vol: 0.55, rate: 0.8 })
+            me.game.flash(ICON.bolt, 'near')
           }
         }
         last = cur
@@ -368,10 +380,18 @@ export const ninja: GameDef = {
           const f = me.fruits[i]
           f.obj.position.copy(f.body.position as unknown as import('three').Vector3)
           f.obj.quaternion.copy(f.body.quaternion as unknown as import('three').Quaternion)
-          // Retombé sans être tranché : la série casse, sans punition
+          // Retombé sans être tranché : la série casse ; une fois la cadence
+          // montée, ça coûte un cœur — on ne peut plus laisser passer
           if (f.body.position.y < -1.3 && f.body.velocity.y < 0) {
-            if (!f.bad) game.miss()
+            const missed = !f.bad
             removeFruit(me, f)
+            if (missed) {
+              if (game.s.level >= me.strictAt) {
+                me.game.flash(ICON.heartEmpty, 'bad')
+                sfx('error', { vol: 0.5 })
+                if (game.hurt()) { finish(me, false); return }
+              } else game.miss()
+            }
           }
         }
         for (let i = me.halves.length - 1; i >= 0; i--) {
