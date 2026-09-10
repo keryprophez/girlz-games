@@ -212,9 +212,9 @@ export const market: GameDef = {
     ctx = c
     c.root.innerHTML = `
       <div class="topbar">
-        <button class="chip mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}</button>
-        <button class="chip mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}</button>
-        <button class="chip mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}</button>
+        <button class="chip mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}<b>Découvre</b></button>
+        <button class="chip mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}<b>Paye</b></button>
+        <button class="chip mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}<b>Monnaie</b></button>
       </div>
       <div class="mk-item" id="mkItem"></div>
       <div class="mk-traywrap" id="mkTrayWrap">

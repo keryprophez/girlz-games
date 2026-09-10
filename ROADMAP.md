@@ -274,6 +274,13 @@ sur l'écran de fin, sessions A puis B puis C.
   acceptent désormais un délai en secondes. Plus rien ne sonne après le
   retour au menu, et les mélodies ne dérivent plus sous la charge.
 
+- ✅ **Un mot sous chaque icône de mode** (demande du 10/09) : les colonnes
+  d'icônes n'étaient pas claires. Grand Tableau × et + (Explore, Trouve,
+  Remplis, Écris), Quelle heure (Découvre, Heures, Minutes, Trouve, Règle),
+  Labyrinthe (Jour, Nuit, Glace) et Marché (Découvre, Paye, Monnaie). Le mot
+  est un renfort, jamais le porteur du sens : l'icône reste première, et le
+  mode choisi se teinte, pastille et mot ensemble.
+
 Ordre pour la suite :
 
 `pizza` (échelle des

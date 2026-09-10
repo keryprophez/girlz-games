@@ -57,7 +57,17 @@ interface State {
 }
 
 function createBoard(op: BoardOp): GameDef {
-  let tb: State | null = null
+  /* Les quatre modes, avec LE mot qui va sous l'icône : l'icône dit déjà tout
+   (loupe, cible, crayon, chiffres), le mot est un renfort pour Joyce (8 ans)
+   et pour l'adulte qui regarde par-dessus l'épaule — jamais l'inverse. */
+const MODE_BTNS: { id: Mode; icon: string; cap: string }[] = [
+  { id: 'explore', icon: ICON.search, cap: 'Explore' },
+  { id: 'find', icon: ICON.target, cap: 'Trouve' },
+  { id: 'fill', icon: ICON.pencil, cap: 'Remplis' },
+  { id: 'type', icon: ICON.digits, cap: 'Écris' }
+]
+
+let tb: State | null = null
   let ctx: GameContext
 
   function cellColor(v: number): string {
@@ -111,7 +121,11 @@ function createBoard(op: BoardOp): GameDef {
 
   function setMode(me: State, mode: Mode) {
     me.mode = mode
-    document.querySelectorAll<HTMLElement>('.tb-tool').forEach(x => x.classList.toggle('sel', x.dataset.m === mode))
+    document.querySelectorAll<HTMLElement>('.tb-tool').forEach(x => {
+      const on = x.dataset.m === mode
+      x.classList.toggle('sel', on)
+      x.parentElement?.classList.toggle('sel', on)
+    })
     resetCells(me)
     $('tbOpts').innerHTML = ''
     $('tbDone').style.display = mode === 'explore' ? '' : 'none'
@@ -274,10 +288,10 @@ function createBoard(op: BoardOp): GameDef {
         <div class="arena tb-wrap" id="tbWrap">
           <div id="tbGrid"></div>
           <div class="tq-tools">
-            <button class="sn-tool tb-tool sel" data-m="explore" aria-label="Explore">${ICON.search}</button>
-            <button class="sn-tool tb-tool" data-m="find" aria-label="Trouve">${ICON.target}</button>
-            <button class="sn-tool tb-tool" data-m="fill" aria-label="Remplis">${ICON.pencil}</button>
-            <button class="sn-tool tb-tool" data-m="type" aria-label="Tape">${ICON.digits}</button>
+            ${MODE_BTNS.map((m, i) => `<span class="tool-item">
+              <button class="sn-tool tb-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.cap}">${m.icon}</button>
+              <i class="tool-cap">${m.cap}</i>
+            </span>`).join('')}
           </div>
           <div class="tq-side tb-side">
             <div class="tb-prompt" id="tbPrompt"></div>

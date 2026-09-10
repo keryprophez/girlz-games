@@ -37,12 +37,13 @@ interface State {
 let ck: State | null = null
 let ctx: GameContext
 
-const MODES: { id: Mode; icon: string }[] = [
-  { id: 'discover', icon: ICON.search },
-  { id: 'hours', icon: ICON.clock },
-  { id: 'minutes', icon: ICON.timer },
-  { id: 'quiz', icon: ICON.target },
-  { id: 'set', icon: ICON.tap }
+/* Chaque mode porte SON mot : l'icône dit le geste, le mot le confirme. */
+const MODES: { id: Mode; icon: string; cap: string }[] = [
+  { id: 'discover', icon: ICON.search, cap: 'Découvre' },
+  { id: 'hours', icon: ICON.clock, cap: 'Heures' },
+  { id: 'minutes', icon: ICON.timer, cap: 'Minutes' },
+  { id: 'quiz', icon: ICON.target, cap: 'Trouve' },
+  { id: 'set', icon: ICON.tap, cap: 'Règle' }
 ]
 
 function clockSVG(h: number, m: number, px: number, o: FaceOpts = {}): string {
@@ -116,7 +117,11 @@ function paintSide(me: State) {
 function setMode(me: State, mode: Mode) {
   me.mode = mode
   me.round = 0; me.score = 0; me.lock = false
-  document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => b.classList.toggle('sel', b.dataset.m === mode))
+  document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => {
+    const on = b.dataset.m === mode
+    b.classList.toggle('sel', on)
+    b.parentElement?.classList.toggle('sel', on)
+  })
   $('ckDone').style.display = mode === 'discover' ? '' : 'none'
   if (mode === 'discover') loadDiscover(me)
   if (mode === 'hours') nextHours(me)
@@ -307,7 +312,9 @@ export const clock: GameDef = {
           <div class="qopts ck-opts" id="ckOpts"></div>
         </div>
         <div class="tq-tools">
-          ${MODES.map((m, i) => `<button class="sn-tool ck-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.id}">${m.icon}</button>`).join('')}
+          ${MODES.map((m, i) => `<span class="tool-item${i === 0 ? ' sel' : ''}">
+            <button class="sn-tool ck-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.cap}">${m.icon}</button>
+            <i class="tool-cap">${m.cap}</i></span>`).join('')}
         </div>
         <div class="tq-side">
           <div class="tq-moves" id="ckScore"></div>

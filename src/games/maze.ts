@@ -44,10 +44,10 @@ let mz: State | null = null
 let ctx: GameContext
 
 const D = [[0, -1], [1, 0], [0, 1], [-1, 0]]
-const MODES: { id: Mode; icon: string; factor: number }[] = [
-  { id: 'classic', icon: ICON.sun, factor: 1 },
-  { id: 'fog', icon: ICON.moon, factor: 1.6 },
-  { id: 'ice', icon: ICON.snowflake, factor: 1.5 }
+const MODES: { id: Mode; icon: string; factor: number; cap: string }[] = [
+  { id: 'classic', icon: ICON.sun, factor: 1, cap: 'Jour' },
+  { id: 'fog', icon: ICON.moon, factor: 1.6, cap: 'Nuit' },
+  { id: 'ice', icon: ICON.snowflake, factor: 1.5, cap: 'Glace' }
 ]
 
 function generate(n: number): Cell[][] {
@@ -314,7 +314,11 @@ function setMode(me: State, mode: Mode) {
   me.sizes = sizesFor(mode)
   me.round = 0
   me.t0 = performance.now()
-  document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => b.classList.toggle('sel', b.dataset.m === mode))
+  document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
+    const on = b.dataset.m === mode
+    b.classList.toggle('sel', on)
+    b.parentElement?.classList.toggle('sel', on)
+  })
   newRound(me)
 }
 
@@ -340,7 +344,9 @@ export const maze: GameDef = {
       <div class="arena mz-wrap" id="mzWrap">
         <div id="mzArea"></div>
         <div class="mz-tools">
-          ${MODES.map((m, i) => `<button class="sn-tool mz-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.id}">${m.icon}</button>`).join('')}
+          ${MODES.map((m, i) => `<span class="tool-item${i === 0 ? ' sel' : ''}">
+            <button class="sn-tool mz-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.cap}">${m.icon}</button>
+            <i class="tool-cap">${m.cap}</i></span>`).join('')}
         </div>
         <div class="mz-dots" id="mzDots"></div>
       </div>`
