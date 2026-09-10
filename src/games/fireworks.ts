@@ -153,7 +153,7 @@ function bouquet() {
 }
 
 export const fireworks: GameDef = {
-  id: 'fireworks', name: "Feu d'Artifice", icon: '🎆', sq: 'sq-lilac', cat: 'creatif', duel: false, music: 'night',
+  id: 'fireworks', name: "Feu d'Artifice", icon: '🎆', sq: 'sq-lilac', cat: 'creatif', music: 'night',
   subtitle: 'Tape dans le ciel pour lancer tes fusées !',
   mount(c) {
     ctx = c

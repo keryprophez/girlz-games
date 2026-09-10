@@ -28,7 +28,7 @@ export function exitFullscreen() {
 }
 
 export default function App() {
-  const [session, setSession] = useState<{ id: string; duel: boolean } | null>(null)
+  const [session, setSession] = useState<{ id: string } | null>(null)
 
   // Le zoom double-tap est neutralisé par `touch-action: manipulation` en CSS :
   // pas de preventDefault global, qui avalait un tap sur deux dans les jeux rapides.
@@ -45,8 +45,8 @@ export default function App() {
       <div id="app">
         <ErrorBoundary onReset={() => setSession(null)}>
           {session
-            ? <GameHost key={session.id + (session.duel ? ':duel' : '')} gameId={session.id} duel={session.duel} onHome={() => setSession(null)} />
-            : <Home onPlay={(id, duel) => { enterFullscreen(); setSession({ id, duel }) }} />}
+            ? <GameHost key={session.id} gameId={session.id} onHome={() => setSession(null)} />
+            : <Home onPlay={id => { enterFullscreen(); setSession({ id }) }} />}
         </ErrorBoundary>
       </div>
       <PlayGuard />

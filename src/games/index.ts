@@ -36,7 +36,7 @@ export const GAMES: GameDef[] = [
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
 ]
 
-/* L'accueil est découpé en trois univers + le Défi à deux. Chaque jeu vit dans
+/* L'accueil est découpé en trois univers. Chaque jeu vit dans
    UN SEUL univers — l'affectation est ici, pas dans les fichiers de jeux :
    - Jouer     = on s'amuse, on peut perdre (action, puzzles, plateau)
    - Apprendre = pédagogique, jamais de sanction

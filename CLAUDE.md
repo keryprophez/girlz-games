@@ -19,9 +19,8 @@ par jeu) · `README.md` = présentation de l'app.
    « bonne pratique » du jeu mobile : monnaie, boutique, coffres, énergie, vies
    qui se rechargent · paliers de déblocage, arbre de progression, saisons,
    événements limités · séries quotidiennes, notifications de rappel, « reviens
-   demain » · classements ou comparaison entre les deux sœurs au-delà du Défi à
-   deux amical · publicité, achats intégrés, analytique tiers, compte en ligne
-   pour les enfants. Les étoiles sont un simple retour de fin de partie.
+   demain » · classements ou comparaison entre les deux sœurs · publicité,
+   achats intégrés, analytique tiers, compte en ligne pour les enfants. Les étoiles sont un simple retour de fin de partie.
 2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, sons
    distincts, démonstration visuelle. `core/voice.ts` ne lit que le **contenu
    pédagogique** (multiplications, heures, noms de lieux), **jamais les
@@ -58,7 +57,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              backup.ts   ← export/import JSON + alerte quota localStorage
              arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
              runner.ts   ← socle des jeux qui défilent (Course, Poussin Volant)
-src/components/  Home · GameHost · PlayTimer · Backup · Album · VoiceStudio · …
+src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
 scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
@@ -78,7 +77,6 @@ sprites triés sont commités, les zips ne le sont pas. Attention : la planche
 export const monJeu: GameDef = {
   id: 'monJeu', name: 'Mon Jeu', icon: '🎯', sq: 'sq-sky',
   cat: 'action',   // reflexion | memoire | action | creatif
-  duel: false,     // optionnel : exclut du Défi à deux
   music: 'fair',   // optionnel : thème de core/music.ts
   subtitle: '…',
   mount(ctx) { /* … */ return () => { /* cleanup IDEMPOTENT */ } }
@@ -92,7 +90,16 @@ pause — ne plus utiliser `setTimeout` pour piloter un jeu). `finish()` accepte
 `outroMs` : le jeu reste monté ce temps-là (ralenti, chute, caméra) avant le
 score. La **pause** est globale (`core/session.ts` : `setPaused`, `onPause`) :
 onglet caché, minuteur parental, bouton pause ; `createStage` fige sa boucle
-dessus tout seul. En jeu, `body.playing` met la coquille en **plein écran** :
+dessus tout seul. **La difficulté se choisit DANS le jeu** (10/09) : à l'ouverture, `GameHost`
+affiche trois boutons sans un mot — fleur (douce), éclair (normale), flamme
+(expert) — et ne monte le jeu qu'après le choix, qui alimente `ctx.tier` et
+`ctx.byTier`. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
+et signalé d'un liseré ; un bouton de la barre en jeu rouvre le choix et
+relance la partie. L'accueil n'est plus qu'une **grille de jeux** : le choix
+de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans `Home.tsx`
+— prêt à revenir — le Défi à deux et la fenêtre de sauvegarde sont supprimés
+(`core/backup.ts` reste pour `loudStorage` et l'alerte de quota).
+En jeu, `body.playing` met la coquille en **plein écran** :
 l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
 barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
 carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
@@ -154,7 +161,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
-| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` cliquent les tuiles `.gc:not(.gc-duel)` et lisent le nom dans `.nm`. Si tu changes l'accueil, mets-les à jour. |
+| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` cliquent les tuiles `.gc`, lisent le nom dans `.nm`, puis choisissent le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
 | **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
 | **Bot sur une valeur périmée** | Un crochet de test (`__towerX`) qui n'est écrit que quand l'objet existe garde sa dernière valeur : le bot de la Tour cliquait « au centre » pendant la chute du bloc précédent, un bloc sur trois manquait, trois déploiements ont échoué sans qu'on le voie. Écrire `NaN` quand il n'y a rien à piloter, et faire attendre le bot sur le score plutôt que sur une durée murale. |
 | **Bots à 4 fps** | Sous swiftshader la 3D rend 3 à 4 images/s et `dt` est borné à 100 ms : la simulation tourne au ralenti et une entrée n'est appliquée qu'à la frame suivante. Un bot qui sonde toutes les 60 ms voit le même état plusieurs fois et double ses commandes. Sonder **une fois par frame** (`evaluate` qui résout dans un `requestAnimationFrame`), anticiper d'une frame, et compter en temps simulé (mètres, pas secondes murales). Une capture d'écran prend 1,5 s : lancée après la mort, elle rate l'outro — la déclencher juste avant. |

@@ -51,6 +51,8 @@ export const ICON = {
   flower: wrap('<circle cx="12" cy="6" r="3.2" fill="currentColor"/><circle cx="18" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="18" r="3.2" fill="currentColor"/><circle cx="6" cy="12" r="3.2" fill="currentColor"/><circle cx="12" cy="12" r="3" fill="#fff"/>'),
   pencil: wrap('<path d="M4 20.5 5 15.5 16.5 4a2.1 2.1 0 0 1 3 0l.5.5a2.1 2.1 0 0 1 0 3L8.5 19z" fill="currentColor"/><path d="m14.5 6 3.5 3.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
   coins: wrap('<circle cx="9" cy="9" r="6.5" fill="currentColor"/><circle cx="15" cy="15" r="6.5" fill="currentColor" stroke="#fff" stroke-width="1.6"/><path d="M15 11.8v6.4M13 13.2h3M13 16.8h3" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>'),
+  flame: wrap('<path d="M13.4 2.2c.3 3.7 4.4 5.4 4.4 9.8 0 3.7-2.6 6.5-5.8 6.5S6.2 15.7 6.2 12.3c0-1.9.7-3.4 1.8-4.5-.1 1.7.6 2.7 1.6 3.2-.5-3.5 1.9-5.7 3.8-8.8z" fill="currentColor"/><path d="M12.2 11.2c.2 1.9 2.1 2.8 2.1 4.8 0 1.6-1 2.6-2.3 2.6s-2.2-1-2.2-2.4c0-1.6 2.1-2.7 2.4-5z" fill="#fff" opacity=".85"/>'),
+  out: wrap('<path d="M5 3.5h14v8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v13" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="m7.5 16.5 4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'),
   versus: wrap('<path d="M4 4.5 9.5 12 4 19.5M20 4.5 14.5 12 20 19.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>')
 } as const
 

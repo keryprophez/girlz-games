@@ -445,7 +445,7 @@ function finish(me: State) {
 }
 
 export const snowman: GameDef = {
-  id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', duel: false, music: 'winter',
+  id: 'snowman', name: 'Bonhomme de neige', icon: '⛄', sq: 'sq-sky', cat: 'creatif', music: 'winter',
   subtitle: 'Roule tes boules dans la neige, empile-les, puis habille-le !',
   mount(c) {
     ctx = c

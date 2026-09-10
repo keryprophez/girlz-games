@@ -42,12 +42,10 @@ const page = await ctx.newPage()
 const pageErrors = []
 page.on('pageerror', e => pageErrors.push(e.message))
 
-// L'univers « À deux » duplique les jeux en mode duel : on ne teste que les
-// tuiles solo, sinon le smoke double de durée pour les mêmes montages
-const TILE = '.gc:not(.gc-duel)'
+const TILE = '.gc'
 await page.goto(URL)
 await page.waitForSelector(TILE, { timeout: 10000 })
-const games = await page.$$eval('.gc:not(.gc-duel)', els => els.map(el => el.querySelector('.nm')?.textContent || '?'))
+const games = await page.$$eval(TILE, els => els.map(el => el.querySelector('.nm')?.textContent || '?'))
 console.log(`${games.length} jeux à vérifier…`)
 
 const failures = []
@@ -56,6 +54,8 @@ for (let i = 0; i < games.length; i++) {
   await page.goto(URL)
   await page.waitForSelector(TILE)
   await page.locator(TILE).nth(i).click()
+  // La difficulté se choisit dans le jeu : on prend la douce (comme Jade)
+  await page.locator('.tierbtn.tier-easy').click()
   // Laisse le temps au jeu de se monter (la 3D charge three.js à la demande)
   await page.waitForTimeout(1600)
   const mounted = await page.$eval('.gameroot', el => el.children.length > 0).catch(() => false)

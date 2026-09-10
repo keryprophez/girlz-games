@@ -88,7 +88,7 @@ function finish(songName?: string) {
 }
 
 export const piano: GameDef = {
-  id: 'piano', name: 'Petit Piano', icon: '🎹', sq: 'sq-sky', cat: 'creatif', duel: false,
+  id: 'piano', name: 'Petit Piano', icon: '🎹', sq: 'sq-sky', cat: 'creatif',
   subtitle: 'Joue librement, ou suis les lumières pour jouer une vraie chanson',
   mount(c) {
     ctx = c

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
-import { GAMES, WORLDS } from '../games'
+import { WORLDS } from '../games'
 import { COLLECT } from '../core/utils'
 import { sFlip } from '../core/audio'
 import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
-import { BackupButton } from './Backup'
 import type { Tier } from '../core/types'
 import { ICON, starsHTML } from '../core/icons'
 
@@ -16,7 +15,12 @@ const Svg = ({ html, className }: { html: string; className?: string }) =>
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
 const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
 
-export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }) {
+/* Le choix de joueuse est MASQUÉ pour l'instant (demande du 10/09) : l'accueil
+   n'est plus qu'une grille de jeux, et la difficulté se choisit dans le jeu.
+   Tout le bloc est gardé tel quel derrière ce drapeau, prêt à revenir. */
+const SHOW_PROFILES = false as boolean
+
+export function Home({ onPlay }: { onPlay: (id: string) => void }) {
   const store = useFerme()
   const [albumOpen, setAlbumOpen] = useState(false)
   const [voicesOpen, setVoicesOpen] = useState(false)
@@ -51,6 +55,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <div className="tag">Les jeux de Jade et Joyce ✨</div>
       </div>
 
+      {SHOW_PROFILES && (<>
       <div className="seg-label">Qui joue ?</div>
       <div className="profiles">
         {store.profiles.map(p => {
@@ -78,7 +83,8 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
           )
         })}
       </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      </>)}
+      {SHOW_PROFILES && <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />}
 
       <div className="statrow">
         <div className="stat"><Svg html={ICON.star} className="ico-inline" /> {prog.stars}</div>
@@ -86,7 +92,6 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
         <div className="stat"><button onClick={() => store.toggleSound()}><Svg html={store.sound ? ICON.sound : ICON.mute} /></button></div>
         <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille"><Svg html={ICON.mic} /></button></div>
         <TimerButton />
-        <BackupButton />
       </div>
 
       <div className="cats">
@@ -97,7 +102,7 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
               {w.games.map(g => {
                 const best = prog.bestStars[g.id] || 0
                 return (
-                  <button className="gc" key={g.id} onClick={() => onPlay(g.id, false)}>
+                  <button className="gc" key={g.id} onClick={() => onPlay(g.id)}>
                     <span className={'sq ' + g.sq}>{g.icon}</span>
                     <span className="nm">{g.name}</span>
                     {w.id !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}
@@ -107,20 +112,6 @@ export function Home({ onPlay }: { onPlay: (id: string, duel: boolean) => void }
             </div>
           </div>
         ))}
-        {/* Le Défi à deux : un univers à part entière — taper un jeu ici le
-            lance directement à deux, plus de bascule à activer avant */}
-        <div className="cat cat-duel">
-          <div className="eyebrow"><Svg html={ICON.versus} className="ico-inline" /> À deux</div>
-          <div className="duel-hint">Chacune son tour, on compare à la fin !</div>
-          <div className="grid">
-            {GAMES.filter(g => g.duel !== false).map(g => (
-              <button className="gc gc-duel" key={'d-' + g.id} onClick={() => onPlay(g.id, true)}>
-                <span className={'sq ' + g.sq}>{g.icon}<span className="duel-badge"><Svg html={ICON.versus} /></span></span>
-                <span className="nm">{g.name}</span>
-                              </button>
-            ))}
-          </div>
-        </div>
       </div>
       <div className="footnote">La collection de chacune est gardée d'une fois sur l'autre 🌟</div>
 

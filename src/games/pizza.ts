@@ -7,12 +7,18 @@ import {
   loadModel, fitModel,
   type Stage, type Cannon
 } from '../core/three3d'
+import { particles } from '../core/scene3d'
+import { ICON } from '../core/icons'
+import { foodImg } from '../core/sprites'
+import { sfx, preloadSfx } from '../core/sfx'
 
 /* 🍕 La Pizzeria 3D — un vrai bac à sable, façon cuisine pour enfants :
    AUCUNE étape imposée. On étale la sauce au doigt, on lâche les ingrédients
    qui TOMBENT et roulent pour de vrai sur la pâte (et parfois à côté…), on
-   enfourne quand on veut — le four chauffe, la pâte dore, le fromage fond —
-   on ressort quand on veut, et on mange les parts une par une. */
+   enfourne quand on veut — le four chauffe, la pâte dore, le fromage fond,
+   et si on l'oublie elle NOIRCIT et fume — on ressort quand on veut, et on
+   mange les parts une par une. Zéro texte : les outils sont les rendus du
+   Food Kit, la cuisson se lit sur une barre crème → doré → brun → noir. */
 
 const PR = 0.56            // rayon de la pizza
 const PR_IN = PR - 0.075   // rayon de la garniture (à l'intérieur de la croûte)
@@ -23,13 +29,19 @@ const G = 9.82
 
 type ToolId = 'tomato' | 'cream' | 'cheese' | 'mushroom' | 'olive' | 'slice' | 'corn' | 'basil' | 'eat'
 
+/** Une tache de sauce, pour les deux outils qui n'ont pas de rendu Food Kit. */
+const blob = (c: string) => `<svg viewBox="0 0 48 48" width="40" height="40"><path d="M24 6c8 0 17 6 17 15 0 8-5 10-5 15 0 3-4 6-12 6S8 39 8 34c0-5-4-7-4-13C4 12 14 6 24 6z" fill="${c}"/><ellipse cx="18" cy="16" rx="4" ry="2.5" fill="rgba(255,255,255,.35)"/></svg>`
+const mushroomSVG = `<svg viewBox="0 0 48 48" width="40" height="40"><path d="M6 24c0-11 8-18 18-18s18 7 18 18c0 2-1 3-3 3H9c-2 0-3-1-3-3z" fill="#E7D5BD"/><circle cx="17" cy="15" r="3" fill="#fff"/><circle cx="29" cy="12" r="2.4" fill="#fff"/><path d="M17 27h14l-2 13c0 2-2 3-5 3s-5-1-5-3z" fill="#F4E9D8"/></svg>`
+const pepperSVG = `<svg viewBox="0 0 48 48" width="40" height="40"><path d="M15 14c-6 2-9 9-8 17s7 12 17 12 16-4 17-12-2-15-8-17c-3-1-6 1-9 1s-6-2-9-1z" fill="#4C9E4A"/><path d="M24 14c0-4 1-7 4-9" stroke="#2F6B2E" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M14 20c-2 4-2 10 0 15" stroke="#76BF6A" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`
 const TOOLS: { id: ToolId; icon: string }[] = [
-  { id: 'tomato', icon: '🥫' }, { id: 'cream', icon: '🥛' },
-  { id: 'cheese', icon: '🧀' }, { id: 'mushroom', icon: '🍄' },
-  { id: 'olive', icon: '🫒' }, { id: 'slice', icon: '🍅' },
-  { id: 'corn', icon: '🌽' }, { id: 'basil', icon: '🌿' },
-  { id: 'eat', icon: '😋' }
+  { id: 'tomato', icon: blob('#CE3A26') }, { id: 'cream', icon: blob('#FFF3DC') },
+  { id: 'cheese', icon: foodImg('cheese', 40) }, { id: 'mushroom', icon: mushroomSVG },
+  { id: 'olive', icon: foodImg('onion', 40) }, { id: 'slice', icon: foodImg('tomato', 40) },
+  { id: 'corn', icon: foodImg('corn', 40) }, { id: 'basil', icon: pepperSVG },
+  { id: 'eat', icon: foodImg('plate-dinner', 40) }
 ]
+/** Au-delà, la pizza noircit ; la barre de cuisson va jusque-là. */
+const BURNT = 1.5
 const SAUCES: Record<string, string> = { tomato: 'rgba(206,58,38,1)', cream: 'rgba(255,243,220,1)' }
 
 let ctx: GameContext
@@ -190,10 +202,16 @@ function toOven(on: boolean) {
   S.ovenT = 0
   ;($('pzOven') as HTMLElement).style.display = on ? 'none' : ''
   ;($('pzOut') as HTMLElement).style.display = on ? '' : 'none'
-  if (!on) $('pzState').textContent = S.bake > 0.75 ? '🍕 Bien dorée !' : S.bake > 0.3 ? '🍕 Toute chaude !' : '🍕 À toi de garnir !'
-  ctx.toast(on ? 'Au four ! 🔥' : 'Elle est prête ! 🍕')
+  // La pelle glisse : un frottement, puis le grésillement du four
+  sfx('cloth', { vol: 0.5, rate: 0.8 })
   if (on) tone(180, 0.5, 'sawtooth', 0.06)
   else sPop()
+}
+
+/** La barre de cuisson : crème → doré → brun → noir, sans un mot. */
+function paintBake() {
+  const cover = document.getElementById('pzCover')
+  if (cover) cover.style.width = `${Math.max(0, 100 - S.bake / BURNT * 100)}%`
 }
 
 /* ---------- Manger ---------- */
@@ -205,10 +223,7 @@ function eatWedge(wi: number) {
   S.eaten++
   sCrunch()
   tone(300 + S.eaten * 40, 0.1, 'triangle', 0.1)
-  if (S.eaten >= SLICES) {
-    ctx.toast('Miam, tout mangé ! 😋')
-    setTimeout(() => S && finish(), 700)
-  }
+  if (S.eaten >= SLICES) ctx.after(700, () => S && finish())
 }
 
 function finish() {
@@ -217,8 +232,9 @@ function finish() {
   confetti()
   sWin()
   const n = S.dropped
+  const burnt = S.bake > 1.2
   ctx.finish({
-    title: S.eaten >= SLICES ? 'Pizza dévorée ! 🍕' : 'Quelle belle pizza ! 🍕',
+    title: S.eaten >= SLICES ? (burnt ? 'Toute noire… et dévorée !' : 'Pizza dévorée !') : burnt ? 'Un peu trop cuite !' : 'Quelle belle pizza !',
     msg: `${ctx.playerName} a posé ${n} ingrédient${n > 1 ? 's' : ''}`,
     stars: 3, starsEarned: 3
   })
@@ -233,33 +249,32 @@ function paintUI() {
 }
 
 export const pizza: GameDef = {
-  id: 'pizza', name: 'La Pizzeria', icon: '🍕', sq: 'sq-peach', cat: 'creatif', duel: false, music: 'kitchen',
+  id: 'pizza', name: 'La Pizzeria', icon: '🍕', sq: 'sq-peach', cat: 'creatif', music: 'kitchen',
   subtitle: 'Sauce au doigt, ingrédients qui tombent, four bien chaud… puis on croque !',
   mount(c) {
     ctx = c
     let dead = false
     c.root.innerHTML = `
       <div class="topbar">
-        <button class="chip" id="pzLeft">◀</button>
-        <div class="chip" id="pzState">🍕 À toi de garnir !</div>
-        <button class="chip" id="pzRight">▶</button>
+        <button class="chip" id="pzLeft" aria-label="Tourner">${ICON.turnLeft}</button>
+        <div class="chip pz-bake" aria-label="Cuisson">${ICON.flame}<span class="pz-bake-bar"><b id="pzCover"></b></span></div>
+        <button class="chip" id="pzRight" aria-label="Tourner">${ICON.turnRight}</button>
       </div>
-      <div class="arena g3-arena pz-arena" id="pzArena">
-        <div class="hint g3-hint" id="pzHint">Choisis un ingrédient, puis touche la pizza 👇</div>
-      </div>
+      <div class="arena g3-arena pz-arena" id="pzArena"></div>
       <div class="g3-bar">
         <div class="g3-row" id="pzTools">
-          ${TOOLS.map(t => `<button class="g3-tool" data-t="${t.id}">${t.icon}</button>`).join('')}
+          ${TOOLS.map(t => `<button class="g3-tool" data-t="${t.id}" aria-label="${t.id}">${t.icon}</button>`).join('')}
         </div>
         <div class="g3-row">
-          <button class="g3-btn" id="pzOven">🔥 Au four</button>
-          <button class="g3-btn" id="pzOut" style="display:none">🍽️ Sortir</button>
-          <button class="g3-btn ghost" id="pzDone">C'est fini ! ✅</button>
+          <button class="sn-tool pz-act" id="pzOven" aria-label="Au four">${ICON.flame}</button>
+          <button class="sn-tool pz-act" id="pzOut" style="display:none" aria-label="Sortir du four">${ICON.out}</button>
+          <button class="sn-tool go" id="pzDone" aria-label="Fini">${ICON.check}</button>
         </div>
       </div>`
 
     const arena = $('pzArena')
     const hideLoader = loader(arena, '🍕')
+    preloadSfx(['cloth', 'tick', 'chop'])
 
     ;(async () => {
       const [, CANNON] = await loadPhysics()
@@ -269,8 +284,8 @@ export const pizza: GameDef = {
         fog: [3.2, 9], fogColor: '#241811',
         cam: [0, 1.2, 1.6], target: [0, 0.06, 0], fov: 46,
         hemi: ['#FFE6C4', '#3A2618', 0.75],
-        sun: { pos: [1.6, 3.2, 2.2], color: '#FFEFD2', intensity: 2.6, area: 3, far: 10 },
-        fill: 0.3, exposure: 0.98
+        sun: { pos: [1.6, 3.2, 2.2], color: '#FFEFD2', intensity: 2.1, area: 3, far: 10 },
+        fill: 0.3, exposure: 0.88
       })
       if (dead) { stage.dispose(); return }
       hideLoader()
@@ -458,11 +473,13 @@ export const pizza: GameDef = {
         sauce: { g: dc.g, tex: sauceTex },
         doughMat, crustMat, sideMat, pizzaGroup, wedges, flames, embers, fireLight,
         loose: [], melting: [], tool: 'tomato' as ToolId, dropped: 0, eaten: 0,
-        bake: 0, inOven: false, ovenT: 0, ended: false,
+        bake: 0, inOven: false, ovenT: 0, ended: false, smokeT: 0,
+        smoke: particles(stage, 200),
         orbit: orbitCam(stage, 1.55, 1.05, [0, 0.06, 0]),
         step: fixedStep()
       }
       paintUI()
+      paintBake()
 
       /* Les vrais modèles remplacent les primitives dès qu'ils sont là. Le jeu
          reste jouable pendant le chargement grâce au jeu de secours. */
@@ -498,7 +515,7 @@ export const pizza: GameDef = {
           eatWedge(Math.min(SLICES - 1, Math.floor(ang / step)))
           return
         }
-        if (S.inOven) { ctx.toast('Sors-la du four d\'abord ! 🍽️'); return }
+        if (S.inOven) { sfx('tick', { vol: 0.3, rate: 0.7 }); return }
         // Un peu de dispersion : deux taps au même endroit ne donnent pas deux clones
         drop(S.tool, p.x + (Math.random() - 0.5) * 0.04, p.z + (Math.random() - 0.5) * 0.04)
         S.dropped++
@@ -518,7 +535,6 @@ export const pizza: GameDef = {
           S.tool = b.dataset.t as ToolId
           sPop()
           paintUI()
-          $('pzHint').style.opacity = '0'
         }
       })
       $('pzOven').onclick = () => toOven(true)
@@ -539,25 +555,37 @@ export const pizza: GameDef = {
         S.orbit.height = 1.02 - Math.abs(pizzaGroup.position.z) * 0.36
         S.orbit.update(dt)
 
-        // Cuisson : la pâte dore, le fromage fond
-        if (S.inOven && S.bake < 1) {
-          S.bake = Math.min(1, S.bake + dt / 14)
-          const k = S.bake
+        // Cuisson : la pâte dore, le fromage fond… et si on l'oublie, elle
+        // noircit et fume (aucune note : c'est une pizza, pas un examen)
+        if (S.inOven && S.bake < BURNT) {
+          S.bake = Math.min(BURNT, S.bake + dt / 14)
+          const k = Math.min(1, S.bake)
+          const burn = Math.max(0, (S.bake - 1.1) / (BURNT - 1.1))
           const tint = (a: number, b: number, cc: number) => {
             const c1 = new T.Color(a), c2 = new T.Color(b), c3 = new T.Color(cc)
-            return k < 0.55 ? c1.lerp(c2, k / 0.55) : c2.lerp(c3, (k - 0.55) / 0.45)
+            const col = k < 0.55 ? c1.lerp(c2, k / 0.55) : c2.lerp(c3, (k - 0.55) / 0.45)
+            return burn > 0 ? col.lerp(new T.Color(0x2A1B12), burn) : col
           }
           S.doughMat.color.copy(tint(0xFFFFFF, 0xE8C793, 0xB98149))
           S.crustMat.color.copy(tint(0xE9C88A, 0xD79E52, 0x9C6027))
           S.sideMat.color.copy(tint(0xEBD3A2, 0xD8A863, 0xA26B33))
+          paintBake()
+          if (burn > 0) {
+            S.smokeT += dt
+            if (S.smokeT > 0.22) {
+              S.smokeT = 0
+              S.smoke.burst({ x: (Math.random() - 0.5) * 0.5, y: 0.12, z: pizzaGroup.position.z + 0.2 },
+                { count: 3, color: [0x5A5A5A, 0x8A8A8A], speed: 0.25, spread: 0.3, life: 1.8, size: 0.16 + burn * 0.1, gravity: -0.35 })
+            }
+          }
           // L'échelle de base vient de fitModel : on la MULTIPLIE, sinon un
           // glTF ramené à 0.1 repasse à 1 et le fromage avale la pizza
           for (const m of S.melting) {
             if (m.base === undefined) m.base = m.obj.scale.x
             m.obj.scale.set(m.base * (1 + k * 0.25), m.base * Math.max(0.3, 1 - k * 0.7), m.base * (1 + k * 0.25))
           }
-          $('pzState').textContent = k < 0.4 ? '🔥 Ça chauffe…' : k < 0.85 ? '😋 Ça sent bon !' : '🍕 Bien dorée !'
         }
+        S.smoke.update(dt)
 
         // Le feu danse : chaque langue a son rythme, les braises montent
         for (const f of S.flames) {
@@ -583,7 +611,7 @@ export const pizza: GameDef = {
           if ((it.t > 0.3 && it.body.velocity.length() < 0.12) || it.t > 5) {
             S.loose.splice(i, 1)
             attach(it)
-            tone(520 + Math.random() * 90, 0.05, 'sine', 0.05)
+            sfx('tick', { vol: 0.25, rate: 1.4 + Math.random() * 0.3 })
           }
         }
 
@@ -607,6 +635,7 @@ export const pizza: GameDef = {
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', onUp)
         sauceTex.dispose()
+        S.smoke.dispose()
         stage.dispose()
       }
     })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })

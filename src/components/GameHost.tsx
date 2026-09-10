@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFerme } from '../core/store'
 import { gameById } from '../games'
-import type { FinishPayload, GameContext, Profile, Tier } from '../core/types'
+import type { FinishPayload, GameContext, Tier } from '../core/types'
 import { toast } from '../core/utils'
 import { confetti, FX } from '../core/fx'
 import { say, shutUp } from '../core/voice'
@@ -22,16 +22,24 @@ interface Result extends FinishPayload {
 
 const TITLE_CARD_MS = 1500
 
-function Face({ p, px = 54 }: { p: Profile; px?: number }) {
-  return p.avatar
-    ? <span className="face-sprite" style={{ width: px, height: px, backgroundImage: `url(${p.avatar})` }} />
-    : <span className="face-blank" style={{ width: px, height: px }} />
+/* La difficulté se choisit DANS le jeu (10/09) : trois boutons, zéro lecture —
+   une fleur (douce), un éclair (normale), une flamme (expert). Le dernier
+   choix est retenu par jeu et proposé en premier au coup d'après. */
+const TIERS: Tier[] = ['easy', 'med', 'exp']
+const TIER_ICON: Record<Tier, string> = { easy: ICON.flower, med: ICON.bolt, exp: ICON.flame }
+const tierKey = (gameId: string) => `ferme:niveau:${gameId}`
+function lastTier(gameId: string): Tier | null {
+  try {
+    const v = localStorage.getItem(tierKey(gameId))
+    if (v === 'easy' || v === 'med' || v === 'exp') return v
+  } catch { /* stockage refusé : tant pis */ }
+  return null
 }
 
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
-export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boolean; onHome: () => void }) {
+export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => void }) {
   const game = gameById(gameId)!
   const creative = game.cat === 'creatif'
   const rootRef = useRef<HTMLDivElement>(null)
@@ -39,14 +47,12 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   const sessionRef = useRef<Session | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [runId, setRunId] = useState(0)
-  const [turn, setTurn] = useState(0)
-  const [interstitial, setInterstitial] = useState<Result | null>(null)
-  const [duelDone, setDuelDone] = useState<Result[] | null>(null)
   const [crashed, setCrashed] = useState(false)
+  // Tant que la difficulté n'est pas choisie, le jeu n'est pas monté
+  const [tier, setTier] = useState<Tier | null>(null)
   const [card, setCard] = useState(true)
   const [paused, setPausedState] = useState(isPaused())
   const [outro, setOutro] = useState(false)
-  const duelResults = useRef<Result[]>([])
   const store = useFerme()
 
   // La planche des animaux, pour montrer le nouveau sticker en vrai sprite
@@ -99,14 +105,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     return () => { off(); document.removeEventListener('visibilitychange', onVis) }
   }, [game.music, result])
 
-  // En duel, l'ordre est figé au montage : la joueuse sélectionnée commence
-  const playersRef = useRef<Profile[]>([])
-  if (playersRef.current.length === 0) {
-    const cur = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
-    const other = store.profiles.find(p => p.id !== cur.id) || cur
-    playersRef.current = duel ? [cur, other] : [cur]
-  }
-  const profile = playersRef.current[Math.min(turn, playersRef.current.length - 1)]
+  const profile = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
 
   // Cérémonie des étoiles : chaque étoile gagnée sonne et étincelle
   useEffect(() => {
@@ -123,7 +122,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
   }, [result])
 
   useEffect(() => {
-    if (!rootRef.current) return
+    if (!rootRef.current || !tier) return
     setResult(null)
     setCrashed(false)
     setOutro(false)
@@ -134,11 +133,6 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
     const p = profile
     const session = new Session()
     sessionRef.current = session
-    // Difficulté adaptative : le palier choisi par le parent, décalé en
-    // silence d'un cran max selon les dernières parties (voir reward()).
-    const TIERS: Tier[] = ['easy', 'med', 'exp']
-    const shift = Math.round(useFerme.getState().progressOf(p.id).adapt?.[gameId] ?? 0)
-    const tier = TIERS[Math.max(0, Math.min(2, TIERS.indexOf(p.tier) + shift))]
     let finished = false
     // Deux cérémonies, pas une : gagner et perdre ne se ressemblent pas
     const ceremony = (res: Result) => {
@@ -178,10 +172,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
           setPaused(true)
           ceremony(res)
           setTimeout(() => playClip(p.id, payload.stars >= 2 ? 'bravo' : 'retry'), 800)
-          if (!duel) { setResult(res); return }
-          duelResults.current = [...duelResults.current.slice(0, turn), res]
-          if (turn === 0) setInterstitial(res)
-          else setDuelDone([...duelResults.current])
+          setResult(res)
         }, outroMs)
       }
     }
@@ -203,7 +194,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         }
       })
     }
-    const waitFs = document.fullscreenEnabled && !document.fullscreenElement && runId === 0 && turn === 0
+    const waitFs = document.fullscreenEnabled && !document.fullscreenElement && runId === 0
     if (waitFs) document.addEventListener('fullscreenchange', doMount)
     const mountT = window.setTimeout(doMount, waitFs ? 350 : 0)
     return () => {
@@ -215,55 +206,61 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
       stopMusic()
       shutUp()
     }
-  }, [gameId, runId, turn])
+  }, [gameId, runId, tier])
 
   const replay = () => { setPaused(false); setResult(null); setRunId(r => r + 1) }
 
-  const startSecondTurn = () => {
+  /** Choisir (ou changer) la difficulté : le jeu repart de zéro à ce niveau. */
+  const pickTier = (t: Tier) => {
+    try { localStorage.setItem(tierKey(gameId), t) } catch { /* stockage refusé */ }
+    tone(520, 0.12, 'sine', 0.1)
     setPaused(false)
-    setInterstitial(null)
-    setTurn(1)
-  }
-
-  const restartDuel = () => {
-    setPaused(false)
-    duelResults.current = []
-    setDuelDone(null)
-    setInterstitial(null)
-    setTurn(0)
+    setResult(null)
+    setTier(t)
     setRunId(r => r + 1)
   }
-
-  const duelMessage = (rs: Result[]) => {
-    const [a, b] = rs
-    if (a.stars === b.stars) return 'Égalité parfaite, bravo les deux !'
-    const winner = a.stars > b.stars ? playersRef.current[0] : playersRef.current[1]
-    return `${winner.name} brille un peu plus fort cette fois. Bravo les deux !`
-  }
+  const askTier = () => { setPaused(false); setResult(null); setTier(null) }
 
   return (
     <section className="screen play active">
-      {/* Barre flottante : maison, (joueuse en duel), pause, rejouer */}
+      {/* Barre flottante : maison, son, pause, rejouer */}
       <div className="playbar">
         <button className="pbtn" onClick={goHome} aria-label="Menu"><Svg html={ICON.home} /></button>
-        {duel && <span className="playbar-who"><Face p={profile} px={30} /><b>{profile.name}</b></span>}
         <span className="playbar-right">
+          {tier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={askTier} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
           <button className="pbtn" onClick={() => { store.toggleSound(); if (store.sound) shutUp() }} aria-label="Son"><Svg html={store.sound ? ICON.sound : ICON.mute} /></button>
           <button className="pbtn" onClick={() => setPaused(true)} aria-label="Pause"><Svg html={ICON.pause} /></button>
           <button className="pbtn" onClick={replay} aria-label="Rejouer"><Svg html={ICON.replay} /></button>
         </span>
       </div>
 
-      <div className={'gameroot' + (outro ? ' outro' : '')} ref={rootRef} key={gameId + ':' + runId + ':' + turn} />
+      <div className={'gameroot' + (outro ? ' outro' : '')} ref={rootRef} key={gameId + ':' + runId + ':' + (tier ?? '-')} />
 
-      {card && (
+      {/* Le choix du niveau remplace le carton titre : même carte, trois boutons */}
+      {!tier && (
+        <div className="tierpick">
+          <span className={'titlecard-sq ' + game.sq}>{game.icon}</span>
+          <span className="titlecard-name">{game.name}</span>
+          <div className="tierrow">
+            {TIERS.map(t => (
+              <button key={t} className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
+                onClick={() => pickTier(t)} aria-label={t}>
+                <Svg html={TIER_ICON[t]} />
+                <span className="tierdots">{TIERS.slice(0, TIERS.indexOf(t) + 1).map((_, i) => <i key={i} />)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tier && card && (
         <div className="titlecard" aria-hidden="true">
           <span className={'titlecard-sq ' + game.sq}>{game.icon}</span>
           <span className="titlecard-name">{game.name}</span>
         </div>
       )}
 
-      {paused && !result && !crashed && !interstitial && !duelDone && (
+      {paused && !result && !crashed && tier && (
         <div className="pausewall" onClick={() => setPaused(false)}>
           <button className="pbtn pbtn-big" aria-label="Reprendre"><Svg html={ICON.play} /></button>
         </div>
@@ -282,7 +279,7 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         </div>
       )}
 
-      {result && !duel && (
+      {result && (
         /* Sur un jeu d'adresse, taper N'IMPORTE OÙ relance : réessayer doit
            coûter un geste, pas une visée. Le bouton reste pour les autres. */
         <div id="result" className={'show' + (game.cat === 'action' ? ' quickretry' : '') + (result.stars === 1 && !creative ? ' lost' : '')}
@@ -308,42 +305,6 @@ export function GameHost({ gameId, duel, onHome }: { gameId: string; duel: boole
         </div>
       )}
 
-      {interstitial && (
-        <div id="result" className="show">
-          <div className="modal">
-            <h2>{playersRef.current[0].name}</h2>
-            <Svg className="stars" html={starsHTML(interstitial.stars)} />
-            <p>{interstitial.msg}</p>
-            <div className="duel-next">
-              <Face p={playersRef.current[1]} px={64} />
-              <div className="duel-next-txt">Au tour de <b>{playersRef.current[1].name}</b> !</div>
-            </div>
-            <div className="rbtns">
-              <button className="bigbtn primary" onClick={startSecondTurn}><Svg html={ICON.versus} /> C'est parti !</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {duelDone && (
-        <div id="result" className="show">
-          <div className="modal">
-            <h2>Résultat du défi</h2>
-            {duelDone.map((r, i) => (
-              <div className="duelrow" key={i}>
-                <Face p={playersRef.current[i]} px={44} />
-                <span className="duelname">{playersRef.current[i].name}</span>
-                <Svg className="duelstars" html={starsHTML(r.stars)} />
-              </div>
-            ))}
-            <p style={{ marginTop: 10 }}>{duelMessage(duelDone)}</p>
-            <div className="rbtns">
-              <button className="bigbtn primary" onClick={restartDuel}><Svg html={ICON.versus} /> Revanche !</button>
-              <button className="bigbtn ghost" onClick={goHome}><Svg html={ICON.home} /> Menu</button>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   )
 }

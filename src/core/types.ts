@@ -46,8 +46,6 @@ export interface GameDef {
   sq: string
   cat: GameCategory
   subtitle: string
-  /** false = pas de Défi à deux (jeux créatifs sans score : comparer n'a pas de sens). */
-  duel?: boolean
   /** Thème de musique d'ambiance générative (voir core/music.ts) ; absent = silence. */
   music?: string
   /** Monte le jeu dans root et renvoie une fonction de nettoyage idempotente. */

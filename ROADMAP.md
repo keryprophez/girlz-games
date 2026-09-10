@@ -240,6 +240,19 @@ sur l'écran de fin, sessions A puis B puis C.
   sont figés (plus de tour qui tremble), seuls les ratés et les morceaux
   vivent en physique.
 
+- ✅ **La Pizzeria sans un mot** : outils en rendus du Food Kit (plus d'emoji),
+  four et sortie en icônes, barre de cuisson crème → doré → brun → noir à la
+  place des phrases, et la pizza **brûle** si on l'oublie (elle noircit et
+  fume, particules GPU). Sons de gestes, timers de partie.
+
+- ✅ **Coquille simplifiée (demande du 10/09)** : le **Défi à deux est
+  supprimé** (accueil, coquille, contrat `GameDef`, CSS, bots) ; la fenêtre de
+  **sauvegarde est retirée** ; le choix de joueuse est **masqué** derrière un
+  drapeau dans `Home.tsx`. L'accueil n'est plus qu'une grille de jeux, et la
+  **difficulté se choisit dans chaque jeu** : trois boutons sans lecture
+  (fleur, éclair, flamme), dernier niveau retenu par jeu, bouton de la barre
+  en jeu pour en changer.
+
 Ordre pour la suite :
 
 `pizza` (échelle des

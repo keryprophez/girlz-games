@@ -359,7 +359,7 @@ function animalJumps(me: State, countryName: string) {
 
 /* ---------- Montage ---------- */
 export const geoGame: GameDef = {
-  id: 'geo', name: 'Le Tour du Monde', icon: '🌍', sq: 'sq-sky', cat: 'reflexion', duel: false, music: 'space',
+  id: 'geo', name: 'Le Tour du Monde', icon: '🌍', sq: 'sq-sky', cat: 'reflexion', music: 'space',
   subtitle: 'Le vrai globe, les vrais pays, et la France avec ses régions et ses villes',
   mount(c) {
     ctx = c

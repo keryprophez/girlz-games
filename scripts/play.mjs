@@ -62,7 +62,9 @@ if (!gl) {
 const openGame = async (name) => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.locator('.gc:not(.gc-duel)', { hasText: name }).first().click()
+  await page.locator('.gc', { hasText: name }).first().click()
+  // Le niveau se choisit dans le jeu : les bots jouent en douce
+  await page.locator('.tierbtn.tier-easy').click()
   await page.waitForTimeout(3200)
 }
 

@@ -108,7 +108,7 @@ function finish() {
 }
 
 export const coloring: GameDef = {
-  id: 'coloring', name: 'Coloriage', icon: '🎨', sq: 'sq-sun', cat: 'creatif', duel: false, music: 'meadow',
+  id: 'coloring', name: 'Coloriage', icon: '🎨', sq: 'sq-sun', cat: 'creatif', music: 'meadow',
   subtitle: 'Choisis une couleur, puis tape sur un morceau du dessin',
   mount(c) {
     ctx = c
