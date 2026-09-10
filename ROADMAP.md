@@ -231,9 +231,18 @@ sur l'écran de fin, sessions A puis B puis C.
   et suivi de caméra, outro au ralenti sur les caisses restantes. Bot
   `stand-six-caisses` (vise la caisse debout la plus basse).
 
+- ✅ **`icetower` : le porte-à-faux casse**. Le bloc est jugé à
+  l'atterrissage : ce qui dépasse du bloc du dessous se détache (un vrai
+  morceau qui tombe, son de glace, éclats) et le bloc suivant a la largeur
+  de ce qui reste — la précision se paie au bloc suivant, la tour s'affine.
+  Trop peu de recouvrement = il bascule, un cœur. Un parfait garde la
+  largeur ; trois parfaits d'affilée en redonnent un peu. Les blocs posés
+  sont figés (plus de tour qui tremble), seuls les ratés et les morceaux
+  vivent en physique.
+
 Ordre pour la suite :
 
-`icetower` (porte-à-faux qui casse, migration sur `createStage`) → `pizza` (échelle des
+`pizza` (échelle des
 ingrédients à la cuisson) → `ninja` (rampe) → tuiles de l'accueil encore en
 emoji → sonde de fréquence d'images sur la tablette.
 

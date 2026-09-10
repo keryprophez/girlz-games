@@ -11,24 +11,30 @@ import { sfx, preloadSfx } from '../core/sfx'
 /* La Tour de Glace — l'archétype du bon jeu Flash : UN SEUL GESTE, un plafond
    d'adresse infini, un ÉCHEC RÉEL, un réessai immédiat.
 
-   Un bloc de glace se balance au bout d'une grue. Un tap le lâche. La physique
-   décide : bien centré → la tour monte et le combo « PARFAIT » grimpe ; décalé
-   → le bloc dépasse, la tour penche, et elle peut s'écrouler. Le balancier
-   accélère avec chaque bloc posé (la rampe suit la performance), les blocs
-   rétrécissent à mesure qu'on monte, et un « tic » à chaque extrémité du
-   balancier fait jouer à l'oreille. Quand la tour tombe, on la VOIT tomber
-   (outro au ralenti), puis seulement le score.
+   Un bloc de glace se balance au bout d'une grue. Un tap le lâche. Bien
+   centré → PARFAIT, la tour monte et le combo grimpe ; décalé → le
+   PORTE-À-FAUX CASSE : ce qui dépasse du bloc du dessous se détache et
+   tombe pour de vrai, et le bloc suivant a la largeur de ce qui reste. La
+   précision se paie au bloc suivant, la tour s'affine — jusqu'au bloc qui ne
+   recouvre plus assez et bascule : un cœur. Trois parfaits d'affilée
+   redonnent un peu de largeur. Le balancier accélère avec chaque bloc posé
+   (la rampe suit la performance), un « tic » à chaque extrémité fait jouer à
+   l'oreille. Quand ça tombe, on le VOIT tomber (outro au ralenti), puis
+   seulement le score.
 
-   Premier jeu sur core/arcade.ts + core/scene3d.ts (2/09). Aucun palier de
-   déblocage : la seule récompense est de mieux jouer. */
+   Premier jeu sur core/arcade.ts + core/scene3d.ts (2/09) ; découpe du
+   porte-à-faux le 10/09. Aucun palier de déblocage : la seule récompense est
+   de mieux jouer. */
 
 const BLOCK_H = 0.34
 const BASE_W = 1.5
 const CRANE_H = 1.65       // le bloc doit TOUJOURS rester visible au-dessus du sommet
 const SETTLE_S = 1.3
 const OUTRO_MS = 1800
+const PERFECT = 0.075        // décalage toléré pour un parfait (m)
+const MIN_OVERLAP = 0.2      // en dessous, le bloc ne tient pas : il bascule
 
-interface Block { mesh: import('three').Mesh; body: import('cannon-es').Body; w: number }
+interface Block { mesh: import('three').Mesh; body: import('cannon-es').Body; w: number; x: number }
 interface Swing extends Block { y: number; t: number; dropped: boolean; dropAt: number; lastSide: number }
 
 interface State {
@@ -43,7 +49,11 @@ interface State {
   game: Arcade
   fx: Particles
   shake: CamShake
+  /** Les blocs qui bougent encore : ratés au sol, morceaux cassés. */
   blocks: Block[]
+  /** La tour posée, du bas vers le haut (corps figés : elle ne tremble pas). */
+  tower: Block[]
+  perfectRun: number
   swing: Swing | null
   placed: number
   topY: number
@@ -81,16 +91,28 @@ function iceTex(T: T3): import('three').Texture {
   return t
 }
 
-/** Un nouveau bloc part se balancer au bout de la grue. */
-function nextBlock(me: State) {
-  const { T, CANNON, RB } = me
-  const w = Math.max(0.62, BASE_W - me.placed * 0.028)   // ça rétrécit : la difficulté monte
-  const y = me.topY + CRANE_H
+/** Le bloc du dessus : le socle, ou le dernier posé (déjà découpé). */
+function topOf(me: State): { x: number; w: number } {
+  return me.tower.length ? me.tower[me.tower.length - 1] : { x: 0, w: BASE_W + 0.35 }
+}
+
+function iceMesh(me: State, w: number) {
+  const { T, RB } = me
   const mesh = new T.Mesh(
     new RB.RoundedBoxGeometry(w, BLOCK_H, 0.82, 3, 0.045),
     new T.MeshStandardMaterial({ map: me.iceMap, color: 0x5FA8D4, roughness: 0.2, metalness: 0.1 })
   )
   mesh.castShadow = true; mesh.receiveShadow = true
+  return mesh
+}
+
+/** Un nouveau bloc part se balancer au bout de la grue — aussi large que le
+    sommet de la tour : c'est la découpe qui fait rétrécir. */
+function nextBlock(me: State) {
+  const { CANNON } = me
+  const w = Math.min(BASE_W, topOf(me).w)
+  const y = me.topY + CRANE_H
+  const mesh = iceMesh(me, w)
   me.stage.scene.add(mesh)
   const body = new CANNON.Body({
     mass: 1.1, material: me.matIce,
@@ -102,7 +124,7 @@ function nextBlock(me: State) {
   body.allowSleep = true
   body.sleepSpeedLimit = 0.2
   body.sleepTimeLimit = 0.35
-  me.swing = { mesh, body, w, y, t: Math.random() * 6.28, dropped: false, dropAt: 0, lastSide: 0 }
+  me.swing = { mesh, body, w, x: 0, y, t: Math.random() * 6.28, dropped: false, dropAt: 0, lastSide: 0 }
   me.cable.visible = true
 }
 
@@ -132,15 +154,28 @@ function judge(me: State) {
   const q = s.body.quaternion
   const tilted = Math.abs(new T.Euler().setFromQuaternion(new T.Quaternion(q.x, q.y, q.z, q.w)).z) > 0.5
   const p = s.body.position
+  const below = topOf(me)
+  // Le recouvrement avec le bloc du dessous : c'est lui qui reste debout
+  const l = Math.max(p.x - s.w / 2, below.x - below.w / 2)
+  const r = Math.min(p.x + s.w / 2, below.x + below.w / 2)
+  const overlap = r - l
 
-  if (fell || tilted) {
+  if (fell || tilted || overlap < MIN_OVERLAP) {
     // ÉCHEC RÉEL : le bloc a raté la tour. Un vrai fracas, la caméra tremble.
+    if (!fell && !tilted) {
+      // Trop peu de recouvrement : il bascule du côté où il dépasse
+      const side = p.x >= below.x ? 1 : -1
+      s.body.wakeUp()
+      s.body.velocity.set(side * 1.2, 0.4, 0)
+      s.body.angularVelocity.set(0, 0, -side * 3)
+    }
     impact(0.95, { matter: 'glace', noShake: true })
     me.shake.hit(0.9)
     me.fx.burst(p, { count: 26, color: [0xDFF3FF, 0x9ED2F0, 0xFFFFFF], speed: 3.2, life: 0.9, size: 0.11 })
     me.game.flash(ICON.heartEmpty, 'bad')
     me.blocks.push(s)     // il reste dans la scène, tombé au sol : la preuve de l'erreur
     me.swing = null
+    me.perfectRun = 0
     const dead = me.game.hurt()
     if (dead) { gameOver(me, false); return }
     me.busy = false
@@ -148,11 +183,26 @@ function judge(me: State) {
     return
   }
 
-  // Posé !
+  // Posé ! Le bloc devient une pierre de la tour : figé, aligné, découpé
   me.placed++
   me.topY += BLOCK_H
-  me.blocks.push(s)
-  const perfect = dx < 0.075
+  const perfect = Math.abs(p.x - below.x) < PERFECT
+  const keptW = perfect ? s.w : overlap
+  const keptX = perfect ? below.x : (l + r) / 2
+  if (!perfect) breakOverhang(me, s, l, r)
+  settle(me, s, keptW, keptX, expected)
+  me.tower.push(s)
+  if (perfect) me.perfectRun++
+  else me.perfectRun = 0
+  if (perfect && me.perfectRun % 3 === 0) {
+    // Trois parfaits d'affilée : la tour se remplume un peu
+    const w2 = Math.min(BASE_W, s.w + 0.14)
+    if (w2 > s.w) {
+      settle(me, s, w2, s.x, expected)
+      me.fx.burst({ x: s.x, y: expected + BLOCK_H / 2, z: 0.45 }, { count: 30, color: [0xFFFFFF, 0xDFF3FF, 0xFFE08A], speed: 2.6, life: 0.9, size: 0.1, gravity: 2 })
+      sfx('confirm', { vol: 0.7, rate: 1.2 })
+    }
+  }
   // La rampe suit la performance : chaque bloc posé accélère un peu le balancier
   me.swingSpeed = Math.min(me.swingSpeed * 1.035, ctx.byTier(1.05, 1.5, 1.9) * 1.8)
   if (perfect) {
@@ -174,6 +224,54 @@ function judge(me: State) {
   me.swing = null
   me.busy = false
   nextBlock(me)
+}
+
+/** Fige un bloc posé aux dimensions gardées : corps STATIQUE (mass 0 AVANT
+    updateMassProperties — piège connu), géométrie refaite à la bonne largeur. */
+function settle(me: State, b: Block, w: number, x: number, y: number) {
+  const { CANNON } = me
+  me.world.removeBody(b.body)
+  const body = new CANNON.Body({ mass: 0, material: me.matIce, shape: new CANNON.Box(new CANNON.Vec3(w / 2, BLOCK_H / 2, 0.41)) })
+  body.position.set(x, y, 0)
+  me.world.addBody(body)
+  b.body = body
+  b.mesh.geometry.dispose()
+  b.mesh.geometry = new me.RB.RoundedBoxGeometry(w, BLOCK_H, 0.82, 3, 0.045)
+  b.mesh.position.set(x, y, 0)
+  b.mesh.quaternion.set(0, 0, 0, 1)
+  b.w = w
+  b.x = x
+}
+
+/** Le porte-à-faux casse : ce qui dépasse devient un morceau libre qui tombe. */
+function breakOverhang(me: State, s: Swing, l: number, r: number) {
+  const { CANNON } = me
+  const p = s.body.position
+  const side = p.x >= (l + r) / 2 ? 1 : -1
+  const cw = s.w - (r - l)
+  if (cw < 0.03) return
+  const cx = side > 0 ? r + cw / 2 : l - cw / 2
+  const mesh = iceMesh(me, cw)
+  mesh.position.set(cx, p.y, 0)
+  me.stage.scene.add(mesh)
+  const body = new CANNON.Body({ mass: 0.5, material: me.matIce, shape: new CANNON.Box(new CANNON.Vec3(cw / 2, BLOCK_H / 2, 0.41)) })
+  body.position.set(cx, p.y, 0)
+  body.velocity.set(side * 0.6, 0.3, 0)
+  body.angularVelocity.set(0, 0, -side * 2.5)
+  me.world.addBody(body)
+  const chunk: Block = { mesh, body, w: cw, x: cx }
+  me.blocks.push(chunk)
+  sfx('glass', { vol: 0.6, rate: 1 + Math.random() * 0.2 })
+  me.fx.burst({ x: side > 0 ? r : l, y: p.y, z: 0.45 }, { count: 14, color: [0xDFF3FF, 0xFFFFFF], speed: 2, life: 0.7, size: 0.07, dir: { x: side, y: 0.6, z: 0.3 } })
+  // Le morceau disparaît une fois au sol, sans encombrer la scène
+  me.game.after(4000, () => {
+    if (it !== me) return
+    const i = me.blocks.indexOf(chunk)
+    if (i >= 0) me.blocks.splice(i, 1)
+    me.stage.scene.remove(mesh)
+    mesh.geometry.dispose()
+    me.world.removeBody(body)
+  })
 }
 
 function gameOver(me: State, collapsed: boolean) {
@@ -201,7 +299,7 @@ export const icetower: GameDef = {
     c.root.innerHTML = `<div class="arena it-arena" id="itArena"></div>`
     const arena = $('itArena')
     const hideLoader = loader(arena, '🧊')
-    preloadSfx(['tick', 'drop', 'confirm', 'pluck', 'error'])
+    preloadSfx(['tick', 'drop', 'glass', 'confirm', 'pluck', 'error'])
     let dead = false
 
     ;(async () => {
@@ -289,7 +387,7 @@ export const icetower: GameDef = {
         stage, T, CANNON, world, matIce, cable, RB,
         iceMap: stage.keep(iceTex(T)),
         game, fx: particles(stage, 500), shake: camShake(stage),
-        blocks: [], swing: null, placed: 0, topY: 0.3,
+        blocks: [], tower: [], perfectRun: 0, swing: null, placed: 0, topY: 0.3,
         swingSpeed: c.byTier(1.05, 1.5, 1.9),
         swingSpan: c.byTier(1.05, 1.35, 1.55),
         busy: false, camY: 1.1, over: false, tapHint
@@ -337,13 +435,10 @@ export const icetower: GameDef = {
           s.mesh.position.copy(s.body.position as unknown as import('three').Vector3)
           s.mesh.quaternion.copy(s.body.quaternion as unknown as import('three').Quaternion)
           const el = game.s.time - s.dropAt
-          if (!me.over && (el > SETTLE_S || (el > 0.2 && s.body.velocity.length() < 0.45))) judge(me)
-        }
-
-        // La tour s'est écroulée ? Le sommet réel a chuté → fin (et on regarde)
-        if (!me.over && me.placed >= 3) {
-          const top = me.blocks[me.blocks.length - 1]
-          if (top && top.body.position.y < me.topY - BLOCK_H * 2.5) gameOver(me, true)
+          // Jugé À L'ATTERRISSAGE, pas après : un bloc dont le centre dépasse
+          // le bord basculerait avant qu'on ait pu le découper
+          const landed = s.body.position.y <= me.topY + BLOCK_H / 2 + 0.02
+          if (!me.over && (landed || el > SETTLE_S || (el > 0.2 && s.body.velocity.length() < 0.45))) judge(me)
         }
 
         // La caméra suit le sommet (recul progressif : on voit la tour entière) ;

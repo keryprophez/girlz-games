@@ -126,8 +126,7 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` (`icetower`
-contourne encore `createStage` : à migrer). Pour un jeu de physique rigide
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole`. Pour un jeu de physique rigide
 (cannon-es) sur le socle, `stand3d.ts` est le modèle : `loadPhysics()`,
 `fixedStep` autour de `world.step`, corps figé avec `mass = 0`.
 
