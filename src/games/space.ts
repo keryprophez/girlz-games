@@ -155,7 +155,7 @@ function visit(id: string) {
   S.target = id
   S.flyT = 0
   tone(300, 0.18, 'sawtooth', 0.06)
-  setTimeout(() => tone(520, 0.16, 'sine', 0.07), 120)
+  tone(520, 0.16, 'sine', 0.07, 0.12)
   $('spFactBox').style.display = 'none'
 }
 

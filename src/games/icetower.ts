@@ -209,7 +209,7 @@ function judge(me: State) {
     // Le son monte avec le combo : la récompense sonore de l'adresse
     const c = me.game.s.combo
     tone(520 + Math.min(12, c) * 70, 0.13, 'sine', 0.13)
-    setTimeout(() => tone(720 + Math.min(12, c) * 80, 0.12, 'sine', 0.1), 90)
+    tone(720 + Math.min(12, c) * 80, 0.12, 'sine', 0.1, 0.09)
     me.fx.burst({ x: p.x, y: p.y + BLOCK_H / 2, z: p.z + 0.3 }, { count: 22, color: [0xFFE08A, 0xFFFFFF, 0xFFC533], speed: 2.4, life: 0.8, size: 0.1, gravity: 3 })
     me.game.hit(2, { perfect: true, silent: true })
     if (me.game.s.combo >= 4) me.game.flash('×' + me.game.s.combo)

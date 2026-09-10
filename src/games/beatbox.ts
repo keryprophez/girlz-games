@@ -25,14 +25,14 @@ const ROWS = [
       <circle cx="17" cy="24" r="1.7" fill="#B25A7B"/><circle cx="23" cy="24" r="1.7" fill="#B25A7B"/>
       <path d="M8,9 L13,13 M32,9 L27,13" stroke="#DE93AB" stroke-width="4" stroke-linecap="round"/>
       <circle cx="14" cy="15" r="1.8" fill="#45362A"/><circle cx="26" cy="15" r="1.8" fill="#45362A"/></svg>`,
-    play() { tone(150, 0.09, 'square', 0.12); setTimeout(() => tone(110, 0.09, 'square', 0.1), 60) }
+    play() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) }
   },
   {
     key: 'canard', color: '#4FB8E7',
     icon: `<svg viewBox="0 0 40 40" width="30" height="30"><circle cx="20" cy="20" r="15" fill="#FFE9A8" stroke="#DEC06A" stroke-width="2"/>
       <path d="M12,24 Q20,30 28,24 L28,27 Q20,33 12,27 Z" fill="#FFA94D" stroke="#E08A2E" stroke-width="1.5"/>
       <circle cx="14" cy="16" r="1.9" fill="#45362A"/><circle cx="26" cy="16" r="1.9" fill="#45362A"/></svg>`,
-    play() { tone(280, 0.1, 'sawtooth', 0.12); setTimeout(() => tone(230, 0.1, 'sawtooth', 0.1), 70) }
+    play() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) }
   },
   {
     key: 'poule', color: '#FFA94D',
@@ -40,7 +40,7 @@ const ROWS = [
       <path d="M13,9 Q15,3 18,8 Q20,2 23,8 Q25,3 27,9" fill="#FF6B81" stroke="#E04E63" stroke-width="1.5"/>
       <path d="M17,23 L23,23 L20,27 Z" fill="#FFA94D"/>
       <circle cx="15" cy="18" r="1.8" fill="#45362A"/><circle cx="25" cy="18" r="1.8" fill="#45362A"/></svg>`,
-    play() { tone(880, 0.05, 'triangle', 0.14); setTimeout(() => tone(1180, 0.06, 'triangle', 0.1), 45) }
+    play() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) }
   }
 ]
 

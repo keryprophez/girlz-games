@@ -19,15 +19,16 @@ let fw: any = null
 let ctx: GameContext
 
 function whistle() {
-  // Sifflement de fusée qui monte
-  for (let i = 0; i < 6; i++) setTimeout(() => tone(420 + i * 130, 0.07, 'sine', 0.05), i * 55)
+  // Sifflement de fusée qui monte — programmé sur l'horloge AUDIO : pas un
+  // seul timer qui survivrait au démontage
+  for (let i = 0; i < 6; i++) tone(420 + i * 130, 0.07, 'sine', 0.05, i * 0.055)
 }
 
 function explode(x: number, y: number, shape: string, cols: string[], big = false) {
   const P = fw.parts
   const n = big ? 90 : rnd(46, 64)
   sBoomReal()
-  setTimeout(() => sPopReal(), rnd(160, 320))
+  sPopReal(rnd(160, 320) / 1000)
   for (let i = 0; i < n; i++) {
     let a = Math.random() * Math.PI * 2
     let v = 1.6 + Math.random() * 2.6
@@ -48,7 +49,7 @@ function explode(x: number, y: number, shape: string, cols: string[], big = fals
       col: pick(cols), tw: Math.random() < 0.3
     })
   }
-  if (shape === 'double') setTimeout(() => fw && fw.running && explode(x + rnd(-40, 40), y + rnd(-30, 10), 'ring', pick(PALETTES)), 260)
+  if (shape === 'double') ctx.after(260, () => { if (fw && fw.running) explode(x + rnd(-40, 40), y + rnd(-30, 10), 'ring', pick(PALETTES)) })
 }
 
 function launch(tx: number, ty: number, shape?: string) {
@@ -135,21 +136,24 @@ function bouquet() {
   $('fwFinal').style.display = 'none'
   const N = 10
   for (let i = 0; i < N; i++) {
-    setTimeout(() => {
+    ctx.after(i * 420, () => {
       if (!fw || !fw.running) return
       launch(rnd(fw.w * 0.12, fw.w * 0.88), rnd(fw.h * 0.12, fw.h * 0.5))
-    }, i * 420)
+    })
   }
-  setTimeout(() => {
+  ctx.after(N * 420 + 500, () => {
     if (!fw || !fw.running) return
     explode(fw.w / 2, fw.h * 0.3, 'burst', ['#FFD34D', '#FFFFFF', '#FF9E7A'], true)
     confetti()
-    setTimeout(() => fw && fw.running && ctx.finish({
-      title: 'Quel spectacle !',
-      msg: `${ctx.playerName} a illuminé tout le ciel`,
-      stars: 3, starsEarned: 3
-    }), 1600)
-  }, N * 420 + 500)
+    ctx.after(1600, () => {
+      if (!fw || !fw.running) return
+      ctx.finish({
+        title: 'Quel spectacle !',
+        msg: `${ctx.playerName} a illuminé tout le ciel`,
+        stars: 3, starsEarned: 3
+      })
+    })
+  })
 }
 
 export const fireworks: GameDef = {

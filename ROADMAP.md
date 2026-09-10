@@ -266,6 +266,14 @@ sur l'écran de fin, sessions A puis B puis C.
   en douce, 2 en normale, 1 en expert), coûte un cœur. Frôler un piment sans
   le trancher déclenche un « ouf » : le near-miss qui manquait.
 
+- ✅ **Plus un seul `setTimeout` dans les jeux**. Les 14 restants (Feu
+  d'artifice, Tour du Monde, Boîte à rythme, Tour de Glace, Espace) sont
+  passés soit aux timers de partie (`ctx.after`, annulés au démontage et
+  suspendus en pause), soit — pour les queues de son — à un **délai sur
+  l'horloge audio** : `tone()`, `sPopReal()`, `sBoomReal()` et `noiseBurst()`
+  acceptent désormais un délai en secondes. Plus rien ne sonne après le
+  retour au menu, et les mélodies ne dérivent plus sous la charge.
+
 Ordre pour la suite :
 
 `pizza` (échelle des

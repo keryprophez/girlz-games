@@ -277,7 +277,7 @@ function judge(me: State, ok: boolean, tappedName: string | null) {
     sfx('confirm', { vol: 0.8 })
     me.ui.dots.querySelectorAll('i')[me.asked - 1]?.classList.add('ok')
     me.stage.timeScale = 1
-    window.setTimeout(() => { if (geo === me) nextQuestion(me) }, 1400)
+    ctx.after(1400, () => { if (geo === me) nextQuestion(me) })
     return
   }
   me.tries++
@@ -295,7 +295,7 @@ function reveal(me: State) {
   else if (t.kind === 'pays') selectCountry(me, t.name, false)
   else if (t.kind === 'region') selectRegion(me, t.nom)
   else pulseCity(me, t.city)
-  window.setTimeout(() => { if (geo === me) speak(me) }, 700)
+  ctx.after(700, () => { if (geo === me) speak(me) })
 }
 
 function finishRound(me: State) {
