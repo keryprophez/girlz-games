@@ -185,6 +185,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
       cancelAnimationFrame(raf)
       unPause()
       window.removeEventListener('resize', onResize)
+      ro?.disconnect()
       disposeTree(T, scene)
       extras.forEach(r => { try { r.dispose() } catch { /* déjà libéré */ } })
       extras.length = 0
@@ -204,6 +205,14 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
     renderer.setSize(w, h)
   }
   window.addEventListener('resize', onResize)
+  /* L'arène change aussi de taille SANS que la fenêtre bouge : la barre d'outils
+     d'un jeu se replie et il reste une bande noire sous le canvas (vécu sur la
+     Pizzeria le 12/09). On observe donc l'arène elle-même. */
+  let ro: ResizeObserver | null = null
+  try {
+    ro = new ResizeObserver(() => onResize())
+    ro.observe(arena)
+  } catch { /* navigateur sans ResizeObserver : le resize fenêtre suffit */ }
 
   return stage
 }

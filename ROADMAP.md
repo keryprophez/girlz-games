@@ -20,7 +20,8 @@ jeu par itération, livré, joué, capturé.
   contenu. Le moteur de voix est gardé, il servira ensuite.
 - Apprendre **sans sanction** : plus de vies, chrono ni bonus de vitesse dans
   les exercices (à retirer de `intrus` en phase 2 ; `quiz` est sorti).
-- `pizza` **gelée** dans Créer : on n'y investit plus.
+- `pizza` était gelée dans Créer ; **dégelée le 12/09** à la demande du père
+  (contrôles incompréhensibles) : cuisson refaite en mini-jeu.
 - Tablette cible : **Samsung Galaxy Tab A9+** (Snapdragon 695, Adreno 619,
   1920×1200). Réglages 3D à mesurer dessus avant de toucher aux ombres.
 - Pas de base cloud : photos et voix restent locales (règle 3). L'export JSON
@@ -292,10 +293,35 @@ sur l'écran de fin, sessions A puis B puis C.
   Enfin, l'Intrus, Memory et la Chasse aux lettres montrent de **vraies
   photos** libres de droit à la place des dessins.
 
+- ✅ **Trois demandes du 12/09 (deuxième passe tablette).**
+  - **Géographie** : le jeu ne disait plus rien de ce qu'il fallait faire.
+    La question est désormais écrite ET illustrée (l'image de l'animal
+    cherché, le drapeau du pays), le nom du lieu touché s'affiche dans un
+    bandeau et se fait dire à la voix (contenu pédagogique : c'est permis),
+    un bouton haut-parleur le répète, les quatre boutons de la barre portent
+    leur mot (Le monde / La France / Explore / Trouve) et les 177 noms de pays
+    sont en français (`public/assets/geo/countries-fr.json`, généré depuis
+    CLDR). Corrigé aussi : la face visible du globe restait dans le noir— une
+    lampe est accrochée à la caméra.
+  - **Grand Tableau × et +** : un bouton « Tout montrer » révèle les 100 cases
+    en cascade dans le mode Explore, pour que Joyce puisse LIRE le tableau au
+    lieu de taper case par case ; un second appui le referme.
+  - **La Pizzeria** : cinq boutons à l'écran, on ne comprenait pas comment
+    sortir la pizza. Le jeu a maintenant **trois temps, une seule action à la
+    fois** : on garnit (les outils seuls), un gros bouton unique enfourne, puis
+    la cuisson devient un **vrai mini-jeu** — une jauge se remplit, une zone
+    verte s'illumine et carillonne, un tic-tac s'accélère, et il faut taper
+    « Sortir ! » au bon moment. Trop tôt : la pizza est pâle et repart au four
+    (aucune sanction, on est dans Créer) ; trop tard : elle est noire et fume.
+    La dorée suit la jauge, la durée suit le niveau (10 s en douce, 4,5 s en
+    expert). Côté garniture : on **saupoudre en gardant le doigt posé**, chaque
+    ingrédient a sa note, une pincée de farine se soulève à l'atterrissage,
+    et le fromage est enfin une flaque fondue (le modèle « cheese-cut » du kit
+    posait une meule ET son couteau à manche bleu sur la pizza).
+
 Ordre pour la suite :
 
-`pizza` (échelle des
-ingrédients à la cuisson) → `ninja` (rampe) → tuiles de l'accueil encore en
+`ninja` (rampe) → tuiles de l'accueil encore en
 emoji → sonde de fréquence d'images sur la tablette.
 
 Chaque itération : une demi-page de design (geste, enjeu, rampe, outro,

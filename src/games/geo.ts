@@ -57,6 +57,12 @@ const ANIMALS: { frame: string; fr: string; continent: ContinentId }[] = [
   { frame: 'whale', fr: 'la baleine', continent: 'antarctique' }
 ]
 
+/** Les 177 pays en français (CLDR, généré dans public/assets/geo/countries-fr.json).
+    Rempli au chargement : avant, toucher la Pologne disait « l'Europe ». */
+let FR_NAMES: Record<string, string> = {}
+/** Le nom à ÉCRIRE et à DIRE pour un pays. */
+const frCountry = (en: string) => FR_NAMES[en] || COUNTRIES_FR[en] || en
+
 /** Les pays de la question « Trouve le pays » : nom Natural Earth → nom dit. */
 const COUNTRIES_FR: Record<string, string> = {
   France: 'la France', Spain: "l'Espagne", Italy: "l'Italie", Germany: "l'Allemagne", 'United Kingdom': "l'Angleterre",
@@ -161,7 +167,10 @@ interface State {
   total: number
   busy: boolean
   over: boolean
-  ui: { bar: HTMLElement; ask: HTMLElement; askImg: HTMLElement; say: HTMLElement; dots: HTMLElement; done: HTMLElement }
+  ui: { bar: HTMLElement; ask: HTMLElement; askImg: HTMLElement; askText: HTMLElement; say: HTMLElement
+    dots: HTMLElement; done: HTMLElement; name: HTMLElement; hint: HTMLElement }
+  /** Dernier nom affiché : le haut-parleur du bandeau le redit. */
+  lastName: string | null
   camFrom: import('three').Vector3
   camTo: import('three').Vector3
   camLook: import('three').Vector3
@@ -229,13 +238,30 @@ function pulseCity(me: State, city: typeof CITIES[number] | null) {
 }
 
 /* ---------- Le jeu ---------- */
+/** LE retour du jeu : le nom s'affiche en grand ET se dit. Sans ça, on touche
+    le globe et « il ne se passe rien » (retour tablette du 12/09). */
+function showName(me: State, texte: string | null, say = true) {
+  const el = me.ui.name
+  if (!texte) { el.classList.add('off'); return }
+  el.querySelector('b')!.textContent = texte
+  el.classList.remove('off')
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop')
+  me.lastName = texte
+  if (say) ctx.say(texte)
+}
+
 function speak(me: State) {
   const t = me.target
   if (!t) return
-  if (t.kind === 'animal') ctx.say(t.animal.fr)
-  else if (t.kind === 'pays') ctx.say(COUNTRIES_FR[t.name])
-  else if (t.kind === 'ville') ctx.say(t.city.fr)
-  else ctx.say(t.nom)
+  ctx.say(targetLabel(t))
+}
+
+/** Ce qu'on cherche, en toutes lettres (écrit sur la carte de question). */
+function targetLabel(t: Target): string {
+  return t.kind === 'animal' ? t.animal.fr
+    : t.kind === 'pays' ? frCountry(t.name)
+    : t.kind === 'ville' ? t.city.fr
+    : t.nom
 }
 
 function nextQuestion(me: State) {
@@ -258,6 +284,8 @@ function nextQuestion(me: State) {
   me.asked++
   // La carte de question : l'animal en grand, ou un haut-parleur pour réentendre
   me.ui.askImg.innerHTML = ''
+  me.ui.askText.textContent = targetLabel(t)
+  showName(me, null)
   if (t.kind === 'animal') {
     const i = document.createElement('i')
     i.className = 'spr'
@@ -285,7 +313,7 @@ function judge(me: State, ok: boolean, tappedName: string | null) {
   sfx('error', { vol: 0.45 })
   // On dit ce qu'on a touché (du contenu : c'est comme ça qu'on apprend), et
   // au deuxième raté on montre la bonne réponse, qu'il faut toucher pour continuer
-  if (tappedName) ctx.say(tappedName)
+  if (tappedName) showName(me, tappedName)
   if (me.tries >= 2) reveal(me)
 }
 
@@ -295,6 +323,7 @@ function reveal(me: State) {
   else if (t.kind === 'pays') selectCountry(me, t.name, false)
   else if (t.kind === 'region') selectRegion(me, t.nom)
   else pulseCity(me, t.city)
+  showName(me, targetLabel(t), false)
   ctx.after(700, () => { if (geo === me) speak(me) })
 }
 
@@ -318,20 +347,21 @@ function tapped(me: State, hit: { kind: 'pays' | 'ville' | 'region'; name: strin
       // Sur le globe, en douce on nomme le continent, sinon le pays
       const asCont = ctx.tier === 'easy' && !!CONTINENT_OF[hit.name]
       selectCountry(me, hit.name, asCont)
-      ctx.say(asCont ? CONTINENTS[CONTINENT_OF[hit.name]].fr : (COUNTRIES_FR[hit.name] ?? CONTINENTS[CONTINENT_OF[hit.name]]?.fr ?? hit.name))
-    } else if (hit.kind === 'region') { selectRegion(me, hit.name); pulseCity(me, null); ctx.say(hit.name) }
-    else { pulseCity(me, hit.city!); ctx.say(hit.name) }
+      showName(me, asCont ? CONTINENTS[CONTINENT_OF[hit.name]].fr : frCountry(hit.name))
+    } else if (hit.kind === 'region') { selectRegion(me, hit.name); pulseCity(me, null); showName(me, hit.name) }
+    else { pulseCity(me, hit.city!); showName(me, hit.name) }
+    me.ui.hint.classList.add('off')
     sfx('pluck', { vol: 0.5 })
     return
   }
   if (t.kind === 'animal' && hit.kind === 'pays') {
     const cid = CONTINENT_OF[hit.name]
     selectCountry(me, hit.name, true)
-    if (cid === t.animal.continent) { judge(me, true, null); animalJumps(me, hit.name) }
+    if (cid === t.animal.continent) { showName(me, CONTINENTS[cid].fr, false); judge(me, true, null); animalJumps(me, hit.name) }
     else judge(me, false, cid ? CONTINENTS[cid].fr : null)
   } else if (t.kind === 'pays' && hit.kind === 'pays') {
     selectCountry(me, hit.name, false)
-    judge(me, hit.name === t.name, COUNTRIES_FR[hit.name] ?? null)
+    judge(me, hit.name === t.name, frCountry(hit.name))
   } else if (t.kind === 'ville' && hit.kind === 'ville') {
     pulseCity(me, hit.city!)
     judge(me, hit.city === t.city, hit.name)
@@ -340,9 +370,9 @@ function tapped(me: State, hit: { kind: 'pays' | 'ville' | 'region'; name: strin
     judge(me, hit.name === t.nom, hit.name)
   } else if (t.kind === 'ville' && hit.kind === 'region') {
     // On cherchait une ville, on a touché une région : on la nomme, ça ne compte pas
-    selectRegion(me, hit.name); ctx.say(hit.name)
+    selectRegion(me, hit.name); showName(me, hit.name)
   } else if (t.kind === 'region' && hit.kind === 'ville') {
-    pulseCity(me, hit.city!); ctx.say(hit.name)
+    pulseCity(me, hit.city!); showName(me, hit.name)
   }
 }
 
@@ -371,11 +401,13 @@ export const geoGame: GameDef = {
 
     ;(async () => {
       const base = import.meta.env.BASE_URL
-      const [T, animals, topo, regionsFc] = await Promise.all([
+      const [T, animals, topo, regionsFc, frNames] = await Promise.all([
         loadThree(), loadAtlas('animals'),
         fetch(`${base}assets/geo/countries-110m.json`).then(r => r.json() as Promise<Topology<{ countries: GeometryCollection<{ name: string }> }>>),
-        fetch(`${base}assets/geo/regions.geojson`).then(r => r.json() as Promise<FeatureCollection<Polygon | MultiPolygon, { nom: string }>>)
+        fetch(`${base}assets/geo/regions.geojson`).then(r => r.json() as Promise<FeatureCollection<Polygon | MultiPolygon, { nom: string }>>),
+        fetch(`${base}assets/geo/countries-fr.json`).then(r => r.json() as Promise<Record<string, string>>).catch(() => ({}))
       ])
+      FR_NAMES = frNames
       if (dead) return
       const countries = (feature(topo, topo.objects.countries) as FeatureCollection<Polygon | MultiPolygon, { name: string }>).features
       if (import.meta.env.DEV) for (const f of countries) if (!CONTINENT_OF[f.properties.name]) console.warn('geo : pays sans continent →', f.properties.name)
@@ -384,9 +416,16 @@ export const geoGame: GameDef = {
         sky: '#0B1026', ibl: false,
         cam: [0, 0.6, 6.4], target: [0, 0, 0], fov: 40,
         hemi: ['#9FB6D8', '#1B2340', 0.55],
-        sun: { pos: [5, 3, 6], color: '#FFF6E6', intensity: 2.4, area: 4, far: 20 },
+        sun: { pos: [5, 3, 6], color: '#FFF6E6', intensity: 1.7, area: 4, far: 20 },
         fill: 0.3, exposure: 1.0
       })
+      // Piège connu : avec un seul soleil fixe, la moitié du globe est dans la
+      // nuit — on ne voit plus les pays de ce côté et on croit que le jeu est
+      // cassé. Une lampe accrochée à la CAMÉRA éclaire toujours la face vue.
+      const camLamp = new stage.T.DirectionalLight(0xFFF4E2, 1.25)
+      stage.camera.add(camLamp)
+      camLamp.position.set(0.6, 0.8, 1)
+      stage.scene.add(stage.camera)
       if (dead) { stage.dispose(); return }
       const { scene } = stage
 
@@ -469,17 +508,34 @@ export const geoGame: GameDef = {
       /* --- L'interface : cartes, modes, question, fin --- */
       const bar = document.createElement('div')
       bar.className = 'geo-bar'
-      bar.innerHTML = `
-        <button class="geo-btn on" data-map="monde" aria-label="Le monde">${ICON.globe}</button>
-        <button class="geo-btn" data-map="france" aria-label="La France">${ICON.hexagon}</button>
-        <span class="sep"></span>
-        <button class="geo-btn on" data-mode="explore" aria-label="Explorer">${ICON.search}</button>
-        <button class="geo-btn" data-mode="trouve" aria-label="Trouver">${ICON.target}</button>`
+      /* Chaque bouton porte son mot : sans ça on ne savait pas ce qu'ils font */
+      const geoBtn = (attr: string, val: string, icon: string, cap: string, on = false) =>
+        `<span class="tool-item${on ? ' sel' : ''}">
+           <button class="geo-btn${on ? ' on' : ''}" ${attr}="${val}" aria-label="${cap}">${icon}</button>
+           <i class="tool-cap">${cap}</i></span>`
+      bar.innerHTML = geoBtn('data-map', 'monde', ICON.globe, 'Le monde', true)
+        + geoBtn('data-map', 'france', ICON.hexagon, 'La France')
+        + '<span class="sep"></span>'
+        + geoBtn('data-mode', 'explore', ICON.search, 'Explore', true)
+        + geoBtn('data-mode', 'trouve', ICON.target, 'Trouve')
       arena.appendChild(bar)
       const ask = document.createElement('div')
       ask.className = 'geo-ask off'
-      ask.innerHTML = `<span class="geo-askimg"></span><button class="geo-say" aria-label="Réécouter">${ICON.sound}</button><span class="geo-dots"></span>`
+      ask.innerHTML = `<span class="geo-askimg"></span>
+        <b class="geo-asktext"></b>
+        <button class="geo-say" aria-label="Réécouter">${ICON.sound}</button>
+        <span class="geo-dots"></span>`
       arena.appendChild(ask)
+      // Le bandeau du nom : ce qu'on vient de toucher, écrit en grand
+      const nameEl = document.createElement('div')
+      nameEl.className = 'geo-name off'
+      nameEl.innerHTML = `<b></b><button class="geo-again" aria-label="Réécouter">${ICON.sound}</button>`
+      arena.appendChild(nameEl)
+      // L'invite : une main qui tape sur le globe, tant qu'on n'a rien touché
+      const hintEl = document.createElement('div')
+      hintEl.className = 'tap-hint geo-hint'
+      hintEl.innerHTML = ICON.tap
+      arena.appendChild(hintEl)
       const done = document.createElement('button')
       done.className = 'geo-done'
       done.setAttribute('aria-label', "J'ai fini")
@@ -491,7 +547,9 @@ export const geoGame: GameDef = {
         globe, earth, overlay: { canvas, g, tex: otex }, france, regionMeshes, cityPins,
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
         selected: null, target: null, tries: 0, asked: 0, errors: 0, total: 8, busy: false, over: false,
-        ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done },
+        ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, askText: ask.querySelector('.geo-asktext')!,
+          say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl, hint: hintEl },
+        lastName: null,
         camFrom: new T.Vector3(0, 0.6, 6.4), camTo: new T.Vector3(0, 0.6, 6.4), camLook: new T.Vector3(0, 0, 0)
       }
       me.ui.dots.innerHTML = Array.from({ length: me.total }, () => '<i></i>').join('')
@@ -505,8 +563,12 @@ export const geoGame: GameDef = {
         france.visible = m === 'france'
         me.camTo.set(...(m === 'monde' ? [0, 0.6, 6.4] : [0, 6.6, 3.9]) as [number, number, number])
         me.camLook.set(0, 0, m === 'monde' ? 0 : -0.2)
-        bar.querySelectorAll<HTMLElement>('[data-map]').forEach(b => b.classList.toggle('on', b.dataset.map === m))
+        bar.querySelectorAll<HTMLElement>('[data-map]').forEach(b => {
+          const on = b.dataset.map === m
+          b.classList.toggle('on', on); b.parentElement?.classList.toggle('sel', on)
+        })
         selectCountry(me, null, false); selectRegion(me, null); pulseCity(me, null)
+        showName(me, null)
         if (me.mode === 'trouve') startRound()
         sfx('click', { vol: 0.5 })
       }
@@ -517,9 +579,12 @@ export const geoGame: GameDef = {
       }
       const setMode = (m: Mode) => {
         me.mode = m
-        bar.querySelectorAll<HTMLElement>('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m))
+        bar.querySelectorAll<HTMLElement>('[data-mode]').forEach(b => {
+          const on = b.dataset.mode === m
+          b.classList.toggle('on', on); b.parentElement?.classList.toggle('sel', on)
+        })
         done.style.display = m === 'explore' ? '' : 'none'
-        if (m === 'explore') { me.ui.ask.classList.add('off'); me.target = null }
+        if (m === 'explore') { me.ui.ask.classList.add('off'); me.target = null; showName(me, null); me.ui.hint.classList.remove('off') }
         else startRound()
         sfx('click', { vol: 0.5 })
       }
@@ -530,6 +595,7 @@ export const geoGame: GameDef = {
         if (b.dataset.mode) setMode(b.dataset.mode as Mode)
       })
       me.ui.say.addEventListener('click', () => speak(me))
+      nameEl.querySelector('.geo-again')!.addEventListener('click', () => { if (me.lastName) ctx.say(me.lastName) })
       done.addEventListener('click', () => {
         if (me.over) return
         me.over = true

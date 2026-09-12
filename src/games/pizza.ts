@@ -17,8 +17,14 @@ import { sfx, preloadSfx } from '../core/sfx'
    qui TOMBENT et roulent pour de vrai sur la pâte (et parfois à côté…), on
    enfourne quand on veut — le four chauffe, la pâte dore, le fromage fond,
    et si on l'oublie elle NOIRCIT et fume — on ressort quand on veut, et on
-   mange les parts une par une. Zéro texte : les outils sont les rendus du
-   Food Kit, la cuisson se lit sur une barre crème → doré → brun → noir. */
+   mange les parts une par une. Les outils sont les rendus du Food Kit.
+
+   Contrôles refaits le 12/09 (« on ne comprend rien ») : **une seule action à
+   la fois**. On garnit, un gros bouton unique enfourne, et la cuisson devient
+   un VRAI petit jeu : une jauge se remplit, une zone verte = pizza parfaite,
+   et il faut taper « Sortir » au bon moment. Trop tôt elle est pâle (on peut
+   la remettre au four), trop tard elle est brûlée. Ensuite seulement on mange
+   les parts, et la partie se termine d'elle-même quand tout est mangé. */
 
 const PR = 0.56            // rayon de la pizza
 const PR_IN = PR - 0.075   // rayon de la garniture (à l'intérieur de la croûte)
@@ -40,8 +46,12 @@ const TOOLS: { id: ToolId; icon: string }[] = [
   { id: 'corn', icon: foodImg('corn', 40) }, { id: 'basil', icon: pepperSVG },
   { id: 'eat', icon: foodImg('plate-dinner', 40) }
 ]
-/** Au-delà, la pizza noircit ; la barre de cuisson va jusque-là. */
+/** Au-delà, la pizza noircit ; la jauge de cuisson va jusque-là. */
 const BURNT = 1.5
+/** La zone parfaite de la jauge (en fraction de BURNT). */
+const PERFECT_FROM = 0.62, PERFECT_TO = 0.92
+/** Trois temps : on garnit, ça cuit (mini-jeu), c'est servi (on mange). */
+type Phase = 'garnir' | 'cuisson' | 'servi'
 const SAUCES: Record<string, string> = { tomato: 'rgba(206,58,38,1)', cream: 'rgba(255,243,220,1)' }
 
 let ctx: GameContext
@@ -84,7 +94,6 @@ function paintSauce(x: number, z: number, color: string) {
    fois puis cloné. Les primitives d'avant — un cube pour le fromage, une sphère
    aplatie pour le basilic — ne pouvaient pas donner autre chose que du plastique. */
 const MODELS: Record<string, { file: string; size: number; r: number; melt: boolean }> = {
-  cheese: { file: 'cheese-cut', size: 0.10, r: 0.038, melt: true },
   mushroom: { file: 'mushroom', size: 0.095, r: 0.042, melt: false },
   olive: { file: 'onion-half', size: 0.075, r: 0.032, melt: false },
   slice: { file: 'tomato-slice', size: 0.105, r: 0.046, melt: false },
@@ -92,9 +101,30 @@ const MODELS: Record<string, { file: string; size: number; r: number; melt: bool
   basil: { file: 'pepper', size: 0.085, r: 0.034, melt: false }
 }
 
+/** Une flaque de mozzarella : une demi-sphère bosselée et aplatie. Le kit Food
+    n'a qu'une MEULE de fromage (avec son couteau !) — illisible sur une pizza. */
+function cheeseDef(T: any) {
+  const mat = new T.MeshStandardMaterial({ color: 0xD8A93F, roughness: 0.42, metalness: 0.02 })
+  return {
+    r: 0.05, melt: true,
+    make: () => {
+      const g = new T.SphereGeometry(0.058, 16, 10)
+      const pos = g.attributes.position
+      const seed = Math.random() * 9
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i)
+        const n = 1 + Math.sin(x * 44 + seed) * 0.16 + Math.cos(z * 37 - seed) * 0.13
+        pos.setXYZ(i, x * n, y * 0.4, z * n)
+      }
+      g.computeVertexNormals()
+      return new T.Mesh(g, mat)
+    }
+  }
+}
+
 /** Charge tous les modèles d'un coup : un ingrédient ne doit jamais faire attendre. */
 async function preloadIngredients(T: any) {
-  const kit: Record<string, any> = {}
+  const kit: Record<string, any> = { cheese: cheeseDef(T) }
   await Promise.all(Object.entries(MODELS).map(async ([id, def]) => {
     const proto = await loadModel('food', def.file)
     fitModel(T, proto, def.size)
@@ -109,10 +139,7 @@ function ingredientKitFallback(T: any) {
   const stemGeo = new T.CylinderGeometry(0.018, 0.022, 0.045, 8)
   const mushMat = std(0xE7D5BD, 0.85)
   return {
-    cheese: {
-      r: 0.05, melt: true,
-      make: () => new T.Mesh(new T.BoxGeometry(0.095, 0.034, 0.095), std(0xFFD98A, 0.6))
-    },
+    cheese: cheeseDef(T),
     mushroom: {
       r: 0.056, melt: false,
       make: () => {
@@ -152,6 +179,11 @@ function ingredientKitFallback(T: any) {
   }
 }
 
+/** Chaque ingrédient a SA note : l'oreille reconnaît ce qu'on saupoudre. */
+const NOTE: Record<string, number> = {
+  cheese: 523, mushroom: 349, olive: 294, slice: 440, corn: 784, basil: 587
+}
+
 /* ---------- Lâcher un ingrédient ---------- */
 function drop(kind: ToolId, x: number, z: number) {
   if (!S || S.inOven) return
@@ -173,7 +205,7 @@ function drop(kind: ToolId, x: number, z: number) {
   body.angularVelocity.set((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5)
   S.world.addBody(body)
   S.loose.push({ obj, body, kind, melt: kit.melt, t: 0 })
-  sPop()
+  tone(NOTE[kind] || 440, 0.07, 'triangle', 0.06)
 }
 
 /** Une fois posé, l'ingrédient rejoint sa part de pizza : plus de physique à simuler. */
@@ -192,26 +224,94 @@ function attach(item: any) {
   }
   // Tombé à côté : il reste sur le plan de travail, c'est la vie
   if (item.melt) S.melting.push(item)
+  // Une pincée de farine soulevée : le contact se VOIT
+  S.smoke.burst({ x: p.x, y: p.y + 0.02, z: p.z },
+    { count: 4, color: [0xFFF4DC, 0xE9D6B0], speed: 0.22, spread: 0.5, life: 0.5, size: 0.05, gravity: -0.4 })
   void T
 }
 
 /* ---------- Four ---------- */
-function toOven(on: boolean) {
-  if (!S || S.ended) return
-  S.inOven = on
-  S.ovenT = 0
-  ;($('pzOven') as HTMLElement).style.display = on ? 'none' : ''
-  ;($('pzOut') as HTMLElement).style.display = on ? '' : 'none'
-  // La pelle glisse : un frottement, puis le grésillement du four
-  sfx('cloth', { vol: 0.5, rate: 0.8 })
-  if (on) tone(180, 0.5, 'sawtooth', 0.06)
-  else sPop()
+/** Change de phase : à chaque instant, UNE SEULE chose à faire. */
+function setPhase(p: Phase) {
+  if (!S) return
+  S.phase = p
+  S.inOven = p === 'cuisson'
+  const show = (id: string, on: boolean) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none' }
+  show('pzTools', p === 'garnir')
+  show('pzOvenItem', p === 'garnir')
+  show('pzEatItem', p === 'servi')
+  show('pzDoneItem', p === 'servi')
+  $('pzCook').classList.toggle('on', p === 'cuisson')
+  paintGauge()
+  if (p === 'servi') S.tool = 'eat'
+  paintUI()
 }
 
-/** La barre de cuisson : crème → doré → brun → noir, sans un mot. */
-function paintBake() {
-  const cover = document.getElementById('pzCover')
-  if (cover) cover.style.width = `${Math.max(0, 100 - S.bake / BURNT * 100)}%`
+/** On enfourne : la jauge démarre. */
+function toOven() {
+  if (!S || S.ended || S.phase === 'cuisson') return
+  S.ovenT = 0
+  setPhase('cuisson')
+  sfx('cloth', { vol: 0.5, rate: 0.8 })
+  tone(180, 0.5, 'sawtooth', 0.06)
+}
+
+/** La jauge : le curseur avance, la zone verte est la cuisson parfaite.
+    Pour une enfant qui ne lit pas, l'ENTRÉE dans la zone doit s'entendre :
+    la jauge s'illumine et un carillon sonne — c'est le signal du geste. */
+function paintGauge(dt = 0) {
+  const k = S.bake / BURNT
+  const n = document.getElementById('pzNeedle')
+  if (n) n.style.left = `${Math.min(100, k * 100)}%`
+  const good = k >= PERFECT_FROM && k <= PERFECT_TO
+  if (good !== S.perfect) {
+    S.perfect = good
+    document.getElementById('pzCook')?.classList.toggle('go', good)
+    if (good) { tone(880, 0.14, 'triangle', 0.09); tone(1320, 0.16, 'triangle', 0.07, 0.1) }
+    else tone(200, 0.2, 'sawtooth', 0.07)
+  }
+  // Un tic-tac qui s'accélère à l'approche : l'oreille compte à rebours
+  const period = k < PERFECT_FROM ? 0.34 : good ? 0.16 : 0.5
+  S.tickT = (S.tickT || 0) + dt
+  if (dt > 0 && S.tickT >= period) {
+    S.tickT = 0
+    tone(good ? 660 : 420, 0.04, 'square', good ? 0.05 : 0.03)
+  }
+}
+
+/** Un mot-image au centre : le verdict de la cuisson. */
+function verdict(html: string, cls = '') {
+  const v = $('pzVerdict')
+  v.innerHTML = html
+  v.className = 'pz-verdict show ' + cls
+  ctx.after(2400, () => { const e = document.getElementById('pzVerdict'); if (e) e.className = 'pz-verdict' })
+}
+
+/** Sortir la pizza : LE geste du mini-jeu. Trop tôt, elle repart au four —
+    aucune sanction (on est dans Créer), juste une pizza pâle à recuire. */
+function pullOut() {
+  if (!S || S.ended || S.phase !== 'cuisson') return
+  const k = S.bake / BURNT
+  sPop()
+  S.perfect = false
+  document.getElementById('pzCook')?.classList.remove('go')
+  if (k < PERFECT_FROM) {
+    setPhase('garnir')
+    verdict(`${ICON.clock}<span class="pz-vmore">${ICON.flame}</span>`, 'pale')
+    const o = document.getElementById('pzOvenItem')
+    if (o) { o.classList.add('pulse'); ctx.after(2600, () => document.getElementById('pzOvenItem')?.classList.remove('pulse')) }
+    tone(230, 0.3, 'sine', 0.08)
+  } else if (k <= PERFECT_TO) {
+    setPhase('servi')
+    verdict(ICON.star, 'perfect')
+    confetti()
+    sWin()
+  } else {
+    setPhase('servi')
+    verdict(ICON.flame, 'burnt')
+    tone(110, 0.5, 'sawtooth', 0.07)
+    sfx('cloth', { vol: 0.5, rate: 0.6 })
+  }
 }
 
 /* ---------- Manger ---------- */
@@ -232,7 +332,7 @@ function finish() {
   confetti()
   sWin()
   const n = S.dropped
-  const burnt = S.bake > 1.2
+  const burnt = S.bake / BURNT > PERFECT_TO
   ctx.finish({
     title: S.eaten >= SLICES ? (burnt ? 'Toute noire… et dévorée !' : 'Pizza dévorée !') : burnt ? 'Un peu trop cuite !' : 'Quelle belle pizza !',
     msg: `${ctx.playerName} a posé ${n} ingrédient${n > 1 ? 's' : ''}`,
@@ -257,18 +357,33 @@ export const pizza: GameDef = {
     c.root.innerHTML = `
       <div class="topbar">
         <button class="chip" id="pzLeft" aria-label="Tourner">${ICON.turnLeft}</button>
-        <div class="chip pz-bake" aria-label="Cuisson">${ICON.flame}<span class="pz-bake-bar"><b id="pzCover"></b></span></div>
         <button class="chip" id="pzRight" aria-label="Tourner">${ICON.turnRight}</button>
       </div>
-      <div class="arena g3-arena pz-arena" id="pzArena"></div>
+      <div class="arena g3-arena pz-arena" id="pzArena">
+        <!-- LE mini-jeu de cuisson : la jauge, sa zone verte, le curseur -->
+        <div class="pz-cook" id="pzCook">
+          <div class="pz-gauge"><span class="pz-perfect"></span><b id="pzNeedle"></b></div>
+          <span class="tool-item">
+            <button class="sn-tool pz-pull" id="pzOut" aria-label="Sortir la pizza">${ICON.out}</button>
+            <i class="tool-cap">Sortir !</i>
+          </span>
+        </div>
+        <div class="pz-verdict" id="pzVerdict"></div>
+      </div>
       <div class="g3-bar">
         <div class="g3-row" id="pzTools">
-          ${TOOLS.map(t => `<button class="g3-tool" data-t="${t.id}" aria-label="${t.id}">${t.icon}</button>`).join('')}
+          ${TOOLS.filter(t => t.id !== 'eat').map(t => `<button class="g3-tool" data-t="${t.id}" aria-label="${t.id}">${t.icon}</button>`).join('')}
         </div>
-        <div class="g3-row">
-          <button class="sn-tool pz-act" id="pzOven" aria-label="Au four">${ICON.flame}</button>
-          <button class="sn-tool pz-act" id="pzOut" style="display:none" aria-label="Sortir du four">${ICON.out}</button>
-          <button class="sn-tool go" id="pzDone" aria-label="Fini">${ICON.check}</button>
+        <div class="g3-row" id="pzActions">
+          <span class="tool-item" id="pzOvenItem">
+            <button class="sn-tool pz-act" id="pzOven" aria-label="Au four">${ICON.flame}</button>
+            <i class="tool-cap">Au four</i></span>
+          <span class="tool-item" id="pzEatItem" style="display:none">
+            <button class="sn-tool pz-eat" id="pzEat" aria-label="Manger">${TOOLS.find(t => t.id === 'eat')!.icon}</button>
+            <i class="tool-cap">Mange !</i></span>
+          <span class="tool-item" id="pzDoneItem" style="display:none">
+            <button class="sn-tool go" id="pzDone" aria-label="Fini">${ICON.check}</button>
+            <i class="tool-cap">Fini</i></span>
         </div>
       </div>`
 
@@ -473,13 +588,15 @@ export const pizza: GameDef = {
         sauce: { g: dc.g, tex: sauceTex },
         doughMat, crustMat, sideMat, pizzaGroup, wedges, flames, embers, fireLight,
         loose: [], melting: [], tool: 'tomato' as ToolId, dropped: 0, eaten: 0,
-        bake: 0, inOven: false, ovenT: 0, ended: false, smokeT: 0,
+        bake: 0, inOven: false, ended: false, smokeT: 0,
+        phase: 'garnir' as Phase, perfect: false,
+        // La jauge doit rester JOUABLE : ~10 s de bout en bout en douce, 4,5 s en expert
+        bakeRate: 1 / ctx.byTier(10, 6.5, 4.5), lastDrop: 0, tickT: 0,
         smoke: particles(stage, 200),
         orbit: orbitCam(stage, 1.55, 1.05, [0, 0.06, 0]),
         step: fixedStep()
       }
-      paintUI()
-      paintBake()
+      setPhase('garnir')
 
       /* Les vrais modèles remplacent les primitives dès qu'ils sont là. Le jeu
          reste jouable pendant le chargement grâce au jeu de secours. */
@@ -508,16 +625,24 @@ export const pizza: GameDef = {
           if (first) tone(240, 0.07, 'sine', 0.06)
           return
         }
-        if (!first) return
         if (S.tool === 'eat') {
+          if (!first) return
           let ang = Math.atan2(p.x, p.z)
           if (ang < 0) ang += Math.PI * 2
           eatWedge(Math.min(SLICES - 1, Math.floor(ang / step)))
           return
         }
-        if (S.inOven) { sfx('tick', { vol: 0.3, rate: 0.7 }); return }
+        if (S.phase === 'cuisson') { if (first) sfx('tick', { vol: 0.3, rate: 0.7 }); return }
+        // SAUPOUDRAGE : on garde le doigt posé et on sème un filet d'ingrédients
+        // (un tap = un morceau, un glissé = une pluie). Plafonné pour que la
+        // physique ne s'effondre pas sous 300 champignons.
+        painting = true
+        const t = performance.now()
+        if (!first && t - S.lastDrop < 110) return
+        if (S.dropped >= 140) { if (first) sfx('tick', { vol: 0.25, rate: 0.6 }); return }
+        S.lastDrop = t
         // Un peu de dispersion : deux taps au même endroit ne donnent pas deux clones
-        drop(S.tool, p.x + (Math.random() - 0.5) * 0.04, p.z + (Math.random() - 0.5) * 0.04)
+        drop(S.tool, p.x + (Math.random() - 0.5) * 0.05, p.z + (Math.random() - 0.5) * 0.05)
         S.dropped++
       }
 
@@ -537,8 +662,9 @@ export const pizza: GameDef = {
           paintUI()
         }
       })
-      $('pzOven').onclick = () => toOven(true)
-      $('pzOut').onclick = () => toOven(false)
+      $('pzOven').onclick = () => toOven()
+      $('pzOut').onclick = () => pullOut()
+      $('pzEat').onclick = () => { if (S) { S.tool = 'eat'; sPop(); paintUI() } }
       $('pzDone').onclick = () => finish()
       $('pzLeft').onclick = () => { S?.orbit.turn(-0.5); sPop() }
       $('pzRight').onclick = () => { S?.orbit.turn(0.5); sPop() }
@@ -557,10 +683,11 @@ export const pizza: GameDef = {
 
         // Cuisson : la pâte dore, le fromage fond… et si on l'oublie, elle
         // noircit et fume (aucune note : c'est une pizza, pas un examen)
-        if (S.inOven && S.bake < BURNT) {
-          S.bake = Math.min(BURNT, S.bake + dt / 14)
-          const k = Math.min(1, S.bake)
-          const burn = Math.max(0, (S.bake - 1.1) / (BURNT - 1.1))
+        if (S.phase === 'cuisson' && S.bake < BURNT) {
+          S.bake = Math.min(BURNT, S.bake + dt * S.bakeRate)
+          const kg = S.bake / BURNT
+          const k = Math.min(1, kg / PERFECT_FROM)        // pâle → bien dorée à l'entrée de la zone
+          const burn = Math.max(0, (kg - PERFECT_TO) / (1 - PERFECT_TO))
           const tint = (a: number, b: number, cc: number) => {
             const c1 = new T.Color(a), c2 = new T.Color(b), c3 = new T.Color(cc)
             const col = k < 0.55 ? c1.lerp(c2, k / 0.55) : c2.lerp(c3, (k - 0.55) / 0.45)
@@ -569,7 +696,7 @@ export const pizza: GameDef = {
           S.doughMat.color.copy(tint(0xFFFFFF, 0xE8C793, 0xB98149))
           S.crustMat.color.copy(tint(0xE9C88A, 0xD79E52, 0x9C6027))
           S.sideMat.color.copy(tint(0xEBD3A2, 0xD8A863, 0xA26B33))
-          paintBake()
+          paintGauge(dt)
           if (burn > 0) {
             S.smokeT += dt
             if (S.smokeT > 0.22) {

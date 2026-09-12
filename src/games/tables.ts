@@ -109,6 +109,20 @@ let tb: State | null = null
     b.classList.add('shown', ...cls)
   }
 
+  /** Montre toutes les cases d'un coup, en cascade (mode Explore). */
+  function revealAll(me: State) {
+    const cells = Object.values(me.cells)
+    const hidden = cells.filter(b => !b.classList.contains('shown'))
+    if (!hidden.length) { resetCells(me); me.explored = 0; sfx('drop', { vol: 0.3, rate: 0.9 }); return }
+    sfx('confirm', { vol: 0.6 })
+    // En cascade depuis le coin haut-gauche : on VOIT la table se remplir
+    hidden.forEach(b => {
+      const d = (b._r + b._c) * 22
+      ctx.after(d, () => { if (tb === me && me.mode === 'explore') revealCell(b) })
+    })
+    me.explored = 100
+  }
+
   function resetCells(me: State) {
     Object.values(me.cells).forEach(b => { b.textContent = ''; b.className = 'tb-cell' })
   }
@@ -134,7 +148,14 @@ let tb: State | null = null
     $('tbDone').style.display = mode === 'explore' ? '' : 'none'
     me.lock = false
     me.q = 0; me.score = 0; me.mistakes = 0; me.totalQ = 8
-    if (mode === 'explore') { me.explored = 0; paintSide(me, ICON.search) }
+    if (mode === 'explore') {
+      me.explored = 0
+      // Le bouton « tout montrer » : Joyce lit la table entière d'un coup
+      paintSide(me, `<button class="sn-tool tb-all" id="tbAll" aria-label="Tout montrer">${ICON.digits}</button>
+        <i class="tool-cap tb-allcap">Tout montrer</i>`)
+      const all = document.getElementById('tbAll')
+      if (all) all.onclick = () => { if (tb === me) revealAll(me) }
+    }
     if (mode === 'find') nextFind(me)
     if (mode === 'type') nextType(me)
     if (mode === 'fill') {
