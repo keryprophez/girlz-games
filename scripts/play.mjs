@@ -552,6 +552,40 @@ await scenario('stand-six-caisses', async () => {
   throw new Error('moins de 6 caisses tombées en 100 s')
 })
 
+/* 📮 La Poste aux Phrases : une partie entière dans CHACUN des trois modes,
+   sans une seule erreur. Le bot lit la réponse attendue dans `window.__po` ;
+   elle vaut `null` pendant l'animation de réponse, donc il attend au lieu de
+   doubler ses clics (piège des bots à 4 fps). Une partie finie ouvre l'écran
+   de fin : on rouvre le jeu pour le mode suivant. */
+for (const [mode, titre] of [['type', 'tamponné'], ['phrase', 'tamponné'], ['point', 'tamponné']]) {
+  await scenario(`poste-${mode}`, async () => {
+    await openGame('Poste aux Phrases')
+    const st = () => page.evaluate(() => (window.__po ? window.__po.state() : null))
+    if (!(await st())) throw new Error("pas d'accroche __po")
+    await page.evaluate(m => window.__po.setMode(m), mode)
+    await page.waitForTimeout(400)
+    for (let i = 0; i < 240; i++) {
+      const s = await st()
+      if (!s || s.done >= s.total) break
+      if (!s.answer) { await page.waitForTimeout(120); continue }
+      const cible = page.locator(`[data-a="${s.answer}"]`).first()
+      if (!(await cible.count())) throw new Error(`réponse « ${s.answer} » sans bouton (mode ${mode})`)
+      await cible.click()
+      await page.waitForTimeout(160)
+    }
+    const f = await st()
+    if (!f) throw new Error(`mode ${mode} : le jeu a été démonté en cours de partie`)
+    if (f.done < f.total) throw new Error(`mode ${mode} : ${f.done}/${f.total} manches gagnées`)
+    if (f.mistakes) throw new Error(`mode ${mode} : ${f.mistakes} erreur(s) alors que le bot connaît la réponse`)
+    // 1,5 s avant la manche suivante + 900 ms d'outro avant l'écran de score
+    await page.waitForTimeout(3600)
+    if (!(await page.evaluate(() => document.body.innerText)).includes(titre)) {
+      throw new Error(`mode ${mode} : l'écran de fin n'est pas apparu`)
+    }
+    if (errors.length) throw new Error('erreurs JS')
+  })
+}
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)

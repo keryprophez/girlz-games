@@ -168,17 +168,21 @@ interface State {
   reverse: boolean
   /** La réponse attendue, gardée pour la rendre au bot après une erreur. */
   answer: string | null
+  /** Vrai pendant l'animation de réponse : le bot attend. */
+  busy: boolean
 }
 
 let po: State | null = null
 let ctx: GameContext
 
-/* Crochet de test : le bot lit la bonne réponse. `null` quand il n'y a rien
-   à piloter — une valeur périmée ferait cliquer le bot dans le vide. */
+/* Crochet de test : le bot lit la bonne réponse de la manche en cours.
+   `null` pendant l'animation — une valeur périmée ferait cliquer le bot dans
+   le vide (piège déjà payé sur la Tour de Glace). Inerte hors des tests. */
 function hook(v: string | null) {
   if (po) po.answer = v
-  ;(window as unknown as Record<string, unknown>).__poAnswer = v
 }
+
+const botOn = () => !!(window as unknown as { __BOT?: boolean }).__BOT
 
 /* ---------- Dessins ---------- */
 
@@ -362,9 +366,9 @@ function bindTools(fn: (answer: string) => void) {
     la même manche, autant de fois qu'il faut. */
 function judge(right: boolean, after?: () => void) {
   const me = po!
-  // Le bot ne doit pas cliquer pendant l'animation : on coupe le crochet le
-  // temps de la réponse, `me.answer` garde la valeur pour le retour en arrière.
-  ;(window as unknown as Record<string, unknown>).__poAnswer = null
+  // Le bot ne doit pas cliquer pendant l'animation : `busy` coupe le crochet
+  // le temps de la réponse, `me.answer` garde la manche pour un nouvel essai.
+  me.busy = true
   if (right) {
     me.done++
     sfx('bong', { vol: 0.55, rate: 0.9 })
@@ -376,6 +380,7 @@ function judge(right: boolean, after?: () => void) {
     ctx.after(1500, () => {
       if (!po || !po.running) return
       me.lock = false
+      me.busy = false
       if (me.q >= ROUNDS) return finish()
       nextRound()
     })
@@ -391,7 +396,7 @@ function judge(right: boolean, after?: () => void) {
       // On retente la MÊME manche : l'erreur n'est pas une perte
       $('poBoard').querySelectorAll<HTMLElement>('.po-crit').forEach(x => x.classList.remove('ok', 'ko'))
       $('poBoard').querySelectorAll<HTMLElement>('.po-why').forEach(x => x.classList.remove('show'))
-      hook(me.answer)   // la manche est la même : le bot doit la retrouver
+      me.busy = false   // la manche est la même : le bot peut réessayer
     })
   }
 }
@@ -469,14 +474,24 @@ export const sentences: GameDef = {
     preloadSfx(['bong', 'confirm', 'drop', 'open', 'click'])
     po = {
       running: true, lock: false, mode: 'type', q: 0, mistakes: 0, done: 0,
-      phrase: null, cand: null, markQ: null, reverse: false, answer: null
+      phrase: null, cand: null, markQ: null, reverse: false, answer: null, busy: false
+    }
+    // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+    if (botOn()) {
+      ;(window as unknown as { __po: unknown }).__po = {
+        state: () => po && {
+          answer: po.busy ? null : po.answer, mode: po.mode,
+          q: po.q, done: po.done, total: ROUNDS, mistakes: po.mistakes
+        },
+        setMode: (m: ModeId) => po && po.running && setMode(m)
+      }
     }
     document.querySelectorAll<HTMLElement>('.po-mode').forEach(b => {
       b.onclick = () => { if (po && po.running) { sfx('click', { vol: 0.4 }); setMode(b.dataset.m as ModeId) } }
     })
     setMode('type')
     return () => {
-      hook(null)
+      if (botOn()) delete (window as unknown as { __po?: unknown }).__po
       if (po) { po.running = false; po = null }
     }
   }

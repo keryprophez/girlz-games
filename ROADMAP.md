@@ -361,6 +361,9 @@ sur l'écran de fin, sessions A puis B puis C.
   donc conforme à la règle 2 ; en flamme la voix se tait et il faut lire.
   Aucune sanction : autant d'essais qu'on veut, la manche ratée se rejoue, et
   la carte postale se remplit d'un tampon par bonne réponse.
+  Surveillé en CI par **trois bots** (`poste-type`, `poste-phrase`,
+  `poste-point`) : chacun joue une partie entière de son mode, sans une seule
+  erreur, et vérifie que l'écran de fin arrive.
 
 Ordre pour la suite :
 
