@@ -282,6 +282,11 @@ async function commonsMeta(names) {
   }).filter(Boolean)
 }
 
+/** Le mot à chercher dans un titre de fichier : le nom de l'article anglais
+    (« Pineapple »), pas le premier mot de la requête — `q` commence souvent par
+    un adjectif et on cherchait « intitle:whole ». */
+const motTitre = (q, en) => (en || q || '').split(/[\s(]/)[0].toLowerCase()
+
 /** Commons, mais en ne gardant que les fichiers dont le TITRE contient le mot :
     « intitle: » évite les photos où le mot n'apparaît que dans la description
     (les pubs « The Bunch of Grapes », le masque à gaz pour « cabbage »…). */
@@ -370,12 +375,12 @@ async function candidats(seulement) {
       () => fromOpenverse(q, 4),
       () => fromWikidata(fr),
       () => fromWikipedia(en, 'en'),
-      () => fromCommonsTitle(q.split(' ')[0], 4)
+      () => fromCommonsTitle(motTitre(q, en), 4)
     ] : [
       () => fromCommonsCat(categ, PER_TERM),   // le reste : la catégorie Commons
       () => fromWikidata(fr),
       () => fromWikipedia(en, 'en'),
-      () => fromCommonsTitle(q.split(' ')[0], 4),
+      () => fromCommonsTitle(motTitre(q, en), 4),
       () => fromOpenverse(q, 4),
       () => fromCommons(q, 4)
     ]) {
@@ -458,7 +463,7 @@ async function unMot(id) {
   if (VIVANT[id]) { try { push(await fromINat(VIVANT[id], 8)) } catch { /* rien */ } }
   if (CATEG[id]) { try { push(await fromCommonsCat(CATEG[id], 10)) } catch { /* rien */ } }
   try { push(await fromWikidata(fr)) } catch { /* rien */ }
-  try { push(await fromCommonsTitle(q.split(' ')[0], 6)) } catch { /* rien */ }
+  try { push(await fromCommonsTitle(motTitre(q, en), 6)) } catch { /* rien */ }
   try { push(await fromOpenverse(q, 6)) } catch { /* rien */ }
   try { push(await fromWikipedia(en, 'en')) } catch { /* rien */ }
   void wiki

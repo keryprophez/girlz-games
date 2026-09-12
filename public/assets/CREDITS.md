@@ -100,7 +100,7 @@ Steven Lek, PD — <https://www.inaturalist.org/photos/267631414>
 - **pêche** (`peach.jpg`) — *20160624-AMS-LSC-9001 (55-seconds) (27524696944).jpg*, U.S. Department of Agriculture, PUBLIC DOMAIN — <https://commons.wikimedia.org/wiki/File:20160624-AMS-LSC-9001_(55-seconds)_(27524696944).jpg>
 - **perroquet** (`parrot.jpg`) — *Blue-and-yellow Macaw (Ara ararauna)*, Jorge Ralston, CC-BY-NC — <https://www.inaturalist.org/photos/77485182>
 - **pingouin** (`penguin.jpg`) — *Emperor Penguin (Aptenodytes forsteri)*, Martha de Jong-Lantink, CC-BY-NC-ND — <https://www.inaturalist.org/photos/7229>
-- **poire** (`pear.jpg`) — *Arga de Baixo, Portugal (7907191130).jpg*, Rosino, CC BY-SA 2.0 — <https://commons.wikimedia.org/wiki/File:Arga_de_Baixo,_Portugal_(7907191130).jpg>
+- **poire** (`pear.jpg`) — *Assumerpeer.JPG*, POMologische Vereniging Noord-Holland, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Assumerpeer.JPG>
 - **poisson** (`fish.jpg`) — *Goldfish (Carassius auratus)*, tigress16, CC-BY-NC — <https://www.inaturalist.org/photos/555919820>
 - **pomme** (`apple.jpg`) — *Red Apple.jpg*, Abhijit Tembhekar from Mumbai, India, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:Red_Apple.jpg>
 - **pomme de terre** (`potato.jpg`) — *110303 CNPP LSC 0413 (13065542084).jpg*, U.S. Department of Agriculture
@@ -114,9 +114,9 @@ Lance Chueng/Visual Information Specialist/USDA, PUBLIC DOMAIN — <https://comm
 - **renard** (`fox.jpg`) — *Typical Foxes (Vulpes)*, Joanne Muis Redwood, CC-BY-NC — <https://www.inaturalist.org/photos/6568074>
 - **serpent** (`snake.jpg`) — *Common Watersnake (Nerodia sipedon)*, markkrist, CC-BY-NC — <https://www.inaturalist.org/photos/13608867>
 - **singe** (`monkey.jpg`) — *Rhesus Macaque (Macaca mulatta)*, Markus  Lilje, CC-BY-NC-ND — <https://www.inaturalist.org/photos/8739674>
-- **tasse** (`cup.jpg`) — *500px photo (35295462).jpeg*, Engin Asil, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:500px_photo_(35295462).jpeg>
+- **tasse** (`cup.jpg`) — *Teacup.png*, Rijksmuseum, CC0 — <https://commons.wikimedia.org/wiki/File:Teacup.png>
 - **tomate** (`tomato.jpg`) — *- panoramio - ✿ Vlinder ✿ (28).jpg*, ✿ Vlinder  ✿, CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:-_panoramio_-_%E2%9C%BF_Vlinder_%E2%9C%BF_(28).jpg>
 - **tortue** (`turtle.jpg`) — *Hermann's Tortoise (Testudo hermanni)*, Roberto Sindaco, CC-BY-NC-SA — <https://www.inaturalist.org/photos/669249>
 - **vache** (`cow.jpg`) — *Domestic Cattle (Bos taurus)*, jwillardz, CC-BY-NC — <https://www.inaturalist.org/photos/408007934>
-- **verre** (`glass.jpg`) — *Vaso largo (modelos).jpg*, Milartino, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Vaso_largo_(modelos).jpg>
+- **verre** (`glass.jpg`) — *Bagare-med-varmt-vatten.jpeg*, Mehinger, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Bagare-med-varmt-vatten.jpeg>
 - **zèbre** (`zebra.jpg`) — *Plains Zebra (Equus quagga)*, ispylifers, CC-BY-NC — <https://www.inaturalist.org/photos/159452856>

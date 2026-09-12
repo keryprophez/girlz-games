@@ -139,8 +139,10 @@ export const PHOTOS = new Set([
   'elephant', 'giraffe', 'lion', 'monkey', 'bear', 'zebra', 'fox', 'deer', 'hedgehog',
   'frog', 'snake', 'owl', 'parrot', 'penguin', 'whale', 'fish', 'turtle', 'butterfly',
   // Fruits
+  // Pas d'ananas : les seules photos libres le montrent sur son pied, vert et
+  // noyé dans ses feuilles — irreconnaissable à 6 ans. Onze fruits suffisent.
   'apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon',
-  'pineapple', 'watermelon', 'peach', 'plum',
+  'watermelon', 'peach', 'plum',
   // Légumes
   'carrot', 'tomato', 'broccoli', 'corn', 'eggplant', 'onion', 'cabbage', 'pumpkin',
   'radish', 'potato', 'cucumber', 'mushroom',

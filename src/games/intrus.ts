@@ -29,7 +29,7 @@ const WATER = ['whale', 'fish', 'penguin', 'frog']
 const BIRD = ['duck', 'owl', 'parrot', 'penguin', 'chicken']
 const NONBIRD = ['cow', 'pig', 'dog', 'rabbit', 'frog', 'snake', 'fish', 'lion']
 const FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear',
-  'lemon', 'pineapple', 'watermelon', 'peach', 'plum']
+  'lemon', 'watermelon', 'peach', 'plum']
 const VEG = ['carrot', 'tomato', 'broccoli', 'corn', 'eggplant', 'onion', 'cabbage',
   'pumpkin', 'radish', 'potato', 'cucumber', 'mushroom']
 const FOODS = ['bread', 'baguette', 'cheese', 'cake', 'cookie', 'muffin', 'croissant', 'egg', 'honey']

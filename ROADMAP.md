@@ -334,7 +334,10 @@ sur l'écran de fin, sessions A puis B puis C.
   un festival). L'Intrus gagne une famille « Dans la cuisine ».
   Les planches Kenney restent pour les PIONS et le DÉCOR (Puissance 4, Simon,
   Taquin, labyrinthe, 3D) : ce n'est plus du vocabulaire illustré, et il
-  faudrait des images détourées.
+  faudrait des images détourées. **L'ananas est sorti du jeu** : toutes les
+  photos libres le montrent sur son pied, vert et noyé dans ses feuilles —
+  même une image techniquement juste ne sert à rien si elle n'est pas reconnue
+  à 6 ans. Onze fruits suffisent.
 
 Ordre pour la suite :
 
