@@ -339,6 +339,29 @@ sur l'écran de fin, sessions A puis B puis C.
   même une image techniquement juste ne sert à rien si elle n'est pas reconnue
   à 6 ans. Onze fruits suffisent.
 
+- ✅ **Un 31ᵉ jeu, demandé par le père à partir de la fiche GR2 de Joyce :
+  « La Poste aux Phrases » (12/09).** Trois objectifs, donc trois modes, sur
+  le patron du Marché et de Quelle heure ? :
+  - **Phrase ?** — une suite de mots est-elle une phrase ? Après la réponse,
+    les trois repères s'allument (majuscule, point, sens) et **seul celui qui
+    manque passe en rouge** : Joyce voit pourquoi, elle ne devine pas.
+  - **Quel type ?** — le cœur. La phrase s'affiche **sans son point final**,
+    un emplacement clignote au bout, et on claque le bon tampon dessus. On
+    choisit le TYPE, jamais le point : le point s'imprime tout seul. C'est le
+    piège de la fiche rendu jouable — exclamative et injonctive portent le
+    même « ! » sans être du même type, et le tampon injonctif porte ses DEUX
+    points (« . » et « ! ») parce que c'est la seule famille qui n'a pas un
+    point à elle.
+  - **Le nom** — le point, le point d'interrogation, le point d'exclamation
+    (plus la virgule et les points de suspension en expert), dans les deux
+    sens : on voit le signe et on cherche son nom, ou on entend le nom et on
+    cherche le signe.
+  La voix lit les phrases **avec leur point**, et c'est l'intérêt : l'intonation
+  est l'indice qui sépare « Tu viens. » de « Tu viens ? ». Contenu pédagogique,
+  donc conforme à la règle 2 ; en flamme la voix se tait et il faut lire.
+  Aucune sanction : autant d'essais qu'on veut, la manche ratée se rejoue, et
+  la carte postale se remplit d'un tampon par bonne réponse.
+
 Ordre pour la suite :
 
 `ninja` (rampe) → tuiles de l'accueil encore en

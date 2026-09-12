@@ -978,6 +978,105 @@ body.playing #cpCanvas{max-height:calc(100vh - 220px);}
   padding:2px 9px;border-radius:99px;vertical-align:middle;}
 
 /* ============================================================
+   LA POSTE AUX PHRASES — les types de phrases (GR2)
+   ============================================================ */
+.po-wrap{position:relative;display:flex;align-items:center;justify-content:center;
+  background:#FFF6E3;touch-action:manipulation;}
+.po-main{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(14px,3vh,30px);width:100%;max-width:min(900px,calc(100% - 190px));padding:0 10px;}
+.po-board{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;}
+
+/* La carte à tamponner : du gros papier, une ombre franche, un liseré postal */
+.po-card{position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+  gap:6px;width:100%;min-height:clamp(150px,30vh,270px);padding:clamp(22px,4vh,38px) 62px;
+  background:#fff;border-radius:20px;box-shadow:0 8px 22px rgba(69,54,42,.16);
+  border:3px solid var(--line);}
+.po-card::before{content:"";position:absolute;inset:8px;border:2px dashed rgba(69,54,42,.13);
+  border-radius:13px;pointer-events:none;}
+.po-text{font-family:'Baloo 2';font-weight:700;font-size:clamp(26px,5.4vmin,48px);
+  color:var(--ink);line-height:1.25;text-align:center;}
+.po-name{font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,5vmin,44px);color:var(--ink);text-align:center;}
+.po-mark{display:block;}
+
+/* L'emplacement du point : il clignote tant qu'il est vide, puis l'encre tombe */
+.po-slot{display:inline-grid;place-items:center;width:clamp(46px,8.4vmin,70px);height:clamp(46px,8.4vmin,70px);
+  margin-left:4px;border:3px dashed var(--mango);border-radius:12px;background:#FFF7E6;
+  animation:poSlot 1.15s ease-in-out infinite;}
+@keyframes poSlot{50%{background:#FFE9BD;transform:scale(1.06);}}
+.po-slot.inked{border-style:solid;border-color:var(--meadow);background:#EAF9EE;animation:poInk .34s var(--spring);}
+@keyframes poInk{0%{transform:scale(2.2) rotate(-14deg);opacity:0;}60%{transform:scale(.88) rotate(3deg);opacity:1;}}
+@media(prefers-reduced-motion:reduce){.po-slot,.po-slot.inked{animation:none;}}
+
+/* Le haut-parleur, posé dans le coin de la carte */
+.po-say{position:absolute;right:10px;top:10px;width:44px;height:44px;border-radius:50%;border:none;
+  cursor:pointer;display:grid;place-items:center;background:var(--card);color:var(--ink-soft);
+  box-shadow:var(--e1);transition:transform .18s var(--spring);}
+.po-say:active{transform:scale(.9);}
+.po-say svg{width:24px;height:24px;}
+
+/* Les trois repères d'une phrase — ils ne s'allument qu'APRÈS la réponse */
+.po-why{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;opacity:0;
+  transition:opacity .25s ease;pointer-events:none;}
+.po-why.show{opacity:1;}
+.po-crit{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:99px;
+  background:var(--card);border:2px solid var(--line);font-family:'Baloo 2';font-weight:700;
+  font-size:clamp(13px,2.4vmin,17px);color:var(--ink-soft);}
+.po-crit b{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;
+  background:rgba(69,54,42,.08);font-size:15px;}
+.po-crit.ok{border-color:var(--meadow);background:#EAF9EE;color:#2E7D4B;}
+.po-crit.ok b{background:var(--meadow);color:#fff;}
+.po-crit.ko{border-color:var(--coral);background:#FFE5E1;color:#C63B2A;}
+.po-crit.ko b{background:var(--coral);color:#fff;}
+
+/* La rangée du bas : les tampons */
+.po-tools{display:flex;gap:clamp(8px,2vw,20px);flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+.po-stamp{border:none;background:none;padding:0;cursor:pointer;display:block;
+  transition:transform .2s var(--spring),filter .2s ease;}
+.po-stamp:active{transform:scale(.86) rotate(-5deg);}
+.po-stampart{display:block;width:clamp(78px,15vmin,124px);height:clamp(78px,15vmin,124px);
+  filter:drop-shadow(0 3px 6px rgba(69,54,42,.25));}
+.po-stamp.picked{animation:poSlam .32s ease-out;}
+@keyframes poSlam{0%{transform:translateY(-26px) scale(1.2) rotate(-9deg);}70%{transform:scale(.82) rotate(4deg);}}
+@media(prefers-reduced-motion:reduce){.po-stamp.picked{animation:none;}}
+
+/* Les deux gros boutons du mode « Phrase ? » */
+.po-yes{background:linear-gradient(135deg,#7CE0A0,#3FA45E);color:#fff;}
+.po-no{background:linear-gradient(135deg,#FFB4A8,#E8574C);color:#fff;}
+.po-yes,.po-no{width:clamp(78px,14vmin,112px);height:clamp(78px,14vmin,112px);}
+.po-yes svg,.po-no svg{width:52px;height:52px;}
+
+/* Le mode « Le nom du point » : soit des signes, soit des étiquettes */
+.po-bigmark{width:clamp(86px,15vmin,124px);height:clamp(86px,15vmin,124px);border-radius:20px;
+  border:3px solid var(--line);background:#fff;cursor:pointer;display:grid;place-items:center;
+  box-shadow:var(--e1);transition:transform .2s var(--spring);}
+.po-bigmark:active{transform:scale(.9);}
+.po-label{font-family:'Baloo 2';font-weight:800;font-size:clamp(17px,3.4vmin,27px);color:var(--ink);
+  padding:18px 26px;border-radius:16px;border:3px solid var(--line);background:#fff;cursor:pointer;
+  box-shadow:var(--e1);transition:transform .2s var(--spring);}
+.po-label:active{transform:scale(.94);}
+.po-bigmark.picked,.po-label.picked,.po-yes.picked,.po-no.picked{border-color:var(--mango);
+  box-shadow:0 0 0 4px rgba(255,169,77,.35);}
+
+/* Le mur de tampons : la carte postale se remplit, une case par bonne réponse */
+.po-wall{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;padding:10px;border-radius:16px;
+  background:rgba(255,255,255,.8);backdrop-filter:blur(6px);box-shadow:var(--e1);}
+.po-slotcell{width:38px;height:38px;border-radius:9px;border:2px dashed rgba(69,54,42,.16);
+  display:grid;place-items:center;}
+.po-slotcell.on{border-style:solid;border-color:transparent;animation:poPop .34s var(--spring);}
+.po-slotcell svg{width:100%;height:100%;display:block;}
+@keyframes poPop{0%{transform:scale(.3) rotate(-16deg);}60%{transform:scale(1.14);}}
+@media(prefers-reduced-motion:reduce){.po-slotcell.on{animation:none;}}
+
+body.playing .po-card{max-width:880px;}
+/* Le mot sous chaque tampon : c'est lui qui nomme le type, il doit se lire */
+.po-tools .tool-cap{font-size:clamp(13px,2.4vmin,17px);padding:3px 10px;}
+@media(max-width:820px){
+  .po-main{max-width:calc(100% - 130px);}
+  .po-wall{grid-template-columns:1fr;gap:5px;padding:7px;}
+  .po-slotcell{width:30px;height:30px;}
+}
+
+/* ============================================================
    LA PIZZERIA 3D
    ============================================================ */
 .pz-arena{background:#3B2A22;}

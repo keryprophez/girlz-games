@@ -19,7 +19,8 @@ jetons.
 Grand Tableau × et +, le Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
 Voyage dans l'Espace (vraies planètes), Suites logiques, le Miroir, Chasse
-aux lettres.
+aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
+phrase avec le bon signe, et le point s'imprime tout seul).
 
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
 neige), Habille-toi (le look est persisté), Boîte à Rythme, Petit Piano, Feu

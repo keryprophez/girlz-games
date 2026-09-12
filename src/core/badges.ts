@@ -218,6 +218,16 @@ export const BADGE: Record<string, string> = {
     <path d="M11 30l4-12 4 12M12.5 26h5" stroke="${C.coral}" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M31 30V20h4a3 3 0 0 1 0 6h-4h4.4a3 3 0 0 1 0 6z" fill="${C.cream}"/>`),
 
+  /* Une enveloppe et son tampon : le point d'exclamation dépasse du rabat. */
+  sentences: svg(`
+    <rect x="4" y="12" width="34" height="25" rx="3" fill="${C.cream}"/>
+    <path d="M4 15l17 12 17-12v-1a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2z" fill="${C.meadow}"/>
+    <path d="M4 37l13-11 4 3 4-3 13 11z" fill="${C.meadowDark}" opacity=".45"/>
+    <rect x="27" y="6" width="18" height="18" rx="3" fill="${C.coralDark}"/>
+    <rect x="27" y="4" width="18" height="18" rx="3" fill="${C.coral}"/>
+    <rect x="34" y="7.5" width="4" height="8" rx="2" fill="${C.white}"/>
+    <circle cx="36" cy="18.5" r="2.1" fill="${C.white}"/>`),
+
   /* ---------- Créer ---------- */
   snowman: svg(`
     <circle cx="24" cy="33" r="10" fill="${C.white}"/>

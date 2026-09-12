@@ -28,11 +28,12 @@ import { caterpillar } from './caterpillar'
 import { fireworks } from './fireworks'
 import { stand3d } from './stand3d'
 import { icetower } from './icetower'
+import { sentences } from './sentences'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, moleGame, catchGame, caterpillar, runGame, flappy, maze, taquin, memory, simonGame, stand3d,
   connect4,
-  clock, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters,
+  clock, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
 ]
 
@@ -58,7 +59,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters]
+    games: [clock, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',
