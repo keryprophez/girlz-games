@@ -1,164 +1,164 @@
 {
   "cow": {
     "fr": "vache",
-    "titre": "Cow female black white.jpg",
-    "auteur": "Keith Weller/USDA",
-    "licence": "PUBLIC DOMAIN",
-    "source": "https://commons.wikimedia.org/wiki/File:Cow_female_black_white.jpg"
+    "titre": "Domestic Cattle (Bos taurus)",
+    "auteur": "jwillardz",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/408007934"
   },
   "pig": {
     "fr": "cochon",
-    "titre": "Pig farm Vampula 1.jpg",
-    "auteur": "kallerna",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Pig_farm_Vampula_1.jpg"
+    "titre": "Domestic Pig (Sus scrofa domesticus)",
+    "auteur": "\nSteven Lek",
+    "licence": "PD",
+    "source": "https://www.inaturalist.org/photos/267631414"
   },
   "duck": {
     "fr": "canard",
-    "titre": "Khaki Campbell",
-    "auteur": "Oneterry AKA Terry Kearney",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/24490288@N04/54745669063"
+    "titre": "Mallard (Anas platyrhynchos)",
+    "auteur": "anonymous",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/95268822"
   },
   "goat": {
     "fr": "chèvre",
-    "titre": "domestic goat, goat, goat (feral)",
-    "auteur": "Klaus Wehrlin",
-    "licence": "CC0",
-    "source": "https://www.inaturalist.org/photos/57909066"
+    "titre": "Domestic Goat (Capra hircus)",
+    "auteur": "Dan Foy",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/138189496"
   },
   "rabbit": {
     "fr": "lapin",
-    "titre": "Summer snowshoe hare",
-    "auteur": "GlacierNPS",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/43288043@N04/51328570634"
+    "titre": "European Rabbit (Oryctolagus cuniculus)",
+    "auteur": "jitensha2021",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/520690657"
   },
   "dog": {
     "fr": "chien",
-    "titre": "Bernese Mountain Dog.",
-    "auteur": "Bernard Spragg",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/88123769@N02/51822282992"
+    "titre": "Domestic Dog (Canis familiaris)",
+    "auteur": "Марина Горбунова-Ëлкина",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/117465253"
   },
   "cat": {
     "fr": "chat",
-    "titre": "Cat",
-    "auteur": "Burnt Pineapple Productions",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/51686021@N07/42700002412"
+    "titre": "Domestic Cat (Felis catus)",
+    "auteur": "capracornelius",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/703856853"
   },
   "elephant": {
     "fr": "éléphant",
-    "titre": "african bush elephant, african elephant, african savannah elephant",
-    "auteur": "Simon Tonge",
-    "licence": "CC0",
-    "source": "https://www.inaturalist.org/photos/214566968"
+    "titre": "African Savanna Elephant (Loxodonta africana)",
+    "auteur": "eslone",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/25191638"
   },
   "giraffe": {
     "fr": "girafe",
-    "titre": "Masai giraffe",
-    "auteur": "Thad Zajdowicz",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/40632439@N00/51832884568"
+    "titre": "South African Giraffe (Giraffa giraffa giraffa)",
+    "auteur": "Ray in Manila",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/115213140"
   },
   "lion": {
     "fr": "lion",
-    "titre": "Lion",
-    "auteur": "Mathias Appel",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/91501748@N07/51648555325"
+    "titre": "Roaring Cats (Panthera)",
+    "auteur": "mikeloomis",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/30922818"
   },
   "monkey": {
     "fr": "singe",
-    "titre": "Macaques",
-    "auteur": "ozalperen",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/162047311@N05/54836465709"
+    "titre": "Rhesus Macaque (Macaca mulatta)",
+    "auteur": "Markus  Lilje",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/8739674"
   },
   "bear": {
     "fr": "ours",
-    "titre": "Kodiak brown bear cub in the snow",
-    "auteur": "USFWSAlaska",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/54775250@N07/51942617571"
+    "titre": "Brown Bear (Ursus arctos)",
+    "auteur": "Валерия Ковалева",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/414075864"
   },
   "fox": {
     "fr": "renard",
-    "titre": "Red fox in the rain",
-    "auteur": "USFWSAlaska",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/54775250@N07/51358716459"
+    "titre": "Typical Foxes (Vulpes)",
+    "auteur": "Joanne Muis Redwood",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/6568074"
   },
   "hedgehog": {
     "fr": "hérisson",
-    "titre": "western european hedgehog, west european hedgehog",
-    "auteur": "Sascha Haberkorn",
-    "licence": "CC0",
-    "source": "https://www.inaturalist.org/photos/404583235"
+    "titre": "Common Hedgehog (Erinaceus europaeus)",
+    "auteur": "Caiden",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/604670731"
   },
   "frog": {
     "fr": "grenouille",
-    "titre": "Columbia Spotted Frog - Rana luteiventris",
-    "auteur": "GlacierNPS",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/43288043@N04/51362600965"
+    "titre": "European Common Frog (Rana temporaria)",
+    "auteur": "H. Krisp",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/54599133"
   },
   "snake": {
     "fr": "serpent",
-    "titre": "Smooth green snake at Moosehorn National Wildlife Refuge",
-    "auteur": "U. S. Fish and Wildlife Service - Northeast Region",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/43322816@N08/51532346486"
+    "titre": "Common Watersnake (Nerodia sipedon)",
+    "auteur": "markkrist",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/13608867"
   },
   "owl": {
     "fr": "hibou",
-    "titre": "Eagle Owl IMG 9203.JPG",
-    "auteur": "Brocken Inaglory",
-    "licence": "CC BY-SA 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Eagle_Owl_IMG_9203.JPG"
+    "titre": "Typical Eagle-Owls and Horned Owls (Bubo)",
+    "auteur": "Rigoberto Yáñez",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/32660415"
   },
   "parrot": {
     "fr": "perroquet",
-    "titre": "Ara ararauna Luc Viatour.jpg",
-    "auteur": "Luc Viatour",
-    "licence": "CC BY 2.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Ara_ararauna_Luc_Viatour.jpg"
+    "titre": "Blue-and-yellow Macaw (Ara ararauna)",
+    "auteur": "Jorge Ralston",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/77485182"
   },
   "penguin": {
     "fr": "pingouin",
-    "titre": "Emperor Penguin",
-    "auteur": "steve 'steve' stevens",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/192320315@N02/53604263691"
+    "titre": "Emperor Penguin (Aptenodytes forsteri)",
+    "auteur": "Martha de Jong-Lantink",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/7229"
   },
   "whale": {
     "fr": "baleine",
-    "titre": "Humpback Whale Tail Lob_Tongass NF_HEH_21",
-    "auteur": "Forest Service Alaska Region, USDA",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/58184989@N07/52502029912"
+    "titre": "Humpback Whale (Megaptera novaeangliae)",
+    "auteur": "John Thorogood",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/338733901"
   },
   "fish": {
     "fr": "poisson",
-    "titre": "Goldie, 8-inch-long Goldfish",
-    "auteur": "JFGryphon",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/30484128@N03/52777908031"
+    "titre": "Goldfish (Carassius auratus)",
+    "auteur": "tigress16",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/555919820"
   },
   "turtle": {
     "fr": "tortue",
-    "titre": "MAY 16: A desert tortoise at the Kingman Field Office",
-    "auteur": "National Interagency Fire Center",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/165415395@N07/52150111645"
+    "titre": "Hermann's Tortoise (Testudo hermanni)",
+    "auteur": "Roberto Sindaco",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/669249"
   },
   "butterfly": {
     "fr": "papillon",
-    "titre": "Swallowtail butterfly feeding on heartleaf arnica pollen",
-    "auteur": "YellowstoneNPS",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/80223459@N05/51284762127"
+    "titre": "Old World Swallowtail (Papilio machaon)",
+    "auteur": "Marcello Consolo",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/1317606"
   },
   "banana": {
     "fr": "banane",
@@ -169,31 +169,31 @@
   },
   "strawberry": {
     "fr": "fraise",
-    "titre": "Garden strawberry (Fragaria × ananassa) single2.jpg",
-    "auteur": "Ivar Leidus",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Garden_strawberry_(Fragaria_%C3%97_ananassa)_single2.jpg"
+    "titre": "2015-365-149 Where Do Those Monsters Grow? (18255992275).jpg",
+    "auteur": "cogdogblog",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2015-365-149_Where_Do_Those_Monsters_Grow%3F_(18255992275).jpg"
   },
   "grapes": {
     "fr": "raisin",
-    "titre": "Grape-Time-Austria",
-    "auteur": "chachasarra",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/82995800@N06/51424346135"
+    "titre": "2021-08-24 23 06 08 Red, green and black table grapes at the Ramada by Wyndham Rochelle Park Near Paramus in Rochelle Park Township, Bergen County, New Jersey.jpg",
+    "auteur": "Famartin",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2021-08-24_23_06_08_Red,_green_and_black_table_grapes_at_the_Ramada_by_Wyndham_Rochelle_Park_Near_Paramus_in_Rochelle_Park_Township,_Bergen_County,_New_Jersey.jpg"
   },
   "lemon": {
     "fr": "citron",
-    "titre": "Lemons",
-    "auteur": "Thad Zajdowicz",
-    "licence": "CC0",
-    "source": "https://www.flickr.com/photos/40632439@N00/51427721961"
+    "titre": "Lemon.jpg",
+    "auteur": "André Karwath aka Aka",
+    "licence": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Lemon.jpg"
   },
   "watermelon": {
     "fr": "pastèque",
-    "titre": "20210902-FNS-UNC-0039",
-    "auteur": "USDAgov",
-    "licence": "PDM",
-    "source": "https://www.flickr.com/photos/41284017@N08/51430704796"
+    "titre": "Watermelon001.jpg",
+    "auteur": "Don miraj",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Watermelon001.jpg"
   },
   "radish": {
     "fr": "radis",
@@ -211,9 +211,268 @@
   },
   "cherries": {
     "fr": "cerises",
-    "titre": "Cherry Stella444.jpg",
-    "auteur": "Benjamint444, edited by Fir0002",
+    "titre": "- panoramio (3071).jpg",
+    "auteur": "dementevalexei",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-_panoramio_(3071).jpg"
+  },
+  "chicken": {
+    "fr": "poule",
+    "titre": "Domestic Chicken (Gallus gallus domesticus)",
+    "auteur": "Svklimkin",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/274681663"
+  },
+  "chick": {
+    "fr": "poussin",
+    "titre": "California Quail Chick",
+    "auteur": "Sharon out hiking:)",
+    "licence": "BY-NC-SA 2.0",
+    "source": "https://www.flickr.com/photos/119714073@N07/54578488119"
+  },
+  "horse": {
+    "fr": "cheval",
+    "titre": "Domestic Horse (Equus caballus)",
+    "auteur": "copper",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/23672580"
+  },
+  "sheep": {
+    "fr": "mouton",
+    "titre": "Domestic Sheep (Ovis aries)",
+    "auteur": "Christopher Stephens",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/632127459"
+  },
+  "zebra": {
+    "fr": "zèbre",
+    "titre": "Plains Zebra (Equus quagga)",
+    "auteur": "ispylifers",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/159452856"
+  },
+  "deer": {
+    "fr": "cerf",
+    "titre": "Red Deer (Cervus elaphus)",
+    "auteur": "Jon J. Laysell",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/25186445"
+  },
+  "pear": {
+    "fr": "poire",
+    "titre": "Arga de Baixo, Portugal (7907191130).jpg",
+    "auteur": "Rosino",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Arga_de_Baixo,_Portugal_(7907191130).jpg"
+  },
+  "pineapple": {
+    "fr": "ananas",
+    "titre": "Ananas.comosus1web.jpg",
+    "auteur": "Forest Starr &amp; Kim Starr",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ananas.comosus1web.jpg"
+  },
+  "peach": {
+    "fr": "pêche",
+    "titre": "20160624-AMS-LSC-9001 (55-seconds) (27524696944).jpg",
+    "auteur": "U.S. Department of Agriculture",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:20160624-AMS-LSC-9001_(55-seconds)_(27524696944).jpg"
+  },
+  "plum": {
+    "fr": "prune",
+    "titre": "100227 ciruelas.JPG",
+    "auteur": "Luisfi",
     "licence": "CC BY-SA 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Cherry_Stella444.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:100227_ciruelas.JPG"
+  },
+  "carrot": {
+    "fr": "carotte",
+    "titre": "13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-035.jpg",
+    "auteur": "Bi-frie (talk)",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-035.jpg"
+  },
+  "tomato": {
+    "fr": "tomate",
+    "titre": "- panoramio - ✿ Vlinder ✿ (28).jpg",
+    "auteur": "✿ Vlinder  ✿",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-_panoramio_-_%E2%9C%BF_Vlinder_%E2%9C%BF_(28).jpg"
+  },
+  "broccoli": {
+    "fr": "brocoli",
+    "titre": "-2018-12-10 Broccoli, Trimingham (1).JPG",
+    "auteur": "Kolforn (Kolforn)\nI'd appreciate if you could mail me (Kolforn@gmail.com) if you",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-2018-12-10_Broccoli,_Trimingham_(1).JPG"
+  },
+  "corn": {
+    "fr": "maïs",
+    "titre": "Klip kukuruza uzgojen u Međimurju (Croatia).JPG",
+    "auteur": "Silverije",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Klip_kukuruza_uzgojen_u_Me%C4%91imurju_(Croatia).JPG"
+  },
+  "eggplant": {
+    "fr": "aubergine",
+    "titre": "Des aubergines violettes.jpg",
+    "auteur": "BeraDigle",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Des_aubergines_violettes.jpg"
+  },
+  "onion": {
+    "fr": "oignon",
+    "titre": "13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-025.jpg",
+    "auteur": "Bi-frie (talk)",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-025.jpg"
+  },
+  "cabbage": {
+    "fr": "chou",
+    "titre": "Individual cabbage in a cabbage field - geograph.org.uk - 6601083.jpg",
+    "auteur": "Neil Theasby",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Individual_cabbage_in_a_cabbage_field_-_geograph.org.uk_-_6601083.jpg"
+  },
+  "pumpkin": {
+    "fr": "citrouille",
+    "titre": "500px photo (233156695).jpeg",
+    "auteur": "Matt Longmire",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:500px_photo_(233156695).jpeg"
+  },
+  "potato": {
+    "fr": "pomme de terre",
+    "titre": "110303 CNPP LSC 0413 (13065542084).jpg",
+    "auteur": "U.S. Department of Agriculture\n\nLance Chueng/Visual Information Specialist/USDA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:110303_CNPP_LSC_0413_(13065542084).jpg"
+  },
+  "cucumber": {
+    "fr": "concombre",
+    "titre": "0106 komkommer sealed.jpg",
+    "auteur": "Frits weet het",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:0106_komkommer_sealed.jpg"
+  },
+  "mushroom": {
+    "fr": "champignon",
+    "titre": "2013 Harvest Festival and Farmer's Market Outdoors Season Closure (20131122-NRCS-LSC-0068).jpg",
+    "auteur": "USDAgov",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:2013_Harvest_Festival_and_Farmer%27s_Market_Outdoors_Season_Closure_(20131122-NRCS-LSC-0068).jpg"
+  },
+  "bread": {
+    "fr": "pain",
+    "titre": "-365 FreshBread Mar10 (25751715811).jpg",
+    "auteur": "terri_bateman",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-365_FreshBread_Mar10_(25751715811).jpg"
+  },
+  "cheese": {
+    "fr": "fromage",
+    "titre": "Cowgirl Creamery Point Reyes - Red Hawk cheese.jpg",
+    "auteur": "Frank Schulenburg",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cowgirl_Creamery_Point_Reyes_-_Red_Hawk_cheese.jpg"
+  },
+  "cake": {
+    "fr": "gâteau",
+    "titre": "-365 shortcakes (27397449543).jpg",
+    "auteur": "terri_bateman",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:-365_shortcakes_(27397449543).jpg"
+  },
+  "cookie": {
+    "fr": "biscuit",
+    "titre": "5-25-2025 Earl grey cookies with extra orange rind - 003.jpg",
+    "auteur": "Wheeler Cowperthwaite",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:5-25-2025_Earl_grey_cookies_with_extra_orange_rind_-_003.jpg"
+  },
+  "egg": {
+    "fr": "œuf",
+    "titre": "2 Huevos de distintas especies de gallinas.jpg",
+    "auteur": "MONUMENTA",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2_Huevos_de_distintas_especies_de_gallinas.jpg"
+  },
+  "milk": {
+    "fr": "lait",
+    "titre": "Agregace micel kaseinu v mléce při změně pH přidáním kyseliny octové.jpg",
+    "auteur": "ZuzanaBrabcova",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Agregace_micel_kaseinu_v_ml%C3%A9ce_p%C5%99i_zm%C4%9Bn%C4%9B_pH_p%C5%99id%C3%A1n%C3%ADm_kyseliny_octov%C3%A9.jpg"
+  },
+  "honey": {
+    "fr": "miel",
+    "titre": "-365 honey mar23 (25480652103).jpg",
+    "auteur": "terri_bateman",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:-365_honey_mar23_(25480652103).jpg"
+  },
+  "croissant": {
+    "fr": "croissant",
+    "titre": "00 Croissant. Yum.jpg",
+    "auteur": "Mark Mitchell",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:00_Croissant._Yum.jpg"
+  },
+  "baguette": {
+    "fr": "baguette",
+    "titre": "9457French bagette 01.jpg",
+    "auteur": "Judgefloro",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:9457French_bagette_01.jpg"
+  },
+  "muffin": {
+    "fr": "muffin",
+    "titre": "2013. Фестиваль славянской культуры в Донецке 209.jpg",
+    "auteur": "Andrey Butko",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2013._%D0%A4%D0%B5%D1%81%D1%82%D0%B8%D0%B2%D0%B0%D0%BB%D1%8C_%D1%81%D0%BB%D0%B0%D0%B2%D1%8F%D0%BD%D1%81%D0%BA%D0%BE%D0%B9_%D0%BA%D1%83%D0%BB%D1%8C%D1%82%D1%83%D1%80%D1%8B_%D0%B2_%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA%D0%B5_209.jpg"
+  },
+  "plate": {
+    "fr": "assiette",
+    "titre": "Botanical plate with spray of fruiting Indian Bean Tree MET DP-1687-038 (cropped).jpg",
+    "auteur": "Chelsea porcelain factory",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Botanical_plate_with_spray_of_fruiting_Indian_Bean_Tree_MET_DP-1687-038_(cropped).jpg"
+  },
+  "cup": {
+    "fr": "tasse",
+    "titre": "Teacup.png",
+    "auteur": "Rijksmuseum",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Teacup.png"
+  },
+  "pot": {
+    "fr": "casserole",
+    "titre": "2014-04-27 IMG 7338 최광모.JPG",
+    "auteur": "최광모 (Choe Kwangmo)",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:2014-04-27_IMG_7338_%EC%B5%9C%EA%B4%91%EB%AA%A8.JPG"
+  },
+  "spoon": {
+    "fr": "cuillère",
+    "titre": "1129 Juego de cuchillo.jpg",
+    "auteur": "Museo Soumaya",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1129_Juego_de_cuchillo.jpg"
+  },
+  "glass": {
+    "fr": "verre",
+    "titre": "Bagare-med-varmt-vatten.jpeg",
+    "auteur": "Mehinger",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bagare-med-varmt-vatten.jpeg"
+  },
+  "orange": {
+    "fr": "orange",
+    "titre": "Oranges - whole-halved-segment.jpg",
+    "auteur": "Ivar Leidus",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Oranges_-_whole-halved-segment.jpg"
   }
 }

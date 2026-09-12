@@ -65,15 +65,20 @@ scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
 scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
 ```
 
-**Les objets et les animaux des jeux d'images sont de VRAIES PHOTOS** (12/09) :
-`public/assets/photos/*.jpg`, 31 sujets sous licence libre réunis par
-`scripts/import-photos.mjs` (Wikimedia + Openverse ; crédits dans
-`CREDITS.json` à côté et dans `public/assets/CREDITS.md`). `photoImg(nom, px)`
-et `hasPhoto(nom)` sont dans `core/sprites.ts`. **Règle** : jamais deux styles
-dans la même grille — une famille de l'Intrus est soit tout en photo, soit
-tout en rendus Kenney, sinon l'intrus se repère à son dessin. Pour ajouter un
-mot : `node scripts/import-photos.mjs candidats`, regarder la planche-contact,
-écrire `photos.picks.json`, puis `… garder`.
+**Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
+Memory, la Chasse aux lettres et le Marché. 68 sujets dans
+`public/assets/photos/*.jpg`, réunis par `scripts/import-photos.mjs` —
+**animaux : iNaturalist** (recherche par taxon latin), **le reste : catégories
+de Wikimedia Commons** — tous ramenés au même moule (carré, 512 px) à l'import.
+`photoImg(nom, px)` et `hasPhoto(nom)` sont dans `core/sprites.ts`, les crédits
+dans `photos/CREDITS.json` et `public/assets/CREDITS.md`. L'app est privée et
+sans usage commercial : les licences CC BY-NC sont acceptées, et créditées.
+**Règle du père : jamais deux styles.** Les planches Kenney ne servent plus que
+là où l'image est un PION ou du DÉCOR (Puissance 4, Simon, Taquin, labyrinthe,
+jeux 3D) : ce n'est plus du vocabulaire illustré, et il faudrait des images
+détourées qu'on ne sait pas produire ici. Pour ajouter un mot : une ligne dans
+`TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
+**regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
 
 **Le reste des visuels vient des planches CC0 Kenney**, pas d'emoji : `loadAtlas('animals')`
 puis `frameStyle(atlas, 'cow', 64)` pour un jeu en DOM (voir `mole.ts`, le patron).
@@ -171,6 +176,9 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **PWA en cache** | `registerSW` applique la maj auto si elle arrive <15 s après l'ouverture (`src/main.tsx`). Ne pas casser ça. |
 | **Animal « posé sur » un trou** | En DOM : un sprite au-dessus d'une ellipse sombre ne sort pas du trou, il est planté devant ; il faut trois couches (terrier, sprite dans un conteneur `overflow:hidden`, bourrelet par-dessus). En 3D, même piège avec un `Sprite` face caméra : incliné vers la caméra, il flotte DEVANT le trou. Utiliser `standeeFromAtlas` (panneau vertical, origine aux pieds, `faceCamera` sur Y seulement) : le sol cache ce qui est dessous, et l'étirement part des pieds (voir `mole.ts`). |
 | **Noms de jeux en double** | Le nom de fichier est la mécanique (`battleship.ts`), le nom affiché est le thème pour les filles (« Cache-Cache Pré »). Vérifier les collisions de nom ET d'icône avant d'en rebaptiser un. |
+| **Banques d'images : la recherche plein texte ment** | Openverse répond « champ de coquelicots » pour *orange* et « des gens dans un festival » pour *oignon*. Passer par ce qui est RANGÉ par des humains : iNaturalist par taxon latin (`Bos taurus`, jamais « cow »), et les catégories Commons (`Category:Carrots`). Et regarder la planche-contact avant de committer : sur 68 photos, sept étaient à refaire (l'ours noir sur fond noir, le « lion » qui était un léopard). |
+| **Wikimedia compte par adresse IP** | Le proxy de la session est partagé : au-delà d'une poignée de requêtes par seconde, tout répond 429 pendant plusieurs minutes. `import-photos.mjs` a une file d'attente par hôte et un recul jusqu'à 2 min ; la collecte complète prend une demi-heure et ne se lance qu'à la main. |
+| **`const file` qui masque `file()`** | Une variable locale du même nom qu'une fonction du module met celle-ci dans sa zone morte : l'appel lève, et un `catch` vide avale tout. 70 mots ont ramené « 0 proposition » sans un seul message d'erreur. Jamais de `catch {}` muet dans un script d'import. |
 | **Arène redimensionnée sans la fenêtre** | Une barre d'outils qui se replie agrandit l'arène : le canvas WebGL, lui, ne bougeait pas et laissait une bande noire (vécu sur la Pizzeria). `createStage` observe maintenant l'arène (`ResizeObserver`) en plus de `resize`. |
 | **Modèle du kit Food mal nommé** | `cheese-cut.glb` n'est pas un morceau de fromage : c'est une meule **avec son couteau** (manche bleu). Regarder le modèle avant de le cloner cent fois sur une pizza. |
 | **Mesure faussée par le service worker** | La maj auto de la PWA recharge la page <15 s après l'ouverture — en plein test Playwright, on mesure alors l'ACCUEIL et pas le jeu (une luminosité relevée à 210/255 au lieu de 68). Toujours ouvrir le contexte avec `serviceWorkers: 'block'`. |

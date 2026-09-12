@@ -3,7 +3,7 @@ import { $, pick, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
-import { foodImg, photoImg } from '../core/sprites'
+import { photoImg } from '../core/sprites'
 
 /* L'Intrus — parmi des choses qui vont ensemble, une seule ne va pas.
 
@@ -16,40 +16,36 @@ import { foodImg, photoImg } from '../core/sprites'
    - plein écran : les tuiles sont aussi grandes que la place le permet,
      manches en pastilles sur le côté ; timers de partie, état typé.
 
-   Depuis le 12/09, les familles sont faites de **photos réelles** (licences
-   libres, voir `scripts/import-photos.mjs`) : une vraie vache, une vraie
-   fraise. Règle absolue : **jamais deux styles dans la même grille** — sinon
-   l'intrus se repère à son dessin, pas à sa famille. Les familles sur photo
-   n'utilisent donc que des mots photographiés (`P(...)`), les autres restent
-   entièrement en rendus Kenney. */
-type It = { k: 'i' | 'p'; n: string }
-const I = (n: string): It => ({ k: 'i', n })
-const P = (n: string): It => ({ k: 'p', n })
+   Depuis le 12/09, **tout le jeu est en photos réelles** (68 sujets, voir
+   `scripts/import-photos.mjs`) : une vraie vache, une vraie fraise, une vraie
+   casserole. Il n'y a plus un seul rendu Kenney ici — la règle du père : pas
+   deux styles. C'est aussi une règle de jeu : si l'intrus était le seul dessin
+   d'une grille de photos, il se repèrerait à son trait, pas à sa famille. */
 
-/* --- Familles EN PHOTO (le gros du jeu) --- */
-const PH_FARM = ['cow', 'pig', 'duck', 'goat', 'rabbit', 'dog', 'cat'].map(P)
-const PH_WILD = ['elephant', 'giraffe', 'lion', 'monkey', 'bear', 'fox', 'hedgehog', 'turtle'].map(P)
-const PH_WATER = ['whale', 'fish', 'penguin', 'frog'].map(P)
-const PH_BIRD = ['duck', 'owl', 'parrot', 'penguin'].map(P)
-const PH_NONBIRD = ['cow', 'pig', 'dog', 'rabbit', 'frog', 'snake', 'fish', 'lion'].map(P)
-const PH_FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'lemon', 'watermelon'].map(P)
-const PH_ANIMALS = ['cow', 'pig', 'dog', 'cat', 'rabbit', 'goat', 'duck', 'lion', 'monkey', 'giraffe'].map(P)
-/* --- Familles en rendus Kenney (les mots sans photo digne de ce nom) --- */
-const I_VEG = ['carrot', 'broccoli', 'corn', 'tomato', 'eggplant', 'onion', 'cabbage', 'pumpkin-basic', 'radish'].map(I)
-const I_FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon', 'pineapple', 'watermelon'].map(I)
-const P_OBJECTS = ['pot', 'plate-dinner', 'cup', 'bread', 'cake', 'loaf-baguette', 'muffin', 'cookie'].map(I)
-const I_FOODS = ['apple', 'bread', 'cheese', 'cookie', 'strawberry', 'muffin', 'corn', 'cake', 'watermelon'].map(I)
+/* --- Les familles --- */
+const FARM = ['cow', 'pig', 'chicken', 'duck', 'horse', 'goat', 'sheep', 'rabbit', 'dog', 'cat']
+const WILD = ['elephant', 'giraffe', 'lion', 'monkey', 'bear', 'zebra', 'fox', 'deer', 'hedgehog', 'turtle']
+const WATER = ['whale', 'fish', 'penguin', 'frog']
+const BIRD = ['duck', 'owl', 'parrot', 'penguin', 'chicken']
+const NONBIRD = ['cow', 'pig', 'dog', 'rabbit', 'frog', 'snake', 'fish', 'lion']
+const FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear',
+  'lemon', 'pineapple', 'watermelon', 'peach', 'plum']
+const VEG = ['carrot', 'tomato', 'broccoli', 'corn', 'eggplant', 'onion', 'cabbage',
+  'pumpkin', 'radish', 'potato', 'cucumber', 'mushroom']
+const FOODS = ['bread', 'baguette', 'cheese', 'cake', 'cookie', 'muffin', 'croissant', 'egg', 'honey']
+const OBJECTS = ['plate', 'cup', 'pot', 'spoon', 'glass']
+const ANIMALS = [...FARM, ...WILD]
 /* La famille (la majorité) et les intrus possibles ; `q` nomme la famille, en positif */
 const CATS = [
-  { q: 'Les animaux de la ferme', maj: PH_FARM, intr: PH_WILD },
-  { q: 'Les animaux sauvages', maj: PH_WILD, intr: PH_FARM },
-  { q: 'Les animaux de l\'eau', maj: PH_WATER, intr: PH_FARM },
-  { q: 'Les oiseaux', maj: PH_BIRD, intr: PH_NONBIRD },
-  { q: 'Les fruits', maj: PH_FRUITS, intr: PH_ANIMALS },
-  { q: 'Les légumes', maj: I_VEG, intr: I_FRUITS },
-  { q: 'À manger', maj: I_FOODS, intr: P_OBJECTS }
+  { q: 'Les animaux de la ferme', maj: FARM, intr: WILD },
+  { q: 'Les animaux sauvages', maj: WILD, intr: FARM },
+  { q: 'Les animaux de l\'eau', maj: WATER, intr: FARM },
+  { q: 'Les oiseaux', maj: BIRD, intr: NONBIRD },
+  { q: 'Les fruits', maj: FRUITS, intr: ANIMALS },
+  { q: 'Les légumes', maj: VEG, intr: FRUITS },
+  { q: 'À manger', maj: FOODS, intr: OBJECTS },
+  { q: 'Dans la cuisine', maj: OBJECTS, intr: FOODS }
 ]
-const same = (a: It, b: It) => a.k === b.k && a.n === b.n
 
 interface State {
   round: number
@@ -72,7 +68,7 @@ function load(me: State) {
   const size = ctx.byTier(me.round >= 3 ? 6 : 4, me.round >= 3 ? 9 : 6, me.round >= 2 ? 12 : 9)
   const cat = pick(CATS)
   const members = shuffle([...cat.maj]).slice(0, Math.min(size - 1, cat.maj.length))
-  const intruderE = pick(cat.intr.filter(e => !members.some(m => same(m, e))))
+  const intruderE = pick(cat.intr.filter(e => !members.includes(e)))
   const items = shuffle([...members.map(e => ({ e, intruder: false })), { e: intruderE, intruder: true }])
   me.intruder = items.findIndex(i => i.intruder)
   $('intQ').textContent = cat.q
@@ -90,10 +86,8 @@ function load(me: State) {
     const b = document.createElement('button')
     b.className = 'itile'
     b.style.width = b.style.height = px + 'px'
-    // Une photo remplit la case (elle a son propre cadre), un rendu 3D respire
-    b.innerHTML = item.e.k === 'p'
-      ? photoImg(item.e.n, Math.round(px * 0.86))
-      : foodImg(item.e.n, Math.round(px * 0.62))
+    // La photo remplit la case : elle a déjà son cadre arrondi
+    b.innerHTML = photoImg(item.e, Math.round(px * 0.86))
     b.dataset.i = String(i)
     b.onclick = () => pickTile(me, b, item.intruder)
     grid.appendChild(b)

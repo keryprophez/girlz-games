@@ -319,6 +319,23 @@ sur l'écran de fin, sessions A puis B puis C.
     et le fromage est enfin une flaque fondue (le modèle « cheese-cut » du kit
     posait une meule ET son couteau à manche bleu sur la pizza).
 
+- ✅ **Un seul style d'images dans les imagiers (12/09).** Le père : « je veux
+  bien que tu me trouves des images pour tout, mais je ne veux pas qu'il y ait
+  deux styles ». **L'Intrus, Memory, la Chasse aux lettres et Le Marché**
+  n'affichent plus QUE des photos — 68 sujets au lieu de 31, tous ramenés au
+  même moule (carré, 512 px) à l'import. Les animaux viennent d'**iNaturalist**
+  (recherche par taxon latin : `Bos taurus` et pas « cow »), le reste des
+  **catégories de Wikimedia Commons** — la recherche plein texte d'Openverse
+  répondait « champ de coquelicots » pour *orange*. L'app étant privée et sans
+  usage commercial, les licences CC BY-NC sont acceptées et créditées comme
+  les autres (`public/assets/photos/CREDITS.json`). Les 68 vignettes ont été
+  regardées une à une sur planche-contact ; sept ont été refaites (l'ours était
+  noir sur fond noir, le « lion » était un léopard, l'« oignon » des gens dans
+  un festival). L'Intrus gagne une famille « Dans la cuisine ».
+  Les planches Kenney restent pour les PIONS et le DÉCOR (Puissance 4, Simon,
+  Taquin, labyrinthe, 3D) : ce n'est plus du vocabulaire illustré, et il
+  faudrait des images détourées.
+
 Ordre pour la suite :
 
 `ninja` (rampe) → tuiles de l'accueil encore en

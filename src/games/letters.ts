@@ -2,7 +2,7 @@ import type { GameContext, GameDef } from '../core/types'
 import { $, pick, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
-import { hasPhoto, loadAtlas, photoImg, spriteSpan, type Atlas } from '../core/sprites'
+import { photoImg } from '../core/sprites'
 
 /* Chasse aux lettres — retrouve les lettres du mot dans l'ordre.
    Premier mot : ton prénom ! Calibré CP pour Jade, mots plus longs pour Joyce. */
@@ -31,11 +31,9 @@ function loadWord() {
 
   // Le mot est d'abord MONTRÉ en entier, dit par la voix et illustré ;
   // puis les lettres s'effacent et il faut les retrouver dans l'ordre
+  // Tous les mots du jeu ont leur photo (12/09) : plus de repli sur un dessin
   const pic = PICS[word]
-  // Une VRAIE photo quand on en a une (12/09), sinon le sprite de la planche
-  $('lgPic').innerHTML = !pic ? ''
-    : hasPhoto(pic) ? photoImg(pic, 112)
-    : lg.atlas ? spriteSpan(lg.atlas, pic, 96) : ''
+  $('lgPic').innerHTML = pic ? photoImg(pic, 128) : ''
   const slots = $('lgWord')
   slots.innerHTML = word.split('').map((ch, i) =>
     `<span class="lg-slot peek" data-i="${i}">${ch}</span>`).join('')
@@ -114,9 +112,11 @@ export const letters: GameDef = {
     const tierWords = c.byTier(WORDS.easy, WORDS.med, WORDS.exp)
     lg = {
       words: [c.playerName.toUpperCase(), ...shuffle([...tierWords]).slice(0, 2)],
-      round: 0, mistakes: 0, running: true, atlas: null, peeking: false
+      round: 0, mistakes: 0, running: true, peeking: false
     }
-    loadAtlas('animals').then((a: Atlas) => { if (lg && lg.running) { lg.atlas = a; loadWord() } })
+    // Avant le 12/09 c'était le chargement de la planche de sprites qui lançait
+    // la première manche ; les photos n'ont rien à attendre, on démarre ici.
+    loadWord()
     return () => { if (lg) { lg.running = false; lg = null } }
   }
 }

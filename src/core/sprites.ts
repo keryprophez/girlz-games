@@ -121,14 +121,33 @@ export function frameDataURL(atlas: Atlas, name: string, px: number): string {
 /* ---------- Photos réelles (Wikimedia / Openverse, licences libres) ----------
    Demande du 12/09 : pour les jeux d'images, de VRAIES photos plutôt que des
    dessins. `scripts/import-photos.mjs` les installe dans public/assets/photos ;
-   les crédits sont dans CREDITS.json à côté. Un mot sans photo retombe sur le
-   rendu Kenney : les jeux vérifient `hasPhoto` avant de composer une grille,
-   pour ne jamais mélanger les deux styles dans le même écran. */
+   les crédits sont dans CREDITS.json à côté.
+
+   Depuis le 12/09, **les imagiers n'utilisent plus que ça** : l'Intrus, Memory,
+   la Chasse aux lettres et le Marché montrent des photos et rien d'autre — le
+   père ne voulait pas voir deux styles. Les planches Kenney restent pour ce
+   qui est PION ou DÉCOR de jeu (Puissance 4, Simon, Taquin, labyrinthe, 3D) :
+   là, ce n'est plus du vocabulaire illustré, et un détourage serait nécessaire.
+
+   Les animaux viennent d'iNaturalist (photos identifiées par l'espèce), le
+   reste des catégories de Wikimedia Commons. Toutes sont ramenées au même
+   moule à l'import : carré, 512 px (voir scripts/import-photos.mjs). */
 export const PHOTOS = new Set([
-  'cow', 'pig', 'duck', 'goat', 'rabbit', 'dog', 'cat',
-  'elephant', 'giraffe', 'lion', 'monkey', 'bear', 'fox', 'hedgehog',
+  // Ferme
+  'cow', 'pig', 'chicken', 'chick', 'duck', 'horse', 'goat', 'sheep', 'rabbit', 'dog', 'cat',
+  // Sauvages
+  'elephant', 'giraffe', 'lion', 'monkey', 'bear', 'zebra', 'fox', 'deer', 'hedgehog',
   'frog', 'snake', 'owl', 'parrot', 'penguin', 'whale', 'fish', 'turtle', 'butterfly',
-  'apple', 'banana', 'strawberry', 'grapes', 'cherries', 'lemon', 'watermelon', 'radish'
+  // Fruits
+  'apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon',
+  'pineapple', 'watermelon', 'peach', 'plum',
+  // Légumes
+  'carrot', 'tomato', 'broccoli', 'corn', 'eggplant', 'onion', 'cabbage', 'pumpkin',
+  'radish', 'potato', 'cucumber', 'mushroom',
+  // À manger
+  'bread', 'baguette', 'cheese', 'cake', 'cookie', 'muffin', 'croissant', 'egg', 'milk', 'honey',
+  // Objets de la cuisine
+  'plate', 'cup', 'pot', 'spoon', 'glass'
 ])
 export const hasPhoto = (name: string) => PHOTOS.has(name)
 export const photoUrl = (name: string) => `${import.meta.env.BASE_URL}assets/photos/${name}.jpg`

@@ -37,39 +37,86 @@ relancer.
 
 ## Photos des jeux d'images
 
-Les jeux qui montrent des objets et des animaux (l'Intrus, Memory, la Chasse
-aux lettres) utilisent de **vraies photographies** sous licence libre, réunies
-par `scripts/import-photos.mjs` (sources : Wikimedia Commons et Openverse).
-Chaque photo est créditée ici et dans `public/assets/photos/CREDITS.json`.
+Les imagiers — **l'Intrus**, **Memory**, la **Chasse aux lettres** et **Le
+Marché** — n'utilisent QUE de vraies photographies : le père ne voulait pas
+voir deux styles dans l'app. Les animaux viennent d'**iNaturalist** (photos
+identifiées par l'espèce), le reste des **catégories de Wikimedia Commons** ;
+tout est ramené au même moule à l'import (carré, 512 px) par
+`scripts/import-photos.mjs`.
 
-- **pomme** (`apple.jpg`) — *n257_w1150*, BioDivLibrary, PDM 1.0 — <https://www.flickr.com/photos/61021753@N02/49168321181>
-- **banane** (`banana.jpg`) — *20150627-FFAS-LSC-0107*, USDAgov, PDM 1.0 — <https://www.flickr.com/photos/41284017@N08/19047618349>
-- **ours** (`bear.jpg`) — *Kodiak brown bear cub in the snow*, USFWSAlaska, PDM 1.0 — <https://www.flickr.com/photos/54775250@N07/51942617571>
-- **papillon** (`butterfly.jpg`) — *Swallowtail butterfly feeding on heartleaf arnica pollen*, YellowstoneNPS, PDM 1.0 — <https://www.flickr.com/photos/80223459@N05/51284762127>
-- **chat** (`cat.jpg`) — *Cat*, Burnt Pineapple Productions, CC0 1.0 — <https://www.flickr.com/photos/51686021@N07/42700002412>
-- **cerises** (`cherries.jpg`) — *Cherries*, GeorgeTan#3 - OFF permanently, PDM 1.0 — <https://www.flickr.com/photos/190270151@N02/51295471407>
-- **vache** (`cow.jpg`) — *Cow female black white.jpg*, Keith Weller/USDA, PUBLIC DOMAIN — <https://commons.wikimedia.org/wiki/File:Cow_female_black_white.jpg>
-- **chien** (`dog.jpg`) — *Bernese Mountain Dog.*, Bernard Spragg, PDM 1.0 — <https://www.flickr.com/photos/88123769@N02/51822282992>
-- **canard** (`duck.jpg`) — *Khaki Campbell*, Oneterry AKA Terry Kearney, CC0 1.0 — <https://www.flickr.com/photos/24490288@N04/54745669063>
-- **éléphant** (`elephant.jpg`) — *african bush elephant, african elephant, african savannah el*, Simon Tonge, CC0 1.0 — <https://www.inaturalist.org/photos/214566968>
-- **poisson** (`fish.jpg`) — *Goldie, 8-inch-long Goldfish*, JFGryphon, CC0 1.0 — <https://www.flickr.com/photos/30484128@N03/52777908031>
-- **renard** (`fox.jpg`) — *Red fox in the rain*, USFWSAlaska, PDM 1.0 — <https://www.flickr.com/photos/54775250@N07/51358716459>
-- **grenouille** (`frog.jpg`) — *Columbia Spotted Frog - Rana luteiventris*, GlacierNPS, PDM 1.0 — <https://www.flickr.com/photos/43288043@N04/51362600965>
-- **girafe** (`giraffe.jpg`) — *Masai giraffe*, Thad Zajdowicz, CC0 1.0 — <https://www.flickr.com/photos/40632439@N00/51832884568>
-- **chèvre** (`goat.jpg`) — *domestic goat, goat, goat (feral)*, Klaus Wehrlin, CC0 1.0 — <https://www.inaturalist.org/photos/57909066>
-- **raisin** (`grapes.jpg`) — *Grape-Time-Austria*, chachasarra, PDM 1.0 — <https://www.flickr.com/photos/82995800@N06/51424346135>
-- **hérisson** (`hedgehog.jpg`) — *western european hedgehog, west european hedgehog*, Sascha Haberkorn, CC0 1.0 — <https://www.inaturalist.org/photos/404583235>
-- **citron** (`lemon.jpg`) — *Lemons*, Thad Zajdowicz, CC0 1.0 — <https://www.flickr.com/photos/40632439@N00/51427721961>
-- **lion** (`lion.jpg`) — *Lion*, Mathias Appel, CC0 1.0 — <https://www.flickr.com/photos/91501748@N07/51648555325>
-- **singe** (`monkey.jpg`) — *Macaques*, ozalperen, PDM 1.0 — <https://www.flickr.com/photos/162047311@N05/54836465709>
-- **hibou** (`owl.jpg`) — *Eagle Owl IMG 9203.JPG*, Brocken Inaglory, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Eagle_Owl_IMG_9203.JPG>
-- **perroquet** (`parrot.jpg`) — *Ara ararauna Luc Viatour.jpg*, Luc Viatour, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:Ara_ararauna_Luc_Viatour.jpg>
-- **pingouin** (`penguin.jpg`) — *Emperor Penguin*, steve 'steve' stevens, CC0 1.0 — <https://www.flickr.com/photos/192320315@N02/53604263691>
-- **cochon** (`pig.jpg`) — *Pig farm Vampula 1.jpg*, kallerna, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Pig_farm_Vampula_1.jpg>
-- **lapin** (`rabbit.jpg`) — *Summer snowshoe hare*, GlacierNPS, PDM 1.0 — <https://www.flickr.com/photos/43288043@N04/51328570634>
-- **radis** (`radish.jpg`) — *Radishes*, Thad Zajdowicz, CC0 1.0 — <https://www.flickr.com/photos/40632439@N00/54730343759>
-- **serpent** (`snake.jpg`) — *Smooth green snake at Moosehorn National Wildlife Refuge*, U. S. Fish and Wildlife Service - Northeast Region, PDM 1.0 — <https://www.flickr.com/photos/43322816@N08/51532346486>
-- **fraise** (`strawberry.jpg`) — *Garden strawberry (Fragaria × ananassa) single2.jpg*, Ivar Leidus, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Garden_strawberry_(Fragaria_%C3%97_ananassa)_single2.jpg>
-- **tortue** (`turtle.jpg`) — *MAY 16: A desert tortoise at the Kingman Field Office*, National Interagency Fire Center, PDM 1.0 — <https://www.flickr.com/photos/165415395@N07/52150111645>
-- **pastèque** (`watermelon.jpg`) — *20210902-FNS-UNC-0039*, USDAgov, PDM 1.0 — <https://www.flickr.com/photos/41284017@N08/51430704796>
-- **baleine** (`whale.jpg`) — *Humpback Whale Tail Lob_Tongass NF_HEH_21*, Forest Service Alaska Region, USDA, CC0 1.0 — <https://www.flickr.com/photos/58184989@N07/52502029912>
+L'app est privée, familiale et sans usage commercial : les licences non
+commerciales (CC BY-NC) sont donc acceptées, et créditées comme les autres.
+La liste fait foi dans `public/assets/photos/CREDITS.json`.
+
+- **ananas** (`pineapple.jpg`) — *Ananas.comosus1web.jpg*, Forest Starr &amp; Kim Starr, CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:Ananas.comosus1web.jpg>
+- **assiette** (`plate.jpg`) — *Botanical plate with spray of fruiting Indian Bean Tree MET DP-1687-038 (cropped).jpg*, Chelsea porcelain factory, CC0 — <https://commons.wikimedia.org/wiki/File:Botanical_plate_with_spray_of_fruiting_Indian_Bean_Tree_MET_DP-1687-038_(cropped).jpg>
+- **aubergine** (`eggplant.jpg`) — *Des aubergines violettes.jpg*, BeraDigle, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Des_aubergines_violettes.jpg>
+- **baguette** (`baguette.jpg`) — *9457French bagette 01.jpg*, Judgefloro, CC0 — <https://commons.wikimedia.org/wiki/File:9457French_bagette_01.jpg>
+- **baleine** (`whale.jpg`) — *Humpback Whale (Megaptera novaeangliae)*, John Thorogood, CC-BY-NC — <https://www.inaturalist.org/photos/338733901>
+- **banane** (`banana.jpg`) — *20150627-FFAS-LSC-0107*, USDAgov, PDM — <https://www.flickr.com/photos/41284017@N08/19047618349>
+- **biscuit** (`cookie.jpg`) — *5-25-2025 Earl grey cookies with extra orange rind - 003.jpg*, Wheeler Cowperthwaite, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:5-25-2025_Earl_grey_cookies_with_extra_orange_rind_-_003.jpg>
+- **brocoli** (`broccoli.jpg`) — *-2018-12-10 Broccoli, Trimingham (1).JPG*, Kolforn (Kolforn)
+I'd appreciate if you could mail me (Kolforn@gmail.com) if you, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:-2018-12-10_Broccoli,_Trimingham_(1).JPG>
+- **canard** (`duck.jpg`) — *Mallard (Anas platyrhynchos)*, anonymous, CC-BY-SA — <https://www.inaturalist.org/photos/95268822>
+- **carotte** (`carrot.jpg`) — *13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-035.jpg*, Bi-frie (talk), CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-035.jpg>
+- **casserole** (`pot.jpg`) — *2014-04-27 IMG 7338 최광모.JPG*, 최광모 (Choe Kwangmo), CC0 — <https://commons.wikimedia.org/wiki/File:2014-04-27_IMG_7338_%EC%B5%9C%EA%B4%91%EB%AA%A8.JPG>
+- **cerf** (`deer.jpg`) — *Red Deer (Cervus elaphus)*, Jon J. Laysell, CC-BY-NC — <https://www.inaturalist.org/photos/25186445>
+- **cerises** (`cherries.jpg`) — *- panoramio (3071).jpg*, dementevalexei, CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:-_panoramio_(3071).jpg>
+- **champignon** (`mushroom.jpg`) — *2013 Harvest Festival and Farmer's Market Outdoors Season Closure (20131122-NRCS-LSC-0068).jpg*, USDAgov, PUBLIC DOMAIN — <https://commons.wikimedia.org/wiki/File:2013_Harvest_Festival_and_Farmer%27s_Market_Outdoors_Season_Closure_(20131122-NRCS-LSC-0068).jpg>
+- **chat** (`cat.jpg`) — *Domestic Cat (Felis catus)*, capracornelius, CC-BY-NC — <https://www.inaturalist.org/photos/703856853>
+- **cheval** (`horse.jpg`) — *Domestic Horse (Equus caballus)*, copper, CC-BY-NC — <https://www.inaturalist.org/photos/23672580>
+- **chèvre** (`goat.jpg`) — *Domestic Goat (Capra hircus)*, Dan Foy, CC-BY-NC — <https://www.inaturalist.org/photos/138189496>
+- **chien** (`dog.jpg`) — *Domestic Dog (Canis familiaris)*, Марина Горбунова-Ëлкина, CC-BY-NC — <https://www.inaturalist.org/photos/117465253>
+- **chou** (`cabbage.jpg`) — *Individual cabbage in a cabbage field - geograph.org.uk - 6601083.jpg*, Neil Theasby, CC BY-SA 2.0 — <https://commons.wikimedia.org/wiki/File:Individual_cabbage_in_a_cabbage_field_-_geograph.org.uk_-_6601083.jpg>
+- **citron** (`lemon.jpg`) — *Lemon.jpg*, André Karwath aka Aka, CC BY-SA 2.5 — <https://commons.wikimedia.org/wiki/File:Lemon.jpg>
+- **citrouille** (`pumpkin.jpg`) — *500px photo (233156695).jpeg*, Matt Longmire, CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:500px_photo_(233156695).jpeg>
+- **cochon** (`pig.jpg`) — *Domestic Pig (Sus scrofa domesticus)*, 
+Steven Lek, PD — <https://www.inaturalist.org/photos/267631414>
+- **concombre** (`cucumber.jpg`) — *0106 komkommer sealed.jpg*, Frits weet het, CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:0106_komkommer_sealed.jpg>
+- **croissant** (`croissant.jpg`) — *00 Croissant. Yum.jpg*, Mark Mitchell, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:00_Croissant._Yum.jpg>
+- **cuillère** (`spoon.jpg`) — *1129 Juego de cuchillo.jpg*, Museo Soumaya, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:1129_Juego_de_cuchillo.jpg>
+- **éléphant** (`elephant.jpg`) — *African Savanna Elephant (Loxodonta africana)*, eslone, CC-BY-NC — <https://www.inaturalist.org/photos/25191638>
+- **fraise** (`strawberry.jpg`) — *2015-365-149 Where Do Those Monsters Grow? (18255992275).jpg*, cogdogblog, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:2015-365-149_Where_Do_Those_Monsters_Grow%3F_(18255992275).jpg>
+- **fromage** (`cheese.jpg`) — *Cowgirl Creamery Point Reyes - Red Hawk cheese.jpg*, Frank Schulenburg, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Cowgirl_Creamery_Point_Reyes_-_Red_Hawk_cheese.jpg>
+- **gâteau** (`cake.jpg`) — *-365 shortcakes (27397449543).jpg*, terri_bateman, CC0 — <https://commons.wikimedia.org/wiki/File:-365_shortcakes_(27397449543).jpg>
+- **girafe** (`giraffe.jpg`) — *South African Giraffe (Giraffa giraffa giraffa)*, Ray in Manila, CC-BY — <https://www.inaturalist.org/photos/115213140>
+- **grenouille** (`frog.jpg`) — *European Common Frog (Rana temporaria)*, H. Krisp, CC-BY — <https://www.inaturalist.org/photos/54599133>
+- **hérisson** (`hedgehog.jpg`) — *Common Hedgehog (Erinaceus europaeus)*, Caiden, CC-BY-NC — <https://www.inaturalist.org/photos/604670731>
+- **hibou** (`owl.jpg`) — *Typical Eagle-Owls and Horned Owls (Bubo)*, Rigoberto Yáñez, CC-BY-NC — <https://www.inaturalist.org/photos/32660415>
+- **lait** (`milk.jpg`) — *Agregace micel kaseinu v mléce při změně pH přidáním kyseliny octové.jpg*, ZuzanaBrabcova, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Agregace_micel_kaseinu_v_ml%C3%A9ce_p%C5%99i_zm%C4%9Bn%C4%9B_pH_p%C5%99id%C3%A1n%C3%ADm_kyseliny_octov%C3%A9.jpg>
+- **lapin** (`rabbit.jpg`) — *European Rabbit (Oryctolagus cuniculus)*, jitensha2021, CC-BY-NC — <https://www.inaturalist.org/photos/520690657>
+- **lion** (`lion.jpg`) — *Roaring Cats (Panthera)*, mikeloomis, CC-BY-NC — <https://www.inaturalist.org/photos/30922818>
+- **maïs** (`corn.jpg`) — *Klip kukuruza uzgojen u Međimurju (Croatia).JPG*, Silverije, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Klip_kukuruza_uzgojen_u_Me%C4%91imurju_(Croatia).JPG>
+- **miel** (`honey.jpg`) — *-365 honey mar23 (25480652103).jpg*, terri_bateman, CC0 — <https://commons.wikimedia.org/wiki/File:-365_honey_mar23_(25480652103).jpg>
+- **mouton** (`sheep.jpg`) — *Domestic Sheep (Ovis aries)*, Christopher Stephens, CC-BY-SA — <https://www.inaturalist.org/photos/632127459>
+- **muffin** (`muffin.jpg`) — *2013. Фестиваль славянской культуры в Донецке 209.jpg*, Andrey Butko, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:2013._%D0%A4%D0%B5%D1%81%D1%82%D0%B8%D0%B2%D0%B0%D0%BB%D1%8C_%D1%81%D0%BB%D0%B0%D0%B2%D1%8F%D0%BD%D1%81%D0%BA%D0%BE%D0%B9_%D0%BA%D1%83%D0%BB%D1%8C%D1%82%D1%83%D1%80%D1%8B_%D0%B2_%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA%D0%B5_209.jpg>
+- **œuf** (`egg.jpg`) — *2 Huevos de distintas especies de gallinas.jpg*, MONUMENTA, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:2_Huevos_de_distintas_especies_de_gallinas.jpg>
+- **oignon** (`onion.jpg`) — *13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-025.jpg*, Bi-frie (talk), CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:13-08-31-wien-redaktionstreffen-EuT-by-Bi-frie-025.jpg>
+- **orange** (`orange.jpg`) — *Oranges - whole-halved-segment.jpg*, Ivar Leidus, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Oranges_-_whole-halved-segment.jpg>
+- **ours** (`bear.jpg`) — *Brown Bear (Ursus arctos)*, Валерия Ковалева, CC-BY — <https://www.inaturalist.org/photos/414075864>
+- **pain** (`bread.jpg`) — *-365 FreshBread Mar10 (25751715811).jpg*, terri_bateman, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:-365_FreshBread_Mar10_(25751715811).jpg>
+- **papillon** (`butterfly.jpg`) — *Old World Swallowtail (Papilio machaon)*, Marcello Consolo, CC-BY-NC-SA — <https://www.inaturalist.org/photos/1317606>
+- **pastèque** (`watermelon.jpg`) — *Watermelon001.jpg*, Don miraj, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:Watermelon001.jpg>
+- **pêche** (`peach.jpg`) — *20160624-AMS-LSC-9001 (55-seconds) (27524696944).jpg*, U.S. Department of Agriculture, PUBLIC DOMAIN — <https://commons.wikimedia.org/wiki/File:20160624-AMS-LSC-9001_(55-seconds)_(27524696944).jpg>
+- **perroquet** (`parrot.jpg`) — *Blue-and-yellow Macaw (Ara ararauna)*, Jorge Ralston, CC-BY-NC — <https://www.inaturalist.org/photos/77485182>
+- **pingouin** (`penguin.jpg`) — *Emperor Penguin (Aptenodytes forsteri)*, Martha de Jong-Lantink, CC-BY-NC-ND — <https://www.inaturalist.org/photos/7229>
+- **poire** (`pear.jpg`) — *Arga de Baixo, Portugal (7907191130).jpg*, Rosino, CC BY-SA 2.0 — <https://commons.wikimedia.org/wiki/File:Arga_de_Baixo,_Portugal_(7907191130).jpg>
+- **poisson** (`fish.jpg`) — *Goldfish (Carassius auratus)*, tigress16, CC-BY-NC — <https://www.inaturalist.org/photos/555919820>
+- **pomme** (`apple.jpg`) — *Red Apple.jpg*, Abhijit Tembhekar from Mumbai, India, CC BY 2.0 — <https://commons.wikimedia.org/wiki/File:Red_Apple.jpg>
+- **pomme de terre** (`potato.jpg`) — *110303 CNPP LSC 0413 (13065542084).jpg*, U.S. Department of Agriculture
+
+Lance Chueng/Visual Information Specialist/USDA, PUBLIC DOMAIN — <https://commons.wikimedia.org/wiki/File:110303_CNPP_LSC_0413_(13065542084).jpg>
+- **poule** (`chicken.jpg`) — *Domestic Chicken (Gallus gallus domesticus)*, Svklimkin, CC-BY-SA — <https://www.inaturalist.org/photos/274681663>
+- **poussin** (`chick.jpg`) — *California Quail Chick*, Sharon out hiking:), BY-NC-SA 2.0 — <https://www.flickr.com/photos/119714073@N07/54578488119>
+- **prune** (`plum.jpg`) — *100227 ciruelas.JPG*, Luisfi, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:100227_ciruelas.JPG>
+- **radis** (`radish.jpg`) — *Radishes*, Thad Zajdowicz, CC0 — <https://www.flickr.com/photos/40632439@N00/54730343759>
+- **raisin** (`grapes.jpg`) — *2021-08-24 23 06 08 Red, green and black table grapes at the Ramada by Wyndham Rochelle Park Near Paramus in Rochelle Park Township, Bergen County, New Jersey.jpg*, Famartin, CC BY-SA 4.0 — <https://commons.wikimedia.org/wiki/File:2021-08-24_23_06_08_Red,_green_and_black_table_grapes_at_the_Ramada_by_Wyndham_Rochelle_Park_Near_Paramus_in_Rochelle_Park_Township,_Bergen_County,_New_Jersey.jpg>
+- **renard** (`fox.jpg`) — *Typical Foxes (Vulpes)*, Joanne Muis Redwood, CC-BY-NC — <https://www.inaturalist.org/photos/6568074>
+- **serpent** (`snake.jpg`) — *Common Watersnake (Nerodia sipedon)*, markkrist, CC-BY-NC — <https://www.inaturalist.org/photos/13608867>
+- **singe** (`monkey.jpg`) — *Rhesus Macaque (Macaca mulatta)*, Markus  Lilje, CC-BY-NC-ND — <https://www.inaturalist.org/photos/8739674>
+- **tasse** (`cup.jpg`) — *500px photo (35295462).jpeg*, Engin Asil, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:500px_photo_(35295462).jpeg>
+- **tomate** (`tomato.jpg`) — *- panoramio - ✿ Vlinder ✿ (28).jpg*, ✿ Vlinder  ✿, CC BY 3.0 — <https://commons.wikimedia.org/wiki/File:-_panoramio_-_%E2%9C%BF_Vlinder_%E2%9C%BF_(28).jpg>
+- **tortue** (`turtle.jpg`) — *Hermann's Tortoise (Testudo hermanni)*, Roberto Sindaco, CC-BY-NC-SA — <https://www.inaturalist.org/photos/669249>
+- **vache** (`cow.jpg`) — *Domestic Cattle (Bos taurus)*, jwillardz, CC-BY-NC — <https://www.inaturalist.org/photos/408007934>
+- **verre** (`glass.jpg`) — *Vaso largo (modelos).jpg*, Milartino, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Vaso_largo_(modelos).jpg>
+- **zèbre** (`zebra.jpg`) — *Plains Zebra (Equus quagga)*, ispylifers, CC-BY-NC — <https://www.inaturalist.org/photos/159452856>
