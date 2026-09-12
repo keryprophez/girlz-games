@@ -119,6 +119,9 @@ body.ingame .critter{display:none;}
   display:flex;align-items:center;justify-content:center;font-size:clamp(24px,5.6vmin,32px);
   box-shadow:inset 0 -3px 6px rgba(69,54,42,.08), inset 0 2px 4px rgba(255,255,255,.7);}
 .badge{width:76%;height:76%;display:block;}
+/* Photos réelles : carrées, recadrées au centre, coins doux (12/09) */
+.photo{object-fit:cover;border-radius:18%;display:block;background:var(--card);
+  box-shadow:0 1px 3px rgba(69,54,42,.18);}
 .sq .badge{filter:drop-shadow(0 1px 1px rgba(69,54,42,.18));}
 .eyebrow-badge{display:inline-flex;width:17px;height:17px;vertical-align:-3px;}
 .eyebrow-badge .badge{width:100%;height:100%;}
@@ -442,7 +445,7 @@ body.playing .g3-bar{max-width:820px;}
    ============================================================ */
 /* Grand Tableau plein écran : grille carrée dimensionnée par le jeu, cases lisibles */
 .tb-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#EEF6EA;touch-action:manipulation;}
-.tb-wrap #tbGrid{margin-right:160px;} /* la colonne de droite (consigne, pavé) a sa place */
+.tb-wrap #tbGrid{margin-right:min(36vw,360px);} /* la colonne de droite (consigne, pavé) a sa place */
 #tbGrid{display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);gap:3px;
   background:var(--card);border:1px solid var(--line);border-radius:22px;padding:8px;box-shadow:var(--e2);}
 .tb-h{display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;
@@ -456,15 +459,18 @@ body.playing .g3-bar{max-width:820px;}
 .tb-cell.good{box-shadow:0 0 0 3px var(--meadow);animation:goodp .4s var(--spring);}
 .tb-cell.bad{box-shadow:0 0 0 3px var(--coral);}
 .tb-cell.want{opacity:1;background:#fff;box-shadow:0 0 0 3px var(--mango);animation:lgpulse 1s ease-in-out infinite;}
-.tb-side{width:260px;gap:12px;}
-.tb-prompt{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;font-family:'Baloo 2';font-weight:800;color:var(--ink);}
-.tb-prompt .ico{font-size:34px;color:var(--coral);}
-.tb-big{font-size:clamp(34px,7vmin,52px);line-height:1;}
+.tb-side{width:min(38vw,380px);gap:14px;}
+.tb-prompt{display:flex;align-items:center;justify-content:center;gap:10px;min-height:72px;font-family:'Baloo 2';font-weight:800;color:var(--ink);}
+.tb-prompt .ico{font-size:42px;color:var(--coral);}
+.tb-big{font-size:clamp(42px,9vmin,68px);line-height:1;}
 .tb-target{color:var(--coral);}
 .tb-target.shake{display:inline-block;animation:lgshake .3s ease;}
 #tbTyped{color:var(--lagoon);min-width:1.2em;display:inline-block;}
-.tb-optsrow{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;min-height:10px;}
-.tb-opt{min-width:70px;padding:10px 14px !important;font-size:clamp(20px,4vmin,26px) !important;}
+.tb-optsrow{display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap;min-height:10px;}
+/* Boutons de réponse et pavé numérique : des cibles de DOIGT D'ENFANT.
+   Trop petits sur tablette avant le 12/09 — on dimensionne sur la colonne. */
+.tb-opt{min-width:104px;min-height:78px;padding:14px 20px !important;
+  font-size:clamp(28px,6vmin,42px) !important;border-radius:20px !important;}
 
 /* ============================================================
    LABYRINTHE — plein écran : le plateau prend toute la hauteur,
@@ -761,10 +767,14 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 
 /* ---- Taquin : mode chiffres + chips ---- */
 /* ---- Grand Tableau : réglette numérique sur UNE ligne ---- */
-.tb-optsrow{margin:0;width:100%;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
-.tb-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:230px;margin:0 auto;}
-.tb-key{aspect-ratio:1;padding:0;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;font-size:26px;}
-.tb-key.del{background:#FFE5E1;color:var(--coral);max-width:52px;}
+/* Le pavé vit dans cette rangée : il la prend en entier, les boutons de
+   réponse se rangent deux par deux (jamais 3 + 1 orphelin). */
+.tb-optsrow{margin:0;width:100%;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.tb-optsrow .tb-pad{flex:1 0 100%;}
+.tb-optsrow .tb-opt{flex:1 1 40%;}
+.tb-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:min(36vw,340px);margin:0 auto;}
+.tb-key{aspect-ratio:1;padding:0;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;font-size:clamp(26px,5vmin,40px);border-radius:18px;}
+.tb-key.del{background:#FFE5E1;color:var(--coral);}
 
 /* ---- Retour à la photo par défaut sur la carte profil ---- */
 .pdel{position:absolute;top:8px;left:10px;width:22px;height:22px;border-radius:50%;

@@ -3,7 +3,7 @@ import { $, pick, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
-import { foodImg, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
+import { foodImg, photoImg } from '../core/sprites'
 
 /* L'Intrus — parmi des choses qui vont ensemble, une seule ne va pas.
 
@@ -16,34 +16,38 @@ import { foodImg, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
    - plein écran : les tuiles sont aussi grandes que la place le permet,
      manches en pastilles sur le côté ; timers de partie, état typé.
 
-   Chaque proposition est un VRAI visuel : sprite de la planche animals (a),
-   poisson de la planche fish (f), ou icône food (i). */
-type It = { k: 'a' | 'f' | 'i'; n: string }
-const A = (n: string): It => ({ k: 'a', n })
-const F = (n: string): It => ({ k: 'f', n })
+   Depuis le 12/09, les familles sont faites de **photos réelles** (licences
+   libres, voir `scripts/import-photos.mjs`) : une vraie vache, une vraie
+   fraise. Règle absolue : **jamais deux styles dans la même grille** — sinon
+   l'intrus se repère à son dessin, pas à sa famille. Les familles sur photo
+   n'utilisent donc que des mots photographiés (`P(...)`), les autres restent
+   entièrement en rendus Kenney. */
+type It = { k: 'i' | 'p'; n: string }
 const I = (n: string): It => ({ k: 'i', n })
+const P = (n: string): It => ({ k: 'p', n })
 
-const P_LAND = ['cow', 'pig', 'dog', 'horse', 'goat', 'rabbit', 'giraffe', 'zebra', 'elephant', 'monkey', 'bear', 'moose'].map(A)
-const P_WATER = [A('whale'), A('narwhal'), A('walrus'), F('fish_blue'), F('fish_orange'), F('fish_pink'), F('fish_red'), F('fish_green')]
-const P_BIRD = ['chicken', 'chick', 'duck', 'owl', 'parrot', 'penguin'].map(A)
-const P_NONBIRD = [...['cow', 'pig', 'dog', 'horse', 'goat', 'rabbit', 'frog', 'snake', 'panda'].map(A), F('fish_blue'), F('fish_orange')]
-const I_FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon', 'pineapple', 'watermelon'].map(I)
+/* --- Familles EN PHOTO (le gros du jeu) --- */
+const PH_FARM = ['cow', 'pig', 'duck', 'goat', 'rabbit', 'dog', 'cat'].map(P)
+const PH_WILD = ['elephant', 'giraffe', 'lion', 'monkey', 'bear', 'fox', 'hedgehog', 'turtle'].map(P)
+const PH_WATER = ['whale', 'fish', 'penguin', 'frog'].map(P)
+const PH_BIRD = ['duck', 'owl', 'parrot', 'penguin'].map(P)
+const PH_NONBIRD = ['cow', 'pig', 'dog', 'rabbit', 'frog', 'snake', 'fish', 'lion'].map(P)
+const PH_FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'lemon', 'watermelon'].map(P)
+const PH_ANIMALS = ['cow', 'pig', 'dog', 'cat', 'rabbit', 'goat', 'duck', 'lion', 'monkey', 'giraffe'].map(P)
+/* --- Familles en rendus Kenney (les mots sans photo digne de ce nom) --- */
 const I_VEG = ['carrot', 'broccoli', 'corn', 'tomato', 'eggplant', 'onion', 'cabbage', 'pumpkin-basic', 'radish'].map(I)
-const P_ANIMALS = ['cow', 'pig', 'chicken', 'duck', 'horse', 'goat', 'rabbit', 'dog', 'monkey', 'panda', 'zebra', 'elephant'].map(A)
+const I_FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon', 'pineapple', 'watermelon'].map(I)
 const P_OBJECTS = ['pot', 'plate-dinner', 'cup', 'bread', 'cake', 'loaf-baguette', 'muffin', 'cookie'].map(I)
-const P_YELLOW = [I('banana'), I('corn'), I('cheese'), I('lemon'), A('chick')]
-const P_NONYELLOW = [I('apple'), I('strawberry'), I('broccoli'), I('tomato'), A('pig'), A('frog'), A('whale'), I('grapes')]
 const I_FOODS = ['apple', 'bread', 'cheese', 'cookie', 'strawberry', 'muffin', 'corn', 'cake', 'watermelon'].map(I)
 /* La famille (la majorité) et les intrus possibles ; `q` nomme la famille, en positif */
 const CATS = [
-  { q: 'Les animaux de la terre', maj: P_LAND, intr: P_WATER },
-  { q: 'Les animaux de l\'eau', maj: P_WATER, intr: P_LAND },
-  { q: 'Les oiseaux', maj: P_BIRD, intr: P_NONBIRD },
-  { q: 'Les choses jaunes', maj: P_YELLOW, intr: P_NONYELLOW },
-  { q: 'Les fruits', maj: I_FRUITS, intr: I_VEG },
+  { q: 'Les animaux de la ferme', maj: PH_FARM, intr: PH_WILD },
+  { q: 'Les animaux sauvages', maj: PH_WILD, intr: PH_FARM },
+  { q: 'Les animaux de l\'eau', maj: PH_WATER, intr: PH_FARM },
+  { q: 'Les oiseaux', maj: PH_BIRD, intr: PH_NONBIRD },
+  { q: 'Les fruits', maj: PH_FRUITS, intr: PH_ANIMALS },
   { q: 'Les légumes', maj: I_VEG, intr: I_FRUITS },
-  { q: 'Les animaux', maj: P_ANIMALS, intr: P_OBJECTS },
-  { q: 'À manger', maj: I_FOODS, intr: P_ANIMALS }
+  { q: 'À manger', maj: I_FOODS, intr: P_OBJECTS }
 ]
 const same = (a: It, b: It) => a.k === b.k && a.n === b.n
 
@@ -52,8 +56,6 @@ interface State {
   total: number
   score: number
   lock: boolean
-  animals: Atlas | null
-  fish: Atlas | null
   intruder: number
 }
 
@@ -88,8 +90,10 @@ function load(me: State) {
     const b = document.createElement('button')
     b.className = 'itile'
     b.style.width = b.style.height = px + 'px'
-    const sp = Math.round(px * 0.62)
-    b.innerHTML = item.e.k === 'i' ? foodImg(item.e.n, sp) : spriteSpan(item.e.k === 'a' ? me.animals! : me.fish!, item.e.n, sp)
+    // Une photo remplit la case (elle a son propre cadre), un rendu 3D respire
+    b.innerHTML = item.e.k === 'p'
+      ? photoImg(item.e.n, Math.round(px * 0.86))
+      : foodImg(item.e.n, Math.round(px * 0.62))
     b.dataset.i = String(i)
     b.onclick = () => pickTile(me, b, item.intruder)
     grid.appendChild(b)
@@ -140,7 +144,7 @@ export const intrus: GameDef = {
         </div>
       </div>`
     preloadSfx(['confirm', 'drop'])
-    const me: State = { round: 0, total: 6, score: 0, lock: false, animals: null, fish: null, intruder: -1 }
+    const me: State = { round: 0, total: 6, score: 0, lock: false, intruder: -1 }
     intr = me
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
@@ -148,9 +152,7 @@ export const intrus: GameDef = {
         get intruder() { return me.intruder }, get round() { return me.round }, get lock() { return me.lock }, get total() { return me.total }
       }
     }
-    Promise.all([loadAtlas('animals'), loadAtlas('fish')]).then(([a, f]: Atlas[]) => {
-      if (intr === me) { me.animals = a; me.fish = f; load(me) }
-    })
+    load(me)   // plus rien à charger : les photos sont de simples <img>
     return () => { if (intr === me) intr = null }
   }
 }

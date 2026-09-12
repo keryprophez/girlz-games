@@ -118,6 +118,24 @@ export function frameDataURL(atlas: Atlas, name: string, px: number): string {
   return u
 }
 
+/* ---------- Photos réelles (Wikimedia / Openverse, licences libres) ----------
+   Demande du 12/09 : pour les jeux d'images, de VRAIES photos plutôt que des
+   dessins. `scripts/import-photos.mjs` les installe dans public/assets/photos ;
+   les crédits sont dans CREDITS.json à côté. Un mot sans photo retombe sur le
+   rendu Kenney : les jeux vérifient `hasPhoto` avant de composer une grille,
+   pour ne jamais mélanger les deux styles dans le même écran. */
+export const PHOTOS = new Set([
+  'cow', 'pig', 'duck', 'goat', 'rabbit', 'dog', 'cat',
+  'elephant', 'giraffe', 'lion', 'monkey', 'bear', 'fox', 'hedgehog',
+  'frog', 'snake', 'owl', 'parrot', 'penguin', 'whale', 'fish', 'turtle', 'butterfly',
+  'apple', 'banana', 'strawberry', 'grapes', 'cherries', 'lemon', 'watermelon', 'radish'
+])
+export const hasPhoto = (name: string) => PHOTOS.has(name)
+export const photoUrl = (name: string) => `${import.meta.env.BASE_URL}assets/photos/${name}.jpg`
+/** Une photo prête à insérer : carrée, coins arrondis, recadrée au centre. */
+export const photoImg = (name: string, px: number) =>
+  `<img class="photo" src="${photoUrl(name)}" width="${px}" height="${px}" alt="" loading="lazy">`
+
 /** Chemin d'une icône food (rendu 2D du Food Kit, voir import-assets.mjs). */
 export const foodIcon = (name: string) => `${import.meta.env.BASE_URL}assets/icons/food/${name}.png`
 

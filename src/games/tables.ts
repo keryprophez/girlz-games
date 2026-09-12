@@ -80,7 +80,10 @@ let tb: State | null = null
   function buildGrid(me: State) {
     const grid = $('tbGrid')
     const wrap = $('tbWrap')
-    const side = Math.max(260, Math.min(wrap.clientHeight - 24, wrap.clientWidth - 400))
+    // La colonne de droite (consigne + pavé) prend jusqu'à 380 px : la grille
+    // occupe tout le reste, sans jamais passer dessous (12/09)
+    const col = Math.min(380, wrap.clientWidth * 0.38)
+    const side = Math.max(240, Math.min(wrap.clientHeight - 24, wrap.clientWidth - col - 120))
     grid.style.width = grid.style.height = side + 'px'
     grid.style.fontSize = Math.max(11, Math.floor(side / 11 * 0.42)) + 'px'
     grid.innerHTML = ''

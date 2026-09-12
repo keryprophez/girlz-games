@@ -211,7 +211,7 @@ function judge(me: State) {
     tone(520 + Math.min(12, c) * 70, 0.13, 'sine', 0.13)
     tone(720 + Math.min(12, c) * 80, 0.12, 'sine', 0.1, 0.09)
     me.fx.burst({ x: p.x, y: p.y + BLOCK_H / 2, z: p.z + 0.3 }, { count: 22, color: [0xFFE08A, 0xFFFFFF, 0xFFC533], speed: 2.4, life: 0.8, size: 0.1, gravity: 3 })
-    me.game.hit(2, { perfect: true, silent: true })
+    me.game.hit(1, { perfect: true, silent: true })
     if (me.game.s.combo >= 4) me.game.flash('×' + me.game.s.combo)
   } else {
     // Posé de travers : le choc se sent d'autant plus que le bloc est décalé
@@ -380,7 +380,11 @@ export const icetower: GameDef = {
         host: arena,
         lives: c.byTier(5, 3, 2),
         scoreIcon: ICON.cube,
-        stars: s => (s.score >= 26 ? 3 : s.score >= 12 ? 2 : 1)
+        // Le compteur affiché = le NOMBRE DE BLOCS posés, en permanence, sans
+        // multiplicateur de combo (demande du 12/09) : on suit sa tour d'un
+        // coup d'œil, et le score de fin est ce même nombre.
+        plainScore: true,
+        stars: s => (s.score >= 14 ? 3 : s.score >= 7 ? 2 : 1)
       })
 
       const me: State = {

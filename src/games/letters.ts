@@ -2,7 +2,7 @@ import type { GameContext, GameDef } from '../core/types'
 import { $, pick, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
-import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
+import { hasPhoto, loadAtlas, photoImg, spriteSpan, type Atlas } from '../core/sprites'
 
 /* Chasse aux lettres — retrouve les lettres du mot dans l'ordre.
    Premier mot : ton prénom ! Calibré CP pour Jade, mots plus longs pour Joyce. */
@@ -32,7 +32,10 @@ function loadWord() {
   // Le mot est d'abord MONTRÉ en entier, dit par la voix et illustré ;
   // puis les lettres s'effacent et il faut les retrouver dans l'ordre
   const pic = PICS[word]
-  $('lgPic').innerHTML = pic && lg.atlas ? spriteSpan(lg.atlas, pic, 96) : ''
+  // Une VRAIE photo quand on en a une (12/09), sinon le sprite de la planche
+  $('lgPic').innerHTML = !pic ? ''
+    : hasPhoto(pic) ? photoImg(pic, 112)
+    : lg.atlas ? spriteSpan(lg.atlas, pic, 96) : ''
   const slots = $('lgWord')
   slots.innerHTML = word.split('').map((ch, i) =>
     `<span class="lg-slot peek" data-i="${i}">${ch}</span>`).join('')

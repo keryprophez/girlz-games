@@ -1,0 +1,219 @@
+{
+  "cow": {
+    "fr": "vache",
+    "titre": "Cow female black white.jpg",
+    "auteur": "Keith Weller/USDA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Cow_female_black_white.jpg"
+  },
+  "pig": {
+    "fr": "cochon",
+    "titre": "Pig farm Vampula 1.jpg",
+    "auteur": "kallerna",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pig_farm_Vampula_1.jpg"
+  },
+  "duck": {
+    "fr": "canard",
+    "titre": "Khaki Campbell",
+    "auteur": "Oneterry AKA Terry Kearney",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/24490288@N04/54745669063"
+  },
+  "goat": {
+    "fr": "chèvre",
+    "titre": "domestic goat, goat, goat (feral)",
+    "auteur": "Klaus Wehrlin",
+    "licence": "CC0",
+    "source": "https://www.inaturalist.org/photos/57909066"
+  },
+  "rabbit": {
+    "fr": "lapin",
+    "titre": "Summer snowshoe hare",
+    "auteur": "GlacierNPS",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/43288043@N04/51328570634"
+  },
+  "dog": {
+    "fr": "chien",
+    "titre": "Bernese Mountain Dog.",
+    "auteur": "Bernard Spragg",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/88123769@N02/51822282992"
+  },
+  "cat": {
+    "fr": "chat",
+    "titre": "Cat",
+    "auteur": "Burnt Pineapple Productions",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/51686021@N07/42700002412"
+  },
+  "elephant": {
+    "fr": "éléphant",
+    "titre": "african bush elephant, african elephant, african savannah elephant",
+    "auteur": "Simon Tonge",
+    "licence": "CC0",
+    "source": "https://www.inaturalist.org/photos/214566968"
+  },
+  "giraffe": {
+    "fr": "girafe",
+    "titre": "Masai giraffe",
+    "auteur": "Thad Zajdowicz",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/40632439@N00/51832884568"
+  },
+  "lion": {
+    "fr": "lion",
+    "titre": "Lion",
+    "auteur": "Mathias Appel",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/91501748@N07/51648555325"
+  },
+  "monkey": {
+    "fr": "singe",
+    "titre": "Macaques",
+    "auteur": "ozalperen",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/162047311@N05/54836465709"
+  },
+  "bear": {
+    "fr": "ours",
+    "titre": "Kodiak brown bear cub in the snow",
+    "auteur": "USFWSAlaska",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/54775250@N07/51942617571"
+  },
+  "fox": {
+    "fr": "renard",
+    "titre": "Red fox in the rain",
+    "auteur": "USFWSAlaska",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/54775250@N07/51358716459"
+  },
+  "hedgehog": {
+    "fr": "hérisson",
+    "titre": "western european hedgehog, west european hedgehog",
+    "auteur": "Sascha Haberkorn",
+    "licence": "CC0",
+    "source": "https://www.inaturalist.org/photos/404583235"
+  },
+  "frog": {
+    "fr": "grenouille",
+    "titre": "Columbia Spotted Frog - Rana luteiventris",
+    "auteur": "GlacierNPS",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/43288043@N04/51362600965"
+  },
+  "snake": {
+    "fr": "serpent",
+    "titre": "Smooth green snake at Moosehorn National Wildlife Refuge",
+    "auteur": "U. S. Fish and Wildlife Service - Northeast Region",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/43322816@N08/51532346486"
+  },
+  "owl": {
+    "fr": "hibou",
+    "titre": "Eagle Owl IMG 9203.JPG",
+    "auteur": "Brocken Inaglory",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Eagle_Owl_IMG_9203.JPG"
+  },
+  "parrot": {
+    "fr": "perroquet",
+    "titre": "Ara ararauna Luc Viatour.jpg",
+    "auteur": "Luc Viatour",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Ara_ararauna_Luc_Viatour.jpg"
+  },
+  "penguin": {
+    "fr": "pingouin",
+    "titre": "Emperor Penguin",
+    "auteur": "steve 'steve' stevens",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/192320315@N02/53604263691"
+  },
+  "whale": {
+    "fr": "baleine",
+    "titre": "Humpback Whale Tail Lob_Tongass NF_HEH_21",
+    "auteur": "Forest Service Alaska Region, USDA",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/58184989@N07/52502029912"
+  },
+  "fish": {
+    "fr": "poisson",
+    "titre": "Goldie, 8-inch-long Goldfish",
+    "auteur": "JFGryphon",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/30484128@N03/52777908031"
+  },
+  "turtle": {
+    "fr": "tortue",
+    "titre": "MAY 16: A desert tortoise at the Kingman Field Office",
+    "auteur": "National Interagency Fire Center",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/165415395@N07/52150111645"
+  },
+  "butterfly": {
+    "fr": "papillon",
+    "titre": "Swallowtail butterfly feeding on heartleaf arnica pollen",
+    "auteur": "YellowstoneNPS",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/80223459@N05/51284762127"
+  },
+  "banana": {
+    "fr": "banane",
+    "titre": "20150627-FFAS-LSC-0107",
+    "auteur": "USDAgov",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/41284017@N08/19047618349"
+  },
+  "strawberry": {
+    "fr": "fraise",
+    "titre": "Garden strawberry (Fragaria × ananassa) single2.jpg",
+    "auteur": "Ivar Leidus",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Garden_strawberry_(Fragaria_%C3%97_ananassa)_single2.jpg"
+  },
+  "grapes": {
+    "fr": "raisin",
+    "titre": "Grape-Time-Austria",
+    "auteur": "chachasarra",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/82995800@N06/51424346135"
+  },
+  "lemon": {
+    "fr": "citron",
+    "titre": "Lemons",
+    "auteur": "Thad Zajdowicz",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/40632439@N00/51427721961"
+  },
+  "watermelon": {
+    "fr": "pastèque",
+    "titre": "20210902-FNS-UNC-0039",
+    "auteur": "USDAgov",
+    "licence": "PDM",
+    "source": "https://www.flickr.com/photos/41284017@N08/51430704796"
+  },
+  "radish": {
+    "fr": "radis",
+    "titre": "Radishes",
+    "auteur": "Thad Zajdowicz",
+    "licence": "CC0",
+    "source": "https://www.flickr.com/photos/40632439@N00/54730343759"
+  },
+  "apple": {
+    "fr": "pomme",
+    "titre": "Red Apple.jpg",
+    "auteur": "Abhijit Tembhekar from Mumbai, India",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Red_Apple.jpg"
+  },
+  "cherries": {
+    "fr": "cerises",
+    "titre": "Cherry Stella444.jpg",
+    "auteur": "Benjamint444, edited by Fir0002",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cherry_Stella444.jpg"
+  }
+}

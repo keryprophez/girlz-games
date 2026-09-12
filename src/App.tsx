@@ -6,15 +6,18 @@ import { Toast } from './components/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PlayGuard } from './components/PlayTimer'
 import { ICON } from './core/icons'
+import { unlockVoice } from './core/voice'
 
 /* Plein écran + paysage, demandés depuis le tap sur la tuile (il faut un geste
    utilisateur). Tout est optionnel : si le navigateur refuse, on joue quand
    même, et le bouton maison ressort du plein écran. */
-function enterFullscreen() {
+export function enterFullscreen() {
   try {
-    // Installée sur l'écran d'accueil, l'app est déjà en plein écran (manifest) :
-    // ne rien demander, sinon Chrome affiche son message « glisser pour quitter »
-    if (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return
+    // Seul le mode `fullscreen` du manifeste cache VRAIMENT la barre système
+    // d'Android. En `standalone` (installation antérieure au manifeste) la
+    // barre du bas restait, et les poignets des filles appuyaient dessus :
+    // on demande donc le plein écran dans TOUS les cas sauf celui-là (10/09).
+    if (matchMedia('(display-mode: fullscreen)').matches) return
     if (document.fullscreenElement) return
     const p = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
     p?.then(() => {
@@ -29,6 +32,18 @@ export function exitFullscreen() {
 
 export default function App() {
   const [session, setSession] = useState<{ id: string } | null>(null)
+
+  /* Android rend la main dès qu'on balaie depuis le bord : le plein écran est
+     perdu et la barre système revient. On le reprend au premier geste suivant
+     (un geste utilisateur est obligatoire pour le redemander). */
+  useEffect(() => {
+    const retake = () => {
+      unlockVoice()   // Android : la synthèse doit être déverrouillée par un geste
+      if (document.body.classList.contains('playing')) enterFullscreen()
+    }
+    document.addEventListener('pointerdown', retake, { passive: true })
+    return () => document.removeEventListener('pointerdown', retake)
+  }, [])
 
   // Le zoom double-tap est neutralisé par `touch-action: manipulation` en CSS :
   // pas de preventDefault global, qui avalait un tap sur deux dans les jeux rapides.

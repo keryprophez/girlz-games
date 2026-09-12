@@ -103,7 +103,9 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
   const paint = () => {
     scoreEl.textContent = String(s.score)
     if (livesEl) livesEl.innerHTML = heartsHTML(s.lives, s.maxLives)
-    if (s.combo >= 2) {
+    // Sans multiplicateur (plainScore), pas de badge « ×N » : il ferait croire
+    // à des points en plus alors que le score est un simple compte (12/09)
+    if (s.combo >= 2 && !o.plainScore) {
       comboEl.textContent = '×' + s.combo
       comboEl.classList.add('on')
       replay(comboEl, 'pop')

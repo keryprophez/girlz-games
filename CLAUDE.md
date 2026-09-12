@@ -65,7 +65,17 @@ scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
 scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
 ```
 
-**Les visuels viennent des planches CC0 Kenney**, pas d'emoji : `loadAtlas('animals')`
+**Les objets et les animaux des jeux d'images sont de VRAIES PHOTOS** (12/09) :
+`public/assets/photos/*.jpg`, 31 sujets sous licence libre réunis par
+`scripts/import-photos.mjs` (Wikimedia + Openverse ; crédits dans
+`CREDITS.json` à côté et dans `public/assets/CREDITS.md`). `photoImg(nom, px)`
+et `hasPhoto(nom)` sont dans `core/sprites.ts`. **Règle** : jamais deux styles
+dans la même grille — une famille de l'Intrus est soit tout en photo, soit
+tout en rendus Kenney, sinon l'intrus se repère à son dessin. Pour ajouter un
+mot : `node scripts/import-photos.mjs candidats`, regarder la planche-contact,
+écrire `photos.picks.json`, puis `… garder`.
+
+**Le reste des visuels vient des planches CC0 Kenney**, pas d'emoji : `loadAtlas('animals')`
 puis `frameStyle(atlas, 'cow', 64)` pour un jeu en DOM (voir `mole.ts`, le patron).
 Pour ajouter un pack, éditer `scripts/import-assets.mjs` et le relancer — les
 sprites triés sont commités, les zips ne le sont pas. Attention : la planche

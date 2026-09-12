@@ -3,7 +3,7 @@ import { $, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE, confetti } from '../core/fx'
 import { ICON } from '../core/icons'
-import { FARM_ANIMALS, loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
+import { PHOTOS, photoImg } from '../core/sprites'
 
 /* Memory — retrouver les paires d'animaux de la ferme (vrais sprites).
 
@@ -17,7 +17,6 @@ import { FARM_ANIMALS, loadAtlas, spriteSpan, type Atlas } from '../core/sprites
    - sons de gestes, état typé, timers de partie. */
 
 interface State {
-  atlas: Atlas | null
   rounds: number[]
   round: number
   moves: number
@@ -55,7 +54,9 @@ function layout(count: number): { cols: number; px: number } {
 
 function loadRound(me: State) {
   const pairs = me.rounds[me.round]
-  const picks = shuffle([...FARM_ANIMALS]).slice(0, pairs)
+  // Des PHOTOS réelles (12/09) : une vraie vache, un vrai renard — et jamais
+  // deux styles dans la même grille, sinon les paires se repèrent au dessin
+  const picks = shuffle([...PHOTOS]).slice(0, pairs)
   const deck = shuffle([...picks, ...picks])
   me.first = null; me.lock = false; me.found = 0; me.pairs = pairs; me.deck = deck
   me.dealt++
@@ -71,7 +72,7 @@ function loadRound(me: State) {
     card.dataset.k = name
     card.dataset.i = String(i)
     card.style.width = card.style.height = px + 'px'
-    card.innerHTML = `<div class="mcinner"><div class="face back">${ICON.star}</div><div class="face front">${spriteSpan(me.atlas!, name, Math.round(px * 0.62))}</div></div>`
+    card.innerHTML = `<div class="mcinner"><div class="face back">${ICON.star}</div><div class="face front">${photoImg(name, Math.round(px * 0.72))}</div></div>`
     card.onclick = () => flipCard(me, card)
     board.appendChild(card)
     cards.push(card)
@@ -149,7 +150,7 @@ export const memory: GameDef = {
       </div>`
     preloadSfx(['cloth', 'confirm', 'drop'])
     const me: State = {
-      atlas: null, rounds: c.byTier([3, 4, 6], [4, 6, 8], [6, 8, 10]), round: 0, moves: 0,
+ rounds: c.byTier([3, 4, 6], [4, 6, 8], [6, 8, 10]), round: 0, moves: 0,
       pairs: 0, found: 0, first: null, lock: false, running: true, deck: [], dealt: 0
     }
     mem = me
@@ -161,7 +162,7 @@ export const memory: GameDef = {
       }
     }
     // La planche d'abord : les cartes se construisent avec les sprites
-    loadAtlas('animals').then((a: Atlas) => { if (mem === me) { me.atlas = a; loadRound(me) } })
+    loadRound(me)   // plus d'atlas à charger : les photos sont de simples <img>
     return () => { if (mem === me) mem = null; me.running = false }
   }
 }

@@ -229,7 +229,14 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
         <button className="pbtn" onClick={goHome} aria-label="Menu"><Svg html={ICON.home} /></button>
         <span className="playbar-right">
           {tier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={askTier} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
-          <button className="pbtn" onClick={() => { store.toggleSound(); if (store.sound) shutUp() }} aria-label="Son"><Svg html={store.sound ? ICON.sound : ICON.mute} /></button>
+          <button className="pbtn" onClick={() => {
+            store.toggleSound()
+            // `store.sound` est encore l'état d'AVANT : s'il était allumé, on
+            // vient de couper — la voix en cours doit s'arrêter net.
+            // (la musique générative, elle, se tait d'elle-même : chaque note
+            // vérifie le réglage — inutile de l'arrêter, elle repart au son)
+            if (store.sound) shutUp()
+          }} aria-label="Son"><Svg html={store.sound ? ICON.sound : ICON.mute} /></button>
           <button className="pbtn" onClick={() => setPaused(true)} aria-label="Pause"><Svg html={ICON.pause} /></button>
           <button className="pbtn" onClick={replay} aria-label="Rejouer"><Svg html={ICON.replay} /></button>
         </span>

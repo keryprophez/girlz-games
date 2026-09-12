@@ -281,6 +281,17 @@ sur l'écran de fin, sessions A puis B puis C.
   est un renfort, jamais le porteur du sens : l'icône reste première, et le
   mode choisi se teinte, pastille et mot ensemble.
 
+- ✅ **Retours tablette du 12/09**. La voix des tables et des additions suit le
+  bouton son : elle se déclenche vraiment (deux pièges d'Android contournés,
+  le `cancel()` qui avale l'énoncé et le déverrouillage par un geste) et se
+  tait net quand on coupe. Le plein écran est demandé même quand l'app est
+  installée en `standalone` — c'est ce qui laissait la barre système d'Android
+  en bas — et il est repris au premier geste après un balayage. La Tour de
+  Glace affiche en permanence le **nombre de blocs**, sans multiplicateur. Les
+  pavés et boutons de réponse du Grand Tableau passent de 70 à plus de 100 px.
+  Enfin, l'Intrus, Memory et la Chasse aux lettres montrent de **vraies
+  photos** libres de droit à la place des dessins.
+
 Ordre pour la suite :
 
 `pizza` (échelle des
