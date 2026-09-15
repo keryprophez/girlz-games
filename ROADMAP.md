@@ -359,8 +359,22 @@ sur l'écran de fin, sessions A puis B puis C.
   La voix lit les phrases **avec leur point**, et c'est l'intérêt : l'intonation
   est l'indice qui sépare « Tu viens. » de « Tu viens ? ». Contenu pédagogique,
   donc conforme à la règle 2 ; en flamme la voix se tait et il faut lire.
-  Aucune sanction : autant d'essais qu'on veut, la manche ratée se rejoue, et
-  la carte postale se remplit d'un tampon par bonne réponse.
+  Aucune sanction : autant d'essais qu'on veut, la manche ratée se rejoue.
+  **Deuxième passe (15/09) : la poste existe pour de vrai.** La lettre arrive
+  en glissant, on **traîne** le tampon jusqu'à la case (ou on le tape, il vole
+  tout seul), il s'écrase avec un « bong », l'encre gicle de sa couleur, le
+  point s'imprime un peu de travers, puis la lettre s'envole dans une **boîte
+  aux lettres** qui l'avale en tressautant — la huitième lève le drapeau.
+  Se tromper de type avec le BON point (exclamative ↔ injonctive) est un
+  presque-juste : la case montre en gris le point qu'elle aurait reçu, le
+  tampon rebondit doucement ; un contresens secoue plus fort. Deux ratés et le
+  bon tampon se met à luire (de l'aide, pas une sanction). Rampe liée à la
+  performance : les phrases s'allongent tous les trois succès. En « Phrase ? »
+  la majuscule et le point s'entourent dans le texte même, et une case vide
+  apparaît là où le point manque. Deux pièges payés : la classe `.hint` de
+  la coquille (absolue) a happé mon tampon, et un glissé écouté sur chaque
+  bouton fait lever deux tampons quand le doigt en survole un autre — le
+  glissé s'écoute sur la fenêtre.
   Surveillé en CI par **trois bots** (`poste-type`, `poste-phrase`,
   `poste-point`) : chacun joue une partie entière de son mode, sans une seule
   erreur, et vérifie que l'écran de fin arrive.
