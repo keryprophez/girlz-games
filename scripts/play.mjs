@@ -59,13 +59,17 @@ if (!gl) {
   process.exit(0)
 }
 
-const openGame = async (name) => {
+const openGame = async (name, hook) => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.locator('.gc', { hasText: name }).first().click()
   // Le niveau se choisit dans le jeu : les bots jouent en douce
   await page.locator('.tierbtn.tier-easy').click()
   await page.waitForTimeout(3200)
+  // Un jeu 3D n'installe son accroche qu'une fois ses modèles chargés : sur
+  // un serveur d'intégration lent, 3,2 s ne suffisent pas toujours (la
+  // Course a échoué en CI sur sa PREMIÈRE sonde, faute de `__run`).
+  if (hook) await page.waitForFunction(k => k in window, hook, { timeout: 30000 })
 }
 
 const failures = []
@@ -83,7 +87,7 @@ const scenario = async (name, fn) => {
 /* ⛄ Bonhomme de neige : le parcours complet, jusqu'à l'écran de fin.
    Protège le blocage vécu (barre de pose hors écran). */
 await scenario('bonhomme-parcours-complet', async () => {
-  await openGame('Bonhomme de neige')
+  await openGame('Bonhomme de neige', '__sn')
   const sn = () => page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
     const s = window.__sn
     res(s ? { phase: s.phase, r: s.r, min: s.minPose, stack: s.stack, ball: s.ball(), pile: s.pile() } : null)
@@ -138,7 +142,7 @@ await scenario('bonhomme-parcours-complet', async () => {
 
 /* 🐛 La Chenille : piloter la tête vers les fruits, en croquer au moins 2. */
 await scenario('chenille-croque-des-fruits', async () => {
-  await openGame('La Chenille')
+  await openGame('La Chenille', '__cp')
   for (let i = 0; i < 110; i++) {
     const st = await page.evaluate(() => {
       const cp = window.__cp
@@ -167,7 +171,7 @@ await scenario('chenille-croque-des-fruits', async () => {
 
 /* 🚜 Course : sauter les obstacles, tenir 60 m avec au moins un cœur. */
 await scenario('course-soixante-metres', async () => {
-  await openGame('Course')
+  await openGame('Course', '__run')
   for (let i = 0; i < 420; i++) {
     // Une décision par frame rendue : sous swiftshader la 3D tourne à 4 fps
     const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
@@ -187,7 +191,7 @@ await scenario('course-soixante-metres', async () => {
 
 /* 🐤 Poussin Volant : viser le milieu du passage, franchir 2 barrières. */
 await scenario('poussin-deux-barrieres', async () => {
-  await openGame('Poussin Volant')
+  await openGame('Poussin Volant', '__fl')
   await page.keyboard.press('Space')
   for (let i = 0; i < 300; i++) {
     const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
