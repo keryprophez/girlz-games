@@ -401,7 +401,15 @@ sur l'écran de fin, sessions A puis B puis C.
     clignent des yeux, s'étirent en sortant, s'écrasent quand on tape. Le
     kit partage géométries et matériaux : dix personnages par partie ne
     coûtent rien. La clôture et les arbres sont ramenés dans le cadre.
-  - ⏳ **Course** (la « voiture ») : à suivre.
+  - ✅ **Course** (la « voiture ») : un vrai tracteur — capot arrondi,
+    calandre et phares, cabine à montants, siège, volant, garde-boue, roues à
+    crampons dont on VOIT la rotation, cheminée qui fume — et une remorque en
+    bois derrière. Il fait jour : ciel bleu, soleil, nuages qui dérivent, une
+    ferme et son silo au loin, une clôture le long du chemin, deux ornières.
+    Et une seconde décision avec le même geste : des pommes et des carottes
+    sont posées sur le chemin et se ramassent en ROULANT dessus — sauter au
+    mauvais moment les fait rater. Chaque récolte atterrit dans la remorque,
+    qui se remplit à vue. Jamais de sanction sur une récolte ratée.
   - ⏳ **Labyrinthe** : le poussin glisse en ligne droite entre deux cases,
     donc à travers les coins — c'est le « passe-muraille » ; à animer case
     par case, et à rendre amusant.

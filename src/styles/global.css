@@ -235,7 +235,7 @@ button.chip:active{transform:scale(.92);}
 /* ============================================================
    COURSE
    ============================================================ */
-.run3-arena{background:#3B2E5C;cursor:pointer;}
+.run3-arena{background:#8FCDEB;cursor:pointer;}
 
 /* ============================================================
    RÉSULTAT / ALBUM / TOAST / CONFETTIS
@@ -477,13 +477,23 @@ body.playing .g3-bar{max-width:820px;}
    les modes sont une colonne d'icônes, les manches des pastilles
    ============================================================ */
 .mz-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#DDEFD2;touch-action:none;}
-#mzArea{position:relative;background:linear-gradient(150deg,#F7F1DC,#EAF5DF);border-radius:22px;
+#mzArea{position:relative;background:radial-gradient(circle at 30% 20%,#EEF7D8,#DCEFC4 70%);border-radius:22px;
   box-shadow:var(--e2);border:1px solid rgba(105,72,38,.18);touch-action:none;overflow:hidden;}
 #mzArea.ice{background:linear-gradient(150deg,#EEF7FF,#D6ECFB);}
 #mzArea.ice svg{filter:hue-rotate(160deg) saturate(.6);}
 #mzArea svg{position:absolute;inset:0;}
 .mz-chick{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;
-  transition:left .12s ease-out,top .12s ease-out;z-index:2;filter:drop-shadow(0 2px 2px rgba(69,54,42,.25));}
+  z-index:2;filter:drop-shadow(0 2px 2px rgba(69,54,42,.25));}
+/* Il regarde où il va, et se dandine en marchant */
+.mz-chick.left .mz-body{transform:scaleX(-1);}
+.mz-chick.walk .mz-body{animation:mzwaddle .28s ease-in-out infinite alternate;}
+.mz-chick.walk.left .mz-body{animation-name:mzwaddleL;}
+@keyframes mzwaddle{from{transform:rotate(-7deg) translateY(0);}to{transform:rotate(7deg) translateY(-2px);}}
+@keyframes mzwaddleL{from{transform:scaleX(-1) rotate(-7deg);}to{transform:scaleX(-1) rotate(7deg) translateY(-2px);}}
+@media(prefers-reduced-motion:reduce){.mz-chick.walk .mz-body{animation:none;}}
+.mz-grain{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:1;
+  animation:mzgrain 1.4s ease-in-out infinite alternate;}
+@keyframes mzgrain{to{transform:translate(-50%,-58%) scale(1.12);}}
 .mz-chick.bump{animation:mzbump .22s ease-out;}
 @keyframes mzbump{30%{transform:scale(1.18,.84);}60%{transform:scale(.92,1.1);}}
 .mz-goal{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;
