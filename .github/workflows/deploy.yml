@@ -3,9 +3,13 @@ name: Deploy sur GitHub Pages
 on:
   push:
     # La branche claude/* est encore la branche par défaut du repo et
-    # l'environnement github-pages n'accepte que celle-ci ; une fois main
-    # passée par défaut dans Settings → General, on pourra la retirer.
-    branches: [main, claude/magic-farm-game-q66bw4]
+    # l'environnement github-pages n'accepte QU'ELLE. `main` n'est plus un
+    # déclencheur : une livraison pousse les deux branches à quelques
+    # secondes d'écart, et les deux runs, dans le même groupe `pages` avec
+    # cancel-in-progress, s'annulaient l'un l'autre — quand c'est celui de
+    # main qui survivait, il échouait au déploiement (15/09). Une fois main
+    # passée par défaut dans Settings → General, la remettre ici seule.
+    branches: [claude/magic-farm-game-q66bw4]
   workflow_dispatch:
 
 permissions:

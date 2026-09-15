@@ -229,4 +229,8 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
   ```
   Si tu bascules la branche par défaut sur `main` dans les réglages GitHub,
   simplifier `deploy.yml` et supprimer cette gymnastique.
-- CI : `npm ci` → `npm run build` → `npm run test:smoke` → Pages.
+- CI : `npm ci` → `npm run build` → `npm run test:smoke` → `test:play` → Pages.
+  Seul un push sur `claude/magic-farm-game-q66bw4` déclenche `deploy.yml`
+  (`main` en est retiré : les deux runs s'annulaient l'un l'autre dans le
+  groupe `pages`, et `main` n'a pas le droit de déployer). Si un run est
+  annulé, relancer à la main : `workflow_dispatch` sur la branche déployée.
