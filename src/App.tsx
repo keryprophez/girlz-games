@@ -34,15 +34,30 @@ export default function App() {
   const [session, setSession] = useState<{ id: string } | null>(null)
 
   /* Android rend la main dès qu'on balaie depuis le bord : le plein écran est
-     perdu et la barre système revient. On le reprend au premier geste suivant
-     (un geste utilisateur est obligatoire pour le redemander). */
+     perdu et la barre système revient. On le reprend au geste suivant (un geste
+     utilisateur est obligatoire pour le redemander) — mais à la FIN du geste,
+     jamais au début, et pas plus d'une fois toutes les trois secondes.
+     Le 12/09 la demande partait à chaque `pointerdown` : quand Android la
+     refuse (PWA installée en `standalone`), elle repart à CHAQUE toucher, et un
+     `requestFullscreen` en plein geste annule le geste (`pointercancel`). La
+     lame du Ninja ne tranchait plus rien et le poussin du Labyrinthe sautait
+     de case en case : « injouable », ont dit les filles (15/09). */
   useEffect(() => {
+    let lastTry = 0
+    const unlock = () => unlockVoice()   // Android : la synthèse se déverrouille sur un geste
     const retake = () => {
-      unlockVoice()   // Android : la synthèse doit être déverrouillée par un geste
-      if (document.body.classList.contains('playing')) enterFullscreen()
+      if (!document.body.classList.contains('playing')) return
+      const now = performance.now()
+      if (now - lastTry < 3000) return
+      lastTry = now
+      enterFullscreen()
     }
-    document.addEventListener('pointerdown', retake, { passive: true })
-    return () => document.removeEventListener('pointerdown', retake)
+    document.addEventListener('pointerdown', unlock, { passive: true })
+    document.addEventListener('pointerup', retake, { passive: true })
+    return () => {
+      document.removeEventListener('pointerdown', unlock)
+      document.removeEventListener('pointerup', retake)
+    }
   }, [])
 
   // Le zoom double-tap est neutralisé par `touch-action: manipulation` en CSS :

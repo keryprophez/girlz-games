@@ -25,9 +25,17 @@ import { sfx, preloadSfx } from '../core/sfx'
 
    Deuxième jeu sur core/arcade.ts + core/scene3d.ts (2/09). */
 
-const G = 11
+/* Réglages par niveau, revus le 15/09 après le verdict des filles
+   (« injouable ») : en douce les fruits sont plus gros, plus lents (gravité
+   plus faible = ils flottent plus longtemps), moins nombreux, la lame plus
+   large, presque pas de piment, et un fruit raté ne coûte un cœur qu'après
+   trente fruits tranchés. Le jeu se durcit avec la performance, pas d'entrée. */
+const GRAV = { easy: 8, med: 10, exp: 11 }
 /** Cran de rampe à partir duquel un fruit raté coûte un cœur (par palier). */
-const STRICT_AT = { easy: 3, med: 2, exp: 1 }
+const STRICT_AT = { easy: 5, med: 3, exp: 2 }
+/** Vitesse de lancer vers le haut (m/s) et rayon de la lame à l'écran (px). */
+const LIFT = { easy: 6.6, med: 7.2, exp: 7.4 }
+const HIT = { easy: 72, med: 58, exp: 46 }
 
 /* Chaque fruit connaît sa moitié et la couleur de son jus. */
 const FRUITS = [
@@ -65,6 +73,9 @@ interface State {
   stroke: number
   /** Cran de rampe à partir duquel un fruit raté coûte un cœur. */
   strictAt: number
+  /** Vitesse de lancer et largeur de la lame, selon le niveau. */
+  lift: number
+  hit: number
   over: boolean
   lastWhoosh: number
 }
@@ -88,11 +99,11 @@ function spawnWave(me: State) {
     if (fromSide) {
       const s = Math.random() < 0.5 ? -1 : 1
       x = s * (me.lane + 0.4); y = 0.4 + Math.random() * 1.2
-      vx = -s * (2.2 + Math.random() * 1.2); vy = 4.2 + Math.random() * 1.6
+      vx = -s * (2.2 + Math.random() * 1.2); vy = me.lift * 0.6 + Math.random() * 1.6
     } else {
       x = (Math.random() * 2 - 1) * me.lane * 0.85; y = -1
       // En cloche vers le centre, apex haut dans le cadre : le tiers haut sert aussi
-      vx = (0 - x) * (0.35 + Math.random() * 0.3); vy = 7.4 + Math.random() * 1.2
+      vx = (0 - x) * (0.35 + Math.random() * 0.3); vy = me.lift + Math.random() * 1.2
     }
     obj.position.set(x, y, 0)
     me.stage.scene.add(obj)
@@ -257,14 +268,15 @@ export const ninja: GameDef = {
       }
 
       /* Monde physique : pas de sol — ce qui retombe sort de l'écran et meurt */
-      const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) })
+      const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -GRAV[c.tier], 0) })
 
       /* Fruits, moitiés et piment, tous préchargés AVANT d'enlever l'attente */
       const models: Record<string, Obj> = {}
       const names = [BAD, ...FRUITS.flatMap(f => [f.whole, f.half])]
       await Promise.all(names.map(async k => {
         const m = await loadModel('food', k)
-        fitModel(T, m, k === BAD ? 0.34 : 0.46)
+        // Le piment reste petit : on ne doit pas le toucher par accident
+        fitModel(T, m, k === BAD ? 0.34 : c.byTier(0.58, 0.5, 0.46))
         models[k] = m
       }))
       if (dead) { stage.dispose(); return }
@@ -275,8 +287,8 @@ export const ninja: GameDef = {
       const lane = halfH * stage.camera.aspect * 0.8
 
       const cfg: Cfg = c.byTier(
-        { min: 2, max: 2, every: 1450, bad: 0.08, side: 0 },
-        { min: 2, max: 3, every: 1250, bad: 0.15, side: 0.15 },
+        { min: 1, max: 2, every: 1750, bad: 0.05, side: 0 },
+        { min: 2, max: 3, every: 1300, bad: 0.12, side: 0.12 },
         { min: 3, max: 4, every: 1050, bad: 0.22, side: 0.3 }
       )
       const game = arcade(c, {
@@ -284,7 +296,7 @@ export const ninja: GameDef = {
         lives: c.byTier(5, 3, 3),
         scoreIcon: ICON.blade,
         // La rampe suit la performance : tous les 6 fruits, plus de fruits, plus vite
-        ramp: { every: 6, max: 6 },
+        ramp: { every: c.byTier(8, 6, 6), max: 6 },
         onLevel: () => {
           me.cfg.every = Math.max(650, me.cfg.every * 0.88)
           me.cfg.max = Math.min(5, me.cfg.max + 1)
@@ -297,7 +309,8 @@ export const ninja: GameDef = {
       const me: State = {
         stage, T, CANNON, world, models, fruits: [], halves: [], game,
         fx: particles(stage, 700), shake: camShake(stage), cfg: { ...cfg }, lane,
-        trail: [], stroke: 0, strictAt: STRICT_AT[c.tier], over: false, lastWhoosh: 0
+        trail: [], stroke: 0, strictAt: STRICT_AT[c.tier], lift: LIFT[c.tier], hit: HIT[c.tier],
+        over: false, lastWhoosh: 0
       }
       nj = me
 
@@ -329,15 +342,16 @@ export const ninja: GameDef = {
         me.trail.push({ x: cur.x, y: cur.y, t: now })
         // Un « whoosh » quand la lame file vite, jamais plus de 6 par seconde
         if (len > 26 && now - me.lastWhoosh > 160) { me.lastWhoosh = now; sfx('whoosh', { vol: 0.35, rate: 1.15 }) }
-        // La lame tranche tout fruit dont la projection écran croise le segment.
-        // Entre 46 et 78 px d'un PIMENT : on l'a frôlé — « ouf ! », une fois.
+        // La lame tranche tout fruit dont la projection écran passe à moins de
+        // `hit` px du segment (plus large en douce). Juste au-delà d'un PIMENT :
+        // on l'a frôlé — « ouf ! », une fois.
         for (const f of [...me.fruits]) {
           const s = toScreen(stage, f.obj.position)
           const d = segDist(s.x, s.y, last.x, last.y, cur.x, cur.y)
-          if (d < 46) {
+          if (d < me.hit) {
             slice(me, f, dx / len, dy / len)
             if (nj !== me || me.over) return
-          } else if (f.bad && !f.grazed && d < 78) {
+          } else if (f.bad && !f.grazed && d < me.hit + 32) {
             f.grazed = true
             sfx('whoosh', { vol: 0.55, rate: 0.8 })
             me.game.flash(ICON.bolt, 'near')
