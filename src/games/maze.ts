@@ -4,7 +4,7 @@ import { impact } from '../core/impact'
 import { sfx, preloadSfx } from '../core/sfx'
 import { ICON } from '../core/icons'
 import { FX } from '../core/fx'
-import { frameStyle, loadAtlas, type Atlas } from '../core/sprites'
+import { tone } from '../core/audio'
 
 /* Labyrinthe — trois façons de se perdre : le jour (classique), la nuit
    (on ne voit qu'autour du poussin), la glace (on glisse jusqu'au mur).
@@ -17,14 +17,23 @@ import { frameStyle, loadAtlas, type Atlas } from '../core/sprites'
      jamais un résolveur), sinon on avance vers elle et on cogne ;
    - un mur heurté se sent : petit choc, le poussin s'écrase, poussière ;
    - retrouver la poule, c'est une fête : câlin, cœurs, son de victoire ;
-   - timers de partie (`ctx.after`), état typé, plus d'emoji. */
+   - timers de partie (`ctx.after`), état typé, plus d'emoji.
+
+   Refonte du 15/09 (« pas fun et plein de bugs de passe-muraille ») :
+   - le poussin MARCHE : il suit le couloir case par case, avec un
+     dandinement, au lieu de glisser en ligne droite d'une case à l'autre —
+     c'est cette ligne droite qui traversait les coins, le « passe-muraille » ;
+   - le poussin et la poule sont dessinés (SVG), plus la pastille ronde de la
+     planche Kenney que les filles ont trouvée « digne d'un Minitel » ;
+   - des graines à ramasser en chemin : les étoiles viennent des graines, pas
+     du chronomètre ; il pépie en marchant, et les murs sont des haies. */
 
 interface Cell { walls: boolean[] } // haut, droite, bas, gauche
 type Mode = 'classic' | 'fog' | 'ice'
 
 interface State {
   running: boolean
-  atlas: Atlas | null
+  ready: boolean
   mode: Mode
   sizes: number[]
   round: number
@@ -38,6 +47,16 @@ interface State {
   t0: number
   lastBump: number
   won: boolean
+  /** Position VISIBLE du poussin (en cases, à virgule) et son chemin à suivre. */
+  vis: { x: number; y: number }
+  path: { x: number; y: number; fast?: boolean }[]
+  facing: 1 | -1
+  lastPeep: number
+  /** Les graines restantes de la manche (clé « x:y »), et le compte. */
+  grains: Set<string>
+  grainsTotal: number
+  grainsGot: number
+  ticker: number
 }
 
 let mz: State | null = null
@@ -130,8 +149,46 @@ function makeGrid(me: State, n: number): Cell[][] {
   return generate(n)
 }
 
+/* ---------- Les personnages, dessinés ---------- */
+/** Le poussin : rond, jaune, une houppette, un bec, des pattes. */
+function chickSVG(px: number): string {
+  return `<svg class="mz-spr mz-body" viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true">
+    <ellipse cx="32" cy="58" rx="16" ry="3.5" fill="rgba(69,54,42,.18)"/>
+    <path d="M24 56l-4 5M40 56l4 5M24 56l-5-1M40 56l5-1" stroke="#E8873A" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="32" cy="40" rx="19" ry="17" fill="#F2C230"/>
+    <ellipse cx="14" cy="40" rx="6" ry="10" fill="#E0AE22" transform="rotate(20 14 40)"/>
+    <circle cx="34" cy="22" r="15" fill="#F5CB3C"/>
+    <path d="M30 8c1-4 4-6 6-4M35 8c0-4 3-6 5-4" stroke="#E0AE22" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M46 22l9 3-9 4z" fill="#E8873A"/>
+    <circle cx="40" cy="20" r="4.2" fill="#fff"/><circle cx="41.4" cy="20.4" r="2.2" fill="#2B2118"/>
+    <circle cx="42.4" cy="19.2" r=".8" fill="#fff"/>
+  </svg>`
+}
+/** La poule : blanche, crête rouge, barbillon, plus grande. */
+function henSVG(px: number): string {
+  return `<svg class="mz-spr" viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true">
+    <ellipse cx="32" cy="59" rx="18" ry="3.5" fill="rgba(69,54,42,.18)"/>
+    <path d="M24 55l-3 6M40 55l3 6M24 55l-5-1M40 55l5-1" stroke="#E8873A" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="30" cy="40" rx="21" ry="17" fill="#F7F3EA"/>
+    <path d="M10 36c-4-2-8 2-6 8 2 4 8 4 10 1z" fill="#E8DED0"/>
+    <ellipse cx="16" cy="42" rx="7" ry="10" fill="#E8DED0" transform="rotate(15 16 42)"/>
+    <circle cx="38" cy="22" r="13" fill="#F7F3EA"/>
+    <path d="M30 11c-1-6 4-8 6-3 2-5 7-5 7 1 1-4 6-3 5 2l-1 3H30z" fill="#E8574C"/>
+    <path d="M49 30c4 1 4 6 0 7z" fill="#E8574C"/>
+    <path d="M50 22l9 3-9 4z" fill="#E8873A"/>
+    <circle cx="43" cy="20" r="4" fill="#fff"/><circle cx="44.4" cy="20.4" r="2.1" fill="#2B2118"/>
+  </svg>`
+}
+/** Une graine : deux petits grains dorés. */
+function grainSVG(px: number): string {
+  return `<svg viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true">
+    <ellipse cx="9" cy="14" rx="4" ry="6" fill="#D9A72A" transform="rotate(-25 9 14)"/>
+    <ellipse cx="16" cy="12" rx="4" ry="6" fill="#E8B830" transform="rotate(20 16 12)"/>
+    <ellipse cx="8" cy="12" rx="1.2" ry="2.5" fill="#FFE08A" transform="rotate(-25 8 12)"/>
+  </svg>`
+}
+
 /* ---------- Le plateau ---------- */
-const sprite = (me: State, name: string, px: number) => `<i class="mz-spr" style="${frameStyle(me.atlas!, name, px)}"></i>`
 
 /** Le plus grand carré qui tient dans l'arène, quelle que soit la tablette. */
 function fitPx(): number {
@@ -155,26 +212,60 @@ function render(me: State) {
     if (c.walls[3]) walls += `<line x1="${x * cw}" y1="${y * cw}" x2="${x * cw}" y2="${(y + 1) * cw}"/>`
   }
   walls += `<line x1="0" y1="${me.px}" x2="${me.px}" y2="${me.px}"/><line x1="${me.px}" y1="0" x2="${me.px}" y2="${me.px}"/>`
-  const sw = Math.max(3, Math.min(6, cw / 7))
-  // Deux passes de murs : une ombre décalée dessous, la haie par-dessus
+  const sw = Math.max(4, Math.min(9, cw / 5))
+  // Les murs sont des haies : une ombre en dessous, la haie sombre, un liseré clair
+  const grains = [...me.grains].map(k => {
+    const [gx, gy] = k.split(':').map(Number)
+    return `<i class="mz-grain" data-k="${k}" style="left:${(gx + 0.5) * cw}px;top:${(gy + 0.5) * cw}px">${grainSVG(Math.round(cw * 0.42))}</i>`
+  }).join('')
   area.innerHTML = `
     <svg viewBox="0 0 ${me.px} ${me.px}" width="${me.px}" height="${me.px}">
-      <g stroke="rgba(105,72,38,.35)" stroke-width="${sw + 1}" stroke-linecap="round" transform="translate(0,${sw * 0.6})">${walls}</g>
-      <g stroke="#B97F3F" stroke-width="${sw}" stroke-linecap="round">${walls}</g>
+      <g stroke="rgba(40,70,30,.28)" stroke-width="${sw + 2}" stroke-linecap="round" transform="translate(0,${sw * 0.5})">${walls}</g>
+      <g stroke="#4B8A3A" stroke-width="${sw}" stroke-linecap="round">${walls}</g>
+      <g stroke="#7CC25C" stroke-width="${sw * 0.4}" stroke-linecap="round" transform="translate(0,${-sw * 0.18})">${walls}</g>
     </svg>
     <div class="mz-crumbs" id="mzCrumbs"></div>
-    <div class="mz-goal" id="mzGoal" style="left:${(n - 1) * cw}px;top:${(n - 1) * cw}px;width:${cw}px;height:${cw}px">${sprite(me, 'chicken', cw * 0.82)}</div>
-    <div class="mz-chick" id="mzChick" style="width:${cw}px;height:${cw}px">${sprite(me, 'chick', cw * 0.74)}</div>
+    ${grains}
+    <div class="mz-goal" id="mzGoal" style="left:${(n - 1) * cw}px;top:${(n - 1) * cw}px;width:${cw}px;height:${cw}px">${henSVG(cw * 0.9)}</div>
+    <div class="mz-chick" id="mzChick" style="width:${cw}px;height:${cw}px">${chickSVG(cw * 0.8)}</div>
     ${me.mode === 'fog' ? '<div class="mz-fog" id="mzFog"></div>' : ''}`
   placeChick(me)
   paintDots(me)
+}
+
+/** Les graines de la manche : quatre sur le chemin de la poule, une à l'écart. */
+function sowGrains(me: State) {
+  const n = me.n
+  const key = (x: number, y: number) => y * n + x
+  const prev = new Map<number, number>([[0, -1]])
+  const queue = [[0, 0]]
+  while (queue.length) {
+    const [x, y] = queue.shift()!
+    for (let d = 0; d < 4; d++) {
+      if (me.grid[y][x].walls[d]) continue
+      const nx = x + D[d][0], ny = y + D[d][1], k = key(nx, ny)
+      if (!prev.has(k)) { prev.set(k, key(x, y)); queue.push([nx, ny]) }
+    }
+  }
+  const path: number[] = []
+  for (let k = key(n - 1, n - 1); k > 0; k = prev.get(k)!) path.unshift(k)
+  path.pop()   // pas sur la poule
+  me.grains = new Set()
+  const onPath = shuffle(path).slice(0, Math.min(4, path.length))
+  for (const k of onPath) me.grains.add(`${k % n}:${Math.floor(k / n)}`)
+  const off = shuffle([...prev.keys()].filter(k => k > 0 && !path.includes(k) && k !== key(n - 1, n - 1)))
+  if (off.length) me.grains.add(`${off[0] % n}:${Math.floor(off[0] / n)}`)
+  me.grainsTotal += me.grains.size
 }
 
 function newRound(me: State) {
   me.n = me.sizes[me.round]
   me.grid = makeGrid(me, me.n)
   me.pos = { x: 0, y: 0 }
+  me.vis = { x: 0, y: 0 }
+  me.path = []
   me.won = false
+  sowGrains(me)
   render(me)
 }
 
@@ -194,24 +285,71 @@ function dropCrumb(me: State, x: number, y: number) {
   while (box.children.length > 80) box.removeChild(box.firstChild!)
 }
 
-function placeChick(me: State, slideCells = 0) {
-  const el = $('mzChick')
-  el.style.transitionDuration = slideCells ? Math.min(0.55, 0.08 + slideCells * 0.05) + 's' : ''
-  el.style.left = me.pos.x * me.cell + 'px'
-  el.style.top = me.pos.y * me.cell + 'px'
+function placeChick(me: State) {
+  const el = document.getElementById('mzChick')
+  if (!el) return
+  el.style.left = me.vis.x * me.cell + 'px'
+  el.style.top = me.vis.y * me.cell + 'px'
+  el.classList.toggle('walk', me.path.length > 0)
+  el.classList.toggle('left', me.facing < 0)
   if (me.mode === 'fog') {
     const r = me.cell * 2.3
-    $('mzFog').style.background = `radial-gradient(circle ${r}px at ${(me.pos.x + 0.5) * me.cell}px ${(me.pos.y + 0.5) * me.cell}px, transparent 0 52%, rgba(48,36,24,.96) 78%)`
+    const fog = document.getElementById('mzFog')
+    if (fog) fog.style.background = `radial-gradient(circle ${r}px at ${(me.vis.x + 0.5) * me.cell}px ${(me.vis.y + 0.5) * me.cell}px, transparent 0 52%, rgba(48,36,24,.96) 78%)`
   }
 }
 
-function moveTo(me: State, x: number, y: number, slideCells = 0) {
+/** Le poussin avance vers le prochain point de son chemin — case par case,
+    donc jamais à travers un coin. Un tour toutes les 30 ms (horloge de jeu). */
+function advance(me: State, dt: number) {
+  if (!me.path.length) return
+  const w = me.path[0]
+  const speed = w.fast ? 26 : 13   // cases par seconde
+  const dx = w.x - me.vis.x, dy = w.y - me.vis.y
+  const dist = Math.hypot(dx, dy)
+  const step = speed * dt
+  if (Math.abs(dx) > 0.01) me.facing = dx > 0 ? 1 : -1
+  if (dist <= step) {
+    me.vis = { x: w.x, y: w.y }
+    me.path.shift()
+    arrived(me, w.x, w.y)
+  } else {
+    me.vis = { x: me.vis.x + dx / dist * step, y: me.vis.y + dy / dist * step }
+  }
+  placeChick(me)
+}
+
+/** Le poussin pose la patte sur une case : graine, miette, pépiement. */
+function arrived(me: State, x: number, y: number) {
+  const k = `${x}:${y}`
+  if (me.grains.has(k)) {
+    me.grains.delete(k)
+    me.grainsGot++
+    const el = document.querySelector<HTMLElement>(`.mz-grain[data-k="${k}"]`)
+    if (el) {
+      const r = el.getBoundingClientRect()
+      FX.burst(r.left + r.width / 2, r.top + r.height / 2, { colors: ['#FFE08A', '#D9A72A', '#FFFFFF'], count: 8, speed: 0.8 })
+      el.remove()
+    }
+    sfx('pluck', { vol: 0.5, rate: 1 + me.grainsGot * 0.04 })
+  }
+  dropCrumb(me, x, y)
+  const now = performance.now()
+  if (now - me.lastPeep > 260) {
+    me.lastPeep = now
+    tone(1300 + Math.random() * 300, 0.045, 'square', 0.025)
+  }
+  if (!me.path.length && x === me.n - 1 && y === me.n - 1) roundWon(me)
+}
+
+/** Un pas logique : la position de jeu change tout de suite (le doigt peut
+    continuer), et le poussin visible rattrape en marchant. */
+function moveTo(me: State, x: number, y: number, fast = false) {
   if (me.won) return
-  if (x !== me.pos.x || y !== me.pos.y) dropCrumb(me, me.pos.x, me.pos.y)
   me.pos = { x, y }
-  placeChick(me, slideCells)
-  if (!slideCells) sfx('tick', { vol: 0.25, rate: 1.4, spread: 0.08 })
-  if (x === me.n - 1 && y === me.n - 1) roundWon(me)
+  me.path.push({ x, y, fast })
+  // Un doigt très rapide ne doit pas laisser le poussin dix cases derrière
+  if (me.path.length > 8) { const w = me.path[me.path.length - 1]; me.vis = { x: me.path[me.path.length - 6].x, y: me.path[me.path.length - 6].y }; me.path = me.path.slice(-5); void w }
 }
 
 /** Cogner un mur : ça se sent, mais pas plus de quatre fois par seconde. */
@@ -288,7 +426,7 @@ function slide(me: State, d: number) {
   }
   if (!cells) { bump(me, d); return }
   sfx('whoosh', { vol: 0.4, rate: 1.2 })
-  moveTo(me, x, y, cells)
+  moveTo(me, x, y, true)
   // Le TOC contre le mur arrive quand le poussin s'arrête, pas avant
   if (!toGoal) {
     const ms = Math.min(0.55, 0.08 + cells * 0.05) * 1000
@@ -297,6 +435,7 @@ function slide(me: State, d: number) {
 }
 
 function roundWon(me: State) {
+  if (me.won) return
   me.won = true
   sfx('confirm', { vol: 0.8, rate: 1.1 })
   const goal = $('mzGoal')
@@ -313,6 +452,7 @@ function setMode(me: State, mode: Mode) {
   me.mode = mode
   me.sizes = sizesFor(mode)
   me.round = 0
+  me.grainsTotal = 0; me.grainsGot = 0
   me.t0 = performance.now()
   document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
     const on = b.dataset.m === mode
@@ -323,14 +463,13 @@ function setMode(me: State, mode: Mode) {
 }
 
 function finish(me: State) {
-  const secs = Math.round((performance.now() - me.t0) / 1000)
-  const totalCells = me.sizes.reduce((s, n) => s + n * n, 0)
-  const f = MODES.find(m => m.id === me.mode)!.factor
-  const stars = secs <= totalCells * 0.9 * f ? 3 : secs <= totalCells * 1.6 * f ? 2 : 1
+  // Les étoiles viennent des graines ramassées, pas du chronomètre
+  const r = me.grainsTotal ? me.grainsGot / me.grainsTotal : 1
+  const stars = r >= 0.99 ? 3 : r >= 0.6 ? 2 : 1
   const names: Record<Mode, string> = { classic: '', fog: ' dans le noir', ice: ' sur la glace' }
   ctx.finish({
     title: 'Famille réunie !',
-    msg: `${ctx.playerName} a traversé ${me.sizes.length} labyrinthes${names[me.mode]} en ${secs} s`,
+    msg: `${ctx.playerName} a traversé ${me.sizes.length} labyrinthes${names[me.mode]} et ramassé ${me.grainsGot} graine${me.grainsGot > 1 ? 's' : ''} sur ${me.grainsTotal}`,
     stars, starsEarned: stars
   })
 }
@@ -352,12 +491,21 @@ export const maze: GameDef = {
       </div>`
     preloadSfx(['tick', 'confirm', 'whoosh'])
     const me: State = {
-      running: true, atlas: null, mode: 'classic', sizes: [], round: 0, grid: [], n: 0, px: 0, cell: 1,
-      pos: { x: 0, y: 0 }, down: false, swipe: null, t0: performance.now(), lastBump: 0, won: false
+      running: true, ready: true, mode: 'classic', sizes: [], round: 0, grid: [], n: 0, px: 0, cell: 1,
+      pos: { x: 0, y: 0 }, down: false, swipe: null, t0: performance.now(), lastBump: 0, won: false,
+      vis: { x: 0, y: 0 }, path: [], facing: 1, lastPeep: 0, grains: new Set(), grainsTotal: 0, grainsGot: 0, ticker: 0
     }
     mz = me
+    // Le poussin marche sur l'horloge de jeu : suspendu en pause, annulé au démontage
+    let lastTick = performance.now()
+    me.ticker = c.every(30, () => {
+      const now = performance.now()
+      const dt = Math.min(0.1, (now - lastTick) / 1000)
+      lastTick = now
+      if (mz === me) advance(me, dt)
+    })
     document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
-      b.onclick = () => { if (mz === me && me.atlas) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
+      b.onclick = () => { if (mz === me && me.ready) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
     })
     const area = $('mzArea')
     const cellAt = (e: PointerEvent) => {
@@ -365,7 +513,7 @@ export const maze: GameDef = {
       return { tx: Math.floor((e.clientX - r.left) / me.cell), ty: Math.floor((e.clientY - r.top) / me.cell) }
     }
     const onMove = (e: PointerEvent) => {
-      if (mz !== me || !me.down || !me.atlas || me.mode === 'ice') return
+      if (mz !== me || !me.down || !me.ready || me.mode === 'ice') return
       const { tx, ty } = cellAt(e)
       if (tx >= 0 && ty >= 0 && tx < me.n && ty < me.n) walkTo(me, tx, ty)
     }
@@ -378,14 +526,14 @@ export const maze: GameDef = {
     const onUp = (e: PointerEvent) => {
       if (mz !== me) return
       me.down = false
-      if (me.mode === 'ice' && me.swipe && me.atlas) {
+      if (me.mode === 'ice' && me.swipe && me.ready) {
         const dx = e.clientX - me.swipe.x, dy = e.clientY - me.swipe.y
         if (Math.abs(dx) + Math.abs(dy) > 24) slide(me, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0))
       }
       me.swipe = null
     }
     const onKey = (e: KeyboardEvent) => {
-      if (mz !== me || !me.atlas) return
+      if (mz !== me || !me.ready) return
       const dirs: Record<string, number> = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
       if (!(e.key in dirs)) return
       e.preventDefault()
@@ -393,7 +541,7 @@ export const maze: GameDef = {
       if (me.mode === 'ice') slide(me, d)
       else step(me, D[d][0], D[d][1])
     }
-    const onResize = () => { if (mz === me && me.atlas) render(me) }
+    const onResize = () => { if (mz === me && me.ready) render(me) }
     area.addEventListener('pointerdown', onDown)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -410,8 +558,7 @@ export const maze: GameDef = {
       }
     }
 
-    // Les sprites d'abord : le plateau se construit avec les personnages dedans
-    loadAtlas('animals').then((a: Atlas) => { if (mz === me) { me.atlas = a; setMode(me, 'classic') } })
+    setMode(me, 'classic')
     return () => {
       if (mz === me) mz = null
       me.running = false

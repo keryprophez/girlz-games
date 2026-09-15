@@ -13,9 +13,9 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 Glace, Ninja Verger, Attrape, la Chenille, Course (le tracteur saute les
 obstacles et remplit sa remorque de pommes), Poussin Volant, le Stand ;
 Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
-et un cactus qui pique) ; et des classiques en sprites : Labyrinthe (classique,
-brouillard, glace), Taquin photo, Memory, Simon, Puissance 4 avec les têtes des
-filles en jetons.
+et un cactus qui pique) ; le Labyrinthe (classique, brouillard, glace) et son
+poussin qui marche entre les haies en ramassant des grains ; et des classiques :
+Taquin photo, Memory, Simon, Puissance 4 avec les têtes des filles en jetons.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
 Grand Tableau × et +, le Marché (vrais euros), l'Intrus, le Tour du Monde

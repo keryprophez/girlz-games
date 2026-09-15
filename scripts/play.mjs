@@ -302,9 +302,9 @@ await scenario('labyrinthe-doigt-rapide', async () => {
   for (let i = 1; i < pts.length; i += 3) { await page.mouse.move(pts[i].x, pts[i].y); await page.waitForTimeout(12) }
   await page.mouse.move(pts[pts.length - 1].x, pts[pts.length - 1].y)
   await page.mouse.up()
-  await page.waitForTimeout(400)
-  const round = await page.evaluate(() => window.__mz.round)
-  if (round < 1) throw new Error('la poule n\'a pas été retrouvée avec un doigt rapide')
+  // Le poussin MARCHE jusqu'à la poule (13 cases/s) : on lui laisse le temps d'arriver
+  await page.waitForFunction(() => window.__mz.round >= 1, null, { timeout: 8000 })
+    .catch(() => { throw new Error('la poule n\'a pas été retrouvée avec un doigt rapide') })
 })
 
 /* 🖼 Taquin : résoudre par recherche en largeur (grille 3×3, mélange court

@@ -410,9 +410,16 @@ sur l'écran de fin, sessions A puis B puis C.
     sont posées sur le chemin et se ramassent en ROULANT dessus — sauter au
     mauvais moment les fait rater. Chaque récolte atterrit dans la remorque,
     qui se remplit à vue. Jamais de sanction sur une récolte ratée.
-  - ⏳ **Labyrinthe** : le poussin glisse en ligne droite entre deux cases,
-    donc à travers les coins — c'est le « passe-muraille » ; à animer case
-    par case, et à rendre amusant.
+  - ✅ **Labyrinthe** : le poussin MARCHE. Il ne glisse plus en ligne droite
+    entre deux cases (le « passe-muraille » : une transition CSS coupait les
+    coins à travers les haies) : chaque geste pousse une case dans une file
+    d'attente, et un minuteur de partie le fait avancer case par case, à
+    13 cases par seconde (26 sur la glace), en se tournant du bon côté, en se
+    dandinant, et en laissant des miettes derrière lui. Les murs sont des
+    haies vertes à trois passes, le poussin et la poule sont dessinés (SVG),
+    plus de sprites. L'enjeu : des grains semés sur le chemin (quatre sur la
+    route de la poule, un à l'écart) qui se ramassent en passant, avec
+    étincelles et pépiement ; les étoiles de fin viennent des grains ramassés.
 
 Ordre pour la suite :
 
