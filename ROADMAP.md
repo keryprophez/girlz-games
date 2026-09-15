@@ -379,6 +379,33 @@ sur l'écran de fin, sessions A puis B puis C.
   `poste-point`) : chacun joue une partie entière de son mode, sans une seule
   erreur, et vérifie que l'écran de fin arrive.
 
+- **Verdict des filles (15/09)** : « les filles ont aimé que Tour de Glace, le
+  Ninja est injouable, la voiture est pourrie, le Labyrinthe pas fun et plein
+  de bugs de passe-muraille, Tape-Trous un sprite atroce digne d'un Minitel ».
+  Ordre validé par le père : geste + Ninja, Tape-Trous, Course, Labyrinthe —
+  une livraison par jeu, pour qu'elles testent entre chaque.
+  - ✅ **Le geste** : depuis le 12/09 chaque `pointerdown` en jeu redemandait
+    le plein écran à Android ; refusée, la demande repartait à chaque toucher
+    et annulait le geste en cours. Les deux jeux « cassés » sont les deux jeux
+    de glissé. On reprend le plein écran en FIN de geste, au plus toutes les
+    3 s. (Hypothèse forte, invérifiable sans la tablette : à confirmer par les
+    filles.)
+  - ✅ **Ninja** : en douce, fruits deux fois plus gros, gravité plus faible
+    (ils flottent), moins nombreux, lame plus large (72 px contre 46), presque
+    pas de piment, et un fruit raté ne coûte un cœur qu'après trente fruits
+    tranchés. Le jeu se durcit avec la performance, pas d'entrée.
+  - ✅ **Tape-Trous** : les pastilles rondes de la planche Kenney sont sorties.
+    Les habitants du pré sont des personnages construits en 3D
+    (`core/critters.ts`) : taupe à moustaches, poussin à houppette, cochon à
+    groin, lapin à longues oreilles, et un cactus à sourcils froncés — ils
+    clignent des yeux, s'étirent en sortant, s'écrasent quand on tape. Le
+    kit partage géométries et matériaux : dix personnages par partie ne
+    coûtent rien. La clôture et les arbres sont ramenés dans le cadre.
+  - ⏳ **Course** (la « voiture ») : à suivre.
+  - ⏳ **Labyrinthe** : le poussin glisse en ligne droite entre deux cases,
+    donc à travers les coins — c'est le « passe-muraille » ; à animer case
+    par case, et à rendre amusant.
+
 Ordre pour la suite :
 
 `ninja` (rampe) → tuiles de l'accueil encore en

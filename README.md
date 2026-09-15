@@ -11,9 +11,10 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 
 **Jouer** — des jeux d'adresse en vraie 3D (Three.js + cannon-es) : la Tour de
 Glace, Ninja Verger, Attrape, la Chenille, Course, Poussin Volant, le Stand ;
-et des classiques en sprites : Tape-Trous, Labyrinthe (classique, brouillard,
-glace), Taquin photo, Memory, Simon, Puissance 4 avec les têtes des filles en
-jetons.
+Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
+et un cactus qui pique) ; et des classiques en sprites : Labyrinthe (classique,
+brouillard, glace), Taquin photo, Memory, Simon, Puissance 4 avec les têtes des
+filles en jetons.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
 Grand Tableau × et +, le Marché (vrais euros), l'Intrus, le Tour du Monde

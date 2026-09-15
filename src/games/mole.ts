@@ -1,16 +1,19 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
 import { impact } from '../core/impact'
-import { loadAtlas, FARM_ANIMALS, type Atlas } from '../core/sprites'
 import { createStage, loader, loadThree, picker, type Stage, type T3 } from '../core/three3d'
 import { arcade, type Arcade } from '../core/arcade'
-import { ground, decor, particles, camShake, standeeFromAtlas, faceCamera, type Particles, type CamShake } from '../core/scene3d'
+import { ground, decor, particles, camShake, faceCamera, type Particles, type CamShake } from '../core/scene3d'
+import { critterKit, CRITTERS, type CritterKit, type Critter } from '../core/critters'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 
 /* Tape-Trous, refait le 2/09 — un pré en vraie 3D, des trous creusés dedans,
-   et les animaux de la ferme (sprites Kenney, face caméra) qui en sortent.
-   On tape dessus… sauf le cactus, qui pique.
+   et les habitants du pré qui en sortent. On tape dessus… sauf le cactus,
+   qui pique. Depuis le 15/09 les habitants sont de VRAIS personnages en 3D
+   (`core/critters.ts` : taupe, poussin, cochon, lapin — et le cactus à
+   sourcils froncés), qui clignent des yeux ; les pastilles rondes de la
+   planche Kenney étaient « un sprite atroce digne d'un Minitel » (les filles).
 
    La boucle :
    - taper un animal SORTI = points × combo ; taper un cactus = un cœur ;
@@ -29,7 +32,8 @@ interface Hole {
   z: number
   disc: import('three').Mesh
   hit: import('three').Mesh
-  sprite: import('three').Mesh | null
+  sprite: import('three').Object3D | null
+  crit: Critter | null
   kind: 'animal' | 'cactus' | null
   /** down = vide ; rising/up/hiding = un habitant ; bonked = tapé. */
   phase: 'down' | 'rising' | 'up' | 'hiding' | 'bonked'
@@ -39,8 +43,6 @@ interface Hole {
   size: number
   /** La poussière de la chute a déjà giclé (phase bonked). */
   dusted?: boolean
-  /** Largeur / hauteur du panneau. */
-  aspect?: number
 }
 
 interface Cfg { up: number; gap: number; cactus: number; multi: number }
@@ -52,8 +54,7 @@ interface State {
   fx: Particles
   shake: CamShake
   holes: Hole[]
-  animals: Atlas
-  items: Atlas
+  kit: CritterKit
   cfg: Cfg
   over: boolean
   tapHint: HTMLElement
@@ -71,20 +72,19 @@ function popOne(me: State) {
   if (!free.length) return
   const h = pick(free)
   const cactus = Math.random() < me.cfg.cactus
-  const sp = cactus
-    ? standeeFromAtlas(me.stage, me.items, 'cactus', SPRITE * 0.95)
-    : standeeFromAtlas(me.stage, me.animals, pick(FARM_ANIMALS), SPRITE)
-  // Un panneau debout, pieds au fond du trou : le sol cache ce qui est dessous
+  const crit = me.kit.make(cactus ? 'cactus' : pick(CRITTERS), cactus ? SPRITE * 0.95 : SPRITE)
+  const sp = crit.obj
+  // Origine aux pieds, au fond du trou : le sol cache ce qui est dessous
   sp.position.set(h.x, -SPRITE, h.z)
   faceCamera(me.stage, sp)
   me.stage.scene.add(sp)
   h.sprite = sp
+  h.crit = crit
   h.kind = cactus ? 'cactus' : 'animal'
   h.phase = 'rising'
   h.t = 0
   h.upFor = me.cfg.up / 1000 * (0.85 + Math.random() * 0.3)
-  h.size = sp.scale.y
-  h.aspect = sp.scale.x / sp.scale.y
+  h.size = SPRITE
   // De la terre qui gicle, et un petit « tic » : on entend sortir
   me.fx.burst({ x: h.x, y: 0.05, z: h.z }, { count: 8, color: [0x6B4A2A, 0x8A6238], speed: 1.4, life: 0.45, size: 0.05, spread: 0.8 })
   sfx('tick', { vol: 0.3, rate: 0.8 })
@@ -104,10 +104,10 @@ function hideOne(me: State, h: Hole, escaped: boolean) {
 
 function clearHole(me: State, h: Hole) {
   if (h.sprite) {
+    // Géométries et matériaux sont partagés par le kit : rien à libérer ici
     me.stage.scene.remove(h.sprite)
-    ;(h.sprite.material as import('three').Material).dispose()
-    h.sprite.geometry.dispose()
     h.sprite = null
+    h.crit = null
   }
   h.kind = null
   h.phase = 'down'
@@ -173,7 +173,7 @@ export const moleGame: GameDef = {
     let dead = false
 
     ;(async () => {
-      const [T, animals, items] = await Promise.all([loadThree(), loadAtlas('animals'), loadAtlas('items')])
+      const T = await loadThree()
       if (dead) return
       const stage = await createStage(arena, {
         sky: '#8FCDEB', fog: [14, 30], fogColor: '#B9E0F2',
@@ -213,17 +213,20 @@ export const moleGame: GameDef = {
         const hit = new T.Mesh(hitGeo, hitMat)
         hit.position.set(x, 0.05, z)
         scene.add(disc, rim, hit)
-        holes.push({ x, z, disc, hit, sprite: null, kind: null, phase: 'down', t: 0, upFor: 1, size: SPRITE })
+        holes.push({ x, z, disc, hit, sprite: null, crit: null, kind: null, phase: 'down', t: 0, upFor: 1, size: SPRITE })
       }
 
       // Le décor : une haie d'arbres derrière, une clôture, des fleurs et des
       // buissons autour du pré — jamais dans la grille
-      const back = -3.6
+      // (15/09) Ramenés DANS le cadre : à z = −3,6 la clôture passait au-dessus
+      // de l'image et le pré avait l'air vide.
+      const back = -2.55
       const items3d = [
-        ...[-5.5, -3.2, -0.6, 1.9, 4.4, 6.6].map((x, i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat', 'tree_detailed'][i % 4]}`, x, z: back - 1.4 - Math.random(), size: 2.2 + Math.random() * 1.2, tint: 0x6EAE48 })),
-        ...[-4.5, -3, -1.5, 0, 1.5, 3, 4.5].map(x => ({ model: 'nature/fence_simple', x, z: back, size: 0.7, rot: 0, tint: 0xC9A874 })),
-        ...[[-3.6, 1.6], [3.7, 1.4], [-3.9, -0.6], [3.9, -0.4], [-2.2, 2.1], [2.4, 2.2]].map(([x, z], i) => ({ model: `nature/${['flower_redA', 'flower_yellowA', 'flower_purpleA'][i % 3]}`, x, z, size: 0.36, tint: 0xFFFFFF })),
-        ...[[-4.4, 0.6], [4.5, 0.8], [-3.2, -2.4], [3.4, -2.5]].map(([x, z]) => ({ model: 'nature/plant_bush', x, z, size: 0.55, tint: 0x6EAE48 }))
+        ...[-4.8, -2.9, -1.1, 0.7, 2.6, 4.6].map((x, i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat', 'tree_detailed'][i % 4]}`, x, z: back - 1.1 - Math.random() * 0.8, size: 1.9 + Math.random() * 0.9, tint: 0x6EAE48 })),
+        ...[-3.9, -2.6, -1.3, 0, 1.3, 2.6, 3.9].map(x => ({ model: 'nature/fence_simple', x, z: back, size: 0.62, rot: 0, tint: 0xC9A874 })),
+        ...[[-3.3, 1.9], [3.4, 1.7], [-3.5, -0.4], [3.5, -0.2], [-2.0, 2.3], [2.2, 2.4], [-3.0, 0.8], [3.1, 0.9]].map(([x, z], i) => ({ model: `nature/${['flower_redA', 'flower_yellowA', 'flower_purpleA'][i % 3]}`, x, z, size: 0.34, tint: 0xFFFFFF })),
+        ...[[-3.9, 1.2], [4.0, 1.3], [-3.0, -1.8], [3.1, -1.9]].map(([x, z]) => ({ model: 'nature/plant_bush', x, z, size: 0.5, tint: 0x6EAE48 })),
+        ...[[-2.6, 2.6], [2.8, 2.7], [-3.6, -1.2], [3.7, -1.1]].map(([x, z]) => ({ model: 'nature/grass_large', x, z, size: 0.4, tint: 0x6EAE48 }))
       ]
       decor(stage, items3d).catch(() => { /* sans décor, le jeu tourne */ })
       hideLoader()
@@ -252,9 +255,10 @@ export const moleGame: GameDef = {
         },
         stars: s => { const th = c.byTier([24, 12], [34, 18], [46, 24]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
       })
+      const kit = critterKit(T)
       const me: State = {
         stage, T, game, fx: particles(stage, 400), shake: camShake(stage),
-        holes, animals, items, cfg: { ...cfg }, over: false, tapHint
+        holes, kit, cfg: { ...cfg }, over: false, tapHint
       }
       mo = me
 
@@ -273,8 +277,14 @@ export const moleGame: GameDef = {
         if (mo !== me) return
         // D'abord les animaux sortis (on tape sur la tête), sinon le trou visé
         const live = me.holes.filter(h => h.sprite && (h.phase === 'up' || h.phase === 'rising'))
-        const onSprite = pick3(e, live.map(h => h.sprite!), false)
-        if (onSprite.length) { whack(me, live.find(h => h.sprite === onSprite[0].object)!); return }
+        const onSprite = pick3(e, live.map(h => h.sprite!), true)
+        if (onSprite.length) {
+          // Le personnage est un groupe de pièces : on remonte jusqu'à lui
+          let o: import('three').Object3D | null = onSprite[0].object
+          while (o && !live.some(h => h.sprite === o)) o = o.parent
+          const h = live.find(x => x.sprite === o)
+          if (h) { whack(me, h); return }
+        }
         const hits = pick3(e, me.holes.map(h => h.hit), false)
         if (!hits.length) return
         const h = me.holes.find(x => x.hit === hits[0].object)
@@ -347,8 +357,9 @@ export const moleGame: GameDef = {
             if (k >= 1) clearHole(me, h)
           }
           sp.position.y = y
-          sp.scale.set(h.size * (h.aspect ?? 1) * sx, h.size * sy, 1)
+          sp.scale.set(sx, sy, sx)   // la taille est dans le personnage, on n'écrase que la forme
           sp.rotation.z = rot // il se penche depuis les pieds
+          if (h.crit && (h.phase === 'up' || h.phase === 'rising')) me.kit.blink(h.crit, dt)
         }
         me.fx.update(dt)
         stage.camera.position.set(0, 4.3, 4.9)
@@ -359,6 +370,7 @@ export const moleGame: GameDef = {
       stage.keep({ dispose() {
         stage.renderer.domElement.removeEventListener('pointerdown', onDown)
         discGeo.dispose(); discMat.dispose(); rimGeo.dispose(); rimMat.dispose(); hitGeo.dispose(); hitMat.dispose()
+        kit.dispose()
         me.fx.dispose()
         me.game.dispose()
       } })
