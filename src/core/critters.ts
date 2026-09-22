@@ -14,8 +14,12 @@ import type { T3 } from './three3d'
    l'ACES remonte tout (piège « couleurs vives + ACES » de CLAUDE.md). */
 
 export type CritterKind = 'mole' | 'chick' | 'pig' | 'rabbit' | 'cactus'
-/** Les habitants du pré — le cactus n'en est pas un, c'est le piège. */
+  | 'cow' | 'hen' | 'dog' | 'duck' | 'sheep'
+/** Les habitants du pré de Tape-Trous — le cactus n'en est pas un, c'est le piège. */
 export const CRITTERS: CritterKind[] = ['mole', 'chick', 'pig', 'rabbit']
+/** Toute la ferme (22/09) : les pions de Simon, Puissance 4, la Boîte à
+    rythme et l'image du Taquin, rendus en portrait par `core/portraits.ts`. */
+export const FARM: CritterKind[] = ['cow', 'pig', 'hen', 'chick', 'duck', 'sheep', 'dog', 'rabbit']
 
 type Obj = import('three').Object3D
 type Mesh = import('three').Mesh
@@ -53,6 +57,9 @@ export function critterKit(T: T3): CritterKit {
     yellow: mat(0xD9A72A), orange: mat(0xD4702A),
     cream: mat(0xCFC3B2), white: mat(0xF2F2F2, 0.5), black: mat(0x1E1A18, 0.4),
     green: mat(0x3A8A4A), greenDark: mat(0x2E6E3B), flower: mat(0xE85C8C),
+    feather: mat(0xD6D0C6, 0.8), red: mat(0xB0302A, 0.6), horn: mat(0xB9A67E, 0.5),
+    wool: mat(0xD2CBBE, 0.95), face: mat(0x3A302A, 0.8), mallard: mat(0x1F5A36, 0.35),
+    duckBody: mat(0x8A7B68, 0.8), gold: mat(0xC99A1E, 0.5), tongue: mat(0xC4506A, 0.6),
     shine: new T.MeshBasicMaterial({ color: 0xFFFFFF })
   }
 
@@ -132,7 +139,89 @@ export function critterKit(T: T3): CritterKit {
         grp.add(part(geos.box, mats.white, s * 0.022 * S, 0.63 * S, 0.27 * S, 0.035 * S, 0.06 * S, 0.02 * S))
         grp.add(part(geos.sphere, mats.cream, s * 0.2 * S, 0.14 * S, 0.24 * S, 0.11 * S, 0.07 * S, 0.14 * S))
       }
-      return eyes(grp, S, 0.1, 0.8, 0.2, 0.06)
+      // Les yeux AU BORD de la tête (à 0.2 ils étaient noyés dedans : un lapin sans regard)
+      return eyes(grp, S, 0.1, 0.8, 0.265, 0.06)
+    },
+    cow(grp, S) {
+      // Un gros corps rond tacheté, un large museau rose, deux cornes
+      grp.add(part(geos.sphere, mats.cream, 0, 0.47 * S, 0, 0.46 * S, 0.45 * S, 0.42 * S))
+      for (const [x, y, z, r] of [[-0.3, 0.62, 0.18, 0.14], [0.34, 0.38, 0.1, 0.16], [0.08, 0.2, -0.3, 0.15], [-0.2, 0.36, -0.28, 0.12], [0.18, 0.72, -0.2, 0.12]]) {
+        // Taches : de petites calottes noires posées à la surface
+        const d = Math.hypot(x / 0.46, (y - 0.47) / 0.45, z / 0.42)
+        grp.add(part(geos.sphere, mats.black, x / d * S, (0.47 + (y - 0.47) / d) * S, z / d * S, r * S, r * S, r * 0.35 * S,
+          0, Math.atan2(x, z), 0))
+      }
+      grp.add(part(geos.sphere, mats.pink, 0, 0.36 * S, 0.36 * S, 0.26 * S, 0.17 * S, 0.14 * S))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.pinkDark, s * 0.08 * S, 0.37 * S, 0.49 * S, 0.035 * S, 0.045 * S, 0.02 * S))
+        grp.add(part(geos.cone, mats.horn, s * 0.2 * S, 0.93 * S, 0.02 * S, 0.05 * S, 0.16 * S, 0.05 * S, 0, 0, -s * 0.5))
+        grp.add(part(geos.sphere, mats.cream, s * 0.44 * S, 0.74 * S, 0, 0.13 * S, 0.06 * S, 0.08 * S, 0, 0, s * 0.35))
+        grp.add(part(geos.sphere, mats.pink, s * 0.47 * S, 0.74 * S, 0.02 * S, 0.08 * S, 0.035 * S, 0.05 * S, 0, 0, s * 0.35))
+        grp.add(part(geos.cyl, mats.black, s * 0.2 * S, 0.05 * S, 0.12 * S, 0.08 * S, 0.1 * S, 0.08 * S))
+      }
+      grp.add(part(geos.sphere, mats.black, 0, 0.92 * S, 0.12 * S, 0.08 * S, 0.05 * S, 0.06 * S))
+      return eyes(grp, S, 0.15, 0.66, 0.35, 0.065)
+    },
+    hen(grp, S) {
+      // La poule : blanche, crête et barbillon rouges, queue en éventail
+      grp.add(part(geos.sphere, mats.feather, 0, 0.4 * S, -0.02 * S, 0.4 * S, 0.38 * S, 0.42 * S))
+      grp.add(part(geos.sphere, mats.feather, 0, 0.74 * S, 0.12 * S, 0.24 * S))
+      for (const [k, r] of [[-1, 0.07], [0, 0.085], [1, 0.07]]) {
+        grp.add(part(geos.sphere, mats.red, 0, (0.98 + (k === 0 ? 0.02 : 0)) * S, (0.12 + k * 0.08) * S, 0.035 * S, r * S, r * S))
+      }
+      grp.add(part(geos.cone, mats.gold, 0, 0.72 * S, 0.4 * S, 0.06 * S, 0.14 * S, 0.06 * S, Math.PI / 2))
+      grp.add(part(geos.sphere, mats.red, 0, 0.6 * S, 0.34 * S, 0.04 * S, 0.07 * S, 0.04 * S))
+      for (let i = -1; i <= 1; i++) {
+        grp.add(part(geos.sphere, mats.feather, i * 0.1 * S, 0.66 * S, -0.4 * S, 0.07 * S, 0.22 * S, 0.1 * S, -0.5, 0, i * 0.35))
+      }
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.feather, s * 0.37 * S, 0.42 * S, -0.02 * S, 0.08 * S, 0.2 * S, 0.26 * S, 0, 0, s * 0.3))
+        grp.add(part(geos.cyl, mats.gold, s * 0.12 * S, 0.06 * S, 0.02 * S, 0.025 * S, 0.12 * S, 0.025 * S))
+        grp.add(part(geos.sphere, mats.gold, s * 0.12 * S, 0.01 * S, 0.08 * S, 0.07 * S, 0.02 * S, 0.1 * S))
+      }
+      return eyes(grp, S, 0.12, 0.8, 0.28, 0.055)
+    },
+    dog(grp, S) {
+      // Le chien : museau clair, truffe noire, grandes oreilles tombantes, langue
+      grp.add(part(geos.sphere, mats.brownLight, 0, 0.36 * S, -0.06 * S, 0.34 * S, 0.34 * S, 0.38 * S))
+      grp.add(part(geos.sphere, mats.brownLight, 0, 0.72 * S, 0.08 * S, 0.3 * S, 0.28 * S, 0.28 * S))
+      grp.add(part(geos.sphere, mats.cream, 0, 0.64 * S, 0.3 * S, 0.16 * S, 0.12 * S, 0.12 * S))
+      grp.add(part(geos.sphere, mats.black, 0, 0.7 * S, 0.42 * S, 0.055 * S, 0.045 * S, 0.04 * S))
+      grp.add(part(geos.sphere, mats.tongue, 0.02 * S, 0.55 * S, 0.37 * S, 0.045 * S, 0.06 * S, 0.02 * S, 0.3))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.capsule, mats.brown, s * 0.3 * S, 0.66 * S, 0.02 * S, 0.08 * S, 0.12 * S, 0.05 * S, 0, 0, s * 0.35))
+        grp.add(part(geos.sphere, mats.brownLight, s * 0.16 * S, 0.06 * S, 0.18 * S, 0.1 * S, 0.07 * S, 0.13 * S))
+      }
+      grp.add(part(geos.capsule, mats.brownLight, 0, 0.5 * S, -0.44 * S, 0.05 * S, 0.1 * S, 0.05 * S, -0.8))
+      grp.add(part(geos.sphere, mats.brown, -0.12 * S, 0.83 * S, 0.22 * S, 0.11 * S, 0.1 * S, 0.06 * S))
+      return eyes(grp, S, 0.11, 0.8, 0.28, 0.055)
+    },
+    duck(grp, S) {
+      // Le canard colvert : tête verte à collier blanc, bec plat jaune d'or
+      grp.add(part(geos.sphere, mats.duckBody, 0, 0.34 * S, -0.04 * S, 0.34 * S, 0.3 * S, 0.44 * S))
+      grp.add(part(geos.sphere, mats.feather, 0, 0.28 * S, 0.12 * S, 0.3 * S, 0.22 * S, 0.28 * S))
+      grp.add(part(geos.cyl, mats.feather, 0, 0.55 * S, 0.12 * S, 0.15 * S, 0.04 * S, 0.15 * S))
+      grp.add(part(geos.sphere, mats.mallard, 0, 0.74 * S, 0.14 * S, 0.22 * S, 0.22 * S, 0.22 * S))
+      grp.add(part(geos.sphere, mats.gold, 0, 0.68 * S, 0.4 * S, 0.1 * S, 0.04 * S, 0.14 * S))
+      grp.add(part(geos.sphere, mats.face, 0, 0.62 * S, -0.44 * S, 0.12 * S, 0.1 * S, 0.12 * S, 0.6))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.duckBody, s * 0.3 * S, 0.4 * S, -0.08 * S, 0.07 * S, 0.16 * S, 0.3 * S, 0.2))
+        grp.add(part(geos.sphere, mats.gold, s * 0.12 * S, 0.02 * S, 0.1 * S, 0.08 * S, 0.02 * S, 0.12 * S))
+      }
+      return eyes(grp, S, 0.12, 0.8, 0.28, 0.05)
+    },
+    sheep(grp, S) {
+      // Le mouton : un nuage de laine, une tête noire, des oreilles de côté
+      const puffs: [number, number, number, number][] = [[0, 0.5, 0, 0.3], [-0.24, 0.46, 0.08, 0.2], [0.24, 0.46, 0.08, 0.2],
+        [-0.2, 0.5, -0.2, 0.22], [0.2, 0.5, -0.2, 0.22], [0, 0.66, -0.12, 0.22], [0, 0.34, -0.3, 0.2], [0, 0.3, 0.14, 0.24],
+        [-0.28, 0.3, -0.08, 0.18], [0.28, 0.3, -0.08, 0.18], [0, 0.74, 0.1, 0.14]]
+      for (const [x, y, z, r] of puffs) grp.add(part(geos.sphere, mats.wool, x * S, y * S, z * S, r * S))
+      grp.add(part(geos.sphere, mats.face, 0, 0.6 * S, 0.32 * S, 0.16 * S, 0.2 * S, 0.15 * S, 0.2))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.face, s * 0.2 * S, 0.66 * S, 0.28 * S, 0.1 * S, 0.04 * S, 0.06 * S, 0, 0, s * 0.3))
+        grp.add(part(geos.cyl, mats.face, s * 0.16 * S, 0.08 * S, 0.1 * S, 0.05 * S, 0.16 * S, 0.05 * S))
+      }
+      return eyes(grp, S, 0.07, 0.68, 0.42, 0.05)
     },
     cactus(grp, S) {
       grp.add(part(geos.capsule, mats.green, 0, 0.5 * S, 0, 0.2 * S, 0.28 * S, 0.2 * S))

@@ -18,22 +18,6 @@ const OUT = 'public/assets'
 /* Les packs qu'on télécharge, avec leur URL de zip direct (lisible dans le HTML
    de https://kenney.nl/assets/<slug>) et leur licence. */
 const PACKS = {
-  animals: {
-    slug: 'animal-pack-remastered', title: 'Animal Pack Remastered',
-    url: 'https://kenney.nl/media/pages/assets/animal-pack-remastered/54a307a369-1774771709/kenney_animal-pack-remastered.zip'
-  },
-  platformer: {
-    slug: 'platformer-art-deluxe', title: 'Platformer Art Deluxe',
-    url: 'https://kenney.nl/media/pages/assets/platformer-art-deluxe/cb30f83169-1677696393/kenney_platformer-art-deluxe.zip'
-  },
-  background: {
-    slug: 'background-elements', title: 'Background Elements',
-    url: 'https://kenney.nl/media/pages/assets/background-elements/b66a1ddec7-1677670395/kenney_background-elements.zip'
-  },
-  fish: {
-    slug: 'fish-pack', title: 'Fish Pack',
-    url: 'https://kenney.nl/media/pages/assets/fish-pack/07ae98c5b6-1747237960/kenney_fish-pack_2.zip'
-  },
   food: {
     slug: 'food-kit', title: 'Food Kit (3D)',
     url: 'https://kenney.nl/media/pages/assets/food-kit/83086fa91c-1719418518/kenney_food-kit.zip'
@@ -67,11 +51,11 @@ const PACKS = {
 /* Les planches gardées : <nom de sortie> ← <pack>/<chemin du .png dans le zip>.
    Chaque planche a un .xml voisin que l'on convertit en .json. */
 const SHEETS = [
-  { out: 'animals', pack: 'animals', png: 'Spritesheet/round.png' },
-  { out: 'fish', pack: 'fish', png: 'Spritesheet/spritesheet.png' },
-  { out: 'nature', pack: 'background', png: 'Spritesheet/bgElements_spritesheet.png' },
-  { out: 'items', pack: 'platformer', png: 'Base pack/Items/items_spritesheet.png' }
-  // `tiles` (planche de sols du platformer) a été retirée le 2/09 : aucun jeu ne la chargeait.
+  // Plus aucune planche 2D depuis le 22/09 : les imagiers sont en photos
+  // (import-photos.mjs) et les pions en personnages 3D (core/critters.ts).
+  // `animals`, `fish`, `nature` et `items` (Animal Pack, Fish Pack, Background
+  // Elements, Platformer Art) ne sont plus chargées par aucun jeu.
+  // Forme d'une entrée : { out: 'animals', pack: 'animals', png: 'Spritesheet/round.png' }
 ]
 
 /* Modèles 3D : quelques .glb triés dans les kits Kenney. Ils sont minuscules
@@ -281,18 +265,25 @@ for (const m of MODELS) {
   console.log(`✓ sons — ${n} bruitages (foley + gestes + interface)`)
 }
 
-writeFileSync(join(OUT, 'CREDITS.md'), `# Crédits des assets
+/* Seule la section Kenney est réécrite : les crédits des photos, de l'Espace
+   et de la géographie (écrits à la main ou par import-photos.mjs) suivent
+   dans le même fichier et doivent survivre à un nouvel import. */
+const creditsPath = join(OUT, 'CREDITS.md')
+const kenney = `# Crédits des assets
 
-Tous les visuels de ce dossier viennent de **[Kenney](https://kenney.nl)** et sont
+Les modèles 3D et les bruitages de ce dossier viennent de **[Kenney](https://kenney.nl)** et sont
 publiés en **CC0 1.0 (domaine public)** : utilisation libre, y compris
 commerciale, sans obligation d'attribution. On cite quand même, c'est la moindre
 des choses — ce travail est offert.
 
 ${credits.map(p => `- **${p.title}** — <https://kenney.nl/assets/${p.slug}>`).join('\n')}
 
-Les planches ont été **triées** : on ne garde que les sprites réellement utilisés
-par les jeux. Pour en ajouter, modifier \`scripts/import-assets.mjs\` et le
-relancer.
-`)
+Les kits ont été **triés** : on ne garde que les modèles et les sons réellement
+utilisés par les jeux. Pour en ajouter, modifier \`scripts/import-assets.mjs\` et
+le relancer.
+`
+const old = existsSync(creditsPath) ? readFileSync(creditsPath, 'utf8') : ''
+const rest = old.indexOf('\n## ') >= 0 ? old.slice(old.indexOf('\n## ')) : ''
+writeFileSync(creditsPath, kenney.trimEnd() + '\n' + rest)
 
 console.log(`\nTotal embarqué : ${Math.round(total / 1024)} Ko`)

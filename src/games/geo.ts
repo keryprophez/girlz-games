@@ -1,6 +1,6 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
-import { loadAtlas, frameStyle, type Atlas } from '../core/sprites'
+import { photoImg } from '../core/sprites'
 import { createStage, loader, loadThree, picker, dotTex, type Stage, type T3 } from '../core/three3d'
 import { particles, type Particles } from '../core/scene3d'
 import { ICON } from '../core/icons'
@@ -40,21 +40,26 @@ const CONTINENTS: Record<ContinentId, { fr: string; color: number; countries: st
 const CONTINENT_OF: Record<string, ContinentId> = {}
 for (const [id, c] of Object.entries(CONTINENTS) as [ContinentId, typeof CONTINENTS[ContinentId]][]) for (const n of c.countries) CONTINENT_OF[n] = id
 
-/** Où vit chaque animal de la planche Kenney (pour la question de Jade). */
-const ANIMALS: { frame: string; fr: string; continent: ContinentId }[] = [
-  { frame: 'panda', fr: 'le panda', continent: 'asie' },
-  { frame: 'penguin', fr: 'le pingouin', continent: 'antarctique' },
-  { frame: 'giraffe', fr: 'la girafe', continent: 'afrique' },
-  { frame: 'zebra', fr: 'le zèbre', continent: 'afrique' },
-  { frame: 'elephant', fr: "l'éléphant", continent: 'afrique' },
-  { frame: 'hippo', fr: "l'hippopotame", continent: 'afrique' },
-  { frame: 'moose', fr: "l'élan", continent: 'amNord' },
-  { frame: 'buffalo', fr: 'le bison', continent: 'amNord' },
-  { frame: 'sloth', fr: 'le paresseux', continent: 'amSud' },
-  { frame: 'parrot', fr: 'le perroquet', continent: 'amSud' },
-  { frame: 'cow', fr: 'la vache', continent: 'europe' },
-  { frame: 'crocodile', fr: 'le crocodile', continent: 'oceanie' },
-  { frame: 'whale', fr: 'la baleine', continent: 'antarctique' }
+/** Où vit chaque animal — en PHOTO depuis le 22/09 (les imagiers sont en
+    photos, « jamais deux styles ») : un animal emblématique par continent,
+    jamais un animal qui vit partout. */
+const ANIMALS: { photo: string; fr: string; continent: ContinentId }[] = [
+  { photo: 'panda', fr: 'le panda', continent: 'asie' },
+  { photo: 'tiger', fr: 'le tigre', continent: 'asie' },
+  { photo: 'giraffe', fr: 'la girafe', continent: 'afrique' },
+  { photo: 'zebra', fr: 'le zèbre', continent: 'afrique' },
+  { photo: 'elephant', fr: "l'éléphant", continent: 'afrique' },
+  { photo: 'hippo', fr: "l'hippopotame", continent: 'afrique' },
+  { photo: 'lion', fr: 'le lion', continent: 'afrique' },
+  { photo: 'moose', fr: "l'élan", continent: 'amNord' },
+  { photo: 'bison', fr: 'le bison', continent: 'amNord' },
+  { photo: 'sloth', fr: 'le paresseux', continent: 'amSud' },
+  { photo: 'parrot', fr: 'le perroquet', continent: 'amSud' },
+  { photo: 'llama', fr: 'le lama', continent: 'amSud' },
+  { photo: 'hedgehog', fr: 'le hérisson', continent: 'europe' },
+  { photo: 'kangaroo', fr: 'le kangourou', continent: 'oceanie' },
+  { photo: 'koala', fr: 'le koala', continent: 'oceanie' },
+  { photo: 'penguin', fr: 'le pingouin', continent: 'antarctique' }
 ]
 
 /** Les 177 pays en français (CLDR, généré dans public/assets/geo/countries-fr.json).
@@ -146,7 +151,6 @@ interface State {
   stage: Stage
   T: T3
   fx: Particles
-  animals: Atlas
   countries: Feature<Polygon | MultiPolygon>[]
   regions: Feature<Polygon | MultiPolygon>[]
   globe: import('three').Group
@@ -273,7 +277,7 @@ function nextQuestion(me: State) {
   let t: Target
   if (me.map === 'monde') {
     const animal = tier === 'easy' ? true : tier === 'med' ? Math.random() < 0.5 : false
-    if (animal) t = { kind: 'animal', animal: pick(ANIMALS.filter(a => me.animals.frames[a.frame])) }
+    if (animal) t = { kind: 'animal', animal: pick(ANIMALS) }
     else t = { kind: 'pays', name: pick(Object.keys(COUNTRIES_FR).filter(n => me.countries.some(f => f.properties!.name === n))) }
   } else {
     const city = tier === 'easy' ? true : tier === 'med' ? Math.random() < 0.5 : false
@@ -287,10 +291,7 @@ function nextQuestion(me: State) {
   me.ui.askText.textContent = targetLabel(t)
   showName(me, null)
   if (t.kind === 'animal') {
-    const i = document.createElement('i')
-    i.className = 'spr'
-    i.setAttribute('style', frameStyle(me.animals, t.animal.frame, 96))
-    me.ui.askImg.appendChild(i)
+    me.ui.askImg.innerHTML = photoImg(t.animal.photo, 96)
   }
   me.ui.dots.querySelectorAll('i').forEach((d, i) => d.classList.toggle('cur', i === me.asked - 1))
   me.ui.ask.classList.remove('off')
@@ -401,8 +402,8 @@ export const geoGame: GameDef = {
 
     ;(async () => {
       const base = import.meta.env.BASE_URL
-      const [T, animals, topo, regionsFc, frNames] = await Promise.all([
-        loadThree(), loadAtlas('animals'),
+      const [T, topo, regionsFc, frNames] = await Promise.all([
+        loadThree(),
         fetch(`${base}assets/geo/countries-110m.json`).then(r => r.json() as Promise<Topology<{ countries: GeometryCollection<{ name: string }> }>>),
         fetch(`${base}assets/geo/regions.geojson`).then(r => r.json() as Promise<FeatureCollection<Polygon | MultiPolygon, { nom: string }>>),
         fetch(`${base}assets/geo/countries-fr.json`).then(r => r.json() as Promise<Record<string, string>>).catch(() => ({}))
@@ -543,7 +544,7 @@ export const geoGame: GameDef = {
       arena.appendChild(done)
 
       const me: State = {
-        stage, T, fx: particles(stage, 300), animals, countries, regions: regionsFc.features,
+        stage, T, fx: particles(stage, 300), countries, regions: regionsFc.features,
         globe, earth, overlay: { canvas, g, tex: otex }, france, regionMeshes, cityPins,
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
         selected: null, target: null, tries: 0, asked: 0, errors: 0, total: 8, busy: false, over: false,

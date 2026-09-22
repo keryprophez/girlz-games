@@ -4,7 +4,8 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { impact } from '../core/impact'
 import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
-import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
+import { critterPortraits, portraitImg } from '../core/portraits'
+import type { CritterKind } from '../core/critters'
 import { SHOW_PROFILES, useFerme } from '../core/store'
 
 /* Puissance 4 des Sœurs — LE jeu à deux sur la même tablette, au tour par
@@ -24,7 +25,7 @@ const COLS = 7, ROWS = 6
 const RIMS = ['#FF6B81', '#4FB8E7']
 type Grid = number[][]
 
-interface Player { name: string; avatar: string | null; fallback: string }
+interface Player { name: string; avatar: string | null; fallback: CritterKind }
 interface State {
   players: Player[]
   grid: Grid
@@ -34,7 +35,8 @@ interface State {
   solo: boolean
   cell: number
   pad: number
-  atlas: Atlas | null
+  /** Les pions dessinés : les personnages 3D du poussin et de la poule. */
+  img: Record<string, string>
 }
 
 let c4: State | null = null
@@ -42,7 +44,7 @@ let ctx: GameContext
 
 function tokenHTML(p: Player, rim: string, px: number): string {
   if (p.avatar) return `<span class="c4-face" style="background-image:url('${p.avatar}');border-color:${rim}"></span>`
-  return `<span class="c4-face c4-drawn" style="border-color:${rim}">${c4?.atlas ? spriteSpan(c4.atlas, p.fallback, px * 0.62) : ''}</span>`
+  return `<span class="c4-face c4-drawn" style="border-color:${rim}">${portraitImg(c4?.img[p.fallback], Math.round(px * 0.72))}</span>`
 }
 
 function winLine(g: Grid, player: number): [number, number][] | null {
@@ -212,6 +214,16 @@ function drop(me: State, col: number) {
   })
 }
 
+/** Les pions arrivent après le premier rendu (portraits 3D) : on redessine. */
+function refreshFaces(me: State) {
+  document.querySelectorAll<HTMLElement>('.c4-token:not(.c4-ghost)').forEach(t => {
+    const [r, c] = (t.dataset.cell || '').split(':').map(Number)
+    const who = me.grid[r]?.[c]
+    if (who === 0 || who === 1) t.innerHTML = tokenHTML(me.players[who], RIMS[who], me.cell)
+  })
+  paintTurn(me)
+}
+
 function newGame(me: State) {
   me.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(-1))
   me.turn = 0; me.lock = false; me.over = false
@@ -262,17 +274,17 @@ export const connect4: GameDef = {
     const me: State = {
       players: [
         { name: cur.name, avatar: cur.avatar, fallback: 'chick' },
-        { name: other.name, avatar: other.avatar, fallback: 'chicken' }
+        { name: other.name, avatar: other.avatar, fallback: 'hen' }
       ],
-      grid: [], turn: 0, lock: false, over: false, solo: false, cell, pad, atlas: null
+      grid: [], turn: 0, lock: false, over: false, solo: false, cell, pad, img: {}
     }
     c4 = me
-    const HEN: Player = { name: 'la poule', avatar: null, fallback: 'chicken' }
+    const HEN: Player = { name: 'la poule', avatar: null, fallback: 'hen' }
     document.querySelectorAll<HTMLElement>('.c4-mode').forEach(b => {
       b.onclick = () => {
         me.solo = b.dataset.m === 'solo'
         document.querySelectorAll('.c4-mode').forEach(x => x.classList.toggle('sel', x === b))
-        me.players[1] = me.solo ? HEN : { name: other.name, avatar: other.avatar, fallback: 'chicken' }
+        me.players[1] = me.solo ? HEN : { name: other.name, avatar: other.avatar, fallback: 'hen' }
         sfx('click', { vol: 0.4 })
         newGame(me)
       }
@@ -291,7 +303,7 @@ export const connect4: GameDef = {
         get solo() { return me.solo }, drop: (col: number) => drop(me, col), ai: (col: number) => aiMove(me.grid, 0, col)
       }
     }
-    loadAtlas('animals').then((a: Atlas) => { if (c4 === me) { me.atlas = a; newGame(me) } })
+    critterPortraits(['chick', 'hen'], Math.round(cell * 0.72)).then(img => { if (c4 === me) { me.img = img; refreshFaces(me) } })
     newGame(me)
     return () => { if (c4 === me) c4 = null; me.over = true }
   }

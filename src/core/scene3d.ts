@@ -6,7 +6,6 @@
 
 import type { Stage, T3 } from './three3d'
 import { loadModel, fitModel, dotTex } from './three3d'
-import type { Atlas } from './sprites'
 
 type V3 = import('three').Vector3
 
@@ -81,63 +80,6 @@ export function ring(n: number, rMin: number, rMax: number, arc: [number, number
     out.push([Math.cos(a) * r, Math.sin(a) * r])
   }
   return out
-}
-
-/* ---------- Sprites 2D (planches Kenney) dans la scène ----------
-   Un `Sprite` three.js face caméra, découpé dans la planche par offset/repeat :
-   les animaux de la ferme en 3D sans modèle 3D. Une texture par planche
-   (mise en cache par `stage.keep`), clonée par sprite pour le découpage. */
-const atlasTex = new WeakMap<Stage, Map<string, import('three').Texture>>()
-export function spriteFromAtlas(stage: Stage, atlas: Atlas, name: string, size: number): import('three').Sprite {
-  const { T } = stage
-  let m = atlasTex.get(stage)
-  if (!m) { m = new Map(); atlasTex.set(stage, m) }
-  let base = m.get(atlas.image)
-  if (!base) {
-    base = stage.keep(new T.TextureLoader().load(atlas.image))
-    base.colorSpace = T.SRGBColorSpace
-    base.magFilter = T.LinearFilter
-    base.minFilter = T.LinearMipmapLinearFilter
-    m.set(atlas.image, base)
-  }
-  const f = atlas.frames[name]
-  const tex = base.clone()
-  tex.repeat.set(f.w / atlas.size.w, f.h / atlas.size.h)
-  tex.offset.set(f.x / atlas.size.w, 1 - (f.y + f.h) / atlas.size.h)
-  tex.needsUpdate = true
-  stage.keep(tex)
-  const sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.1 }))
-  sp.scale.set(size * f.w / f.h, size, 1)
-  return sp
-}
-
-/** Le même découpage, mais sur un PANNEAU VERTICAL ancré aux pieds (origine en
-    bas), qui ne tourne que sur Y pour faire face à la caméra (`faceCamera`).
-    Contrairement au Sprite face caméra, ce qui passe sous le sol est caché par
-    le sol : un animal qui SORT d'un trou, pas un autocollant planté devant. */
-export function standeeFromAtlas(stage: Stage, atlas: Atlas, name: string, size: number): import('three').Mesh {
-  const { T } = stage
-  let m = atlasTex.get(stage)
-  if (!m) { m = new Map(); atlasTex.set(stage, m) }
-  let base = m.get(atlas.image)
-  if (!base) {
-    base = stage.keep(new T.TextureLoader().load(atlas.image))
-    base.colorSpace = T.SRGBColorSpace
-    base.magFilter = T.LinearFilter
-    base.minFilter = T.LinearMipmapLinearFilter
-    m.set(atlas.image, base)
-  }
-  const f = atlas.frames[name]
-  const tex = base.clone()
-  tex.repeat.set(f.w / atlas.size.w, f.h / atlas.size.h)
-  tex.offset.set(f.x / atlas.size.w, 1 - (f.y + f.h) / atlas.size.h)
-  tex.needsUpdate = true
-  stage.keep(tex)
-  const geo = new T.PlaneGeometry(1, 1)
-  geo.translate(0, 0.5, 0) // origine aux pieds : l'écrasement part du sol
-  const mesh = new T.Mesh(geo, new T.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.1, side: T.DoubleSide }))
-  mesh.scale.set(size * f.w / f.h, size, 1)
-  return mesh
 }
 
 /** Oriente un panneau vers la caméra autour de Y seulement (il reste debout). */

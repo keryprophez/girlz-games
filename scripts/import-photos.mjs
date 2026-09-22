@@ -73,6 +73,16 @@ export const TERMS = [
   ['fish', 'poisson', 'Poisson rouge', 'goldfish', 'Goldfish'],
   ['turtle', 'tortue', 'Tortue terrestre', 'tortoise', 'Tortoise'],
   ['butterfly', 'papillon', 'Machaon', 'swallowtail butterfly', 'Papilio machaon'],
+  // --- Animaux du Tour du Monde (22/09 : un animal par continent, en photo) ---
+  ['panda', 'panda', 'Panda géant', 'giant panda', 'Giant panda'],
+  ['kangaroo', 'kangourou', 'Kangourou roux', 'red kangaroo', 'Red kangaroo'],
+  ['hippo', 'hippopotame', 'Hippopotame', 'hippopotamus', 'Hippopotamus'],
+  ['bison', 'bison', "Bison d'Amérique", 'american bison', 'American bison'],
+  ['sloth', 'paresseux', 'Paresseux à gorge brune', 'three-toed sloth', 'Brown-throated sloth'],
+  ['moose', 'élan', 'Élan', 'moose', 'Moose'],
+  ['koala', 'koala', 'Koala', 'koala', 'Koala'],
+  ['tiger', 'tigre', 'Tigre', 'tiger', 'Tiger'],
+  ['llama', 'lama', 'Lama', 'llama', 'Llama'],
   // --- Fruits ---
   ['apple', 'pomme', 'Pomme', 'apple fruit', 'Apple'],
   ['banana', 'banane', 'Banane', 'banana fruit', 'Banana'],
@@ -152,7 +162,10 @@ const VIVANT = {
   fox: 'Vulpes vulpes', deer: 'Cervus elaphus', hedgehog: 'Erinaceus europaeus',
   frog: 'Rana temporaria', snake: 'Natrix natrix', owl: 'Bubo bubo',
   parrot: 'Ara ararauna', penguin: 'Aptenodytes forsteri', whale: 'Megaptera novaeangliae',
-  fish: 'Carassius auratus', turtle: 'Testudo hermanni', butterfly: 'Papilio machaon'
+  fish: 'Carassius auratus', turtle: 'Testudo hermanni', butterfly: 'Papilio machaon',
+  panda: 'Ailuropoda melanoleuca', kangaroo: 'Osphranter rufus', hippo: 'Hippopotamus amphibius',
+  bison: 'Bison bison', sloth: 'Bradypus variegatus', moose: 'Alces alces', koala: 'Phascolarctos cinereus',
+  tiger: 'Panthera tigris', llama: 'Lama glama'
 }
 
 /* ---------- Le style unique ----------

@@ -4,14 +4,16 @@ import { tone } from '../core/audio'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
-import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
+import { critterPortraits, portraitImg } from '../core/portraits'
+import type { CritterKind } from '../core/critters'
 
 /* Simon — quatre animaux chantent une mélodie, on la rejoue en tapant sur
    eux. Une note de plus à chaque tour, un peu plus vite à chaque fois.
 
    Polish du 9/09 (phase 2, jeux 2D) :
    - plein écran : quatre grands pads aussi grands que la place le permet,
-     avec les VRAIS animaux (sprites Kenney) au lieu d'emoji ;
+     avec de vrais animaux au lieu d'emoji — depuis le 22/09 les personnages
+     3D de la ferme (`core/portraits.ts`), plus les pastilles Kenney ;
    - plus de texte pour dire à qui c'est : une oreille pendant l'écoute,
      une main quand c'est à toi, et les pads se grisent pendant l'écoute ;
    - l'animal qui chante saute ; une fausse note secoue le pad en rouge et
@@ -19,8 +21,8 @@ import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
    - timers de partie (pause-safe), état typé. */
 
 const NOTES = [392, 523, 659, 784]
-const PADS = [
-  { animal: 'chicken', bg: '#FFE0E4' },
+const PADS: { animal: CritterKind; bg: string }[] = [
+  { animal: 'hen', bg: '#FFE0E4' },
   { animal: 'cow', bg: '#DFF4DE' },
   { animal: 'pig', bg: '#DBEEFE' },
   { animal: 'dog', bg: '#FFEFC8' }
@@ -32,7 +34,6 @@ interface State {
   playerTurn: boolean
   best: number
   playSpeed: number
-  atlas: Atlas | null
   over: boolean
 }
 
@@ -118,7 +119,7 @@ export const simonGame: GameDef = {
       </div>`
     preloadSfx(['confirm', 'error'])
     const me: State = {
-      seq: [], step: 0, playerTurn: false, best: 0, playSpeed: c.byTier(650, 520, 420), atlas: null, over: false
+      seq: [], step: 0, playerTurn: false, best: 0, playSpeed: c.byTier(650, 520, 420), over: false
     }
     simon = me
     for (let i = 0; i < c.byTier(1, 2, 3); i++) me.seq.push(rnd(0, 3))
@@ -131,13 +132,11 @@ export const simonGame: GameDef = {
       }
     }
 
-    loadAtlas('animals').then((a: Atlas) => {
+    const wrap = $('simonWrap')
+    const px = Math.max(80, Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight) * 0.36))
+    critterPortraits(PADS.map(p => p.animal), px).then(img => {
       if (simon !== me) return
-      me.atlas = a
-      const wrap = $('simonWrap')
-      const side = Math.min(wrap.clientWidth, wrap.clientHeight)
-      const px = Math.max(60, Math.floor(side * 0.28))
-      wrap.innerHTML = PADS.map((p, i) => `<button class="spad" data-i="${i}" style="background:${p.bg}">${spriteSpan(a, p.animal, px)}</button>`).join('')
+      wrap.innerHTML = PADS.map((p, i) => `<button class="spad" data-i="${i}" style="background:${p.bg}">${portraitImg(img[p.animal], px)}</button>`).join('')
       wrap.querySelectorAll<HTMLElement>('.spad').forEach(p => { p.onclick = () => press(me, parseInt(p.dataset.i!)) })
       ctx.after(500, () => playSequence(me))
     })

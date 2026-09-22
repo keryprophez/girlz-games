@@ -467,5 +467,68 @@
     "auteur": "Ivar Leidus",
     "licence": "CC BY-SA 4.0",
     "source": "https://commons.wikimedia.org/wiki/File:Oranges_-_whole-halved-segment.jpg"
+  },
+  "panda": {
+    "fr": "panda",
+    "titre": "Giant Panda (Ailuropoda melanoleuca)",
+    "auteur": "昆虫学liuye",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/443566770"
+  },
+  "kangaroo": {
+    "fr": "kangourou",
+    "titre": "Red Kangaroo (Osphranter rufus)",
+    "auteur": "Dianne Clarke",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/195432418"
+  },
+  "hippo": {
+    "fr": "hippopotame",
+    "titre": "Common Hippopotamus (Hippopotamus amphibius)",
+    "auteur": "Michael Barth",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/294638919"
+  },
+  "bison": {
+    "fr": "bison",
+    "titre": "Bovids (Bovidae)",
+    "auteur": "Sean Brady",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/7642"
+  },
+  "sloth": {
+    "fr": "paresseux",
+    "titre": "Brown-throated Three-toed Sloth (Bradypus variegatus)",
+    "auteur": "Dean Thompson",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/224996933"
+  },
+  "moose": {
+    "fr": "élan",
+    "titre": "True Moose (Alces)",
+    "auteur": "Declan Troy",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/335160686"
+  },
+  "koala": {
+    "fr": "koala",
+    "titre": "Koala (Phascolarctos cinereus)",
+    "auteur": "Aidan",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/212767739"
+  },
+  "tiger": {
+    "fr": "tigre",
+    "titre": "Roaring Cats (Panthera)",
+    "auteur": "girishdv",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/1902449"
+  },
+  "llama": {
+    "fr": "lama",
+    "titre": "Llama (Lama glama)",
+    "auteur": "Lucyin",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/188007033"
   }
 }

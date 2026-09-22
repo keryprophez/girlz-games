@@ -1,9 +1,10 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick } from '../core/utils'
+import { $, pick, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
-import { loadAtlas, FARM_ANIMALS, type Atlas } from '../core/sprites'
+import { farmScene } from '../core/portraits'
+import { FARM } from '../core/critters'
 import { useFerme } from '../core/store'
 
 /* Taquin — on fait glisser des morceaux de photo (sa tête, une photo
@@ -40,36 +41,11 @@ let ctx: GameContext
 let mode: Mode = 'image'
 const TQ_COLORS = ['#FF9C8F', '#FFC06B', '#7BD494', '#6FC2EE', '#C0A0F2', '#F58FB8', '#8FD7CE', '#F2B58F']
 
-/** L'image de base : un pré, un ciel, et quatre animaux de la ferme (vrais sprites). */
-function farmPicture(atlas: Atlas): Promise<string> {
-  return new Promise(resolve => {
-    const img = new Image()
-    img.onload = () => {
-      const c = document.createElement('canvas')
-      c.width = c.height = 512
-      const g = c.getContext('2d')!
-      const sky = g.createLinearGradient(0, 0, 0, 320)
-      sky.addColorStop(0, '#8FCDEB'); sky.addColorStop(1, '#D6EEFA')
-      g.fillStyle = sky; g.fillRect(0, 0, 512, 512)
-      g.fillStyle = '#FFE066'; g.beginPath(); g.arc(90, 90, 46, 0, 7); g.fill()
-      g.fillStyle = '#FFFFFF'
-      for (const [x, y, r] of [[330, 80, 30], [370, 70, 38], [410, 85, 28]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill() }
-      const grass = g.createLinearGradient(0, 300, 0, 512)
-      grass.addColorStop(0, '#7CC96F'); grass.addColorStop(1, '#4F9A45')
-      g.fillStyle = grass; g.fillRect(0, 300, 512, 212)
-      const names = [...FARM_ANIMALS].sort(() => Math.random() - 0.5).slice(0, 4)
-      names.forEach((n, i) => {
-        const f = atlas.frames[n]
-        if (!f) return
-        const size = 150
-        const x = 30 + i * 118, y = 340 - (i % 2) * 40
-        g.drawImage(img, f.x, f.y, f.w, f.h, x, y, size * f.w / f.h, size)
-      })
-      resolve(c.toDataURL('image/png'))
-    }
-    img.onerror = () => resolve('')
-    img.src = atlas.image
-  })
+/** L'image de base : un vrai pré en 3D (arbres, clôture, fleurs) et quatre
+    personnages de la ferme — les mêmes que Tape-Trous et Simon, plus les
+    pastilles Kenney collées sur un dégradé (22/09). */
+function farmPicture(): Promise<string> {
+  return farmScene(shuffle([...FARM]).slice(0, 4), 512)
 }
 
 function render(me: State) {
@@ -252,9 +228,9 @@ export const taquin: GameDef = {
       }
     }
 
-    // L'image de la ferme est dessinée avec les vrais animaux : on la prépare
-    // d'abord, elle sert de base quand il n'y a ni photo ni tête
-    loadAtlas('animals').then(farmPicture).then(p => {
+    // L'image de la ferme est un rendu 3D : on la prépare d'abord, elle sert
+    // de base quand il n'y a ni photo ni tête
+    farmPicture().then(p => {
       if (!alive) return
       farm = p
       build(img || farm)

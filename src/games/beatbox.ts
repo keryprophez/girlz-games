@@ -1,48 +1,29 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $ } from '../core/utils'
 import { sMoo, tone } from '../core/audio'
 import { ICON } from '../core/icons'
-import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
+import { isPaused, onPause } from '../core/session'
+import { critterPortraits, portraitImg } from '../core/portraits'
+import type { CritterKind } from '../core/critters'
 
 /* Boîte à Rythme de la Ferme — une grille de 8 temps × 4 animaux :
-   on allume des cases, on appuie sur play, la ferme fait de la musique. */
+   on allume des cases, on appuie sur Joue, la ferme fait de la musique.
+
+   Repris le 22/09 : plein écran (la grille prend toute la place, les cases
+   sont de vrais gros boutons), les animaux sont les personnages 3D de la
+   ferme (`core/portraits.ts`, plus les dessins ni les pastilles Kenney) et
+   ils SAUTENT quand ils chantent ; une barre de lecture parcourt la grille ;
+   les outils sont une colonne d'icônes avec leur mot dessous. Créer : aucune
+   note, l'écran de fin ne juge pas. La lecture s'arrête avec la pause. */
 
 const STEPS = 8
-const ROWS = [
-  {
-    key: 'vache', color: '#B197FC',
-    icon: `<svg viewBox="0 0 40 40" width="30" height="30"><circle cx="20" cy="20" r="15" fill="#FFF6E8" stroke="#C9B497" stroke-width="2"/>
-      <circle cx="13" cy="13" r="4.5" fill="#5B4632"/><ellipse cx="20" cy="27" rx="9" ry="6" fill="#F8C8CE"/>
-      <circle cx="17" cy="27" r="1.6" fill="#B26E78"/><circle cx="23" cy="27" r="1.6" fill="#B26E78"/>
-      <path d="M6,10 Q3,5 8,5 M34,10 Q37,5 32,5" stroke="#C9B497" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <circle cx="14" cy="18" r="1.8" fill="#45362A"/><circle cx="26" cy="18" r="1.8" fill="#45362A"/></svg>`,
-    play() { sMoo() }
-  },
-  {
-    key: 'cochon', color: '#F58FB8',
-    icon: `<svg viewBox="0 0 40 40" width="30" height="30"><circle cx="20" cy="20" r="15" fill="#FBC6D3" stroke="#DE93AB" stroke-width="2"/>
-      <ellipse cx="20" cy="24" rx="7.5" ry="5.5" fill="#F291B2"/>
-      <circle cx="17" cy="24" r="1.7" fill="#B25A7B"/><circle cx="23" cy="24" r="1.7" fill="#B25A7B"/>
-      <path d="M8,9 L13,13 M32,9 L27,13" stroke="#DE93AB" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="14" cy="15" r="1.8" fill="#45362A"/><circle cx="26" cy="15" r="1.8" fill="#45362A"/></svg>`,
-    play() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) }
-  },
-  {
-    key: 'canard', color: '#4FB8E7',
-    icon: `<svg viewBox="0 0 40 40" width="30" height="30"><circle cx="20" cy="20" r="15" fill="#FFE9A8" stroke="#DEC06A" stroke-width="2"/>
-      <path d="M12,24 Q20,30 28,24 L28,27 Q20,33 12,27 Z" fill="#FFA94D" stroke="#E08A2E" stroke-width="1.5"/>
-      <circle cx="14" cy="16" r="1.9" fill="#45362A"/><circle cx="26" cy="16" r="1.9" fill="#45362A"/></svg>`,
-    play() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) }
-  },
-  {
-    key: 'poule', color: '#FFA94D',
-    icon: `<svg viewBox="0 0 40 40" width="30" height="30"><circle cx="20" cy="21" r="14" fill="#FFF6E8" stroke="#D9BFA0" stroke-width="2"/>
-      <path d="M13,9 Q15,3 18,8 Q20,2 23,8 Q25,3 27,9" fill="#FF6B81" stroke="#E04E63" stroke-width="1.5"/>
-      <path d="M17,23 L23,23 L20,27 Z" fill="#FFA94D"/>
-      <circle cx="15" cy="18" r="1.8" fill="#45362A"/><circle cx="25" cy="18" r="1.8" fill="#45362A"/></svg>`,
-    play() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) }
-  }
+const ROWS: { animal: CritterKind; color: string; play(): void }[] = [
+  { animal: 'cow', color: '#B197FC', play() { sMoo() } },
+  { animal: 'pig', color: '#F58FB8', play() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) } },
+  { animal: 'duck', color: '#4FB8E7', play() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) } },
+  { animal: 'hen', color: '#FFA94D', play() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } }
 ]
+
+const TEMPOS = [{ ms: 500, cap: 'Lent', dots: 1 }, { ms: 340, cap: 'Moyen', dots: 2 }, { ms: 230, cap: 'Vite', dots: 3 }]
 
 const PRESETS: Record<string, number[][]> = {
   // [ligne][pas] — 1 = case allumée
@@ -60,47 +41,73 @@ const PRESETS: Record<string, number[][]> = {
   ]
 }
 
-let bb: any = null
+interface State {
+  grid: number[][]
+  playing: boolean
+  step: number
+  tempo: number
+  raf: number
+  nextAt: number
+  root: HTMLElement
+  cells: HTMLElement[][]
+  animals: HTMLElement[]
+  head: HTMLElement
+}
+
+let bb: State | null = null
 let ctx: GameContext
 
-function render() {
-  document.querySelectorAll<HTMLElement>('.bb-cell').forEach(cell => {
-    const r = +cell.dataset.r!, s = +cell.dataset.s!
-    cell.classList.toggle('on', !!bb.grid[r][s])
-  })
+function render(me: State) {
+  me.cells.forEach((row, r) => row.forEach((c, s) => c.classList.toggle('on', !!me.grid[r][s])))
 }
 
-function tick() {
-  bb.step = (bb.step + 1) % STEPS
-  document.querySelectorAll<HTMLElement>('.bb-cell').forEach(cell => {
-    cell.classList.toggle('now', +cell.dataset.s! === bb.step)
-  })
-  ROWS.forEach((row, r) => { if (bb.grid[r][bb.step]) row.play() })
+/** Un animal chante : il saute, sa case s'illumine. */
+function sing(me: State, r: number) {
+  ROWS[r].play()
+  const a = me.animals[r]
+  a.classList.remove('sing'); void a.offsetWidth; a.classList.add('sing')
 }
 
-/* L'horloge : une frame d'avance sur `performance.now()`, le temps du
-   prochain pas est ACCUMULÉ (plus de dérive de setTimeout) ; en pause d'onglet
-   on ne rattrape pas en rafale. */
+function tick(me: State) {
+  me.step = (me.step + 1) % STEPS
+  me.cells.forEach(row => row.forEach((c, s) => c.classList.toggle('now', s === me.step)))
+  // La barre de lecture glisse sur la colonne jouée
+  const c0 = me.cells[0][me.step], cN = me.cells[ROWS.length - 1][me.step]
+  me.head.style.transform = `translateX(${c0.offsetLeft}px)`
+  me.head.style.width = c0.offsetWidth + 'px'
+  me.head.style.top = c0.offsetTop + 'px'
+  me.head.style.height = cN.offsetTop + cN.offsetHeight - c0.offsetTop + 'px'
+  ROWS.forEach((_, r) => { if (me.grid[r][me.step]) sing(me, r) })
+}
+
+/* L'horloge : le temps du prochain pas est ACCUMULÉ sur `performance.now()`
+   (pas de dérive de minuteur) ; en pause, rien ne joue et on ne rattrape pas
+   en rafale au retour. */
 function clock(now: number) {
-  if (!bb || !bb.playing) return
-  if (now >= bb.nextAt) {
-    tick()
-    bb.nextAt += bb.tempo
-    if (now - bb.nextAt > bb.tempo * 2) bb.nextAt = now + bb.tempo
+  const me = bb
+  if (!me || !me.playing) return
+  if (isPaused()) me.nextAt = now + me.tempo
+  else if (now >= me.nextAt) {
+    tick(me)
+    me.nextAt += me.tempo
+    if (now - me.nextAt > me.tempo * 2) me.nextAt = now + me.tempo
   }
-  bb.raf = requestAnimationFrame(clock)
+  me.raf = requestAnimationFrame(clock)
 }
 
-function setPlaying(on: boolean) {
-  bb.playing = on
-  cancelAnimationFrame(bb.raf)
-  $('bbPlay').innerHTML = on ? ICON.pause : ICON.play
-  if (on) { bb.step = -1; bb.nextAt = performance.now(); bb.raf = requestAnimationFrame(clock) }
-  else document.querySelectorAll('.bb-cell').forEach(c => c.classList.remove('now'))
+function setPlaying(me: State, on: boolean) {
+  me.playing = on
+  cancelAnimationFrame(me.raf)
+  const btn = me.root.querySelector<HTMLElement>('#bbPlay')!
+  btn.innerHTML = on ? ICON.pause : ICON.play
+  btn.parentElement!.classList.toggle('sel', on)
+  me.head.classList.toggle('on', on)
+  if (on) { me.step = -1; me.nextAt = performance.now(); me.raf = requestAnimationFrame(clock) }
+  else me.cells.forEach(row => row.forEach(c => c.classList.remove('now')))
 }
 
-function finish() {
-  const notes = bb.grid.flat().filter(Boolean).length
+function finish(me: State) {
+  const notes = me.grid.flat().filter(Boolean).length
   ctx.finish({
     title: 'Quel orchestre !',
     msg: `Tu as composé un rythme avec ${notes} sons de la ferme`,
@@ -108,70 +115,85 @@ function finish() {
   })
 }
 
+const tool = (id: string, icon: string, cap: string, extra = '') =>
+  `<span class="tool-item"><button class="sn-tool${extra}" id="${id}" aria-label="${cap}">${icon}</button><i class="tool-cap">${cap}</i></span>`
+
 export const beatbox: GameDef = {
   id: 'beatbox', name: 'Boîte à Rythme', icon: '🥁', sq: 'sq-pink', cat: 'creatif',
   subtitle: 'Allume des cases, appuie sur Joue : la ferme fait de la musique !',
   mount(c) {
     ctx = c
-    const ANIMALS = ['cow', 'pig', 'duck', 'chicken']
     c.root.innerHTML = `
-      <div class="topbar">
-        <button class="chip bb-big" id="bbPlay" aria-label="Joue">${ICON.play}</button>
-        <button class="chip bb-tempo" data-t="500" aria-label="Lent">${ICON.timer}<i class="bb-dots">•</i></button>
-        <button class="chip bb-tempo sel" data-t="340" aria-label="Moyen">${ICON.timer}<i class="bb-dots">••</i></button>
-        <button class="chip bb-tempo" data-t="230" aria-label="Rapide">${ICON.timer}<i class="bb-dots">•••</i></button>
-        <button class="chip" id="bbClear" aria-label="Effacer">${ICON.replay}</button>
-      </div>
-      <div id="bbGrid">
-        ${ROWS.map((row, r) => `
-          <div class="bb-row">
-            <button class="bb-animal" data-r="${r}" data-a="${ANIMALS[r]}" style="--rc:${row.color}">${row.icon}</button>
+      <div class="arena bb-arena">
+        <div class="tq-tools bb-tools">
+          ${tool('bbPlay', ICON.play, 'Joue', ' go')}
+          ${TEMPOS.map((t, i) => `<span class="tool-item${i === 1 ? ' sel' : ''}"><button class="sn-tool bb-tempo" data-t="${t.ms}" aria-label="${t.cap}">${ICON.timer}<i class="bb-dots">${'•'.repeat(t.dots)}</i></button><i class="tool-cap">${t.cap}</i></span>`).join('')}
+          ${tool('bbP1', ICON.sound + '<i class="bb-num">1</i>', 'Air 1')}
+          ${tool('bbP2', ICON.sound + '<i class="bb-num">2</i>', 'Air 2')}
+          ${tool('bbClear', ICON.replay, 'Efface')}
+        </div>
+        <div class="bb-board" id="bbGrid">
+          <div class="bb-head"></div>
+          ${ROWS.map((row, r) => `
+            <button class="bb-animal" data-r="${r}" style="--rc:${row.color}" aria-label="${row.animal}"></button>
             ${Array.from({ length: STEPS }, (_, s) =>
-              `<button class="bb-cell${s % 4 === 0 ? ' bar' : ''}" data-r="${r}" data-s="${s}" style="--rc:${row.color}"></button>`).join('')}
-          </div>`).join('')}
-      </div>
-      <div class="bb-presets">
-        <button class="chip" data-p="p1" aria-label="Rythme 1">${ICON.sound} 1</button>
-        <button class="chip" data-p="p2" aria-label="Rythme 2">${ICON.sound} 2</button>
-      </div>
-      <button class="sn-tool go" id="bbDone" style="margin-top:12px" aria-label="Fini">${ICON.check}</button>`
-    bb = { grid: ROWS.map(() => Array(STEPS).fill(0)), playing: false, step: -1, tempo: 340, running: true, raf: 0, nextAt: 0 }
-    // Les vrais animaux de la planche sur les boutons de ligne
-    loadAtlas('animals').then((a: Atlas) => {
-      if (!bb) return
-      document.querySelectorAll<HTMLElement>('.bb-animal').forEach(b => { b.innerHTML = spriteSpan(a, b.dataset.a!, 40) })
+              `<button class="bb-cell${s % 4 === 0 ? ' bar' : ''}" data-r="${r}" data-s="${s}" style="--rc:${row.color}"></button>`).join('')}`).join('')}
+        </div>
+        <button class="sn-tool go bb-done" id="bbDone" aria-label="Fini">${ICON.check}</button>
+      </div>`
+    const root = c.root
+    const board = root.querySelector<HTMLElement>('#bbGrid')!
+    const cells = ROWS.map((_, r) => Array.from(board.querySelectorAll<HTMLElement>(`.bb-cell[data-r="${r}"]`)))
+    const animals = Array.from(board.querySelectorAll<HTMLElement>('.bb-animal'))
+    const me: State = {
+      grid: ROWS.map(() => Array(STEPS).fill(0)), playing: false, step: -1, tempo: 340, raf: 0, nextAt: 0,
+      root, cells, animals, head: board.querySelector<HTMLElement>('.bb-head')!
+    }
+    bb = me
+
+    // Les vrais personnages de la ferme sur les boutons de ligne
+    const px = Math.max(64, Math.round(animals[0].clientHeight * 0.95))
+    critterPortraits(ROWS.map(r => r.animal), px).then(img => {
+      if (bb !== me) return
+      animals.forEach((a, r) => { a.innerHTML = portraitImg(img[ROWS[r].animal], px) })
     })
-    document.querySelectorAll<HTMLElement>('.bb-cell').forEach(cell => {
-      cell.onclick = () => {
-        if (!bb) return
+
+    board.addEventListener('click', e => {
+      const t = e.target as HTMLElement
+      const cell = t.closest<HTMLElement>('.bb-cell')
+      if (cell) {
         const r = +cell.dataset.r!, s = +cell.dataset.s!
-        bb.grid[r][s] = bb.grid[r][s] ? 0 : 1
-        if (bb.grid[r][s]) ROWS[r].play()
-        render()
+        me.grid[r][s] = me.grid[r][s] ? 0 : 1
+        if (me.grid[r][s]) sing(me, r)
+        render(me)
+        return
       }
+      const an = t.closest<HTMLElement>('.bb-animal')
+      if (an) sing(me, +an.dataset.r!)
     })
-    document.querySelectorAll<HTMLElement>('.bb-animal').forEach(a => {
-      a.onclick = () => ROWS[+a.dataset.r!].play()
-    })
-    document.querySelectorAll<HTMLElement>('.bb-tempo').forEach(t => {
+    root.querySelectorAll<HTMLElement>('.bb-tempo').forEach(t => {
       t.onclick = () => {
-        if (!bb) return
-        bb.tempo = +t.dataset.t!
-        document.querySelectorAll('.bb-tempo').forEach(x => x.classList.remove('sel'))
-        t.classList.add('sel')
+        me.tempo = +t.dataset.t!
+        root.querySelectorAll('.bb-tempo').forEach(x => x.parentElement!.classList.toggle('sel', x === t))
       }
     })
-    document.querySelectorAll<HTMLElement>('.bb-presets .chip').forEach(p => {
-      p.onclick = () => {
-        if (!bb) return
-        bb.grid = PRESETS[p.dataset.p!].map(row => [...row])
-        render()
-        if (!bb.playing) setPlaying(true)
-      }
-    })
-    ;($('bbPlay') as HTMLButtonElement).onclick = () => bb && setPlaying(!bb.playing)
-    ;($('bbClear') as HTMLButtonElement).onclick = () => { if (bb) { bb.grid = ROWS.map(() => Array(STEPS).fill(0)); render() } }
-    ;($('bbDone') as HTMLButtonElement).onclick = () => { if (bb) { setPlaying(false); finish() } }
-    return () => { if (bb) { cancelAnimationFrame(bb.raf); bb = null } }
+    const preset = (k: string) => {
+      me.grid = PRESETS[k].map(row => [...row])
+      render(me)
+      if (!me.playing) setPlaying(me, true)
+    }
+    root.querySelector<HTMLElement>('#bbP1')!.onclick = () => preset('p1')
+    root.querySelector<HTMLElement>('#bbP2')!.onclick = () => preset('p2')
+    root.querySelector<HTMLElement>('#bbPlay')!.onclick = () => setPlaying(me, !me.playing)
+    root.querySelector<HTMLElement>('#bbClear')!.onclick = () => { me.grid = ROWS.map(() => Array(STEPS).fill(0)); render(me) }
+    root.querySelector<HTMLElement>('#bbDone')!.onclick = () => { setPlaying(me, false); finish(me) }
+    // Pause (onglet caché, minuteur parental) : on ne chante pas dans le vide
+    const offPause = onPause(p => { if (p) me.cells.forEach(row => row.forEach(c => c.classList.remove('now'))) })
+    return () => {
+      offPause()
+      cancelAnimationFrame(me.raf)
+      me.playing = false
+      if (bb === me) bb = null
+    }
   }
 }
