@@ -1,4 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
+import { isPaused } from '../core/session'
 import { $, pick, rnd } from '../core/utils'
 import { sBoomReal, sPopReal, tone } from '../core/audio'
 import { confetti } from '../core/fx'
@@ -15,7 +16,21 @@ const PALETTES = [
 ]
 const SHAPES = ['burst', 'ring', 'heart', 'star', 'double'] as const
 
-let fw: any = null
+interface Rocket { x: number; y: number; tx: number; ty: number; t: number; dur: number; cols: string[]; shape: string }
+interface Spark { x: number; y: number; vx: number; vy: number; life: number; decay: number; r: number; col: string; tw: boolean }
+interface State {
+  c2d: CanvasRenderingContext2D
+  w: number
+  h: number
+  rockets: Rocket[]
+  parts: Spark[]
+  count: number
+  finale: boolean
+  running: boolean
+  raf: number
+}
+
+let fw: State | null = null
 let ctx: GameContext
 
 function whistle() {
@@ -25,6 +40,7 @@ function whistle() {
 }
 
 function explode(x: number, y: number, shape: string, cols: string[], big = false) {
+  if (!fw) return
   const P = fw.parts
   const n = big ? 90 : rnd(46, 64)
   sBoomReal()
@@ -65,7 +81,9 @@ function launch(tx: number, ty: number, shape?: string) {
 
 function loop() {
   if (!fw || !fw.running) return
-  const c: CanvasRenderingContext2D = fw.c2d
+  // En pause (onglet caché, minuteur parental) le ciel se fige
+  if (isPaused()) { fw.raf = requestAnimationFrame(loop); return }
+  const c = fw.c2d
   // Voile léger pour les traînées lumineuses
   c.fillStyle = 'rgba(20,14,44,.22)'
   c.fillRect(0, 0, fw.w, fw.h)
@@ -82,7 +100,7 @@ function loop() {
     c.beginPath(); c.arc(x, y, 2.4, 0, 7); c.fill()
     c.fillStyle = 'rgba(255,210,120,.5)'
     c.beginPath(); c.arc(x + rnd(-2, 2), y + 8, 1.6, 0, 7); c.fill()
-    if (k >= 1) { fw.rockets.splice(i, 1); explode(r.tx, r.ty, r.shape, r.cols) }
+    if (k >= 1) { fw.rockets.splice(i, 1); explode(r.tx, r.ty, r.shape, r.cols); if (!fw) return }
   }
   // Étincelles
   for (let i = fw.parts.length - 1; i >= 0; i--) {
@@ -181,25 +199,26 @@ export const fireworks: GameDef = {
     canvas.style.height = arena.clientHeight + 'px'
     const c2d = canvas.getContext('2d')!
     c2d.setTransform(dpr, 0, 0, dpr, 0, 0)
-    fw = {
+    const me: State = {
       c2d, w: arena.clientWidth, h: arena.clientHeight,
       rockets: [], parts: [], count: 0, finale: false, running: true, raf: 0
     }
+    fw = me
     // Fond de nuit initial
-    fw.c2d.fillStyle = '#140E2C'
-    fw.c2d.fillRect(0, 0, fw.w, fw.h)
+    me.c2d.fillStyle = '#140E2C'
+    me.c2d.fillRect(0, 0, me.w, me.h)
 
     arena.onpointerdown = (e: PointerEvent) => {
-      if (!fw || !fw.running || fw.finale) return
+      if (fw !== me || !me.running || me.finale) return
       const r = canvas.getBoundingClientRect()
       launch(e.clientX - r.left, e.clientY - r.top)
-      fw.count++
+      me.count++
       $('fwHint').classList.add('off')
-      $('fwCount').innerHTML = `${ICON.bolt}<span>${fw.count}</span>`
-      if (fw.count === need) $('fwFinal').style.display = ''
+      $('fwCount').innerHTML = `${ICON.bolt}<span>${me.count}</span>`
+      if (me.count === need) $('fwFinal').style.display = ''
     }
     ;($('fwFinal') as HTMLButtonElement).onclick = bouquet
     loop()
-    return () => { if (fw) { fw.running = false; cancelAnimationFrame(fw.raf); fw = null } }
+    return () => { me.running = false; cancelAnimationFrame(me.raf); if (fw === me) fw = null }
   }
 }

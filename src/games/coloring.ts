@@ -55,42 +55,54 @@ const SCENES: { id: string; name: string; svg: string }[] = [
   }
 ]
 
-let col: any = null
+interface State {
+  color: string
+  scene: typeof SCENES[number]
+  /** Zones peintes (hors blanc) : quand tout est colorié, c'est la fête. */
+  painted: Set<number>
+  total: number
+  running: boolean
+  celebrated: boolean
+  profileId: string
+  fills: Record<string, string>
+}
+
+let col: State | null = null
 let ctx: GameContext
 
 /* Le dessin est GARDÉ (par joueuse et par scène) : on peut reprendre plus tard */
-const storeKey = (scene: string) => `ferme:coloriage:${col.profileId}:${scene}`
-function savePaint() {
-  try { localStorage.setItem(storeKey(col.scene.id), JSON.stringify(col.fills)) } catch { /* quota : tant pis */ }
+const storeKey = (me: State, scene: string) => `ferme:coloriage:${me.profileId}:${scene}`
+function savePaint(me: State) {
+  try { localStorage.setItem(storeKey(me, me.scene.id), JSON.stringify(me.fills)) } catch { /* quota : tant pis */ }
 }
-function loadPaint(scene: string): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem(storeKey(scene)) || '{}') } catch { return {} }
+function loadPaint(me: State, scene: string): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(storeKey(me, scene)) || '{}') } catch { return {} }
 }
 
-function loadScene(sceneId: string) {
+function loadScene(me: State, sceneId: string) {
   const scene = SCENES.find(s => s.id === sceneId)!
-  col.scene = scene
-  col.painted = new Set()
-  document.querySelectorAll('.cscene-btn').forEach(b => b.classList.toggle('sel', (b as any).dataset.s === sceneId))
+  me.scene = scene
+  me.painted = new Set()
+  document.querySelectorAll('.cscene-btn').forEach(b => b.classList.toggle('sel', (b as HTMLElement).dataset.s === sceneId))
   const holder = $('colSvg')
   holder.innerHTML = `<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">${scene.svg}</svg>`
   const regions = holder.querySelectorAll<SVGElement>('.creg')
-  col.total = regions.length
-  col.fills = loadPaint(sceneId)
-  col.celebrated = false
+  me.total = regions.length
+  me.fills = loadPaint(me, sceneId)
+  me.celebrated = false
   regions.forEach((r, i) => {
-    const saved = col.fills[i]
-    if (saved) { r.style.fill = saved; if (saved !== '#FFFFFF') col.painted.add(i) }
+    const saved = me.fills[i]
+    if (saved) { r.style.fill = saved; if (saved !== '#FFFFFF') me.painted.add(i) }
     r.addEventListener('pointerdown', () => {
-      if (!col || !col.running) return
-      r.style.fill = col.color
-      col.fills[i] = col.color
+      if (col !== me || !me.running) return
+      r.style.fill = me.color
+      me.fills[i] = me.color
       sfx('cloth', { vol: 0.35, rate: 1.4, spread: 0.1 })
-      if (col.color !== '#FFFFFF') col.painted.add(i)
-      else col.painted.delete(i)
-      savePaint()
-      if (col.painted.size === col.total && !col.celebrated) {
-        col.celebrated = true
+      if (me.color !== '#FFFFFF') me.painted.add(i)
+      else me.painted.delete(i)
+      savePaint(me)
+      if (me.painted.size === me.total && !me.celebrated) {
+        me.celebrated = true
         confetti()
         sfx('confirm', { vol: 0.8 })
       }
@@ -98,11 +110,11 @@ function loadScene(sceneId: string) {
   })
 }
 
-function finish() {
+function finish(me: State) {
   // Une création ne se note pas : toujours la même fête
   ctx.finish({
     title: 'Chef-d\'œuvre !',
-    msg: `Tu as colorié ${col.scene.name.toLowerCase()}`,
+    msg: `Tu as colorié ${me.scene.name.toLowerCase()}`,
     stars: 3
   })
 }
@@ -124,21 +136,25 @@ export const coloring: GameDef = {
       </div>
       <button class="sn-tool go" id="colDone" style="margin-top:12px" aria-label="Fini">${ICON.check}</button>`
     preloadSfx(['cloth', 'click', 'confirm'])
-    col = { color: PALETTE[0], painted: new Set(), total: 0, running: true, celebrated: false, profileId: useFerme.getState().currentId, fills: {} }
+    const me: State = {
+      color: PALETTE[0], scene: SCENES[0], painted: new Set(), total: 0, running: true, celebrated: false,
+      profileId: useFerme.getState().currentId, fills: {}
+    }
+    col = me
     document.querySelectorAll<HTMLElement>('.cscene-btn').forEach(b => {
-      b.onclick = () => { if (col && col.running) { col.painted = new Set(); loadScene(b.dataset.s!) } }
+      b.onclick = () => { if (me.running) { me.painted = new Set(); loadScene(me, b.dataset.s!) } }
     })
     document.querySelectorAll<HTMLElement>('.pchip').forEach(b => {
       b.onclick = () => {
-        if (!col || !col.running) return
-        col.color = b.dataset.c
+        if (!me.running) return
+        me.color = b.dataset.c!
         document.querySelectorAll('.pchip').forEach(x => x.classList.remove('sel'))
         b.classList.add('sel')
         sfx('click', { vol: 0.4 })
       }
     })
-    ;($('colDone') as HTMLButtonElement).onclick = () => col && col.running && finish()
-    loadScene(SCENES[0].id)
-    return () => { if (col) { col.running = false; col = null } }
+    ;($('colDone') as HTMLButtonElement).onclick = () => { if (me.running) finish(me) }
+    loadScene(me, SCENES[0].id)
+    return () => { me.running = false; if (col === me) col = null }
   }
 }

@@ -79,7 +79,23 @@ function speak(c: number): string {
   return `${ct} centime${ct > 1 ? 's' : ''}`
 }
 
-let mk: any = null
+type Mode = 'explore' | 'pay' | 'change'
+interface State {
+  running: boolean
+  lock: boolean
+  mode: Mode
+  /** Pièces et billets posés dans le panier (en centimes). */
+  tray: number[]
+  /** Le compte à atteindre : le prix (Paye) ou la monnaie à rendre. */
+  goal: number
+  q: number
+  totalQ: number
+  mistakes: number
+  /** Ce qu'on a touché dans Découvre. */
+  seen: Set<number>
+}
+
+let mk: State | null = null
 let ctx: GameContext
 
 function bankDenoms(): number[] {
@@ -90,119 +106,122 @@ function makePrice(): number {
   return ctx.byTier(rnd(1, 5) * 100, rnd(2, 19) * 50, rnd(35, 1450))
 }
 
-function buildBank(denoms: number[]) {
+function buildBank(me: State, denoms: number[]) {
   const bank = $('mkBank')
   bank.innerHTML = ''
   denoms.forEach(v => {
     const d = DENOMS.find(x => x.v === v)!
     const b = document.createElement('button')
     b.className = 'mk-coin' + (d.kind === 'note' ? ' mk-note' : '')
+    b.dataset.v = String(v)
     b.innerHTML = moneySVG(v)
-    b.onclick = () => tapBank(v, b)
+    b.onclick = () => tapBank(me, v, b)
     bank.appendChild(b)
   })
 }
 
-function renderTray() {
+function renderTray(me: State) {
   const tray = $('mkTray')
   tray.innerHTML = ''
-  mk.tray.forEach((v: number, i: number) => {
+  me.tray.forEach((v, i) => {
     const b = document.createElement('button')
     b.className = 'mk-coin mk-intray' + (v >= 500 ? ' mk-note' : '')
     b.innerHTML = moneySVG(v)
     b.onclick = () => {
-      if (!mk || !mk.running || mk.lock) return
-      mk.tray.splice(i, 1); sfx('coins', { vol: 0.4, rate: 0.9 }); renderTray()
-      const sum = mk.tray.reduce((a: number, b: number) => a + b, 0)
+      if (mk !== me || !me.running || me.lock) return
+      me.tray.splice(i, 1); sfx('coins', { vol: 0.4, rate: 0.9 }); renderTray(me)
+      const sum = me.tray.reduce((a, b) => a + b, 0)
       if (sum) ctx.say(speak(sum))
     }
     tray.appendChild(b)
   })
-  const sum = mk.tray.reduce((a: number, b: number) => a + b, 0)
+  const sum = me.tray.reduce((a, b) => a + b, 0)
   const tot = $('mkTotal')
   tot.textContent = sum ? fmt(sum) : '—'
-  tot.classList.toggle('over', sum > mk.goal)
-  tot.classList.toggle('exact', sum === mk.goal)
+  tot.classList.toggle('over', sum > me.goal)
+  tot.classList.toggle('exact', sum === me.goal)
 }
 
-function tapBank(v: number, b: HTMLElement) {
-  if (!mk || !mk.running || mk.lock) return
-  if (mk.mode === 'explore') {
+function tapBank(me: State, v: number, b: HTMLElement) {
+  if (mk !== me || !me.running || me.lock) return
+  if (me.mode === 'explore') {
     sfx('coins', { vol: 0.6 }); fxAt(b, JUICE.warm, 6)
     b.classList.remove('boing'); void b.offsetWidth; b.classList.add('boing')
     ctx.say(speak(v))
-    mk.seen.add(v)
+    me.seen.add(v)
     return
   }
-  mk.tray.push(v)
+  me.tray.push(v)
   sfx('coins', { vol: 0.6, rate: 1 + Math.random() * 0.1 })
-  renderTray()
-  const sum = mk.tray.reduce((a: number, b: number) => a + b, 0)
-  if (sum === mk.goal) return success()
-  if (sum > mk.goal) { mk.mistakes++; sfx('drop', { vol: 0.4, rate: 0.8 }) }
+  renderTray(me)
+  const sum = me.tray.reduce((a, b) => a + b, 0)
+  if (sum === me.goal) return success(me)
+  if (sum > me.goal) { me.mistakes++; sfx('drop', { vol: 0.4, rate: 0.8 }) }
   // Le geste pédagogique du marché : on dit le total courant à chaque pièce
   ctx.say(speak(sum))
 }
 
-function success() {
-  mk.lock = true
+function success(me: State) {
+  me.lock = true
   sfx('confirm', { vol: 0.8 })
   fxAt($('mkTray'), JUICE.green, 14)
-  ctx.say(speak(mk.goal))
-  mk.q++
+  ctx.say(speak(me.goal))
+  me.q++
   ctx.after(1300, () => {
-    if (!mk || !mk.running) return
-    mk.lock = false
-    if (mk.q >= mk.totalQ) return finish()
-    nextRound()
+    if (mk !== me || !me.running) return
+    me.lock = false
+    if (me.q >= me.totalQ) return finish(me)
+    nextRound(me)
   })
 }
 
-function nextRound() {
-  mk.tray = []
+function nextRound(me: State) {
+  me.tray = []
   const price = makePrice()
   const item = pick(ITEMS)
-  if (mk.mode === 'pay') {
-    mk.goal = price
+  if (me.mode === 'pay') {
+    me.goal = price
     $('mkItem').innerHTML = `${photoImg(item, 62)}
-      <span class="mk-price">${fmt(price)}</span>
-      <span class="mk-sub">${mk.q + 1}/${mk.totalQ}</span>`
+      <span class="mk-price">${fmt(price)}</span>`
   } else {
     // La monnaie : payé avec le plus petit billet au-dessus du prix
     const note = price < 500 ? 500 : price < 1000 ? 1000 : 2000
-    mk.goal = note - price
+    me.goal = note - price
     $('mkItem').innerHTML = `${photoImg(item, 62)}
       <span class="mk-price">${fmt(price)}</span>
-      <span class="mk-paid">${ICON.turnLeft} ${moneySVG(note)}</span>
-      <span class="mk-sub">${mk.q + 1}/${mk.totalQ}</span>`
+      <span class="mk-paid">${ICON.turnLeft} ${moneySVG(note)}</span>`
   }
-  renderTray()
+  // Les manches en pastilles, plus « 2/4 » à lire
+  $('mkDots').innerHTML = Array.from({ length: me.totalQ }, (_, i) =>
+    `<i class="sn-dot${i < me.q ? ' on' : ''}${i === me.q ? ' cur' : ''}"></i>`).join('')
+  renderTray(me)
 }
 
-function setMode(mode: string) {
-  mk.mode = mode
+function setMode(me: State, mode: Mode) {
+  me.mode = mode
   document.querySelectorAll<HTMLElement>('.mk-mode').forEach(x => x.classList.toggle('sel', x.dataset.m === mode))
-  mk.lock = false
-  mk.q = 0; mk.mistakes = 0; mk.tray = []
+  me.lock = false
+  me.q = 0; me.mistakes = 0; me.tray = []
   const explore = mode === 'explore'
   $('mkItem').style.display = explore ? 'none' : ''
   $('mkTrayWrap').style.display = explore ? 'none' : ''
   $('mkDone').style.display = explore ? '' : 'none'
+  $('mkDots').style.display = explore ? 'none' : ''
   if (explore) {
-    mk.seen = new Set()
-    buildBank(DENOMS.map(d => d.v))
+    me.seen = new Set()
+    buildBank(me, DENOMS.map(d => d.v))
   } else {
-    mk.totalQ = mode === 'pay' ? 4 : 3
-    buildBank(bankDenoms())
-    nextRound()
+    me.totalQ = mode === 'pay' ? 4 : 3
+    buildBank(me, bankDenoms())
+    nextRound(me)
   }
 }
 
-function finish() {
-  const stars = mk.mistakes === 0 ? 3 : mk.mistakes <= 2 ? 2 : 1
+function finish(me: State) {
+  const stars = me.mistakes === 0 ? 3 : me.mistakes <= 2 ? 2 : 1
   ctx.finish({
-    title: mk.mode === 'pay' ? 'Le compte est bon !' : 'Monnaie rendue !',
-    msg: `Tu as réussi ${mk.q} paiement${mk.q > 1 ? 's' : ''}`,
+    title: me.mode === 'pay' ? 'Le compte est bon !' : 'Monnaie rendue !',
+    msg: `Tu as réussi ${me.q} paiement${me.q > 1 ? 's' : ''}`,
     stars
   })
 }
@@ -224,21 +243,29 @@ export const market: GameDef = {
         <div class="mk-total" id="mkTotal">—</div>
       </div>
       <div class="mk-bank" id="mkBank"></div>
-      <button class="sn-tool go" id="mkDone" style="margin-top:10px" aria-label="Fini">${ICON.check}</button>`
+      <button class="sn-tool go" id="mkDone" style="margin-top:10px" aria-label="Fini">${ICON.check}</button>
+      <div class="mem-dots mk-dots" id="mkDots"></div>`
     preloadSfx(['coins', 'confirm', 'drop'])
-    mk = { running: true, lock: false, tray: [], seen: new Set() }
+    const me: State = { running: true, lock: false, mode: 'explore', tray: [], goal: 0, q: 0, totalQ: 0, mistakes: 0, seen: new Set() }
+    mk = me
     document.querySelectorAll<HTMLElement>('.mk-mode').forEach(b => {
-      b.onclick = () => mk && mk.running && setMode(b.dataset.m!)
+      b.onclick = () => { if (me.running) setMode(me, b.dataset.m as Mode) }
     })
     ;($('mkDone') as HTMLButtonElement).onclick = () => {
-      if (!mk || !mk.running || mk.mode !== 'explore') return
+      if (!me.running || me.mode !== 'explore') return
       ctx.finish({
         title: 'Belle découverte !',
-        msg: `Tu as écouté ${mk.seen.size} pièces et billets`,
+        msg: `Tu as écouté ${me.seen.size} pièces et billets`,
         stars: 3
       })
     }
-    setMode('explore')
-    return () => { if (mk) { mk.running = false; mk = null } }
+    // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+    if ((window as unknown as { __BOT?: boolean }).__BOT) {
+      ;(window as unknown as { __mk: unknown }).__mk = {
+        get goal() { return me.goal }, get q() { return me.q }, get lock() { return me.lock }, get sum() { return me.tray.reduce((a, b) => a + b, 0) }
+      }
+    }
+    setMode(me, 'explore')
+    return () => { me.running = false; if (mk === me) mk = null }
   }
 }

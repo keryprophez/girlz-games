@@ -16,7 +16,7 @@ export function buzz(pattern: number | number[]) {
 export function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.15, delay = 0) {
   if (!soundOn) return
   try {
-    actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)()
+    actx = actx || new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
     const at = actx.currentTime + delay
     const o = actx.createOscillator()
     const g = actx.createGain()
@@ -47,7 +47,7 @@ let noiseBuf: AudioBuffer | null = null
 /** Contexte audio partagé (un seul pour toute l'app — sons ET musique). */
 export function getCtx(): AudioContext | null {
   try {
-    actx = actx || new (window.AudioContext || (window as any).webkitAudioContext)()
+    actx = actx || new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
     if (actx.state === 'suspended') actx.resume().catch(() => { /* rien */ })
     return actx
   } catch { return null }

@@ -20,7 +20,10 @@ par jeu) · `README.md` = présentation de l'app.
    qui se rechargent · paliers de déblocage, arbre de progression, saisons,
    événements limités · séries quotidiennes, notifications de rappel, « reviens
    demain » · classements ou comparaison entre les deux sœurs · publicité,
-   achats intégrés, analytique tiers, compte en ligne pour les enfants. Les étoiles sont un simple retour de fin de partie.
+   achats intégrés, analytique tiers, compte en ligne pour les enfants. Les étoiles sont un simple retour de fin de partie :
+   rien ne s'accumule (l'album de 24 autocollants à débloquer et le total
+   d'étoiles de l'accueil sont sortis le 22/09 ; seule la meilleure note par
+   jeu reste, sous sa tuile).
 2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, sons
    distincts, démonstration visuelle. `core/voice.ts` ne lit que le **contenu
    pédagogique** (multiplications, heures, noms de lieux), **jamais les
@@ -52,12 +55,16 @@ near-miss et outro (voir `AUDIT.md` §4 pour les huit manques communs).
 src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.ts
              music.ts (générative) · voice.ts · juice.ts · fx.ts · character.ts
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
-             sprites.ts  ← planches d'assets CC0 chargées à la demande
+             sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
+             portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
+             fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
              badges.ts   ← une vignette SVG dessinée par jeu (accueil, carton titre)
              arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
-             critters.ts ← personnages 3D en formes rondes (taupe, poussin, cochon, lapin, cactus)
+             critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
+                           lapin, cactus (Tape-Trous) + vache, poule, chien,
+                           canard, mouton (`FARM`, les pions des jeux en DOM)
              runner.ts   ← socle des jeux qui défilent (Course, Poussin Volant)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
@@ -67,26 +74,29 @@ scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
 ```
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
-Memory, la Chasse aux lettres et le Marché. 68 sujets dans
+Memory, la Chasse aux lettres, le Marché — et depuis le 22/09 les animaux
+des continents du Tour du Monde. 76 sujets dans
 `public/assets/photos/*.jpg`, réunis par `scripts/import-photos.mjs` —
 **animaux : iNaturalist** (recherche par taxon latin), **le reste : catégories
 de Wikimedia Commons** — tous ramenés au même moule (carré, 512 px) à l'import.
 `photoImg(nom, px)` et `hasPhoto(nom)` sont dans `core/sprites.ts`, les crédits
 dans `photos/CREDITS.json` et `public/assets/CREDITS.md`. L'app est privée et
 sans usage commercial : les licences CC BY-NC sont acceptées, et créditées.
-**Règle du père : jamais deux styles.** Les planches Kenney ne servent plus que
-là où l'image est un PION ou du DÉCOR (Puissance 4, Simon, Taquin, labyrinthe,
-jeux 3D) : ce n'est plus du vocabulaire illustré, et il faudrait des images
-détourées qu'on ne sait pas produire ici. Pour ajouter un mot : une ligne dans
+**Règle du père : jamais deux styles.** Ce qui est PION ou DÉCOR (Simon,
+Puissance 4, la Boîte à rythme, l'image du Taquin) est fait des personnages
+3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
+`critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
+WebGL jetable), `portraitImg(url, px)` les insère, `farmScene(kinds, px)` rend
+un pré 3D entier. Ce sont les mêmes personnages que Tape-Trous. Pour ajouter un mot : une ligne dans
 `TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
 **regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
 
-**Le reste des visuels vient des planches CC0 Kenney**, pas d'emoji : `loadAtlas('animals')`
-puis `frameStyle(atlas, 'cow', 64)` pour un jeu en DOM (voir `mole.ts`, le patron).
-Pour ajouter un pack, éditer `scripts/import-assets.mjs` et le relancer — les
-sprites triés sont commités, les zips ne le sont pas. Attention : la planche
-`nature` mélange les saisons, d'où les listes `GREEN_TREES` / `GREEN_GRASS` de
-`sprites.ts` — piocher au hasard sème de la neige au milieu d'un pré.
+**Plus aucune planche 2D** (22/09) : les planches Kenney `animals`, `nature`,
+`items` et `fish` ne servaient plus à aucun jeu, elles sont sorties avec leur
+code (`loadAtlas`, `frameStyle`, `spriteFromAtlas`…). Kenney reste la source
+des modèles 3D (kits food, holiday, space, nature) et des bruitages : pour en
+ajouter, éditer `scripts/import-assets.mjs` et le relancer — les fichiers
+triés sont commités, les zips ne le sont pas. Pas d'emoji dans les jeux.
 
 **Contrat d'un jeu** — volontairement minimal, c'est la force du projet :
 
@@ -100,7 +110,9 @@ export const monJeu: GameDef = {
 }
 ```
 Puis **une ligne dans `src/games/index.ts`**. `GameHost` fournit `ctx` :
-`root`, `tier`, `playerName`, `avatar`, `look`, `byTier(e,m,x)`, `finish()`,
+`root`, `tier`, `playerName` (**vide** tant que le choix de joueuse est
+masqué : les messages de fin tutoient et ne nomment personne), `avatar`,
+`look`, `byTier(e,m,x)`, `finish()`,
 `toast()`, `say()`, et depuis le 2/09 les **timers de partie** `after(ms,fn)` /
 `every(ms,fn)` / `cancel(id)` / `alive()` (annulés au démontage, suspendus en
 pause — ne plus utiliser `setTimeout` pour piloter un jeu). `finish()` accepte
@@ -113,8 +125,10 @@ affiche trois boutons sans un mot — fleur (douce), éclair (normale), flamme
 `ctx.byTier`. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
 et signalé d'un liseré ; un bouton de la barre en jeu rouvre le choix et
 relance la partie. L'accueil n'est plus qu'une **grille de jeux** : le choix
-de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans `Home.tsx`
-— prêt à revenir — le Défi à deux et la fenêtre de sauvegarde sont supprimés
+de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans
+`core/store.ts` — prêt à revenir ; tant qu'il l'est, les encouragements
+enregistrés sont communs à la famille — le Défi à deux et la fenêtre de
+sauvegarde sont supprimés
 (`core/backup.ts` reste pour `loudStorage` et l'alerte de quota).
 En jeu, `body.playing` met la coquille en **plein écran** :
 l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
@@ -127,10 +141,12 @@ la vignette en même temps que le jeu.
 
 **Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
 rampe par performance, timers simulés `game.after`, HUD en icônes dans
-l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs`) et de
+l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs` ; le
+combo pilote `setMusicIntensity()` de `core/music.ts` : à 3, 6 et 10
+d'affilée la musique gagne un shaker, un arpège, une contre-voix) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
-Modèles : `icetower.ts`, `ninja.ts`, `mole.ts` (sprites Kenney en 3D via
-`spriteFromAtlas`, raycast sur les sprites eux-mêmes) et `stand3d.ts`
+Modèles : `icetower.ts`, `ninja.ts`, `mole.ts` (personnages de
+`critters.ts`, raycast sur des zones de tape invisibles) et `stand3d.ts`
 (manches enchaînées, near-miss, démonstration du geste par la trajectoire). **Un jeu qui défile**
 (la joueuse reste à x = 0, le monde avance vers −x) part en plus de
 `core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
@@ -175,7 +191,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **CSS transform vs SVG** | Une animation CSS `transform` écrase l'attribut `transform="translate(…)"` d'un `<g>`. |
 | **AudioContext unique** | `getCtx()` de `core/audio.ts` est partagé sons + musique. Ne pas créer un second contexte. |
 | **PWA en cache** | `registerSW` applique la maj auto si elle arrive <15 s après l'ouverture (`src/main.tsx`). Ne pas casser ça. |
-| **Animal « posé sur » un trou** | En DOM : un sprite au-dessus d'une ellipse sombre ne sort pas du trou, il est planté devant ; il faut trois couches (terrier, sprite dans un conteneur `overflow:hidden`, bourrelet par-dessus). En 3D, même piège avec un `Sprite` face caméra : incliné vers la caméra, il flotte DEVANT le trou. Utiliser `standeeFromAtlas` (panneau vertical, origine aux pieds, `faceCamera` sur Y seulement) : le sol cache ce qui est dessous, et l'étirement part des pieds. Depuis le 15/09 Tape-Trous n'utilise plus de panneau du tout : ses habitants sont des **personnages construits en 3D** (`core/critters.ts`, origine aux pieds aussi), et la pastille ronde de la planche Kenney est sortie — « un sprite atroce digne d'un Minitel » (les filles). |
+| **Animal « posé sur » un trou** | En DOM : un sprite au-dessus d'une ellipse sombre ne sort pas du trou, il est planté devant ; il faut trois couches (terrier, sprite dans un conteneur `overflow:hidden`, bourrelet par-dessus). En 3D, même piège avec un `Sprite` face caméra : incliné vers la caméra, il flotte DEVANT le trou. Utiliser `standeeFromAtlas` (panneau vertical, origine aux pieds, `faceCamera` sur Y seulement) : le sol cache ce qui est dessous, et l'étirement part des pieds. Depuis le 15/09 Tape-Trous n'utilise plus de panneau du tout : ses habitants sont des **personnages construits en 3D** (`core/critters.ts`, origine aux pieds aussi), et la pastille ronde de la planche Kenney est sortie — « un sprite atroce digne d'un Minitel » (les filles). `standeeFromAtlas` est parti avec les planches le 22/09. |
 | **Noms de jeux en double** | Le nom de fichier est la mécanique (`battleship.ts`), le nom affiché est le thème pour les filles (« Cache-Cache Pré »). Vérifier les collisions de nom ET d'icône avant d'en rebaptiser un. |
 | **Banques d'images : la recherche plein texte ment** | Openverse répond « champ de coquelicots » pour *orange* et « des gens dans un festival » pour *oignon*. Passer par ce qui est RANGÉ par des humains : iNaturalist par taxon latin (`Bos taurus`, jamais « cow »), et les catégories Commons (`Category:Carrots`). Et regarder la planche-contact avant de committer : sur 68 photos, sept étaient à refaire (l'ours noir sur fond noir, le « lion » qui était un léopard). |
 | **Wikimedia compte par adresse IP** | Le proxy de la session est partagé : au-delà d'une poignée de requêtes par seconde, tout répond 429 pendant plusieurs minutes. `import-photos.mjs` a une file d'attente par hôte et un recul jusqu'à 2 min ; la collecte complète prend une demi-heure et ne se lance qu'à la main. |
@@ -196,6 +212,10 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **Bot qui sonde avant l'accroche** | `openGame` attendait 3,2 s à plat, puis le bot de la Course lisait `window.__run` : un jeu 3D n'installe son accroche qu'APRÈS ses modèles, et sur le serveur d'intégration (plus lent que la session) elle n'était pas là — première sonde à `null`, « partie terminée avant 60 m », déploiement bloqué alors que tout passait ici. Un bot attend son accroche (`openGame(nom, '__run')` → `waitForFunction`) ou la disparition de `.nj-loading`, jamais une durée murale. |
 | **Bots à 4 fps** | Sous swiftshader la 3D rend 3 à 4 images/s et `dt` est borné à 100 ms : la simulation tourne au ralenti et une entrée n'est appliquée qu'à la frame suivante. Un bot qui sonde toutes les 60 ms voit le même état plusieurs fois et double ses commandes. Sonder **une fois par frame** (`evaluate` qui résout dans un `requestAnimationFrame`), anticiper d'une frame, et compter en temps simulé (mètres, pas secondes murales). Une capture d'écran prend 1,5 s : lancée après la mort, elle rate l'outro — la déclencher juste avant. |
 | **Queue de son en `setTimeout`** | Un `tone()` programmé 60 ms plus tard par `setTimeout` joue APRÈS le retour au menu, et dérive sous la charge. `tone()`, `sPopReal()`, `sBoomReal()` et `noiseBurst()` prennent un **délai en secondes** programmé sur l'horloge audio : plus aucun timer pour un son. Depuis le 10/09, **aucun `setTimeout` ne subsiste dans `src/games/`** — état de jeu = `ctx.after`/`game.after`, son = délai audio. |
+| **Les yeux dans la tête** | Un œil de personnage placé au centre d'une sphère de tête plus grande que lui est NOYÉ : le lapin de Tape-Trous n'a pas eu de regard pendant une semaine. Placer l'œil à la surface (distance ≈ rayon de la tête) et regarder un portrait (`critterPortraits`) avant de valider. |
+| **La planche-contact ne ment pas** | 22/09, recherche iNaturalist par taxon : sur 5 « bisons », 4 antilopes ; sur 5 « tigres », un léopard, une lionne, un jaguar et une panthère — les observations sont identifiées au genre ou à la famille. Toujours regarder avant `garder`. |
+| **`import-assets.mjs` et CREDITS.md** | Le script réécrivait TOUT `public/assets/CREDITS.md` : relancé, il effaçait les crédits des photos et de l'Espace. Il ne remplace plus que sa section (jusqu'au premier `## `). |
+| **`pkill -f` qui se tue lui-même** | `pkill -f "vite preview"` dans une commande qui relance aussi `vite preview` tue le shell qui l'exécute (la ligne de commande contient le motif). Arrêter le serveur dans une commande à part. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -210,7 +230,14 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-5. Supprimer les scripts `.verify-*.mjs` avant de committer.
+   `npm run test:play` fait jouer **un bot par jeu** (22/09 : les 31) jusqu'à
+   son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
+   `window.__xx` (posée seulement si `window.__BOT`).
+5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans
+   `.gitignore` et ignorés par ESLint, par sécurité).
+6. Sur la vraie tablette, `?fps` dans l'adresse allume la sonde d'images par
+   seconde (reste allumée, `?fps=0` l'éteint) : mesurer AVANT de toucher aux
+   ombres, au `pixelRatio` ou aux particules.
 
 ## Git & déploiement
 

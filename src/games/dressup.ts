@@ -23,28 +23,30 @@ const HATS: Look['hat'][] = ['none', 'crown', 'cap', 'sunhat', 'party']
 const GLASSES: Look['glasses'][] = ['none', 'round', 'sun']
 const HELD: Look['held'][] = ['none', 'balloon', 'wand', 'flower', 'icecream']
 
-let du: any = null
+interface State { look: Look; profileId: string; running: boolean }
+
+let du: State | null = null
 let ctx: GameContext
 
-function render() {
-  $('duDoll').innerHTML = characterSVG(ctx.avatar, du.look, 150)
+function render(me: State) {
+  $('duDoll').innerHTML = characterSVG(ctx.avatar, me.look, 150)
   document.querySelectorAll<HTMLElement>('.du-opt').forEach(b => {
-    b.classList.toggle('sel', du.look[b.dataset.k!] === b.dataset.v)
+    b.classList.toggle('sel', me.look[b.dataset.k as keyof Look] === b.dataset.v)
   })
 }
 
 /** Chaque geste est sauvé : quitter sans « fini » ne perd plus le look. */
-function save() { useFerme.getState().setLook(du.profileId, { ...du.look }) }
+function save(me: State) { useFerme.getState().setLook(me.profileId, { ...me.look }) }
 
-function setLookProp(k: keyof Look, v: string) {
-  if (!du || !du.running) return
-  du.look[k] = v
-  sfx('cloth', { vol: 0.4, rate: 1.3 }); render(); save()
+function setLookProp(me: State, k: keyof Look, v: string) {
+  if (du !== me || !me.running) return
+  ;(me.look as unknown as Record<string, string>)[k] = v
+  sfx('cloth', { vol: 0.4, rate: 1.3 }); render(me); save(me)
 }
 
-function finish() {
+function finish(me: State) {
   confetti()
-  save()
+  save(me)
   ctx.finish({
     title: 'Superbe look !',
     msg: 'Ton look est gardé pour la prochaine fois',
@@ -58,7 +60,8 @@ export const dressup: GameDef = {
   mount(c) {
     ctx = c
     const st = useFerme.getState()
-    du = { look: { ...(st.profiles.find(p => p.id === st.currentId)?.look || defaultLook()) }, profileId: st.currentId, running: true }
+    const me: State = { look: { ...(st.profiles.find(p => p.id === st.currentId)?.look || defaultLook()) }, profileId: st.currentId, running: true }
+    du = me
 
     const colorChips = (k: string, colors: string[]) => colors.map(col =>
       `<button class="du-opt du-color" data-k="${k}" data-v="${col}" style="background:${col}"></button>`).join('')
@@ -97,35 +100,35 @@ export const dressup: GameDef = {
     preloadSfx(['cloth', 'click', 'confirm'])
 
     document.querySelectorAll<HTMLElement>('.du-opt').forEach(b => {
-      b.onclick = () => setLookProp(b.dataset.k as keyof Look, b.dataset.v!)
+      b.onclick = () => setLookProp(me, b.dataset.k as keyof Look, b.dataset.v!)
     })
     document.querySelectorAll<HTMLElement>('.du-bg').forEach(b => {
       b.onclick = () => {
-        if (!du || !du.running) return
+        if (!me.running) return
         $('duStage').style.background = BGS[parseInt(b.dataset.i!)].css
         document.querySelectorAll('.du-bg').forEach(x => x.classList.remove('sel'))
         b.classList.add('sel'); sfx('click', { vol: 0.4 })
       }
     })
     ;($('duRandom') as HTMLButtonElement).onclick = () => {
-      if (!du || !du.running) return
-      du.look = {
+      if (!me.running) return
+      me.look = {
         outfit: pick(['dress', 'tee'] as const), color: pick(OUTFIT_COLORS),
         hair: pick(['pigtails', 'long'] as const), hairColor: pick(HAIR_COLORS),
         hat: pick(HATS), glasses: pick(GLASSES), held: pick(HELD)
       }
       $('duStage').style.background = pick(BGS).css
-      sfx('confirm', { vol: 0.6 }); render(); save()
+      sfx('confirm', { vol: 0.6 }); render(me); save(me)
     }
     ;($('duReset') as HTMLButtonElement).onclick = () => {
-      if (!du || !du.running) return
-      du.look = defaultLook()
+      if (!me.running) return
+      me.look = defaultLook()
       $('duStage').style.background = BGS[0].css
       document.querySelectorAll('.du-bg').forEach((x, i) => x.classList.toggle('sel', i === 0))
-      sfx('click', { vol: 0.4 }); render(); save()
+      sfx('click', { vol: 0.4 }); render(me); save(me)
     }
-    ;($('duDone') as HTMLButtonElement).onclick = () => du && du.running && finish()
-    render()
-    return () => { if (du) { du.running = false; du = null } }
+    ;($('duDone') as HTMLButtonElement).onclick = () => { if (me.running) finish(me) }
+    render(me)
+    return () => { me.running = false; if (du === me) du = null }
   }
 }

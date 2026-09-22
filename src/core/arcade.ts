@@ -10,11 +10,14 @@
    - le HUD est le même partout : cœurs, score avec l'icône du jeu, combo qui
      grossit, barre de temps. En icônes, jamais en texte ;
    - la fin passe par `end()` qui calcule les étoiles avec le barème du jeu et
-     laisse l'outro se jouer. */
+     laisse l'outro se jouer ;
+   - le combo s'ENTEND : à 3, 6 et 10 d'affilée, la musique gagne une couche
+     (shaker, arpège, contre-voix), et le raté la ramène au thème seul. */
 
 import type { GameContext } from './types'
 import { ICON, heartsHTML } from './icons'
 import { sfx } from './sfx'
+import { setMusicIntensity } from './music'
 
 export interface ArcadeState {
   score: number
@@ -110,6 +113,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
       comboEl.classList.add('on')
       replay(comboEl, 'pop')
     } else comboEl.classList.remove('on')
+    setMusicIntensity(s.over ? 0 : s.combo >= 10 ? 3 : s.combo >= 6 ? 2 : s.combo >= 3 ? 1 : 0)
   }
 
   const a: Arcade = {
@@ -160,6 +164,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
     end(e) {
       if (s.over) return
       s.over = true
+      setMusicIntensity(0)
       const stars = o.stars(s)
       hud.classList.add('off')
       ctx.finish({ title: e.title, msg: e.msg, stars, outroMs: e.outroMs })
@@ -170,6 +175,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
       replay(flashEl, 'go')
     },
     dispose() {
+      setMusicIntensity(0)
       hud.remove(); timerBar?.remove(); flashEl.remove()
     }
   }

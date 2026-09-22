@@ -15,26 +15,31 @@ obstacles et remplit sa remorque de pommes), Poussin Volant, le Stand ;
 Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
 et un cactus qui pique) ; le Labyrinthe (classique, brouillard, glace) et son
 poussin qui marche entre les haies en ramassant des grains ; et des classiques :
-Taquin photo, Memory, Simon, Puissance 4 avec les têtes des filles en jetons.
+Taquin (une photo ou un pré en 3D), Memory, Simon et Puissance 4, avec les
+personnages 3D de la ferme (vache, poule, cochon, canard, mouton…) en pions.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
 Grand Tableau × et +, le Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
-Voyage dans l'Espace (vraies planètes), Suites logiques, le Miroir, Chasse
+Voyage dans l'Espace (vraies planètes, une fusée, un mode « Trouve »),
+Suites logiques, le Miroir (on peint en glissant, le reflet se replie), Chasse
 aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).
 
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
-neige), Habille-toi (le look est persisté), Boîte à Rythme, Petit Piano, Feu
+neige), Habille-toi (le look est persisté), Boîte à Rythme (les animaux chantent
+en sautant), Petit Piano (la chanson en partition de couleurs), Feu
 d'artifice, Coloriage, la Pizzeria.
 
-**Autour** — profils avec photo (cadrage zoomable), album d'animaux, Défi à
-deux (chacune son tour, résultat commun et bienveillant), minuteur parental
-avec verrou « question de grand », voix de la famille enregistrées (« Bravo ! »),
-sauvegarde exportable, musique générative par univers, vrais bruitages foley
-sur les chocs, mise à jour automatique de la PWA.
+**Autour** — une grille de jeux, la difficulté choisie dans chaque jeu (fleur,
+éclair, flamme), minuteur parental avec verrou « question de grand », voix de
+la famille enregistrées (« Bravo ! »), musique générative par univers qui
+s'enrichit quand le combo monte, vrais bruitages foley sur les chocs, mise à
+jour automatique de la PWA. Le choix de joueuse (profils avec photo) est
+masqué pour l'instant, prêt à revenir.
 
-**Ce qu'il n'y aura jamais** : monnaie, boutique, paliers de déblocage, séries
+**Ce qu'il n'y aura jamais** : monnaie, boutique, paliers de déblocage ni
+collection à compléter (l'album d'autocollants est sorti le 22/09), séries
 quotidiennes, notifications, classements, publicité, analytique. Les règles
 complètes sont dans `CLAUDE.md`.
 
@@ -43,12 +48,12 @@ complètes sont dans `CLAUDE.md`.
 | Brique | Choix |
 |---|---|
 | Build | Vite 6 + TypeScript strict, ESLint, vitest |
-| Coquille (accueil, profils, album, résultats) | React 18 + zustand |
+| Coquille (accueil, résultats, minuteur) | React 18 + zustand |
 | Jeux | Modules vanilla TS montés dans un hôte commun (`GameHost`) |
 | 3D & physique | Three.js + cannon-es via le socle `src/core/three3d.ts`, chargés à la demande |
-| Visuels 2D | Planches de sprites CC0 (Kenney) chargées à la demande, `src/core/sprites.ts` |
+| Images | Photos libres (iNaturalist, Wikimedia Commons) pour les imagiers ; personnages 3D rendus en images pour les pions (`src/core/portraits.ts`) |
 | Son | Web Audio : musique générative, foley Kenney pour les chocs |
-| Persistance | zustand + `localStorage`, export/import JSON (bouton 💾) |
+| Persistance | zustand + `localStorage` (meilleure note par jeu, réglages) |
 | Installation | vite-plugin-pwa (service worker + manifest) |
 | Déploiement | GitHub Actions → GitHub Pages |
 
@@ -65,10 +70,13 @@ npm run preview      # sert le build
 npm run lint         # ESLint
 npm test             # vitest (logique pure)
 npm run test:smoke   # ouvre chaque jeu dans Chromium : 0 erreur JS, chargement terminé
-npm run test:play    # des bots jouent les parcours clés jusqu'au bout
+npm run test:play    # un bot par jeu joue sa partie jusqu'à l'écran de fin
 ```
 
 `test:smoke` et `test:play` **bloquent le déploiement** en CI.
+
+Sur la tablette, ajouter `?fps` à l'adresse allume un petit compteur d'images
+par seconde (et le coût d'une image 3D) pour régler la 3D ; `?fps=0` l'éteint.
 
 ## 🌍 Mise en ligne
 

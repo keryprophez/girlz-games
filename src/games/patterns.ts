@@ -1,12 +1,19 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick, rnd, shuffle } from '../core/utils'
+import { pick, rnd, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
-import { ICON } from '../core/icons'
+import { shake } from '../core/juice'
 
 /* Suites logiques — qu'est-ce qui vient après ? Formes dessinées en SVG,
    zéro lecture. Motifs AB/AABB en douce, ABC en normale, tailles qui
-   grandissent en expert. */
+   grandissent en expert.
+
+   Repris le 22/09 : plein écran (le train de formes traverse l'écran, les
+   réponses sont de grosses cartes en bas), manches en pastilles, plus de
+   score écrit. Apprendre SANS sanction : une mauvaise forme tremble et
+   s'efface, on réessaie ; au deuxième raté la bonne vient se poser dans
+   la case. Une suite trouvée fait la vague, et le motif qui se répète se
+   souligne de couleur — on VOIT pourquoi c'était cette forme-là. */
 
 type Item = { kind: string; color: string; size?: number }
 const KINDS = ['circle', 'square', 'triangle', 'star', 'heart', 'diamond']
@@ -30,7 +37,7 @@ function shapeSVG(it: Item, px: number): string {
 
 const key = (it: Item) => it.kind + it.color + (it.size ?? 1)
 
-function makeRound(tier: string): { seq: Item[]; answer: Item; options: Item[] } {
+function makeRound(tier: string): { seq: Item[]; answer: Item; options: Item[]; period: number } {
   const kinds = shuffle([...KINDS])
   const colors = shuffle([...COLORS])
   let motif: Item[]
@@ -73,59 +80,114 @@ function makeRound(tier: string): { seq: Item[]; answer: Item; options: Item[] }
       : { kind: pick(KINDS), color: pick(COLORS), size: answer.size }
     if (!options.some(x => key(x) === key(o))) options.push(o)
   }
-  return { seq, answer, options: shuffle(options) }
+  return { seq, answer, options: shuffle(options), period: motif.length }
 }
 
-let pt: any = null
+interface State {
+  round: number
+  total: number
+  /** Manches trouvées du premier coup / au deuxième essai. */
+  first: number
+  second: number
+  tries: number
+  lock: boolean
+  running: boolean
+  answer: Item
+  period: number
+  root: HTMLElement
+}
+
+let pt: State | null = null
 let ctx: GameContext
 
-function load() {
+const $in = (me: State, sel: string) => me.root.querySelector<HTMLElement>(sel)!
+
+function cellPx(me: State, n: number) {
+  const w = $in(me, '.pt-arena').clientWidth - 120
+  return Math.max(52, Math.min(130, Math.floor(w / (n + 0.4)) - 10))
+}
+
+function load(me: State) {
   const r = makeRound(ctx.tier)
-  pt.answer = r.answer
-  $('ptRound').textContent = `${pt.round + 1}/${pt.total}`
-  $('ptSeq').innerHTML = r.seq.map(it => `<span class="pt-cell">${shapeSVG(it, 64)}</span>`).join('')
-    + `<span class="pt-cell pt-q">?</span>`
-  const opts = $('ptOpts')
+  me.answer = r.answer
+  me.period = r.period
+  me.tries = 0
+  const px = cellPx(me, r.seq.length + 1)
+  const seq = $in(me, '.pt-seq')
+  seq.style.setProperty('--c', px + 'px')
+  seq.innerHTML = r.seq.map((it, k) => `<span class="pt-cell" style="--k:${k}">${shapeSVG(it, px * 0.82)}</span>`).join('')
+    + `<span class="pt-cell pt-q" style="--k:${r.seq.length}"></span>`
+  seq.classList.remove('solved')
+  const opts = $in(me, '.pt-opts')
   opts.innerHTML = ''
+  const opx = Math.min(150, Math.max(96, px * 1.15))
   r.options.forEach(o => {
     const b = document.createElement('button')
     b.className = 'pt-opt'
     b.dataset.key = key(o)
-    b.innerHTML = shapeSVG(o, 70)
-    b.onclick = () => answer(b, o)
+    b.style.setProperty('--o', opx + 'px')
+    b.innerHTML = shapeSVG(o, opx * 0.72)
+    b.onclick = () => answer(me, b, o)
     opts.appendChild(b)
   })
-  pt.lock = false
+  paintDots(me)
+  me.lock = false
 }
 
-function answer(b: HTMLButtonElement, o: Item) {
-  if (!pt || !pt.running || pt.lock) return
-  pt.lock = true
-  if (key(o) === key(pt.answer)) {
-    b.classList.add('good'); pt.score++; sfx('confirm', { vol: 0.7 }); fxAt(b, JUICE.green, 12)
-    const q = document.querySelector('.pt-q') as HTMLElement
-    q.innerHTML = shapeSVG(pt.answer, 64); q.classList.add('found')
-  } else {
-    b.classList.add('bad'); sfx('drop', { vol: 0.4, rate: 0.8 })
-    document.querySelectorAll<HTMLButtonElement>('.pt-opt').forEach(x => {
-      // Comparer la clé, pas l'innerHTML : le navigateur re-sérialise le SVG
-      if (x !== b && x.dataset.key === key(pt.answer)) x.classList.add('good')
-    })
-  }
-  $('ptScore').innerHTML = `${ICON.star} ${pt.score}`
-  pt.round++
-  ctx.after(1100, () => {
-    if (!pt || !pt.running) return
-    if (pt.round < pt.total) load()
-    else finish()
+function paintDots(me: State) {
+  $in(me, '.pt-dots').innerHTML = Array.from({ length: me.total }, (_, i) =>
+    `<i class="sn-dot${i < me.round ? ' on' : ''}${i === me.round ? ' cur' : ''}"></i>`).join('')
+}
+
+/** La forme trouvée se pose dans la case, le train fait la vague et le motif
+    qui se répète se souligne. */
+function solve(me: State, fromBtn: HTMLElement | null) {
+  const q = $in(me, '.pt-q')
+  q.innerHTML = shapeSVG(me.answer, parseFloat(getComputedStyle($in(me, '.pt-seq')).getPropertyValue('--c')) * 0.82)
+  q.classList.add('found')
+  const seq = $in(me, '.pt-seq')
+  seq.querySelectorAll<HTMLElement>('.pt-cell').forEach((c, k) => { c.dataset.g = String(Math.floor(k / me.period) % 2) })
+  seq.classList.add('solved')
+  if (fromBtn) fxAt(fromBtn, JUICE.green, 12)
+  me.round++
+  ctx.after(1700, () => {
+    if (pt !== me || !me.running) return
+    if (me.round < me.total) load(me)
+    else finish(me)
   })
 }
 
-function finish() {
-  const stars = pt.score >= pt.total - 1 ? 3 : pt.score >= pt.total - 3 ? 2 : 1
+function answer(me: State, b: HTMLButtonElement, o: Item) {
+  if (pt !== me || !me.running || me.lock || b.classList.contains('gone')) return
+  if (key(o) === key(me.answer)) {
+    me.lock = true
+    if (me.tries === 0) me.first++; else me.second++
+    b.classList.add('good')
+    sfx('confirm', { vol: 0.7 })
+    solve(me, b)
+    return
+  }
+  // Pas de sanction : la forme tremble et s'efface, on réessaie
+  me.tries++
+  sfx('drop', { vol: 0.4, rate: 0.8 })
+  shake(b, 7, 300)
+  b.classList.add('gone')
+  if (me.tries >= 2) {
+    me.lock = true
+    ctx.after(500, () => {
+      if (pt !== me) return
+      me.root.querySelectorAll<HTMLElement>('.pt-opt').forEach(x => { if (x.dataset.key === key(me.answer)) x.classList.add('good') })
+      solve(me, null)
+    })
+  }
+}
+
+function finish(me: State) {
+  const pts = me.first + me.second * 0.5
+  const stars = pts >= me.total - 0.5 ? 3 : pts >= me.total - 2.5 ? 2 : 1
   ctx.finish({
     title: 'Sacré sens logique !',
-    msg: `Tu as trouvé ${pt.score} suites sur ${pt.total}`,
+    msg: `Tu as trouvé ${me.first} suite${me.first > 1 ? 's' : ''} du premier coup, sur ${me.total}`,
     stars
   })
 }
@@ -136,17 +198,24 @@ export const patterns: GameDef = {
   mount(c) {
     ctx = c
     c.root.innerHTML = `
-      <div class="topbar">
-        <div class="chip" id="ptRound">1/6</div>
-        <div class="chip" id="ptScore">${ICON.star} 0</div>
-      </div>
-      <div class="panel pt-box">
-        <div class="pt-seq" id="ptSeq"></div>
-        <div class="pt-opts" id="ptOpts"></div>
+      <div class="arena pt-arena">
+        <div class="pt-seq"></div>
+        <div class="pt-opts"></div>
+        <div class="tq-side"><div class="mem-dots pt-dots"></div></div>
       </div>`
-    pt = { round: 0, total: 6, score: 0, lock: false, running: true }
     preloadSfx(['confirm', 'drop'])
-    load()
-    return () => { if (pt) { pt.running = false; pt = null } }
+    const me: State = {
+      round: 0, total: 6, first: 0, second: 0, tries: 0, lock: false, running: true,
+      answer: { kind: 'circle', color: '#000' }, period: 1, root: c.root
+    }
+    pt = me
+    // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+    if ((window as unknown as { __BOT?: boolean }).__BOT) {
+      ;(window as unknown as { __pt: unknown }).__pt = {
+        get answer() { return key(me.answer) }, get round() { return me.round }, get lock() { return me.lock }
+      }
+    }
+    load(me)
+    return () => { me.running = false; if (pt === me) pt = null }
   }
 }

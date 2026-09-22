@@ -4,6 +4,8 @@ import { rnd, toast } from '../core/utils'
 import { sGood, sNope, sPop, tone } from '../core/audio'
 import { say } from '../core/voice'
 import { setPaused } from '../core/session'
+import { ICON } from '../core/icons'
+import { critterPortraits } from '../core/portraits'
 
 /* Minuteur parental — on règle un temps de jeu par tranches de 5 minutes.
    Quand c'est fini : écran de pause tout doux qui bloque les jeux. Pour
@@ -162,6 +164,15 @@ export function PlayGuard() {
     if (!expired) setPaused(false)
   }, [expired])
 
+  // Les personnages de la ferme qui dorment aussi (plus d'emoji, 22/09)
+  const [sleepers, setSleepers] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!expired) return
+    let on = true
+    critterPortraits(['rabbit', 'chick', 'cow'], 72).then(r => { if (on) setSleepers(r) })
+    return () => { on = false }
+  }, [expired])
+
   if (!expired) return null
   return (
     <div className="pt-lock">
@@ -173,10 +184,16 @@ export function PlayGuard() {
           }}>✦</span>
         ))}
       </div>
-      <div className="pt-lock-moon">🌙</div>
+      <div className="pt-lock-moon" dangerouslySetInnerHTML={{ __html: ICON.moon }} />
       <h2 className="pt-lock-title">C'est l'heure de la pause !</h2>
-      <p className="pt-lock-sub">Tu as super bien joué 🌟<br />Repose tes yeux, on se retrouve bientôt 💤</p>
-      <div className="pt-lock-animals">🐰💤 🐤💤 🐮💤</div>
+      <p className="pt-lock-sub">Tu as super bien joué !<br />Repose tes yeux, on se retrouve bientôt.</p>
+      <div className="pt-lock-animals">
+        {['rabbit', 'chick', 'cow'].map((k, i) => sleepers[k] && (
+          <span key={k} className="pt-sleeper" style={{ animationDelay: -(i * 0.9) + 's' }}>
+            <img src={sleepers[k]} alt="" /><i>z</i>
+          </span>
+        ))}
+      </div>
       {gate ? (
         <div className="modal pt-lock-modal">
           <MathGate

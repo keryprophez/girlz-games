@@ -5,9 +5,9 @@ import { confetti } from '../core/fx'
 import {
   createStage, loadPhysics, loader, fixedStep, orbitCam, woodTex, bumpyNormal, picker,
   loadModel, fitModel,
-  type Stage, type Cannon
+  type Stage, type Cannon, type T3, type Orbit
 } from '../core/three3d'
-import { particles } from '../core/scene3d'
+import { particles, type Particles } from '../core/scene3d'
 import { ICON } from '../core/icons'
 import { foodImg } from '../core/sprites'
 import { sfx, preloadSfx } from '../core/sfx'
@@ -55,7 +55,50 @@ type Phase = 'garnir' | 'cuisson' | 'servi'
 const SAUCES: Record<string, string> = { tomato: 'rgba(206,58,38,1)', cream: 'rgba(255,243,220,1)' }
 
 let ctx: GameContext
-let S: any = null
+type Obj3D = import('three').Object3D
+type StdMat = import('three').MeshStandardMaterial
+interface IngredientDef { r: number; melt: boolean; make: () => Obj3D }
+/** Un ingrédient lâché : en vol (physique) puis posé sur sa part. */
+interface Item { obj: Obj3D; body: import('cannon-es').Body; kind: ToolId; melt: boolean; t: number; base?: number }
+interface Wedge { group: import('three').Group; items: Item[]; eaten: boolean; fade: number; a0: number; a1: number }
+interface State {
+  stage: Stage
+  CANNON: Cannon
+  world: import('cannon-es').World
+  matFood: import('cannon-es').Material
+  kit: Record<string, IngredientDef>
+  realModels?: boolean
+  sauce: { g: CanvasRenderingContext2D; tex: import('three').CanvasTexture }
+  doughMat: StdMat
+  crustMat: StdMat
+  sideMat: StdMat
+  pizzaGroup: import('three').Group
+  wedges: Wedge[]
+  flames: { sp: import('three').Sprite; base: number; phase: number; speed: number }[]
+  embers: { sp: import('three').Sprite; vy: number; sway: number }[]
+  fireLight: import('three').PointLight
+  loose: Item[]
+  melting: Item[]
+  tool: ToolId
+  dropped: number
+  eaten: number
+  bake: number
+  inOven: boolean
+  ended: boolean
+  smokeT: number
+  phase: Phase
+  perfect: boolean
+  bakeRate: number
+  lastDrop: number
+  tickT: number
+  ovenT: number
+  smoke: Particles
+  orbit: Orbit
+  step: ReturnType<typeof fixedStep>
+  cleanup?: () => void
+}
+
+let S: State | null = null
 
 /* ---------- Pâte crue peinte sur une texture : la sauce s'y étale ---------- */
 function doughCanvas() {
@@ -72,6 +115,7 @@ function doughCanvas() {
 
 /** Pose une tache de sauce à la position monde (x,z) de la pizza. */
 function paintSauce(x: number, z: number, color: string) {
+  if (!S) return
   const { g, tex } = S.sauce
   // La face du dessus d'un CylinderGeometry a ses UV en (u = z, v = x), et la
   // texture canvas est retournée verticalement (flipY). Le doigt touche (x, z)
@@ -103,7 +147,7 @@ const MODELS: Record<string, { file: string; size: number; r: number; melt: bool
 
 /** Une flaque de mozzarella : une demi-sphère bosselée et aplatie. Le kit Food
     n'a qu'une MEULE de fromage (avec son couteau !) — illisible sur une pizza. */
-function cheeseDef(T: any) {
+function cheeseDef(T: T3): IngredientDef {
   const mat = new T.MeshStandardMaterial({ color: 0xD8A93F, roughness: 0.42, metalness: 0.02 })
   return {
     r: 0.05, melt: true,
@@ -123,8 +167,8 @@ function cheeseDef(T: any) {
 }
 
 /** Charge tous les modèles d'un coup : un ingrédient ne doit jamais faire attendre. */
-async function preloadIngredients(T: any) {
-  const kit: Record<string, any> = { cheese: cheeseDef(T) }
+async function preloadIngredients(T: T3) {
+  const kit: Record<string, IngredientDef> = { cheese: cheeseDef(T) }
   await Promise.all(Object.entries(MODELS).map(async ([id, def]) => {
     const proto = await loadModel('food', def.file)
     fitModel(T, proto, def.size)
@@ -133,7 +177,7 @@ async function preloadIngredients(T: any) {
   return kit
 }
 
-function ingredientKitFallback(T: any) {
+function ingredientKitFallback(T: T3): Record<string, IngredientDef> {
   const std = (c: number, r = 0.7) => new T.MeshStandardMaterial({ color: c, roughness: r })
   const capGeo = new T.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2)
   const stemGeo = new T.CylinderGeometry(0.018, 0.022, 0.045, 8)
@@ -209,8 +253,9 @@ function drop(kind: ToolId, x: number, z: number) {
 }
 
 /** Une fois posé, l'ingrédient rejoint sa part de pizza : plus de physique à simuler. */
-function attach(item: any) {
-  const { T, scene } = S.stage
+function attach(item: Item) {
+  if (!S) return
+  const { scene } = S.stage
   S.world.removeBody(item.body)
   const p = item.obj.position
   const d = Math.hypot(p.x, p.z)
@@ -227,7 +272,6 @@ function attach(item: any) {
   // Une pincée de farine soulevée : le contact se VOIT
   S.smoke.burst({ x: p.x, y: p.y + 0.02, z: p.z },
     { count: 4, color: [0xFFF4DC, 0xE9D6B0], speed: 0.22, spread: 0.5, life: 0.5, size: 0.05, gravity: -0.4 })
-  void T
 }
 
 /* ---------- Four ---------- */
@@ -260,6 +304,7 @@ function toOven() {
     Pour une enfant qui ne lit pas, l'ENTRÉE dans la zone doit s'entendre :
     la jauge s'illumine et un carillon sonne — c'est le signal du geste. */
 function paintGauge(dt = 0) {
+  if (!S) return
   const k = S.bake / BURNT
   const n = document.getElementById('pzNeedle')
   if (n) n.style.left = `${Math.min(100, k * 100)}%`
@@ -316,6 +361,7 @@ function pullOut() {
 
 /* ---------- Manger ---------- */
 function eatWedge(wi: number) {
+  if (!S) return
   const w = S.wedges[wi]
   if (!w || w.eaten) return
   w.eaten = true
@@ -343,8 +389,9 @@ function finish() {
 /* ---------- Interface ---------- */
 function paintUI() {
   if (!S) return
+  const tool = S.tool
   $('pzTools').querySelectorAll<HTMLElement>('.g3-tool').forEach(b => {
-    b.classList.toggle('sel', b.dataset.t === S.tool)
+    b.classList.toggle('sel', b.dataset.t === tool)
   })
 }
 
@@ -484,7 +531,7 @@ export const pizza: GameDef = {
       flameTex.colorSpace = T.SRGBColorSpace
       const fireGroup = new T.Group()
       fireGroup.position.set(0, 0.02, VAULT_Z - VAULT_L / 2 + 0.18)
-      const flames: any[] = []
+      const flames: State['flames'] = []
       for (let i = 0; i < 6; i++) {
         const sp = new T.Sprite(new T.SpriteMaterial({
           map: flameTex, blending: T.AdditiveBlending, depthWrite: false,
@@ -496,7 +543,7 @@ export const pizza: GameDef = {
         flames.push({ sp, base, phase: Math.random() * 9, speed: 80 + Math.random() * 40 })
       }
       // Braises : des étincelles qui montent et s'éteignent, puis repartent
-      const embers: any[] = []
+      const embers: State['embers'] = []
       for (let i = 0; i < 5; i++) {
         const sp = new T.Sprite(new T.SpriteMaterial({
           map: flameTex, blending: T.AdditiveBlending, depthWrite: false,
@@ -538,7 +585,7 @@ export const pizza: GameDef = {
       const pizzaGroup = new T.Group()
       scene.add(pizzaGroup)
       const step = (Math.PI * 2) / SLICES
-      const wedges: any[] = []
+      const wedges: Wedge[] = []
       for (let i = 0; i < SLICES; i++) {
         const a0 = i * step
         const g = new T.Group()
@@ -550,7 +597,7 @@ export const pizza: GameDef = {
         dough.castShadow = true; dough.receiveShadow = true
         g.add(dough)
         // Croûte : un boudin suivant l'arc de la part
-        const pts: any[] = []
+        const pts: import('three').Vector3[] = []
         for (let k = 0; k <= 8; k++) {
           const a = a0 + (k / 8) * step
           pts.push(new T.Vector3(Math.sin(a) * (PR - 0.05), PH * 0.75, Math.cos(a) * (PR - 0.05)))
@@ -568,7 +615,7 @@ export const pizza: GameDef = {
       /* --- Physique --- */
       const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -G, 0) })
       world.broadphase = new CANNON.SAPBroadphase(world)
-      ;(world.solver as any).iterations = 10
+      ;(world.solver as import('cannon-es').GSSolver).iterations = 10
       const matFood = new CANNON.Material('food')
       world.addContactMaterial(new CANNON.ContactMaterial(matFood, matFood, { friction: 0.62, restitution: 0.08 }))
       world.addBody(new CANNON.Body({
@@ -583,8 +630,8 @@ export const pizza: GameDef = {
       )
       world.addBody(disc)
 
-      S = {
-        stage, CANNON, world, matFood, kit: ingredientKitFallback(T),
+      const me: State = {
+        stage, CANNON, world, matFood, kit: ingredientKitFallback(T), ovenT: 0,
         sauce: { g: dc.g, tex: sauceTex },
         doughMat, crustMat, sideMat, pizzaGroup, wedges, flames, embers, fireLight,
         loose: [], melting: [], tool: 'tomato' as ToolId, dropped: 0, eaten: 0,
@@ -596,13 +643,14 @@ export const pizza: GameDef = {
         orbit: orbitCam(stage, 1.55, 1.05, [0, 0.06, 0]),
         step: fixedStep()
       }
+      S = me
       setPhase('garnir')
 
       /* Les vrais modèles remplacent les primitives dès qu'ils sont là. Le jeu
          reste jouable pendant le chargement grâce au jeu de secours. */
       preloadIngredients(T)
-        .then(kit => { if (S) { S.kit = kit; S.realModels = true } })
-        .catch(() => ctx.toast('Modèles 3D indisponibles, formes simples 🍕'))
+        .then(kit => { if (S === me) { me.kit = kit; me.realModels = true } })
+        .catch(() => ctx.toast('Modèles 3D indisponibles, formes simples'))
 
       /* --- Toucher la pizza --- */
       const pick = picker(stage)
@@ -732,8 +780,9 @@ export const pizza: GameDef = {
         S.step(dt, () => world.step(1 / 60))
         for (let i = S.loose.length - 1; i >= 0; i--) {
           const it = S.loose[i]
-          it.obj.position.copy(it.body.position as any)
-          it.obj.quaternion.copy(it.body.quaternion as any)
+          const bp = it.body.position, bq = it.body.quaternion
+          it.obj.position.set(bp.x, bp.y, bp.z)
+          it.obj.quaternion.set(bq.x, bq.y, bq.z, bq.w)
           it.t += dt
           if ((it.t > 0.3 && it.body.velocity.length() < 0.12) || it.t > 5) {
             S.loose.splice(i, 1)
@@ -756,16 +805,16 @@ export const pizza: GameDef = {
         }
       })
 
-      S.cleanup = () => {
+      me.cleanup = () => {
         stage.renderer.domElement.removeEventListener('pointerdown', onDown)
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', onUp)
         sauceTex.dispose()
-        S.smoke.dispose()
+        me.smoke.dispose()
         stage.dispose()
       }
-    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici') })
 
     return () => {
       dead = true

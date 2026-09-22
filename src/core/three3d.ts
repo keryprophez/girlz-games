@@ -116,17 +116,18 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
      Sans carte d'environnement, un MeshStandardMaterial n'a rien à réfléchir :
      il rend une couleur plate. RoomEnvironment donne des reflets crédibles à
      tout le monde d'un coup, sans fichier HDR à télécharger. --- */
-  let pmrem: any = null
+  let pmrem: import('three').PMREMGenerator | null = null
   if (iblOn) {
     const { RoomEnvironment } = await import('three/examples/jsm/environments/RoomEnvironment.js')
     pmrem = new T.PMREMGenerator(renderer)
     const envScene = new RoomEnvironment()
-    const env = pmrem.fromScene(envScene as any, 0.04)
+    const env = pmrem.fromScene(envScene as unknown as import('three').Scene, 0.04)
     scene.environment = env.texture
     scene.environmentIntensity = o.iblIntensity ?? 0.6
-    envScene.traverse?.((x: any) => {
-      if (x.geometry) x.geometry.dispose()
-      if (x.material) (Array.isArray(x.material) ? x.material : [x.material]).forEach((m: any) => m.dispose())
+    envScene.traverse?.((x: import('three').Object3D) => {
+      const m = x as import('three').Mesh
+      if (m.geometry) m.geometry.dispose()
+      if (m.material) (Array.isArray(m.material) ? m.material : [m.material]).forEach(mm => mm.dispose())
     })
   }
 
@@ -229,15 +230,17 @@ const MAPS = [
 ]
 
 export function disposeTree(T: T3, root: import('three').Object3D) {
-  const geos = new Set<any>()
-  const mats = new Set<any>()
-  root.traverse((o: any) => {
-    if (o.geometry) geos.add(o.geometry)
-    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => mats.add(m))
+  const geos = new Set<import('three').BufferGeometry>()
+  const mats = new Set<import('three').Material>()
+  root.traverse(o => {
+    const m = o as import('three').Mesh
+    if (m.geometry) geos.add(m.geometry)
+    if (m.material) (Array.isArray(m.material) ? m.material : [m.material]).forEach(mm => mats.add(mm))
   })
   geos.forEach(g => g.dispose())
-  mats.forEach((m: any) => {
-    for (const k of MAPS) if (m[k]?.dispose) m[k].dispose()
+  mats.forEach(m => {
+    const slots = m as unknown as Record<string, { dispose?: () => void } | undefined>
+    for (const k of MAPS) slots[k]?.dispose?.()
     m.dispose()
   })
   // Vide la scène pour libérer les références JS
@@ -428,13 +431,14 @@ export function loadModel(kit: string, name: string): Promise<import('three').Gr
       ])
       const url = `${import.meta.env.BASE_URL}assets/models/${kit}/${name}.glb`
       const gltf = await new GLTFLoader().loadAsync(url)
-      gltf.scene.traverse((o: any) => {
+      gltf.scene.traverse(obj => {
+        const o = obj as import('three').Mesh
         if (!o.isMesh) return
         o.castShadow = true
         o.receiveShadow = true
         // Kenney sort ses kits en filtrage « plus proche » : ça pixellise à
         // l'écran. On repasse en linéaire, la texture est un atlas de couleurs.
-        const m = o.material
+        const m = o.material as import('three').MeshStandardMaterial | undefined
         if (m?.map) { m.map.magFilter = T.LinearFilter; m.map.minFilter = T.LinearMipmapLinearFilter; m.map.needsUpdate = true }
         if (m) { m.roughness = 0.62; m.metalness = 0.02 }
       })

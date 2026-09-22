@@ -75,7 +75,8 @@ sur l'écran de fin, sessions A puis B puis C.
    plus en CI (tour, ninja) : 7 scénarios. Confettis en papier (plus d'emoji).
 4. À faire en fond : `core/rounds.ts` et `core/exercise.ts` (manches sans
    temps mort, QCM avec second essai) quand les jeux 2D et Apprendre seront
-   itérés ; sonde fps `?fps` ; captures de référence par jeu.
+   itérés ; captures de référence par jeu. ✅ La sonde `?fps` est faite
+   (22/09) : reste à relever les chiffres sur la Tab A9+.
 
 ## Phase 2 — Un jeu par session
 
@@ -421,10 +422,50 @@ sur l'écran de fin, sessions A puis B puis C.
     route de la poule, un à l'écart) qui se ramassent en passant, avec
     étincelles et pépiement ; les étoiles de fin viennent des grains ramassés.
 
-Ordre pour la suite :
+- ✅ **Les dix du 22/09** (liste proposée par Claude, « fais tout, et fais
+  tout au mieux ») :
+  1. **Plus de « Jade » pour tout le monde.** Le choix de joueuse masqué, tout
+     le monde s'appelait Jade : Joyce lisait « Jade a empilé 12 blocs » et
+     devait chercher J-A-D-E dans la Chasse aux lettres. Les jeux reçoivent un
+     prénom vide, les messages de fin tutoient, Puissance 4 nomme les pions,
+     les encouragements enregistrés sont communs à la famille.
+  2. **Les pastilles Kenney « Minitel » sont sorties partout.** Cinq
+     personnages de plus dans `core/critters.ts` (vache, poule, chien, canard,
+     mouton) et `core/portraits.ts` qui les rend en images : Simon,
+     Puissance 4, la Boîte à rythme et le pré 3D du Taquin. Le Tour du Monde
+     passe en photos (neuf importées : panda, tigre, kangourou, koala,
+     hippopotame, bison, élan, paresseux, lama). Plus aucune planche 2D.
+  3. **Voyage dans l'Espace sans lecture** : billes-planètes (passeport et
+     raccourci), lueur et main qui montrent quoi toucher, glisser pour tourner,
+     haut-parleur ; nouveau mode **Trouve** (la voix dit une planète).
+  4. **Règle 1 : l'album de 24 autocollants et le total d'étoiles** de
+     l'accueil sont sortis (une collection à compléter). Reste la meilleure
+     note par jeu, sous sa tuile.
+  5. **Plein écran** : Suites logiques (train de formes, second essai, le motif
+     se souligne), Petit Piano (chansons en dessins, partition de couleurs),
+     Boîte à rythme, Chasse aux lettres (la lettre vole, aide après deux
+     erreurs), le Miroir (on peint en glissant, le reflet se replie) ; manches
+     en pastilles partout, plus de « Mot 1/3 ».
+  6. **La musique suit le combo** : à 3, 6 et 10 d'affilée, un shaker, un
+     arpège, une contre-voix ; le raté ramène au thème seul. Les huit jeux
+     d'adresse d'un coup, par `core/arcade.ts`.
+  7. **Sonde `?fps`** pour la vraie tablette.
+  8. **Un bot par jeu** : onze scénarios de plus (Suites, Lettres, Miroir,
+     Marché, Espace, Piano, Rythme, Feu d'artifice, Coloriage, Habille-toi,
+     Tableau +).
+  9. **Plus un seul `any`** : l'état des onze jeux qui restaient est typé (le
+     piège qui avait fait planter le Piano), 0 avertissement ESLint.
+  10. **Ménage** : `progress.adapt` (plus appliqué depuis le choix du niveau
+      dans le jeu), minuteurs de la coquille annulés au démontage,
+      `import-assets.mjs` qui effaçait les crédits des photos, le lapin de
+      Tape-Trous qui n'avait pas d'yeux. Au passage, les derniers emoji vus
+      par les filles hors des jeux sont partis : la poule et son poussin en 3D
+      se promènent au bas de l'accueil, et l'écran « dodo » du minuteur a sa
+      lune dessinée et trois personnages qui dorment.
 
-`ninja` (rampe) → tuiles de l'accueil encore en
-emoji → sonde de fréquence d'images sur la tablette.
+Ordre pour la suite : relever `?fps` sur la Tab A9+, faire tester aux filles
+les pions 3D et les jeux repris, puis la phase 3 (l'Atelier à la place du
+Coloriage, le personnage partagé).
 
 Chaque itération : une demi-page de design (geste, enjeu, rampe, outro,
 sons), l'implémentation, un bot qui gagne, une capture de référence.
@@ -441,14 +482,16 @@ sons), l'implémentation, un bot qui gagne, une capture de référence.
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅
 
-- Vraie 3D + physique sur `core/three3d.ts` pour 11 jeux ; kits glTF `food`,
-  `holiday`, `space` ; planches Kenney `animals`, `fish`, `nature`, `items` +
-  icônes food, importées par `scripts/import-assets.mjs`.
+- Vraie 3D + physique sur `core/three3d.ts` pour 12 jeux ; kits glTF `food`,
+  `holiday`, `space`, `nature` + icônes food, importés par
+  `scripts/import-assets.mjs` ; personnages 3D de la ferme (`core/critters.ts`)
+  rendus en images pour les jeux en DOM (`core/portraits.ts`).
 - 24 foley Kenney branchés sur `core/impact.ts`.
 - Musique générative 6 thèmes (`core/music.ts`), unique et sans fichier.
 - Minuteur parental avec verrou « question de grand » (`PlayTimer.tsx`).
-- Sauvegarde exportable + alerte quota (`core/backup.ts`).
-- Difficulté adaptative silencieuse (`progress.adapt`).
+- Alerte de quota `localStorage` (`core/backup.ts`) ; la fenêtre d'export est
+  sortie le 10/09, la difficulté adaptative silencieuse le 22/09 (le niveau se
+  choisit dans le jeu).
 - Médaillon photo dans la 3D (`avatarMedallion`).
 - Anti-crash (ErrorBoundary + capture des erreurs runtime), maj PWA auto.
 - Smoke test et bots de jeu en CI.

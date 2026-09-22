@@ -70,6 +70,16 @@ let nextT = 0
 let step = 0
 let lastMel = 0
 
+/* Intensité (22/09) : le combo d'un jeu d'adresse ajoute des couches à la
+   musique — le manque n°4 de l'audit (« le combo est un chiffre dans un
+   div »). 0 = le thème seul ; 1 = un shaker ; 2 = un arpège sur l'accord ;
+   3 = une contre-basse et une deuxième voix. Les couches entrent au pas
+   suivant (dans le temps) et tombent dès le raté. Piloté par core/arcade.ts. */
+let intensity = 0
+export function setMusicIntensity(n: number) {
+  intensity = Math.max(0, Math.min(3, Math.round(n)))
+}
+
 const MASTER_VOL = 0.55
 let ducked = false
 function ensureMaster(ac: AudioContext): GainNode {
@@ -127,6 +137,38 @@ function bassNote(ac: AudioContext, n: number, t: number, dur: number, vol: numb
   o.start(t); o.stop(t + dur + 0.05)
 }
 
+let noiseBuf: AudioBuffer | null = null
+/** Shaker : un souffle de bruit aigu, très court. */
+function hat(ac: AudioContext, t: number, vol: number) {
+  if (!noiseBuf) {
+    noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.1), ac.sampleRate)
+    const d = noiseBuf.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+  }
+  const src = ac.createBufferSource()
+  src.buffer = noiseBuf
+  const f = ac.createBiquadFilter()
+  f.type = 'highpass'; f.frequency.value = 6500
+  const g = ac.createGain()
+  g.gain.setValueAtTime(vol, t)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05)
+  src.connect(f); f.connect(g); g.connect(master!)
+  src.start(t); src.stop(t + 0.07)
+}
+
+/** Les couches du combo, par-dessus n'importe quel thème. */
+function layers(ac: AudioContext, th: Theme, sub: number, bar: number, t: number, stepDur: number) {
+  if (intensity >= 1) hat(ac, t, sub % 2 === 0 ? 0.05 : 0.025)
+  if (intensity >= 2) {
+    const chord = th.chords[bar]
+    pluck(ac, m2f(chord[sub % chord.length] + 12 * (sub % 4 < 2 ? 1 : 2)), t, 0.03)
+  }
+  if (intensity >= 3) {
+    if (sub === Math.floor((th.style === 'waltz' ? 6 : 8) / 2)) bassNote(ac, th.bass[bar] + 7, t, stepDur * 2, 0.08)
+    if (Math.random() < 0.5) pluck(ac, m2f(nextMelody(th.scale) + 12), t, 0.04, true)
+  }
+}
+
 /** Mélodie en marche aléatoire : proche de la note précédente, jamais pareille. */
 function nextMelody(scale: number[]): number {
   const jump = Math.random() < 0.2 ? 2 : 1
@@ -164,6 +206,7 @@ function scheduleStep(ac: AudioContext, th: Theme, s: number, t: number, stepDur
     }
     if (Math.random() < 0.1) pluck(ac, m2f(nextMelody(th.scale)), t, 0.045, true)
   }
+  if (intensity) layers(ac, th, sub, bar, t, stepDur)
 }
 
 /** Lance l'ambiance d'un univers (remplace la précédente en douceur). */
@@ -174,6 +217,7 @@ export function playMusic(theme: string) {
   const ac = getCtx()
   if (!ac) return
   current = theme
+  intensity = 0
   master = null
   ensureMaster(ac)
   lastMel = Math.floor(th.scale.length / 2)
@@ -197,6 +241,7 @@ export function stopMusic(fade = 0.7) {
   clearInterval(timer)
   timer = 0
   current = null
+  intensity = 0
   const m = master
   master = null
   if (!m) return

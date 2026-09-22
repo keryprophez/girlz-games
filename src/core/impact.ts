@@ -165,8 +165,8 @@ export function impactAt(el: Element, f: number, o: ImpactOpts = {}) {
  * Branche les collisions d'un corps cannon-es sur le feel partagé.
  * Renvoie la fonction de débranchement.
  */
-export function wireBody(body: any, o: ImpactOpts & { softAt?: number; hardAt?: number } = {}) {
-  const on = (e: any) => {
+export function wireBody(body: import('cannon-es').Body, o: ImpactOpts & { softAt?: number; hardAt?: number } = {}) {
+  const on = (e: { contact?: { getImpactVelocityAlongNormal?: () => number } }) => {
     const v = Math.abs(e.contact?.getImpactVelocityAlongNormal?.() ?? 0)
     impact(force(v, o.softAt ?? 1.2, o.hardAt ?? 7), o)
   }

@@ -2,7 +2,9 @@
    vérifient qu'on peut Y JOUER — rouler les boules du bonhomme jusqu'au bout,
    croquer des fruits à la chenille, sauter les obstacles du tracteur, passer
    des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
-   (régression du bug de coordonnées UV).
+   (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
+   catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
+   Boîte à rythme, Feu d'artifice, Coloriage et Habille-toi compris.
 
    Les jeux exposent leur état de pilotage seulement quand `window.__BOT` est
    posé avant le chargement — inerte en production.
@@ -131,13 +133,12 @@ await scenario('bonhomme-parcours-complet', async () => {
   await page.waitForTimeout(1200)
   const fini = await page.evaluate(() => document.body.innerText.includes('beau bonhomme'))
   if (!fini) throw new Error('l\'écran de fin n\'est pas apparu')
-  // Et la difficulté adaptative a enregistré la partie (reward → adapt)
-  const adapt = await page.evaluate(() => {
-    const key = Object.keys(localStorage).find(k => k.startsWith('ferme'))
-    const d = JSON.parse(localStorage.getItem(key))
-    return d.state.progress?.jade?.adapt?.snowman
+  // Et la meilleure note du jeu est enregistrée (sous sa tuile à l'accueil)
+  const best = await page.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('ferme:v2') || '{}')
+    return d.state?.progress?.jade?.bestStars?.snowman
   })
-  if (typeof adapt !== 'number') throw new Error('progress.adapt non enregistré après la partie')
+  if (typeof best !== 'number') throw new Error('meilleure note non enregistrée après la partie')
 })
 
 /* 🐛 La Chenille : piloter la tête vers les fruits, en croquer au moins 2. */
@@ -438,6 +439,22 @@ await scenario('tableau-huit-cases', async () => {
   if (!fini) throw new Error('l\'écran de fin du tableau n\'est pas apparu')
 })
 
+/* ➕ Grand Tableau + : la même chasse aux cases, sur la table d'addition. */
+await scenario('tableau-plus-huit-cases', async () => {
+  await openGame('Grand Tableau +')
+  await page.waitForFunction(() => window.__tb, null, { timeout: 15000 })
+  await page.locator('.tb-tool[data-m="find"]').click()
+  for (let i = 0; i < 8; i++) {
+    await page.waitForFunction(q => window.__tb.q === q && !window.__tb.lock, i, { timeout: 15000 })
+    const ok = await page.evaluate(() => window.__tb.find(window.__tb.target))
+    if (!ok) throw new Error('cible introuvable dans la grille')
+    await page.waitForTimeout(200)
+  }
+  await page.waitForTimeout(2000)
+  const fini = await page.evaluate(() => document.body.innerText.includes('Chasse aux cases'))
+  if (!fini) throw new Error('l\'écran de fin du tableau + n\'est pas apparu')
+})
+
 /* 🔍 L'Intrus : six manches, l'intrus lu sur le crochet. */
 await scenario('intrus-six-manches', async () => {
   await openGame("L'Intrus")
@@ -589,6 +606,137 @@ for (const [mode, titre] of [['type', 'tamponné'], ['phrase', 'tamponné'], ['p
     if (errors.length) throw new Error('erreurs JS')
   })
 }
+
+/* ── Bots du 22/09 : les jeux qui n'étaient surveillés par personne ── */
+const finDe = async (texte, ms = 9000) => {
+  await page.waitForFunction(t => document.querySelector('#result.show') && document.body.innerText.includes(t), texte, { timeout: ms })
+}
+
+/* 🔷 Suites logiques : six manches, la bonne forme lue sur le crochet. */
+await scenario('suites-six-manches', async () => {
+  await openGame('Suites Logiques', '__pt')
+  for (let i = 0; i < 6; i++) {
+    await page.waitForFunction(r => window.__pt.round === r && !window.__pt.lock, i, { timeout: 15000 })
+    const k = await page.evaluate(() => window.__pt.answer)
+    await page.locator(`.pt-opt[data-key="${k}"]`).click()
+    await page.waitForTimeout(150)
+  }
+  await finDe('Sacré sens logique')
+})
+
+/* 🔤 Chasse aux lettres : trois mots, lettre après lettre (la lettre vole). */
+await scenario('lettres-trois-mots', async () => {
+  await openGame('Chasse aux lettres', '__lg')
+  for (let r = 0; r < 3; r++) {
+    await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 15000 })
+    const word = await page.evaluate(() => window.__lg.word)
+    for (const ch of word) {
+      await page.locator(`.lg-tile:not(.used)[data-ch="${ch}"]`).first().click()
+      await page.waitForTimeout(120)
+    }
+  }
+  await finDe('Tous les mots trouvés')
+})
+
+/* 🪞 Le Miroir : trois motifs peints au doigt (couleur choisie, puis case). */
+await scenario('miroir-trois-motifs', async () => {
+  await openGame('Le Miroir', '__mr')
+  for (let r = 0; r < 3; r++) {
+    await page.waitForFunction(k => window.__mr.round === k && !window.__mr.done, r, { timeout: 15000 })
+    const need = await page.evaluate(() => window.__mr.need)
+    for (const { k, color } of need) {
+      await page.evaluate(c => window.__mr.pick(c), color)
+      await page.locator(`.mr-free[data-k="${k}"]`).click()
+      await page.waitForTimeout(60)
+    }
+    await page.waitForFunction(() => window.__mr.done || window.__mr.round > 0, null, { timeout: 5000 })
+  }
+  await finDe('Miroir, joli miroir')
+})
+
+/* 💶 Le Marché : quatre paiements exacts, pièces choisies de la plus grosse
+   à la plus petite (le bot rend la monnaie comme un marchand). */
+await scenario('marche-quatre-paiements', async () => {
+  await openGame('Le Marché', '__mk')
+  await page.locator('.mk-mode[data-m="pay"]').click()
+  for (let q = 0; q < 4; q++) {
+    await page.waitForFunction(k => window.__mk.q === k && !window.__mk.lock && window.__mk.goal > 0, q, { timeout: 15000 })
+    const denoms = await page.$$eval('#mkBank .mk-coin', els => els.map(e => +e.dataset.v).sort((a, b) => b - a))
+    let reste = await page.evaluate(() => window.__mk.goal)
+    for (const v of denoms) {
+      while (reste >= v) { await page.locator(`#mkBank .mk-coin[data-v="${v}"]`).click(); reste -= v; await page.waitForTimeout(80) }
+    }
+    if (reste) throw new Error('prix impossible à payer avec la banque : reste ' + reste)
+  }
+  await finDe('Le compte est bon')
+})
+
+/* 🚀 Voyage dans l'Espace : les huit planètes visitées par les billes, puis
+   la fête et l'écran de fin. */
+await scenario('espace-huit-planetes', async () => {
+  await openGame("Voyage dans l'Espace")
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 30000 })
+  await page.waitForSelector('.sp3-pick', { timeout: 20000 })
+  for (const id of ['mercure', 'venus', 'terre', 'mars', 'jupiter', 'saturne', 'uranus', 'neptune']) {
+    await page.locator(`.sp3-pick[data-id="${id}"]`).click({ force: true })
+    await page.waitForSelector('.sp3-card:not(.off)', { timeout: 30000 })
+    await page.locator('.sp3-home').click({ force: true })
+    await page.waitForTimeout(200)
+  }
+  await finDe('Astronaute', 20000)
+})
+
+/* 🎹 Petit Piano : « Au clair de la lune » jouée en suivant la touche qui brille. */
+await scenario('piano-une-chanson', async () => {
+  await openGame('Petit Piano')
+  await page.locator('.pn-mode[data-s="0"]').click()
+  for (let i = 0; i < 40; i++) {
+    if (await page.locator('.pn-score.won').count()) break
+    await page.locator('.pkey.pulse').first().dispatchEvent('pointerdown')
+    await page.waitForTimeout(90)
+  }
+  if (!(await page.locator('.pn-score.won').count())) throw new Error('la chanson ne s\'est pas finie')
+  await finDe('Quelle musicienne')
+})
+
+/* 🥁 Boîte à rythme : un air tout fait, la tête de lecture tourne, les
+   animaux chantent, puis « fini ». */
+await scenario('rythme-un-air', async () => {
+  await openGame('Boîte à Rythme')
+  await page.locator('#bbP1').click()
+  await page.waitForFunction(() => document.querySelector('.bb-cell.now') && document.querySelector('.bb-head.on'), null, { timeout: 5000 })
+  await page.waitForFunction(() => document.querySelector('.bb-animal.sing'), null, { timeout: 5000 })
+  await page.locator('#bbDone').click()
+  await finDe('Quel orchestre')
+})
+
+/* 🎆 Feu d'artifice : huit fusées, puis le bouquet final jusqu'à la fin. */
+await scenario('feu-bouquet-final', async () => {
+  await openGame("Feu d'Artifice")
+  const box = await page.locator('#fwArena').boundingBox()
+  for (let i = 0; i < 8; i++) {
+    await page.mouse.click(box.x + box.width * (0.2 + 0.08 * i), box.y + box.height * 0.3)
+    await page.waitForTimeout(120)
+  }
+  // Le bouton du bouquet bat sans arrêt : Playwright ne le verrait jamais « stable »
+  await page.locator('#fwFinal').click({ force: true })
+  await finDe('Quel spectacle', 15000)
+})
+
+/* 🎨 Coloriage et 👗 Habille-toi : les deux créations vont jusqu'à leur fin. */
+await scenario('coloriage-papillon', async () => {
+  await openGame('Coloriage')
+  const n = await page.locator('#colSvg .creg').count()
+  for (let i = 0; i < n; i++) await page.locator('#colSvg .creg').nth(i).dispatchEvent('pointerdown')
+  await page.locator('#colDone').click()
+  await finDe('Chef-d')
+})
+await scenario('habille-toi-surprise', async () => {
+  await openGame('Habille-toi')
+  await page.locator('#duRandom').click()
+  await page.locator('#duDone').click()
+  await finDe('Superbe look')
+})
 
 await browser.close()
 if (failures.length) {
