@@ -130,8 +130,8 @@ function finish(me: State) {
   const stars = me.moves <= perfect * 1.4 ? 3 : me.moves <= perfect * 2 ? 2 : 1
   ctx.finish({
     title: 'Toutes les paires trouvées !',
-    msg: `${ctx.playerName} a terminé en ${me.moves} coups`,
-    stars, starsEarned: stars
+    msg: `Tu as terminé en ${me.moves} coups`,
+    stars
   })
 }
 

@@ -81,9 +81,9 @@ function finish(songName?: string) {
   ctx.finish({
     title: songName ? 'Quelle musicienne !' : 'Joli concert !',
     msg: songName
-      ? `${ctx.playerName} a joué « ${songName} » en entier`
-      : `${ctx.playerName} a joué ${pn ? pn.played : 0} notes`,
-    stars: 3, starsEarned: 3
+      ? `Tu as joué « ${songName} » en entier`
+      : `Tu as joué ${pn ? pn.played : 0} notes`,
+    stars: 3
   })
 }
 

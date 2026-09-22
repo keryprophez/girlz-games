@@ -202,8 +202,8 @@ function finish() {
   const stars = mk.mistakes === 0 ? 3 : mk.mistakes <= 2 ? 2 : 1
   ctx.finish({
     title: mk.mode === 'pay' ? 'Le compte est bon !' : 'Monnaie rendue !',
-    msg: `${ctx.playerName} a réussi ${mk.q} paiement${mk.q > 1 ? 's' : ''}`,
-    stars, starsEarned: stars
+    msg: `Tu as réussi ${mk.q} paiement${mk.q > 1 ? 's' : ''}`,
+    stars
   })
 }
 
@@ -234,8 +234,8 @@ export const market: GameDef = {
       if (!mk || !mk.running || mk.mode !== 'explore') return
       ctx.finish({
         title: 'Belle découverte !',
-        msg: `${ctx.playerName} a écouté ${mk.seen.size} pièces et billets`,
-        stars: 3, starsEarned: 3
+        msg: `Tu as écouté ${mk.seen.size} pièces et billets`,
+        stars: 3
       })
     }
     setMode('explore')

@@ -4,7 +4,7 @@ import js from '@eslint/js'
 import ts from 'typescript-eslint'
 
 export default ts.config(
-  { ignores: ['dist/**', 'node_modules/**', 'scripts/**', '*.config.*'] },
+  { ignores: ['dist/**', 'node_modules/**', 'scripts/**', '*.config.*', '.verify-*'] },
   js.configs.recommended,
   ...ts.configs.recommended,
   {

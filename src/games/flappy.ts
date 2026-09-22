@@ -89,7 +89,7 @@ function finish(me: State) {
   const th = ctx.byTier([10, 6], [14, 8], [18, 11])
   me.game.end({
     title: n >= th[0] ? 'Grand envol !' : n >= th[1] ? 'Bel envol !' : 'Le poussin est tombé !',
-    msg: `${ctx.playerName} a passé ${n} barrière${n > 1 ? 's' : ''}`,
+    msg: `Tu as passé ${n} barrière${n > 1 ? 's' : ''}`,
     outroMs: 1300
   })
 }

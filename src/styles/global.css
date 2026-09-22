@@ -90,7 +90,6 @@ body.ingame .critter{display:none;}
 .pcam{position:absolute;bottom:-4px;right:-6px;font-size:15px;background:#fff;border-radius:50%;
   padding:2px;box-shadow:var(--e1);line-height:1;}
 .pname{font-family:'Baloo 2';font-weight:800;font-size:clamp(15px,3.4vmin,19px);}
-.pmeta{font-size:12px;color:var(--ink-soft);font-weight:600;}
 .ptier{border:1px solid var(--line);background:var(--paper);border-radius:99px;cursor:pointer;
   font-weight:700;font-size:11.5px;padding:4px 10px;margin-top:3px;font-family:'Baloo 2';
   transition:transform .2s var(--spring);}
@@ -130,7 +129,6 @@ body.ingame .critter{display:none;}
 .gc .sq{position:relative;}
 .sq-pink{background:#FFE3E0;}.sq-mint{background:#DDF5E4;}.sq-sky{background:#DDEFFC;}
 .sq-sun{background:#FFF0CC;}.sq-lilac{background:#EDE3FD;}.sq-peach{background:#FFE8D6;}
-.footnote{margin:14px 0 6px;font-size:11.5px;color:var(--ink-soft);text-align:center;}
 
 /* ============================================================
    CHROME EN JEU
@@ -238,9 +236,9 @@ button.chip:active{transform:scale(.92);}
 .run3-arena{background:#8FCDEB;cursor:pointer;}
 
 /* ============================================================
-   RÉSULTAT / ALBUM / TOAST / CONFETTIS
+   RÉSULTAT / MODALES / TOAST / CONFETTIS
    ============================================================ */
-#result,#album{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+#result,#sheet{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
   background:rgba(69,54,42,.35);backdrop-filter:blur(6px);animation:enter .3s var(--spring);}
 /* L'écran de fin laisse voir la partie figée derrière : voile léger, flou léger */
 #result{background:rgba(69,54,42,.16);backdrop-filter:blur(2px);}
@@ -249,12 +247,7 @@ button.chip:active{transform:scale(.92);}
 .modal h2{font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,5.6vmin,36px);margin-bottom:4px;}
 .modal p{font-size:15.5px;color:var(--ink-soft);margin-bottom:10px;}
 .stars{display:flex;justify-content:center;margin:4px 0 8px;}
-.earned{white-space:nowrap;color:var(--mango);font-weight:700;}
-.earned .ico{font-size:1.1em;}
 @keyframes starpop{from{transform:scale(0) rotate(-40deg);opacity:0;}to{transform:scale(1);opacity:1;}}
-.rewardbox{background:#FFF4D6;border:1px solid rgba(255,184,77,.4);border-radius:var(--r-md);
-  padding:12px;margin:6px 0 14px;font-weight:600;}
-.rewardbox .ra{font-size:44px;display:block;animation:rbob 1.6s ease-in-out infinite;}
 @keyframes rbob{50%{transform:translateY(-7px) rotate(-6deg);}}
 .rbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
 .bigbtn{border:none;cursor:pointer;font-family:'Baloo 2';font-weight:700;font-size:16.5px;
@@ -262,13 +255,8 @@ button.chip:active{transform:scale(.92);}
 .bigbtn:active{transform:scale(.93);}
 .bigbtn.primary{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;box-shadow:0 6px 18px rgba(255,123,107,.35);}
 .bigbtn.ghost{background:var(--card);border:1px solid var(--line);}
-.albumcard{max-height:86vh;overflow:auto;}
-.albumsub{color:var(--ink-soft);font-size:14px;margin-bottom:14px;}
-.collgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:16px;}
-.slot{aspect-ratio:1;border-radius:var(--r-md);background:#F4ECDE;display:flex;align-items:center;justify-content:center;
-  font-size:26px;box-shadow:inset 0 2px 5px rgba(69,54,42,.07);}
-.slot.have{background:var(--card);border:1px solid var(--line);box-shadow:var(--e1);}
-.slot.locked{filter:grayscale(1) opacity(.32);font-size:20px;}
+.vs-card{max-height:86vh;overflow:auto;}
+.vs-sub{color:var(--ink-soft);font-size:14px;margin-bottom:14px;}
 .confetti{position:fixed;top:-24px;z-index:9;pointer-events:none;animation:fall linear forwards;box-shadow:0 1px 2px rgba(69,54,42,.2);}
 @keyframes fall{to{transform:translateY(112vh) rotate(560deg);opacity:.85;}}
 #toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-80px);z-index:12;
@@ -976,16 +964,47 @@ body.playing #cpCanvas{max-height:calc(100vh - 220px);}
    VOYAGE DANS L'ESPACE 3D
    ============================================================ */
 .sp3-arena{background:#05060F;}
-.sp3-passport{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:11px;}
-.sp3-dot{width:19px;height:19px;border-radius:50%;opacity:.26;filter:grayscale(.85);
-  box-shadow:inset -2px -2px 4px rgba(0,0,0,.35);transition:opacity .3s ease,filter .3s ease,transform .3s var(--spring);}
-.sp3-dot.on{opacity:1;filter:none;transform:scale(1.2);box-shadow:inset -2px -2px 4px rgba(0,0,0,.35),0 0 9px rgba(255,255,255,.55);}
-.sp3-fact{background:linear-gradient(180deg,rgba(30,26,58,.96),rgba(18,15,40,.96));color:#F2ECFF;
-  border-radius:var(--r-lg);padding:15px 16px;box-shadow:var(--e2);gap:7px;}
-.sp3-name{font-family:'Baloo 2';font-weight:800;font-size:20px;color:#FFE08A;}
-.sp3-text{font-size:14.5px;line-height:1.45;text-align:center;max-width:460px;}
-.sp3-new{display:inline-block;background:var(--coral);color:#fff;font-size:12px;font-weight:700;
-  padding:2px 9px;border-radius:99px;vertical-align:middle;}
+/* Les billes-planètes : passeport ET raccourci, à droite, sous la barre de jeu.
+   La vraie texture défile : la bille tourne comme la planète. */
+.sp3-balls{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;
+  gap:clamp(4px,1vh,9px);transition:opacity .35s ease,transform .35s var(--spring);}
+.sp3-balls.off{opacity:0;transform:translate(40px,-50%);pointer-events:none;}
+.sp3-pick{border:none;background:none;padding:0;cursor:pointer;display:grid;place-items:center;
+  width:clamp(40px,7vh,58px);height:clamp(40px,7vh,58px);}
+.sp3-ball{--s:clamp(30px,5.6vh,46px);position:relative;display:block;width:var(--s);height:var(--s);border-radius:50%;
+  background-size:200% 100%;background-repeat:repeat-x;animation:sp3spin 14s linear infinite;
+  box-shadow:inset -6px -5px 10px rgba(0,0,0,.6),inset 2px 2px 6px rgba(255,255,255,.18);
+  opacity:.5;filter:saturate(.55);transition:opacity .3s ease,filter .3s ease,transform .3s var(--spring);}
+.sp3-ball.sun{box-shadow:0 0 14px rgba(255,190,80,.8);}
+.sp3-ball.ringed::after{content:'';position:absolute;left:-26%;right:-26%;top:38%;height:24%;border-radius:50%;
+  border:3px solid rgba(228,210,164,.85);transform:rotate(-16deg);}
+.sp3-ball.seen{opacity:1;filter:none;}
+.sp3-ball.here{transform:scale(1.22);outline:3px solid #FFE08A;outline-offset:3px;}
+.sp3-ball.wink{animation:sp3spin 14s linear infinite,sp3wink 1s ease-in-out infinite;opacity:.9;}
+.sp3-balls.party .sp3-ball{animation:sp3spin 3s linear infinite,sp3wink .6s ease-in-out infinite;}
+.sp3-balls.party .sp3-pick:nth-child(odd) .sp3-ball{animation-delay:0s,.3s;}
+.sp3-ball.big{--s:74px;opacity:1;filter:none;}
+@keyframes sp3spin{to{background-position:-200% 0;}}
+@keyframes sp3wink{50%{transform:scale(1.2);box-shadow:inset -6px -5px 10px rgba(0,0,0,.5),0 0 16px 4px rgba(255,236,170,.8);}}
+/* La merveille de la planète : nom + texte (dits par la voix), réécouter, rentrer */
+.sp3-card{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:7;width:min(640px,calc(100% - 120px));
+  display:grid;grid-template-columns:1fr auto;column-gap:14px;align-items:center;
+  background:linear-gradient(180deg,rgba(30,26,58,.94),rgba(18,15,40,.94));color:#F2ECFF;
+  border:1px solid rgba(255,224,138,.25);border-radius:26px;padding:12px 14px 14px 20px;box-shadow:var(--e2);
+  transition:opacity .3s ease,transform .3s var(--spring);}
+.sp3-card.off{opacity:0;transform:translate(-50%,30px);pointer-events:none;}
+.sp3-cardhead{display:flex;align-items:center;gap:10px;}
+.sp3-name{font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,4.4vmin,34px);color:#FFE08A;line-height:1.1;}
+.sp3-name.new::after{content:'';display:inline-block;width:.8em;height:.8em;margin-left:.3em;vertical-align:-.05em;
+  background:#FFD34D;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  animation:starpop .5s var(--spring) both;}
+.sp3-text{grid-column:1;font-size:clamp(15px,2.3vmin,18px);line-height:1.4;margin:4px 0 0;}
+.sp3-home{grid-column:2;grid-row:1 / span 2;width:66px;height:66px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--lagoon);color:#fff;font-size:38px;display:grid;place-items:center;box-shadow:var(--e1);}
+.sp3-home:active{transform:scale(.9);}
+.sp3-card.last .sp3-home{animation:sp3wink 1s ease-in-out infinite;background:var(--mango);}
+.sp3-askimg:empty{display:none;}
+.sp3-hint{bottom:auto;}
 
 /* ============================================================
    LA POSTE AUX PHRASES — les types de phrases (GR2)

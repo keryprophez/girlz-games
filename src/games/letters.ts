@@ -5,7 +5,7 @@ import { fxAt, JUICE } from '../core/fx'
 import { photoImg } from '../core/sprites'
 
 /* Chasse aux lettres — retrouve les lettres du mot dans l'ordre.
-   Premier mot : ton prénom ! Calibré CP pour Jade, mots plus longs pour Joyce. */
+   Premier mot : ton prénom (quand on sait qui joue). Calibré CP pour Jade, mots plus longs pour Joyce. */
 
 /* Des mots qu'on peut MONTRER (un animal de la planche) : le mot est vu,
    dit par la voix et illustré avant d'être cherché — plus d'essai-erreur. */
@@ -91,8 +91,8 @@ function finish() {
   const stars = lg.mistakes <= 1 ? 3 : lg.mistakes <= 4 ? 2 : 1
   ctx.finish({
     title: 'Tous les mots trouvés !',
-    msg: `${ctx.playerName} a chassé ${lg.words.length} mots`,
-    stars, starsEarned: stars
+    msg: `Tu as chassé ${lg.words.length} mots`,
+    stars
   })
 }
 
@@ -111,7 +111,10 @@ export const letters: GameDef = {
     preloadSfx(['tick', 'confirm', 'drop'])
     const tierWords = c.byTier(WORDS.easy, WORDS.med, WORDS.exp)
     lg = {
-      words: [c.playerName.toUpperCase(), ...shuffle([...tierWords]).slice(0, 2)],
+      // Le prénom en premier mot, seulement si on sait qui joue
+      words: c.playerName
+        ? [c.playerName.toUpperCase(), ...shuffle([...tierWords]).slice(0, 2)]
+        : shuffle([...tierWords]).slice(0, 3),
       round: 0, mistakes: 0, running: true, peeking: false
     }
     // Avant le 12/09 c'était le chargement de la planche de sprites qui lançait

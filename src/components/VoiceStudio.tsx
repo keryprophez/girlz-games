@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { useFerme } from '../core/store'
+import { SHOW_PROFILES, useFerme } from '../core/store'
+import { clipOwner } from '../core/clips'
 
 /* Studio des voix de la famille — écran parent : on enregistre une fois
    « Bravo Jade ! », « Courage Joyce ! »… et ces vraies voix remplacent
    le jingle aux fins de partie. Tout reste sur l'appareil. */
 
 const SLOTS = [
-  { slot: 'bravo', label: (n: string) => `« Bravo ${n} ! »`, icon: '🎉' },
-  { slot: 'retry', label: (n: string) => `« Courage ${n}, essaie encore ! »`, icon: '💪' }
+  { slot: 'bravo', label: (n: string) => n ? `« Bravo ${n} ! »` : '« Bravo ! »', icon: '🎉' },
+  { slot: 'retry', label: (n: string) => n ? `« Courage ${n}, essaie encore ! »` : '« Courage, essaie encore ! »', icon: '💪' }
 ]
 
 export function VoiceStudio({ onClose }: { onClose: () => void }) {
@@ -57,17 +58,19 @@ export function VoiceStudio({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div id="album" className="show" onClick={onClose}>
-      <div className="modal albumcard" onClick={e => e.stopPropagation()}>
+    <div id="sheet" className="show" onClick={onClose}>
+      <div className="modal vs-card" onClick={e => e.stopPropagation()}>
         <h2>🎙 Les voix de la famille</h2>
-        <div className="albumsub">
+        <div className="vs-sub">
           Papa, maman, mamie… enregistrez un encouragement : c'est VOTRE voix
           qu'elle entendra à la fin de ses parties. Tout reste sur la tablette.
         </div>
         {error && <div className="vs-error">{error}</div>}
-        {store.profiles.map(p => (
+        {/* Tant que le choix de joueuse est masqué, un seul jeu
+            d'encouragements, pour les deux, sans prénom */}
+        {(SHOW_PROFILES ? store.profiles : [{ id: clipOwner(''), name: '' }]).map(p => (
           <div key={p.id} className="vs-block">
-            <div className="vs-name">{p.name}</div>
+            {p.name && <div className="vs-name">{p.name}</div>}
             {SLOTS.map(s => {
               const key = p.id + ':' + s.slot
               const has = !!store.voiceClips[key]

@@ -118,7 +118,7 @@ function pickTile(me: State, btn: HTMLButtonElement, isIntruder: boolean) {
 
 function finish(me: State) {
   const stars = me.score >= me.total - 1 ? 3 : me.score >= me.total - 2 ? 2 : 1
-  ctx.finish({ title: 'Bravo l\'inspectrice !', msg: `${ctx.playerName} a trouvé ${me.score} intrus sur ${me.total}`, stars, starsEarned: stars })
+  ctx.finish({ title: 'Bravo l\'inspectrice !', msg: `Tu as trouvé ${me.score} intrus sur ${me.total}`, stars })
 }
 
 export const intrus: GameDef = {

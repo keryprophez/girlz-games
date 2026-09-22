@@ -143,7 +143,7 @@ function finish(me: State, piquant: boolean) {
   const th = ctx.byTier([30, 15], [42, 21], [56, 28])
   me.game.end({
     title: piquant ? 'Aïe, le piment !' : s.score >= th[0] ? 'Quelle récolte !' : s.score >= th[1] ? 'Récolte rentrée !' : 'La récolte est tombée…',
-    msg: `${ctx.playerName} a marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
+    msg: `Tu as marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
     outroMs: 1200
   })
 }

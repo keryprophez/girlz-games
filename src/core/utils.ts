@@ -1,17 +1,3 @@
-/* La collection de l'album : des NOMS de sprites de la planche animals.
-   L'ordre est l'ordre de déblocage (les animaux de la ferme d'abord). */
-export const COLLECT = [
-  'dog', 'chicken', 'chick', 'pig', 'cow', 'rabbit', 'horse', 'duck',
-  'goat', 'frog', 'owl', 'parrot', 'bear', 'panda', 'monkey', 'penguin',
-  'giraffe', 'zebra', 'elephant', 'whale', 'moose', 'buffalo', 'sloth', 'hippo'
-]
-/** L'ancienne collection (emoji), gardée UNIQUEMENT pour migrer les
-    sauvegardes existantes : l'emoji d'index i devient COLLECT[i]. */
-export const OLD_COLLECT = [
-  '🐕', '🐈', '🐔', '🐤', '🐷', '🐮', '🐑', '🐰', '🐴', '🦆', '🐐', '🦃',
-  '🐝', '🦋', '🐞', '🐌', '🦔', '🐸', '🦉', '🦄', '🐢', '🦊', '🐿️', '🦩'
-]
-
 export function shuffle<T>(a: T[]): T[] {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))

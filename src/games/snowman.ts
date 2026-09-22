@@ -439,8 +439,8 @@ function finish(me: State) {
   const names = ['génial', 'magnifique', 'trop beau', 'super rigolo']
   ctx.finish({
     title: 'Quel beau bonhomme !',
-    msg: `${ctx.playerName} a roulé un bonhomme de neige ${pick(names)}`,
-    stars: 3, starsEarned: 3
+    msg: `Tu as roulé un bonhomme de neige ${pick(names)}`,
+    stars: 3
   })
 }
 

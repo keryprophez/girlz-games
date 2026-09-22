@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useFerme } from '../core/store'
+import { SHOW_PROFILES, useFerme } from '../core/store'
 import { WORLDS } from '../games'
-import { COLLECT } from '../core/utils'
 import { sFlip } from '../core/audio'
-import { Album } from './Album'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
 import type { Tier } from '../core/types'
@@ -16,20 +14,14 @@ const Svg = ({ html, className }: { html: string; className?: string }) =>
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
 const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
 
-/* Le choix de joueuse est MASQUÉ pour l'instant (demande du 10/09) : l'accueil
-   n'est plus qu'une grille de jeux, et la difficulté se choisit dans le jeu.
-   Tout le bloc est gardé tel quel derrière ce drapeau, prêt à revenir. */
-const SHOW_PROFILES = false as boolean
-
 export function Home({ onPlay }: { onPlay: (id: string) => void }) {
   const store = useFerme()
-  const [albumOpen, setAlbumOpen] = useState(false)
   const [voicesOpen, setVoicesOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const photoTarget = useRef<string>('')
 
   const current = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
-  const prog = store.progress[current.id] || { stars: 0, stickers: [], bestStars: {} }
+  const prog = store.progress[current.id] || { bestStars: {} }
 
   const askPhoto = (profileId: string) => {
     photoTarget.current = profileId
@@ -53,14 +45,13 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
     <section className="screen active">
       <div className="brand">
         <h1>La Ferme Magique</h1>
-        <div className="tag">Les jeux de Jade et Joyce ✨</div>
+        <div className="tag">Les jeux de Jade et Joyce</div>
       </div>
 
       {SHOW_PROFILES && (<>
       <div className="seg-label">Qui joue ?</div>
       <div className="profiles">
         {store.profiles.map(p => {
-          const pProg = store.progress[p.id] || { stars: 0, stickers: [], bestStars: {} }
           const sel = p.id === store.currentId
           return (
             <div key={p.id} className={'pcard' + (sel ? ' sel' : '')}
@@ -74,7 +65,6 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
                   onClick={e => { e.stopPropagation(); store.setAvatar(p.id, null) }}>✖</button>
               )}
               <div className="pname">{p.name}</div>
-              <div className="pmeta"><Svg html={ICON.star} className="ico-inline" /> {pProg.stars}</div>
               {sel && (
                 <button className="ptier" onClick={e => { e.stopPropagation(); store.setTier(p.id, NEXT_TIER[p.tier]); sFlip() }}>
                   {TIER_LABEL[p.tier]}
@@ -88,8 +78,6 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
       {SHOW_PROFILES && <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />}
 
       <div className="statrow">
-        <div className="stat"><Svg html={ICON.star} className="ico-inline" /> {prog.stars}</div>
-        <div className="stat"><button onClick={() => setAlbumOpen(true)}><Svg html={ICON.album} className="ico-inline" /> {prog.stickers.length}/{COLLECT.length}</button></div>
         <div className="stat"><button onClick={() => store.toggleSound()}><Svg html={store.sound ? ICON.sound : ICON.mute} /></button></div>
         <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille"><Svg html={ICON.mic} /></button></div>
         <TimerButton />
@@ -114,9 +102,6 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
           </div>
         ))}
       </div>
-      <div className="footnote">La collection de chacune est gardée d'une fois sur l'autre 🌟</div>
-
-      {albumOpen && <Album onClose={() => setAlbumOpen(false)} />}
       {voicesOpen && <VoiceStudio onClose={() => setVoicesOpen(false)} />}
       {adjust && (
         <PhotoAdjust img={adjust.img}
@@ -184,7 +169,7 @@ function PhotoAdjust({ img, onDone, onCancel }: {
   }
 
   return (
-    <div id="album" className="show">
+    <div id="sheet" className="show">
       <div className="modal">
         <h2>📷 Cadre la tête !</h2>
         <p>Zoome et déplace la photo pour que le visage remplisse le rond</p>

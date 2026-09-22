@@ -179,8 +179,8 @@ let tb: State | null = null
       const stars = me.mistakes <= 1 ? 3 : me.mistakes <= 4 ? 2 : 1
       ctx.finish({
         title: op.fillTitle(me.table),
-        msg: `${ctx.playerName} a rempli toute la ligne${me.mistakes ? ` (${me.mistakes} essai${me.mistakes > 1 ? 's' : ''} de trop)` : ' sans se tromper'}`,
-        stars, starsEarned: stars
+        msg: `Tu as rempli toute la ligne${me.mistakes ? ` (${me.mistakes} essai${me.mistakes > 1 ? 's' : ''} de trop)` : ' sans se tromper'}`,
+        stars
       })
       return
     }
@@ -262,8 +262,8 @@ let tb: State | null = null
     const stars = me.mistakes <= 1 ? 3 : me.mistakes <= 4 ? 2 : 1
     ctx.finish({
       title: 'Championne du calcul !',
-      msg: `${ctx.playerName} a tapé ${me.score} résultats`,
-      stars, starsEarned: stars
+      msg: `Tu as tapé ${me.score} résultats`,
+      stars
     })
   }
 
@@ -298,8 +298,8 @@ let tb: State | null = null
     const stars = me.score >= me.totalQ - 1 ? 3 : me.score >= me.totalQ - 3 ? 2 : 1
     ctx.finish({
       title: 'Chasse aux cases terminée !',
-      msg: `${ctx.playerName} a trouvé ${me.score} cases sur ${me.totalQ}`,
-      stars, starsEarned: stars
+      msg: `Tu as trouvé ${me.score} cases sur ${me.totalQ}`,
+      stars
     })
   }
 
@@ -339,8 +339,8 @@ let tb: State | null = null
         if (tb !== me || me.mode !== 'explore') return
         ctx.finish({
           title: 'Belle exploration !',
-          msg: `${ctx.playerName} a découvert ${me.explored} ${op.exploreWord}`,
-          stars: 3, starsEarned: 3
+          msg: `Tu as découvert ${me.explored} ${op.exploreWord}`,
+          stars: 3
         })
       }
       const onKey = (e: KeyboardEvent) => {

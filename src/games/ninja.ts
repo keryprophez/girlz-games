@@ -197,7 +197,7 @@ function finish(me: State, peppered: boolean) {
   const th = ctx.byTier([22, 12], [32, 17], [44, 24])
   me.game.end({
     title: peppered ? 'Aïe, le piment !' : s.score >= th[0] ? 'Sabre d\'or !' : 'Beau tranchage !',
-    msg: `${ctx.playerName} a marqué ${s.score} points` + (s.bestCombo >= 6 ? `, ${s.bestCombo} fruits d'affilée` : ''),
+    msg: `Tu as marqué ${s.score} points` + (s.bestCombo >= 6 ? `, ${s.bestCombo} fruits d'affilée` : ''),
     outroMs: peppered ? 1100 : 700
   })
 }

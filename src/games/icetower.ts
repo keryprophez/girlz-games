@@ -286,7 +286,7 @@ function gameOver(me: State, collapsed: boolean) {
   const best = me.game.s.bestCombo
   me.game.end({
     title: h >= 14 ? 'Tour GÉANTE !' : h >= 7 ? 'Belle tour !' : 'La tour s\'écroule !',
-    msg: `${ctx.playerName} a empilé ${h} blocs de glace` + (best >= 4 ? ` et enchaîné ${Math.floor(best / 2)} parfaits` : ''),
+    msg: `Tu as empilé ${h} blocs de glace` + (best >= 4 ? ` et enchaîné ${Math.floor(best / 2)} parfaits` : ''),
     outroMs: OUTRO_MS
   })
 }

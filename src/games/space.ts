@@ -1,21 +1,38 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $ } from '../core/utils'
-import { sGood, sPop, sWin, tone } from '../core/audio'
+import { shuffle } from '../core/utils'
+import { sGood, sNope, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
+import { ICON } from '../core/icons'
+import { shake } from '../core/juice'
 import {
-  createStage, loader, orbitCam, dotTex, picker, loadModel, type Stage
+  createStage, loader, orbitCam, dotTex, picker, loadModel, type Stage, type T3, type Orbit
 } from '../core/three3d'
+import { particles, toScreen, type Particles } from '../core/scene3d'
 
-/* 🚀 Mon Voyage dans l'Espace, en 3D — un vrai système solaire : des sphères
-   texturées qui tournent autour d'un Soleil qui éclaire tout le monde, les
-   anneaux de Saturne en géométrie, et une fusée qui s'envole vers la planète
-   touchée pendant que la caméra la suit. Zéro quiz : découverte pure, et une
-   merveille racontée à voix haute à chaque arrivée. */
+/* Voyage dans l'Espace, en 3D — un vrai système solaire : des sphères
+   texturées (NASA, Solar System Scope) qui tournent autour d'un Soleil qui
+   éclaire tout le monde, les anneaux de Saturne en géométrie, et une fusée
+   qui s'envole vers la planète touchée pendant que la caméra la suit.
+
+   Repris le 22/09 : c'était le dernier jeu qui faisait LIRE (« Touche une
+   planète : ta fusée s'envole ! », « J'ai mon diplôme ! », compteur en
+   emoji, flèches en texte). Plus un mot de consigne :
+   - une colonne de BILLES-PLANÈTES (les vraies textures, qui tournent) sert
+     à la fois de passeport — elles s'allument une fois visitées — et de
+     raccourci pour les petites planètes dures à viser ;
+   - une lueur pulse autour d'une planète pas encore vue quand on attend :
+     c'est la démonstration du geste ;
+   - on fait tourner le système en glissant le doigt ;
+   - le nom de la planète et sa merveille s'affichent, et la voix les dit
+     (contenu pédagogique, règle 2) ; un haut-parleur les répète.
+   Deux modes, comme le Tour du Monde : Explore (la découverte, jusqu'à la
+   fête des huit planètes) et Trouve (la voix dit une planète, on la cherche ;
+   deuxième essai puis la bonne planète s'illumine — aucune sanction). */
 
 interface Planet {
   id: string; name: string; tex: string
   orbit: number; radius: number; speed: number; tilt: number
-  base: string; bands: string[]; spot?: string
+  base: string
   ring?: [number, number, string]
   clouds?: boolean
   moons?: number
@@ -25,56 +42,130 @@ interface Planet {
 const PLANETS: Planet[] = [
   {
     id: 'mercure', name: 'Mercure', orbit: 2.4, radius: 0.23, speed: 0.30, tilt: 0.02, tex: 'mercury.jpg',
-    base: '#9B8C79', bands: ['#7D705F', '#B4A794', '#6E6252'],
+    base: '#9B8C79',
     fact: 'Mercure ! La plus petite planète, et la plus rapide autour du Soleil. Le jour il y fait super chaud, et la nuit super froid.'
   },
   {
     id: 'venus', name: 'Vénus', orbit: 3.1, radius: 0.34, speed: 0.23, tilt: 0.05, tex: 'venus.jpg',
-    base: '#E8C377', bands: ['#F8E6AE', '#C08A3E', '#FFF0C4', '#D9A44E'],
+    base: '#E8C377',
     fact: 'Vénus ! La planète la plus chaude de toutes, plus chaude qu\'un four, à cause de ses gros nuages tout épais.'
   },
   {
     id: 'terre', name: 'la Terre', orbit: 3.9, radius: 0.38, speed: 0.19, tilt: 0.41, tex: 'earth.jpg',
-    base: '#2E6BA8', bands: [], clouds: true, moons: 1,
+    base: '#2E6BA8', clouds: true, moons: 1,
     fact: 'La Terre, c\'est chez nous ! La seule planète avec de l\'eau bleue, des nuages blancs et plein d\'animaux.'
   },
   {
     id: 'mars', name: 'Mars', orbit: 4.7, radius: 0.29, speed: 0.16, tilt: 0.44, moons: 2, tex: 'mars.jpg',
-    base: '#B4502E', bands: ['#EE9564', '#8E3620', '#D2703F'],
+    base: '#B4502E',
     fact: 'Mars, la planète rouge ! Elle est couverte de poussière rouge, et des petits robots s\'y promènent pour l\'explorer.'
   },
   {
     id: 'jupiter', name: 'Jupiter', orbit: 6.0, radius: 0.88, speed: 0.10, tilt: 0.05, tex: 'jupiter.jpg',
-    base: '#D8B98C', bands: ['#F2D9B4', '#B07A48', '#E6CBA4', '#9C6A3E', '#F6E3C2'], spot: '#C4522F',
+    base: '#D8B98C',
     moons: 3,
     fact: 'Jupiter, la plus GROSSE planète ! Si grande qu\'elle pourrait avaler mille Terres. Elle a une tempête géante toute rouge.'
   },
   {
     id: 'saturne', name: 'Saturne', orbit: 7.3, radius: 0.74, speed: 0.075, tilt: 0.47, tex: 'saturn.jpg',
-    base: '#E2CE9C', bands: ['#F4E6BC', '#C7A45A', '#EFDDAE'], ring: [1.35, 2.35, '#E4D2A4'],
+    base: '#E2CE9C', ring: [1.35, 2.35, '#E4D2A4'],
     fact: 'Saturne et ses magnifiques anneaux ! Ils sont faits de glace et de cailloux qui brillent dans la lumière du Soleil.'
   },
   {
     id: 'uranus', name: 'Uranus', orbit: 8.5, radius: 0.52, speed: 0.055, tilt: 1.71, tex: 'uranus.jpg',
-    base: '#8FD4DC', bands: ['#C4F0F0', '#6BAEC4'], ring: [1.5, 1.9, '#BFE6EC'],
+    base: '#8FD4DC', ring: [1.5, 1.9, '#BFE6EC'],
     fact: 'Uranus ! Elle est couchée sur le côté et roule comme une bille. Brrr, c\'est une planète toute bleue et très très froide.'
   },
   {
     id: 'neptune', name: 'Neptune', orbit: 9.5, radius: 0.50, speed: 0.042, tilt: 0.5, tex: 'neptune.jpg',
-    base: '#2A4FA0', bands: ['#6FA8F0', '#1D3570', '#4C7FD0'],
+    base: '#2A4FA0',
     fact: 'Neptune, la planète la plus loin du Soleil ! Elle est toute bleue, avec les vents les plus rapides de tout le système solaire.'
   }
 ]
 
 const SUN_FACT = 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.'
 
+type Mesh = import('three').Mesh
+type Group = import('three').Group
+type Vec3 = import('three').Vector3
+
+interface PlanetObj {
+  def: Planet
+  grp: Group
+  mesh: Mesh
+  hit: Mesh
+  clouds: Mesh | null
+  moons: { m: Mesh; d: number; s: number; ph: number }[]
+  phase: number
+}
+
+type Mode = 'explore' | 'trouve'
+
+interface State {
+  stage: Stage
+  T: T3
+  fx: Particles
+  planets: PlanetObj[]
+  sun: Mesh
+  sunHit: Mesh
+  glow: import('three').Sprite
+  halo: import('three').Sprite
+  fill: import('three').DirectionalLight
+  rocket: { group: Group; flame: Mesh }
+  orbit: Orbit
+  mode: Mode
+  visited: Set<string>
+  /** La fusée vole vers (ou est posée sur) cette planète. */
+  target: string | null
+  flyT: number
+  arrived: boolean
+  /** Temps simulé du système (les orbites). */
+  t: number
+  /** Secondes sans geste : la lueur de démonstration apparaît après 3 s. */
+  idle: number
+  finaled: boolean
+  quiz: { order: string[]; i: number; tries: number; errors: number; wanted: string | null; lock: boolean }
+  ui: {
+    arena: HTMLElement
+    balls: HTMLElement
+    card: HTMLElement
+    cardName: HTMLElement
+    cardText: HTMLElement
+    ask: HTMLElement
+    askImg: HTMLElement
+    askText: HTMLElement
+    dots: HTMLElement
+    hint: HTMLElement
+    bar: HTMLElement
+  }
+  tmp: Vec3
+  tmp2: Vec3
+  goal: Vec3
+}
+
 let ctx: GameContext
-let S: any = null
+let sp: State | null = null
+
+const base = () => import.meta.env.BASE_URL + 'assets/space/'
+const isSun = (id: string) => id === 'soleil'
+const nameOf = (id: string) => isSun(id) ? 'le Soleil' : PLANETS.find(p => p.id === id)!.name
+const texOf = (id: string) => isSun(id) ? 'sun.jpg' : PLANETS.find(p => p.id === id)!.tex
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+
+/** Retour au système : un soleil et son orbite (pas de flèche à interpréter). */
+const ICON_SYSTEM = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4.6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.6" fill="currentColor"/><circle cx="20.4" cy="14.3" r="1.9" fill="currentColor"/></svg>`
+
+/** Une bille-planète : la vraie texture, qui défile comme une planète qui tourne. */
+function ballHTML(id: string, cls = '') {
+  const ringed = id === 'saturne' || id === 'uranus'
+  return `<span class="sp3-ball ${cls}${ringed ? ' ringed' : ''}${isSun(id) ? ' sun' : ''}" data-id="${id}"
+    style="background-image:url(${base()}${texOf(id)})"></span>`
+}
 
 /* ---------- Textures : de VRAIES images (NASA Blue Marble pour la Terre,
    Solar System Scope CC BY 4.0 pour les autres, voir CREDITS.md) ---------- */
-function realTex(T: any, stage: Stage, file: string) {
-  const t = new T.TextureLoader().load(`${import.meta.env.BASE_URL}assets/space/${file}`)
+function realTex(T: T3, stage: Stage, file: string) {
+  const t = new T.TextureLoader().load(base() + file)
   t.colorSpace = T.SRGBColorSpace
   t.anisotropy = 4
   return stage.keep(t)
@@ -83,7 +174,7 @@ function realTex(T: any, stage: Stage, file: string) {
 /** Anneau : la texture est une bande radiale (transparence incluse) ; on
     recalcule les UV du RingGeometry pour qu'elle s'enroule du bord intérieur
     au bord extérieur. */
-function ringUVs(T: any, geo: any, ri: number, ro: number) {
+function ringUVs(T: T3, geo: import('three').RingGeometry, ri: number, ro: number) {
   const pos = geo.attributes.position, uv = geo.attributes.uv
   const v = new T.Vector3()
   for (let i = 0; i < pos.count; i++) {
@@ -93,11 +184,10 @@ function ringUVs(T: any, geo: any, ri: number, ro: number) {
   uv.needsUpdate = true
 }
 
-function cloudTex(T: any) {
+function cloudTex(T: T3) {
   const c = document.createElement('canvas')
   c.width = 512; c.height = 256
   const g = c.getContext('2d')!
-  g.clearRect(0, 0, 512, 256)
   for (let i = 0; i < 130; i++) {
     const x = Math.random() * 512, y = 20 + Math.random() * 216
     const r = 8 + Math.random() * 30
@@ -113,7 +203,23 @@ function cloudTex(T: any) {
   return t
 }
 
-async function makeRocket(T: any) {
+/** Un anneau lumineux doux : la lueur qui montre « touche-moi ». */
+function haloTex(T: T3) {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(64, 64, 34, 64, 64, 62)
+  grad.addColorStop(0, 'rgba(255,255,255,0)')
+  grad.addColorStop(0.55, 'rgba(255,236,170,.95)')
+  grad.addColorStop(1, 'rgba(255,236,170,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return t
+}
+
+async function makeRocket(T: T3) {
   const stackParts = await Promise.all(
     ['rocket_baseA', 'rocket_fuelA', 'rocket_topA'].map(n => loadModel('space', n))
   )
@@ -126,80 +232,170 @@ async function makeRocket(T: any) {
     h += box.getSize(v).y
     stack.add(p)
   }
-  // Même gabarit que l'ancienne fusée (~0.6 unité), origine au CENTRE :
-  // la navigation fait lookAt + rotateX(π/2) sur cette origine-là
-  const k = 0.62 / h
-  stack.scale.setScalar(k)
+  // ~0.6 unité, origine au CENTRE : la navigation fait lookAt + rotateX(π/2)
+  stack.scale.setScalar(0.62 / h)
   stack.position.y = -0.31
-  const g = new T.Group()
+  const group = new T.Group()
   const flame = new T.Mesh(
     new T.ConeGeometry(0.06, 0.22, 12),
     new T.MeshBasicMaterial({ color: 0xFFB03A, transparent: true, opacity: 0.9 })
   )
   flame.position.y = -0.36
   flame.rotation.x = Math.PI
-  g.add(stack, flame)
-  return { group: g, flame }
+  group.add(stack, flame)
+  return { group, flame }
 }
 
-/* ---------- Navigation ---------- */
-function planetPos(p: any, t: number, out: any) {
+/* ---------- Le système ---------- */
+function planetPos(p: PlanetObj, t: number, out: Vec3) {
   const a = p.phase + t * p.def.speed
-  out.set(Math.sin(a) * p.def.orbit, 0, Math.cos(a) * p.def.orbit)
-  return out
+  return out.set(Math.sin(a) * p.def.orbit, 0, Math.cos(a) * p.def.orbit)
 }
 
-function visit(id: string) {
-  if (!S || S.busy) return
-  S.busy = true
-  S.target = id
-  S.flyT = 0
+function bodyPos(me: State, id: string, out: Vec3): number {
+  if (isSun(id)) { out.set(0, 0, 0); return 0.92 }
+  const p = me.planets.find(x => x.def.id === id)!
+  out.copy(p.grp.position)
+  return p.def.radius
+}
+
+/* ---------- Explore ---------- */
+function fly(me: State, id: string) {
+  me.target = id
+  me.flyT = 0
+  me.arrived = false
+  me.idle = 0
+  me.ui.card.classList.add('off')
+  me.ui.hint.classList.add('off')
   tone(300, 0.18, 'sawtooth', 0.06)
   tone(520, 0.16, 'sine', 0.07, 0.12)
-  $('spFactBox').style.display = 'none'
+  markBalls(me)
 }
 
-function arrive() {
-  const id = S.target
-  const p = id === 'soleil' ? null : S.planets.find((x: any) => x.def.id === id)
-  const name = p ? p.def.name : 'le Soleil'
-  const fact = p ? p.def.fact : SUN_FACT
-  const isNew = !!p && !S.visited.has(id)
-  if (isNew) { S.visited.add(id); sGood(); FX.fireworks?.() } else sPop()
-  $('spFactName').innerHTML = `${p ? '' : '☀️ '}${name}${isNew ? ' <span class="sp3-new">Nouveau !</span>' : ''}`
-  $('spFactText').textContent = fact
-  $('spFactBox').style.display = ''
+function arrive(me: State) {
+  const id = me.target!
+  me.arrived = true
+  const r = bodyPos(me, id, me.tmp)
+  me.fx.burst(me.tmp, { count: 26, color: ['#FFE08A', '#FFFFFF', isSun(id) ? '#FFB13A' : me.planets.find(p => p.def.id === id)!.def.base], speed: 1.4 + r, spread: 1, life: 0.9, size: 0.5, gravity: 0 })
+  if (me.mode === 'trouve') return
+  const isNew = !isSun(id) && !me.visited.has(id)
+  if (isNew) { me.visited.add(id); sGood() } else sPop()
+  const fact = isSun(id) ? SUN_FACT : PLANETS.find(p => p.id === id)!.fact
+  me.ui.cardName.textContent = cap(nameOf(id))
+  me.ui.cardName.classList.toggle('new', isNew)
+  me.ui.cardText.textContent = fact
+  me.ui.card.classList.remove('off')
+  me.ui.card.classList.toggle('last', me.visited.size >= PLANETS.length && !me.finaled)
   ctx.say(fact)
-  updatePassport()
+  markBalls(me)
 }
 
-function back() {
-  if (!S) return
-  S.busy = false
-  S.target = null
-  S.flyT = 0
-  $('spFactBox').style.display = 'none'
+function home(me: State) {
+  me.target = null
+  me.flyT = 0
+  me.arrived = false
+  me.idle = 0
+  me.ui.card.classList.add('off')
   sPop()
-  if (S.visited.size >= PLANETS.length && !S.finaled) finale()
+  markBalls(me)
+  if (me.mode === 'explore' && me.visited.size >= PLANETS.length && !me.finaled) finale(me)
 }
 
-function updatePassport() {
-  $('spCount').textContent = `🚀 ${S.visited.size}/8`
-  for (const p of PLANETS) {
-    $('spDot_' + p.id)?.classList.toggle('on', S.visited.has(p.id))
+function markBalls(me: State) {
+  me.ui.balls.querySelectorAll<HTMLElement>('.sp3-ball').forEach(b => {
+    const id = b.dataset.id!
+    b.classList.toggle('seen', isSun(id) || me.visited.has(id))
+    b.classList.toggle('here', me.target === id)
+  })
+}
+
+/** Les huit planètes vues : le système s'illumine, puis l'écran de fin. */
+function finale(me: State) {
+  me.finaled = true
+  sWin(); confetti(); FX.fireworks?.()
+  me.ui.balls.classList.add('party')
+  for (const p of me.planets) me.fx.burst(p.grp.position, { count: 18, color: ['#FFE08A', '#FFFFFF', p.def.base], speed: 1.6, life: 1.2, size: 0.45, gravity: 0 })
+  ctx.say('Bravo ! Tu as visité les huit planètes de la famille du Soleil.')
+  ctx.finish({ title: 'Astronaute diplômée !', msg: 'Tu as visité les huit planètes', stars: 3, outroMs: 3200 })
+}
+
+/* ---------- Trouve ---------- */
+function nextQuestion(me: State) {
+  const q = me.quiz
+  q.tries = 0
+  q.lock = false
+  if (q.i >= q.order.length) { quizEnd(me); return }
+  const id = q.order[q.i]
+  q.wanted = id
+  // En douce on MONTRE la planète cherchée (on la reconnaît à son allure) ;
+  // ensuite il faut la retrouver d'après son nom
+  me.ui.askImg.innerHTML = ctx.tier === 'easy' ? ballHTML(id, 'big') : ''
+  me.ui.askText.textContent = cap(nameOf(id))
+  me.ui.ask.classList.remove('off')
+  me.ui.dots.querySelectorAll('i').forEach((d, k) => d.classList.toggle('cur', k === q.i))
+  ctx.say(cap(nameOf(id)))
+}
+
+function answer(me: State, id: string) {
+  const q = me.quiz
+  if (q.lock || !q.wanted) return
+  if (id === q.wanted) {
+    q.lock = true
+    sGood()
+    me.ui.dots.querySelectorAll('i')[q.i]?.classList.add('ok')
+    fly(me, id)
+    ctx.after(2600, () => { if (sp !== me) return; home(me); q.i++; ctx.after(700, () => sp === me && nextQuestion(me)) })
+    return
+  }
+  // Mauvaise planète : on dit laquelle on a touchée (c'est du contenu, ça
+  // apprend), la carte tremble ; au deuxième essai la bonne s'illumine
+  q.tries++
+  q.errors++
+  sNope()
+  shake(me.ui.ask, 6, 300)
+  ctx.say(cap(nameOf(id)))
+  if (q.tries >= 2) {
+    q.lock = true
+    ctx.after(1100, () => {
+      if (sp !== me) return
+      ctx.say(cap(nameOf(q.wanted!)))
+      fly(me, q.wanted!)
+      ctx.after(2800, () => { if (sp !== me) return; home(me); q.i++; ctx.after(700, () => sp === me && nextQuestion(me)) })
+    })
   }
 }
 
-function finale() {
-  S.finaled = true
-  S.busy = true
-  sWin(); confetti(); FX.fireworks?.()
-  $('spFactName').innerHTML = '🚀 Bravo, astronaute !'
-  $('spFactText').textContent = `${ctx.playerName} a visité toute la famille du Soleil ! 🌍🪐✨`
-  $('spFactBox').style.display = ''
-  ;($('spBack') as HTMLElement).style.display = 'none'
-  ;($('spDiploma') as HTMLElement).style.display = ''
-  ctx.say(`Bravo astronaute ${ctx.playerName} ! Tu as visité les huit planètes de la famille du Soleil. Tu es une vraie exploratrice de l'espace !`)
+function quizEnd(me: State) {
+  me.ui.ask.classList.add('off')
+  const n = me.quiz.order.length, e = me.quiz.errors
+  const stars = e <= 1 ? 3 : e <= 4 ? 2 : 1
+  if (stars === 3) { sWin(); confetti() }
+  ctx.finish({ title: stars === 3 ? 'Astronaute experte !' : 'Belle mission !', msg: `Tu as retrouvé ${n} planètes`, stars, outroMs: 600 })
+}
+
+function setMode(me: State, m: Mode) {
+  if (me.mode === m) return
+  me.mode = m
+  me.ui.bar.querySelectorAll<HTMLElement>('[data-mode]').forEach(b => {
+    const on = b.dataset.mode === m
+    b.classList.toggle('on', on)
+    b.parentElement!.classList.toggle('sel', on)
+  })
+  me.target = null
+  me.arrived = false
+  me.ui.card.classList.add('off')
+  me.ui.balls.classList.toggle('off', m === 'trouve') // les billes donneraient la réponse
+  sPop()
+  if (m === 'trouve') {
+    const n = ctx.byTier(5, 8, 8)
+    me.quiz = { order: shuffle(PLANETS.map(p => p.id)).slice(0, n), i: 0, tries: 0, errors: 0, wanted: null, lock: false }
+    me.ui.dots.innerHTML = Array.from({ length: n }, () => '<i></i>').join('')
+    ctx.after(500, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
+  } else {
+    me.quiz.wanted = null
+    me.ui.ask.classList.add('off')
+  }
+  markBalls(me)
 }
 
 export const space: GameDef = {
@@ -208,29 +404,10 @@ export const space: GameDef = {
   mount(c) {
     ctx = c
     let dead = false
-    c.root.innerHTML = `
-      <div class="topbar">
-        <div class="chip" id="spCount">🚀 0/8</div>
-        <button class="chip" id="spLeft">◀</button>
-        <button class="chip" id="spRight">▶</button>
-      </div>
-      <div class="arena g3-arena sp3-arena" id="spArena">
-        <div class="hint g3-hint" id="spHint">Touche une planète : ta fusée s'envole ! 🚀</div>
-      </div>
-      <div class="sp3-passport" id="spPassport">
-        ${PLANETS.map(p => `<span class="sp3-dot" id="spDot_${p.id}" style="background:${p.base}"></span>`).join('')}
-      </div>
-      <div class="g3-bar sp3-fact" id="spFactBox" style="display:none">
-        <div class="sp3-name" id="spFactName"></div>
-        <div class="sp3-text" id="spFactText"></div>
-        <div class="g3-row">
-          <button class="g3-btn" id="spBack">🚀 Continuer</button>
-          <button class="g3-btn" id="spDiploma" style="display:none">🌟 J'ai mon diplôme !</button>
-        </div>
-      </div>`
-
-    const arena = $('spArena')
+    c.root.innerHTML = `<div class="arena g3-arena sp3-arena" id="spArena"></div>`
+    const arena = c.root.querySelector<HTMLElement>('#spArena')!
     const hideLoader = loader(arena, '🚀')
+    const cleanups: (() => void)[] = []
 
     ;(async () => {
       const stage: Stage = await createStage(arena, {
@@ -240,7 +417,6 @@ export const space: GameDef = {
         noSun: true, exposure: 1.0
       })
       if (dead) { stage.dispose(); return }
-      hideLoader()
       const T = stage.T
       const scene = stage.scene
 
@@ -273,8 +449,7 @@ export const space: GameDef = {
       }))
       glow.scale.setScalar(3.6)
       scene.add(glow)
-      const sunLight = new T.PointLight(0xFFF0D0, 260, 46, 2)
-      scene.add(sunLight)
+      scene.add(new T.PointLight(0xFFF0D0, 260, 46, 2))
       // Appoint depuis la caméra : sans lui, les planètes du premier plan sont
       // vues côté nuit — c'est juste physiquement, mais inregardable à 6 ans.
       const fill = new T.DirectionalLight(0xB8CCFF, 0.75)
@@ -291,7 +466,7 @@ export const space: GameDef = {
       }
 
       /* --- Les planètes --- */
-      const planets = PLANETS.map((def, i) => {
+      const planets: PlanetObj[] = PLANETS.map((def, i) => {
         const grp = new T.Group()
         const mesh = new T.Mesh(
           new T.SphereGeometry(def.radius, 40, 28),
@@ -299,27 +474,24 @@ export const space: GameDef = {
         )
         mesh.rotation.z = def.tilt
         grp.add(mesh)
+        let clouds: Mesh | null = null
         if (def.clouds) {
-          const cl = new T.Mesh(
+          clouds = new T.Mesh(
             new T.SphereGeometry(def.radius * 1.03, 32, 22),
             new T.MeshStandardMaterial({
               map: stage.keep(cloudTex(T)), transparent: true, opacity: 0.45, roughness: 1, depthWrite: false
             })
           )
-          cl.rotation.z = def.tilt
-          grp.add(cl)
-          grp.userData.clouds = cl
+          clouds.rotation.z = def.tilt
+          grp.add(clouds)
         }
         if (def.ring) {
           const [ri, ro, col] = def.ring
           const rgeo = new T.RingGeometry(def.radius * ri, def.radius * ro, 96, 1)
           ringUVs(T, rgeo, def.radius * ri, def.radius * ro)
-          const rg = new T.Mesh(
-            rgeo,
-            new T.MeshBasicMaterial({
-              map: realTex(T, stage, 'saturn_ring.png'), color: col, transparent: true, side: T.DoubleSide, depthWrite: false
-            })
-          )
+          const rg = new T.Mesh(rgeo, new T.MeshBasicMaterial({
+            map: realTex(T, stage, 'saturn_ring.png'), color: col, transparent: true, side: T.DoubleSide, depthWrite: false
+          }))
           // L'anneau est dans le plan équatorial : une seule inclinaison, portée par le holder
           rg.rotation.x = -Math.PI / 2 + 0.02
           const holder = new T.Group()
@@ -327,8 +499,8 @@ export const space: GameDef = {
           holder.add(rg)
           grp.add(holder)
         }
-        // Lunes : de simples cailloux gris qui tournent
-        const moons: any[] = []
+        // Lunes : de simples cailloux gris qui tournent (la Lune a sa vraie texture)
+        const moons: PlanetObj['moons'] = []
         for (let k = 0; k < (def.moons || 0); k++) {
           const m = new T.Mesh(
             new T.SphereGeometry(def.radius * (0.14 + k * 0.03), 14, 12),
@@ -341,129 +513,200 @@ export const space: GameDef = {
         }
         // Zone tapable généreuse : les petites planètes sont dures à viser
         const hit = new T.Mesh(
-          new T.SphereGeometry(Math.max(def.radius * 1.55, 0.42), 12, 10),
+          new T.SphereGeometry(Math.max(def.radius * 1.55, 0.5), 12, 10),
           new T.MeshBasicMaterial({ visible: false })
         )
         hit.userData.pid = def.id
         grp.add(hit)
         scene.add(grp)
-        return { def, grp, mesh, hit, moons, phase: (i * 2.1) % (Math.PI * 2) }
+        return { def, grp, mesh, hit, clouds, moons, phase: (i * 2.1) % (Math.PI * 2) }
       })
 
-      const sunHit = new T.Mesh(
-        new T.SphereGeometry(1.25, 14, 12),
-        new T.MeshBasicMaterial({ visible: false })
-      )
+      const sunHit = new T.Mesh(new T.SphereGeometry(1.25, 14, 12), new T.MeshBasicMaterial({ visible: false }))
       sunHit.userData.pid = 'soleil'
       scene.add(sunHit)
+
+      const halo = new T.Sprite(new T.SpriteMaterial({
+        map: stage.keep(haloTex(T)), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0
+      }))
+      scene.add(halo)
 
       const rocket = await makeRocket(T)
       if (dead) { stage.dispose(); return }
       rocket.group.position.set(2.9, 3.1, 7.2)
       scene.add(rocket.group)
+      hideLoader()
 
-      S = {
-        stage, planets, rocket, sun, glow, sunLight, fill, visited: new Set<string>(),
-        busy: false, target: null, flyT: 0, t: 0, finaled: false,
+      /* --- L'interface, sans un mot de consigne --- */
+      const bar = document.createElement('div')
+      bar.className = 'geo-bar'
+      const modeBtn = (m: Mode, icon: string, capTxt: string, on = false) =>
+        `<span class="tool-item${on ? ' sel' : ''}">
+           <button class="geo-btn${on ? ' on' : ''}" data-mode="${m}" aria-label="${capTxt}">${icon}</button>
+           <i class="tool-cap">${capTxt}</i></span>`
+      bar.innerHTML = modeBtn('explore', ICON.search, 'Explore', true) + modeBtn('trouve', ICON.target, 'Trouve')
+      const balls = document.createElement('div')
+      balls.className = 'sp3-balls'
+      balls.innerHTML = ['soleil', ...PLANETS.map(p => p.id)].map(id => `<button class="sp3-pick" data-id="${id}" aria-label="${nameOf(id)}">${ballHTML(id)}</button>`).join('')
+      const card = document.createElement('div')
+      card.className = 'sp3-card off'
+      card.innerHTML = `<div class="sp3-cardhead"><b class="sp3-name"></b>
+          <button class="geo-again sp3-again" aria-label="Réécouter">${ICON.sound}</button></div>
+        <p class="sp3-text"></p>
+        <button class="sp3-home" aria-label="Retour au système">${ICON_SYSTEM}</button>`
+      const ask = document.createElement('div')
+      ask.className = 'geo-ask sp3-ask off'
+      ask.innerHTML = `<span class="sp3-askimg"></span><b class="geo-asktext"></b>
+        <button class="geo-say" aria-label="Réécouter">${ICON.sound}</button><span class="geo-dots"></span>`
+      const hint = document.createElement('div')
+      hint.className = 'tap-hint sp3-hint'
+      hint.innerHTML = ICON.tap
+      arena.append(bar, balls, card, ask, hint)
+
+      const me: State = {
+        stage, T, fx: particles(stage, 400), planets, sun, sunHit, glow, halo, fill, rocket,
         orbit: orbitCam(stage, 19, 9.5, [0, 0, 0]),
-        tmp: new T.Vector3(), tmp2: new T.Vector3()
+        mode: 'explore', visited: new Set(), target: null, flyT: 0, arrived: false, t: 0, idle: 0, finaled: false,
+        quiz: { order: [], i: 0, tries: 0, errors: 0, wanted: null, lock: false },
+        ui: {
+          arena, balls, card, bar, hint, ask,
+          cardName: card.querySelector('.sp3-name')!, cardText: card.querySelector('.sp3-text')!,
+          askImg: ask.querySelector('.sp3-askimg')!, askText: ask.querySelector('.geo-asktext')!,
+          dots: ask.querySelector('.geo-dots')!
+        },
+        tmp: new T.Vector3(), tmp2: new T.Vector3(), goal: new T.Vector3()
       }
-      updatePassport()
+      sp = me
+      markBalls(me)
 
-      /* --- Toucher une planète --- */
+      /* --- Gestes : taper une planète, glisser pour tourner le système --- */
       const pick = picker(stage)
-      const onTap = (e: PointerEvent) => {
-        if (!S || S.busy) return
+      const cv = stage.renderer.domElement
+      let down: { x: number; y: number; moved: boolean } | null = null
+      const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY, moved: false }; me.idle = 0 }
+      const onMove = (e: PointerEvent) => {
+        if (!down) return
+        const dx = e.clientX - down.x
+        if (!down.moved && Math.abs(dx) + Math.abs(e.clientY - down.y) > 10) down.moved = true
+        if (down.moved) { me.orbit.turn(-dx * 0.006); down.x = e.clientX; down.y = e.clientY; me.ui.hint.classList.add('off') }
+      }
+      const onUp = (e: PointerEvent) => {
+        const d = down
+        down = null
+        if (!d || d.moved || me.finaled) return
         const hits = pick(e, [...planets.map(p => p.hit), sunHit])
-        if (!hits.length) return
-        let o: any = hits[0].object
+        let o: import('three').Object3D | null = hits[0]?.object ?? null
         while (o && !o.userData.pid) o = o.parent
-        if (o?.userData.pid) {
-          visit(o.userData.pid)
-          $('spHint').style.opacity = '0'
-        }
+        const id = o?.userData.pid as string | undefined
+        if (me.mode === 'trouve') { if (id) answer(me, id); return }
+        if (id) fly(me, id)
+        else if (me.target && me.arrived) home(me) // taper le ciel : on rentre
       }
-      stage.renderer.domElement.addEventListener('pointerdown', onTap)
+      cv.addEventListener('pointerdown', onDown)
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
 
-      $('spLeft').onclick = () => { S?.orbit.turn(-0.5); sPop() }
-      $('spRight').onclick = () => { S?.orbit.turn(0.5); sPop() }
-      $('spBack').onclick = () => back()
-      $('spDiploma').onclick = () => {
-        ctx.finish({
-          title: 'Astronaute diplômée ! 🚀',
-          msg: `${ctx.playerName} a exploré tout le système solaire 🪐✨`,
-          stars: 3, starsEarned: 3
-        })
-      }
+      balls.addEventListener('click', e => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>('.sp3-pick')
+        if (!b || me.finaled || me.mode !== 'explore') return
+        fly(me, b.dataset.id!)
+      })
+      card.querySelector<HTMLElement>('.sp3-home')!.onclick = () => home(me)
+      card.querySelector<HTMLElement>('.sp3-again')!.onclick = () => { if (me.target) ctx.say(me.ui.cardText.textContent || '') }
+      ask.querySelector<HTMLElement>('.geo-say')!.onclick = () => { if (me.quiz.wanted) ctx.say(cap(nameOf(me.quiz.wanted))) }
+      bar.addEventListener('click', e => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>('[data-mode]')
+        if (b && !me.finaled) setMode(me, b.dataset.mode as Mode)
+      })
 
       // Contenu (pas consigne) : le Soleil et les planètes, c'est la leçon
-      ctx.say('Voici le Soleil, une étoile géante. Autour de lui vivent huit planètes.')
+      ctx.say('Voici le Soleil, une étoile géante. Autour de lui tournent huit planètes.')
 
       /* --- Boucle --- */
-      const goal = new T.Vector3()
       stage.start((dt, now) => {
-        if (!S) return
+        if (sp !== me) return
+        me.idle += dt
         // Le système ralentit pendant une visite : on regarde tranquillement
-        S.t += dt * (S.busy ? 0.15 : 1)
-
-        for (const p of S.planets) {
-          planetPos(p, S.t, p.grp.position)
+        me.t += dt * (me.target ? 0.15 : 1)
+        for (const p of me.planets) {
+          planetPos(p, me.t, p.grp.position)
           p.mesh.rotation.y += dt * 0.35
-          if (p.grp.userData.clouds) p.grp.userData.clouds.rotation.y += dt * 0.24
+          if (p.clouds) p.clouds.rotation.y += dt * 0.24
           for (const mo of p.moons) {
-            const a = mo.ph + S.t * mo.s * 2.4
+            const a = mo.ph + me.t * mo.s * 2.4
             mo.m.position.set(Math.cos(a) * mo.d, Math.sin(a) * mo.d * 0.3, Math.sin(a) * mo.d)
           }
         }
-        S.sun.rotation.y += dt * 0.05
-        S.glow.scale.setScalar(3.6 + Math.sin(now / 900) * 0.18)
+        me.sun.rotation.y += dt * 0.05
+        me.glow.scale.setScalar(3.6 + Math.sin(now / 900) * 0.18)
 
-        // Cible de la fusée et de la caméra
-        if (S.target) {
-          const p = S.target === 'soleil' ? null : S.planets.find((x: any) => x.def.id === S.target)
-          const rad = p ? p.def.radius : 0.92
-          goal.copy(p ? p.grp.position : S.sun.position)
-          const near = Math.max(1.1, rad * 3.4)
-          S.orbit.look = [goal.x, goal.y, goal.z]
-          S.orbit.dist = near
-          S.orbit.height = rad * 0.9
-          S.orbit.auto = 0.22
-          // La fusée se pose à côté
-          const rp = S.rocket.group.position
-          const want = S.tmp.copy(goal)
-          want.x += rad * 1.5; want.y += rad * 0.5; want.z += rad * 1.5
-          rp.lerp(want, Math.min(1, dt * 2.2))
-          S.rocket.group.lookAt(goal)
-          S.rocket.group.rotateX(Math.PI / 2)
-          S.flyT += dt
-          if (S.flyT > 1.1 && !S.arrived) { S.arrived = true; arrive() }
+        // La démonstration : après 3 s sans geste, une lueur pulse autour
+        // d'une planète pas encore vue (en Trouve, jamais : ce serait la réponse)
+        // La plus grosse d'abord : Mercure, collée au Soleil, est la plus dure à viser
+        const suggest = me.mode === 'explore' && !me.target && me.idle > 3
+          ? me.planets.filter(p => !me.visited.has(p.def.id)).sort((x, y) => y.def.radius - x.def.radius)[0] : undefined
+        const hm = me.halo.material
+        if (suggest) {
+          me.halo.position.copy(suggest.grp.position)
+          const pulse = 0.5 + 0.5 * Math.sin(now / 260)
+          me.halo.scale.setScalar(Math.max(1.2, suggest.def.radius * 4.2) * (1 + pulse * 0.18))
+          hm.opacity = Math.min(1, hm.opacity + dt * 2) * (0.55 + pulse * 0.45)
+          // La main se pose SUR la planète suggérée, tant qu'on n'a rien visité
+          const showHand = me.visited.size === 0
+          me.ui.hint.classList.toggle('off', !showHand)
+          if (showHand) {
+            const sc = toScreen(stage, suggest.grp.position), ar = arena.getBoundingClientRect()
+            me.ui.hint.style.left = sc.x - ar.left + 'px'
+            me.ui.hint.style.top = sc.y - ar.top + 14 + 'px'
+          }
         } else {
-          S.arrived = false
-          S.orbit.look = [0, 0, 0]
-          S.orbit.dist = 19
-          S.orbit.height = 9.5
-          S.orbit.auto = 0.035
-          const rp = S.rocket.group.position
-          rp.lerp(S.tmp2.set(2.9, 3.1, 7.2), Math.min(1, dt * 1.6))
-          S.rocket.group.rotation.set(0, now / 2600, 0)
+          hm.opacity = Math.max(0, hm.opacity - dt * 4)
+          me.ui.hint.classList.add('off')
         }
-        S.rocket.flame.scale.setScalar(0.7 + Math.sin(now / 45) * 0.25)
-        S.orbit.update(dt)
-        S.fill.position.copy(stage.camera.position)
+        me.ui.balls.querySelectorAll<HTMLElement>('.sp3-ball').forEach(b => b.classList.toggle('wink', b.dataset.id === suggest?.def.id))
+
+        if (me.target) {
+          const rad = bodyPos(me, me.target, me.goal)
+          const near = Math.max(1.3, rad * 3.4)
+          me.orbit.look = [me.goal.x, me.goal.y, me.goal.z]
+          me.orbit.dist = near
+          me.orbit.height = rad * 0.9
+          me.orbit.auto = 0.22
+          // La fusée se pose à côté
+          const want = me.tmp2.copy(me.goal)
+          want.x += rad * 1.5 + 0.3; want.y += rad * 0.5; want.z += rad * 1.5 + 0.3
+          me.rocket.group.position.lerp(want, Math.min(1, dt * 2.2))
+          me.rocket.group.lookAt(me.goal)
+          me.rocket.group.rotateX(Math.PI / 2)
+          me.flyT += dt
+          if (me.flyT > 1.1 && !me.arrived) arrive(me)
+        } else {
+          me.orbit.look = [0, 0, 0]
+          me.orbit.dist = me.finaled ? 23 : 19
+          me.orbit.height = me.finaled ? 12 : 9.5
+          me.orbit.auto = me.finaled ? 0.3 : 0.035
+          me.rocket.group.position.lerp(me.tmp2.set(2.9, 3.1, 7.2), Math.min(1, dt * 1.6))
+          me.rocket.group.rotation.set(0, now / 2600, 0)
+        }
+        me.rocket.flame.scale.setScalar(0.7 + Math.sin(now / 45) * 0.25)
+        me.orbit.update(dt)
+        me.fill.position.copy(stage.camera.position)
+        me.fx.update(dt)
       })
 
-      S.cleanup = () => {
-        stage.renderer.domElement.removeEventListener('pointerdown', onTap)
+      cleanups.push(() => {
+        cv.removeEventListener('pointerdown', onDown)
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        me.fx.dispose()
         stage.dispose()
-      }
-    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici 😕') })
+      })
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici') })
 
     return () => {
       dead = true
-      if (S) {
-        try { S.cleanup?.() } catch { /* déjà démonté */ }
-        S = null
-      }
+      sp = null
+      cleanups.splice(0).forEach(f => { try { f() } catch { /* déjà démonté */ } })
     }
   }
 }

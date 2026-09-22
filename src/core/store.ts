@@ -3,15 +3,19 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
 import type { Look } from './character'
-import { COLLECT, OLD_COLLECT } from './utils'
 import { setSound } from './audio'
+
+/* Le choix de joueuse est MASQUÉ pour l'instant (demande du 10/09) : l'accueil
+   n'est plus qu'une grille de jeux. Tout le bloc de Home.tsx est gardé derrière
+   ce drapeau, prêt à revenir. Tant qu'il est à false, personne n'est nommé :
+   GameHost passe un prénom vide aux jeux (sinon Joyce s'appelait Jade). */
+export const SHOW_PROFILES = false as boolean
 
 interface FermeState {
   profiles: Profile[]
   currentId: string
   progress: Record<string, Progress>
   sound: boolean
-  /** Mode grand écran mémorisé : chaque jeu se monte directement à la bonne taille. */
   /** Minuteur parental : timestamp de fin de jeu (null = pas de minuteur). */
   timerEnd: number | null
   setTimerEnd(t: number | null): void
@@ -30,11 +34,12 @@ interface FermeState {
   voiceClips: Record<string, string>
   setVoiceClip(key: string, dataUrl: string): void
   toggleSound(): void
-  /** Ajoute les étoiles gagnées et débloque éventuellement un sticker. Renvoie le sticker débloqué. */
-  reward(gameId: string, starsEarned: number, stars: number, profileId?: string): string | null
+  /** Retient la meilleure note du jeu (affichée sous sa tuile). Rien d'autre :
+      ni total d'étoiles ni autocollants à débloquer (règle 1). */
+  recordBest(gameId: string, stars: number, profileId?: string): void
 }
 
-const emptyProgress = (): Progress => ({ stars: 0, stickers: [], bestStars: {}, adapt: {} })
+const emptyProgress = (): Progress => ({ bestStars: {} })
 
 export const useFerme = create<FermeState>()(
   persist(
@@ -88,32 +93,12 @@ export const useFerme = create<FermeState>()(
         setSound(on)
         set({ sound: on })
       },
-      reward(gameId, starsEarned, stars, profileId) {
+      recordBest(gameId, stars, profileId) {
         const s = get()
         const id = profileId || s.currentId
         const prog = s.progress[id] || emptyProgress()
-        let newSticker: string | null = null
-        const stickers = [...prog.stickers]
-        if (stars >= 2) {
-          const locked = COLLECT.find(e => !stickers.includes(e))
-          if (locked) { stickers.push(locked); newSticker = locked }
-        }
-        const bestStars = { ...prog.bestStars }
-        bestStars[gameId] = Math.max(bestStars[gameId] || 0, stars)
-        // Difficulté qui s'adapte en silence : 3 ⭐ pousse vers le vif (+0.5),
-        // 1 ⭐ vers le doux (−0.5), 2 ⭐ ramène vers le réglage de base (±0.25).
-        // Le décalage effectif (arrondi, ±1 cran max) est appliqué par GameHost.
-        const adapt = { ...(prog.adapt || {}) }
-        const cur = adapt[gameId] || 0
-        adapt[gameId] = Math.max(-1, Math.min(1,
-          stars >= 3 ? cur + 0.5 : stars <= 1 ? cur - 0.5 : cur - Math.sign(cur) * 0.25))
-        set({
-          progress: {
-            ...s.progress,
-            [id]: { stars: prog.stars + starsEarned, stickers, bestStars, adapt }
-          }
-        })
-        return newSticker
+        if ((prog.bestStars[gameId] || 0) >= stars) return
+        set({ progress: { ...s.progress, [id]: { bestStars: { ...prog.bestStars, [gameId]: stars } } } })
       }
     }),
     {
@@ -123,24 +108,16 @@ export const useFerme = create<FermeState>()(
       onRehydrateStorage: () => state => {
         if (!state) return
         setSound(state.sound)
-        // Migration : les stickers étaient des emoji, ils deviennent des noms
-        // de sprites (même index → même rang de déblocage, rien n'est perdu)
+        // Le 22/09 l'album d'autocollants, le total d'étoiles et la difficulté
+        // adaptative sont sortis : on ne garde que les meilleures notes
         const prog = state.progress || {}
         let dirty = false
         const next: typeof prog = {}
         for (const [id, p] of Object.entries(prog)) {
-          if (p?.stickers?.some(s => OLD_COLLECT.includes(s))) {
-            dirty = true
-            next[id] = {
-              ...p,
-              stickers: p.stickers.map(s => {
-                const i = OLD_COLLECT.indexOf(s)
-                return i >= 0 ? COLLECT[i] : s
-              })
-            }
-          } else next[id] = p
+          if (p && Object.keys(p).some(k => k !== 'bestStars')) dirty = true
+          next[id] = { bestStars: p?.bestStars || {} }
         }
-        if (dirty) setTimeout(() => useFerme.setState({ progress: next }), 0)
+        if (dirty) queueMicrotask(() => useFerme.setState({ progress: next }))
       }
     }
   )

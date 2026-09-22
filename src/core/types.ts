@@ -3,8 +3,8 @@ export type Tier = 'easy' | 'med' | 'exp'
 export interface FinishPayload {
   title: string
   msg: string
+  /** Simple retour de fin de partie (règle 1) : rien ne s'accumule. */
   stars: 1 | 2 | 3
-  starsEarned: number
   /** Outro : le jeu reste monté ce temps-là (ralenti, chute, caméra qui
       recule…) avant l'écran de résultat. 0 = tout de suite. */
   outroMs?: number
@@ -15,6 +15,9 @@ import type { Look } from './character'
 export interface GameContext {
   root: HTMLElement
   tier: Tier
+  /** Prénom de la joueuse — CHAÎNE VIDE tant que le choix de joueuse est
+      masqué (SHOW_PROFILES) : sans lui, tout le monde s'appellerait Jade.
+      Les messages de fin tutoient et ne citent jamais de prénom. */
   playerName: string
   avatar: string | null
   /** Look choisi dans Habille-toi — suit la joueuse dans les autres jeux. */
@@ -61,12 +64,8 @@ export interface Profile {
   look?: Look
 }
 
+/** Ce qu'on garde d'une partie à l'autre : la meilleure note par jeu,
+    affichée sous la tuile. Pas de total, pas de collection (règle 1). */
 export interface Progress {
-  stars: number
-  stickers: string[]
   bestStars: Record<string, number>
-  /** Ajustement discret de difficulté par jeu (jamais affiché) : −1..+1,
-      par demi-pas. Deux parties parfaites → un cran plus vif ; deux parties
-      à une étoile → un cran plus doux. Voir reward() et GameHost. */
-  adapt?: Record<string, number>
 }

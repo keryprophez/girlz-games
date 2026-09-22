@@ -691,8 +691,8 @@ function finish() {
     : 'Tous les points nommés !'
   ctx.finish({
     title: titre,
-    msg: `${ctx.playerName} a tamponné ${me.done} phrase${me.done > 1 ? 's' : ''}`,
-    stars, starsEarned: stars, outroMs: 900
+    msg: `Tu as tamponné ${me.done} phrase${me.done > 1 ? 's' : ''}`,
+    stars, outroMs: 900
   })
 }
 

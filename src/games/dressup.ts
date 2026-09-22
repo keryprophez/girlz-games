@@ -47,8 +47,8 @@ function finish() {
   save()
   ctx.finish({
     title: 'Superbe look !',
-    msg: `${ctx.playerName} portera ce look dans les autres jeux`,
-    stars: 3, starsEarned: 3
+    msg: 'Ton look est gardé pour la prochaine fois',
+    stars: 3
   })
 }
 

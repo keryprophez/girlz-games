@@ -149,8 +149,8 @@ function bouquet() {
       if (!fw || !fw.running) return
       ctx.finish({
         title: 'Quel spectacle !',
-        msg: `${ctx.playerName} a illuminé tout le ciel`,
-        stars: 3, starsEarned: 3
+        msg: `Tu as illuminé tout le ciel`,
+        stars: 3
       })
     })
   })

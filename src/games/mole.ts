@@ -156,7 +156,7 @@ function gameOver(me: State) {
   const th = ctx.byTier([24, 12], [34, 18], [46, 24])
   me.game.end({
     title: s.score >= th[0] ? 'Quel coup d\'œil !' : s.score >= th[1] ? 'Animaux attrapés !' : 'Ils se sont sauvés !',
-    msg: `${ctx.playerName} a marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
+    msg: `Tu as marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
     outroMs: 1300
   })
 }

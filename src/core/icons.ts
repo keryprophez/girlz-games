@@ -23,7 +23,6 @@ export const ICON = {
   sound: wrap('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'),
   mute: wrap('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="m16 9 5 6m0-6-5 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
   camera: wrap('<path d="M4 8h3.5l1.5-2.5h6L16.5 8H20a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9.5A1.5 1.5 0 0 1 4 8z" fill="currentColor"/><circle cx="12" cy="13.5" r="3.2" fill="#fff"/>'),
-  album: wrap('<path d="M5 3.5h11.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5z" fill="currentColor"/><path d="M8 7h5M8 10.5h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>'),
   mic: wrap('<rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
   timer: wrap('<path d="M7 3h10v3.5c0 2.4-2 3.8-3.6 5.5 1.6 1.7 3.6 3.1 3.6 5.5V21H7v-3.5c0-2.4 2-3.8 3.6-5.5C9 10.3 7 8.9 7 6.5z" fill="currentColor"/>'),
   save: wrap('<path d="M4 4.5h12l3.5 3.5v11.5A1.5 1.5 0 0 1 18 21H4a1.5 1.5 0 0 1-1.5-1.5v-13A2 2 0 0 1 4 4.5z" fill="currentColor"/><rect x="7" y="13" width="10" height="6" fill="#fff"/><rect x="7" y="4.5" width="7" height="4" fill="#fff"/>'),

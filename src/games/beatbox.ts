@@ -103,8 +103,8 @@ function finish() {
   const notes = bb.grid.flat().filter(Boolean).length
   ctx.finish({
     title: 'Quel orchestre !',
-    msg: `${ctx.playerName} a composé un rythme avec ${notes} sons de la ferme`,
-    stars: 3, starsEarned: 3
+    msg: `Tu as composé un rythme avec ${notes} sons de la ferme`,
+    stars: 3
   })
 }
 

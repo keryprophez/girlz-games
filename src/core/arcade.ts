@@ -162,7 +162,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
       s.over = true
       const stars = o.stars(s)
       hud.classList.add('off')
-      ctx.finish({ title: e.title, msg: e.msg, stars, starsEarned: stars, outroMs: e.outroMs })
+      ctx.finish({ title: e.title, msg: e.msg, stars, outroMs: e.outroMs })
     },
     flash(html, cls = '') {
       flashEl.innerHTML = html

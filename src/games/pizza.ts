@@ -335,8 +335,8 @@ function finish() {
   const burnt = S.bake / BURNT > PERFECT_TO
   ctx.finish({
     title: S.eaten >= SLICES ? (burnt ? 'Toute noire… et dévorée !' : 'Pizza dévorée !') : burnt ? 'Un peu trop cuite !' : 'Quelle belle pizza !',
-    msg: `${ctx.playerName} a posé ${n} ingrédient${n > 1 ? 's' : ''}`,
-    stars: 3, starsEarned: 3
+    msg: `Tu as posé ${n} ingrédient${n > 1 ? 's' : ''}`,
+    stars: 3
   })
 }
 

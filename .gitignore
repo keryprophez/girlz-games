@@ -6,3 +6,4 @@ dev-dist/
 tsconfig.tsbuildinfo
 .photos-candidats/
 photos.picks.json
+.verify-*

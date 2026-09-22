@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useFerme } from '../core/store'
+import { SHOW_PROFILES, useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Tier } from '../core/types'
 import { toast } from '../core/utils'
@@ -9,17 +9,12 @@ import { playClip } from '../core/clips'
 import { iris } from '../core/juice'
 import { tone } from '../core/audio'
 import { playMusic, stopMusic } from '../core/music'
-import { frameProps, loadAtlas, type Atlas } from '../core/sprites'
 import { ICON, starsHTML } from '../core/icons'
 import { BADGE } from '../core/badges'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
    Le jeu ne voit que `ctx` ; tout ce qui est commun à 30 jeux vit ici. */
-
-interface Result extends FinishPayload {
-  newSticker: string | null
-}
 
 const TITLE_CARD_MS = 1500
 
@@ -46,7 +41,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const rootRef = useRef<HTMLDivElement>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const sessionRef = useRef<Session | null>(null)
-  const [result, setResult] = useState<Result | null>(null)
+  const [result, setResult] = useState<FinishPayload | null>(null)
   const [runId, setRunId] = useState(0)
   const [crashed, setCrashed] = useState(false)
   // Tant que la difficulté n'est pas choisie, le jeu n'est pas monté
@@ -55,10 +50,6 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const [paused, setPausedState] = useState(isPaused())
   const [outro, setOutro] = useState(false)
   const store = useFerme()
-
-  // La planche des animaux, pour montrer le nouveau sticker en vrai sprite
-  const [atlas, setAtlas] = useState<Atlas | null>(null)
-  useEffect(() => { let on = true; loadAtlas('animals').then(a => on && setAtlas(a)); return () => { on = false } }, [])
 
   // Mode jeu : la coquille passe en plein écran (CSS). Le plein écran du
   // navigateur, lui, reste d'un jeu à l'autre : chaque entrée/sortie faisait
@@ -135,18 +126,21 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     const session = new Session()
     sessionRef.current = session
     let finished = false
+    // Les minuteurs de la coquille (outro, encouragement) meurent avec la
+    // partie : quitter pendant un outro ne doit rien afficher ni jouer après
+    const hostTimers: number[] = []
     // Deux cérémonies, pas une : gagner et perdre ne se ressemblent pas
-    const ceremony = (res: Result) => {
+    const ceremony = (res: FinishPayload) => {
       if (creative) { confetti(); return }
       if (res.stars === 3) { confetti(); FX.fireworks(); return }
       if (res.stars === 2) { confetti(); return }
       // 1 étoile : pas de fête, une descente douce — « encore ? »
-      tone(392, 0.16, 'sine', 0.1); setTimeout(() => tone(330, 0.22, 'sine', 0.09), 170)
+      tone(392, 0.16, 'sine', 0.1); tone(330, 0.22, 'sine', 0.09, 0.17)
     }
     const ctx: GameContext = {
       root: rootRef.current,
       tier,
-      playerName: p.name,
+      playerName: SHOW_PROFILES ? p.name : '',
       avatar: p.avatar,
       look: p.look || null,
       byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
@@ -159,22 +153,21 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       finish(payload) {
         if (finished) return
         finished = true
-        const newSticker = useFerme.getState().reward(gameId, payload.starsEarned, payload.stars, p.id)
-        const res: Result = { ...payload, newSticker }
+        useFerme.getState().recordBest(gameId, payload.stars, p.id)
         // L'outro : le jeu reste monté pendant que la tour s'écroule, le
         // tracteur percute, la caméra recule — PUIS le score.
         const outroMs = payload.outroMs ?? 0
         if (outroMs > 0) { setOutro(true); stopMusic(outroMs / 1000) }
-        window.setTimeout(() => {
+        hostTimers.push(window.setTimeout(() => {
           // Le jeu reste MONTÉ et figé derrière l'écran de fin : on voit sa
           // partie, pas un fond vide. Il sera démonté au rejouer / au menu.
           sessionRef.current?.end()
           sessionRef.current = null
           setPaused(true)
-          ceremony(res)
-          setTimeout(() => playClip(p.id, payload.stars >= 2 ? 'bravo' : 'retry'), 800)
-          setResult(res)
-        }, outroMs)
+          ceremony(payload)
+          hostTimers.push(window.setTimeout(() => playClip(p.id, payload.stars >= 2 ? 'bravo' : 'retry'), 800))
+          setResult(payload)
+        }, outroMs))
       }
     }
     // Monté après le rendu pour que les dimensions soient mesurables — et
@@ -203,6 +196,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       clearTimeout(mountT)
       document.removeEventListener('fullscreenchange', doMount)
       clearTimeout(cardT)
+      hostTimers.forEach(clearTimeout)
       safeCleanup()
       stopMusic()
       shutUp()
@@ -296,14 +290,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             : undefined}>
           <div className="modal">
             <h2>{result.title}</h2>
-            <p>{result.msg}{!creative && <span className="earned"> +{result.starsEarned}<Svg html={ICON.star} /></span>}</p>
+            <p>{result.msg}</p>
             {!creative && <Svg className="stars" html={starsHTML(result.stars)} />}
-            {result.newSticker && (
-              <div className="rewardbox" style={{ display: 'block' }}>
-                <span className="ra">{atlas ? <i className="spr" style={frameProps(atlas, result.newSticker, 64)} /> : null}</span>
-                <span>Nouvel animal pour l'album de {profile.name} !</span>
-              </div>
-            )}
             <div className="rbtns">
               <button className="bigbtn primary" onClick={replay}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
               <button className="bigbtn ghost" onClick={goHome}><Svg html={ICON.home} /> Menu</button>

@@ -5,6 +5,7 @@ import App from './App'
 import './assets/fonts/fonts.css'
 import './styles/global.css'
 import { toast } from './core/utils'
+import { startFpsProbe } from './core/fps'
 
 /* Mise à jour PWA sans friction : si une nouvelle version est détectée juste
    après l'ouverture, on l'applique tout de suite (rechargement invisible).
@@ -20,3 +21,5 @@ const updateSW = registerSW({
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<App />)
+// `?fps` dans l'adresse : compteur d'images pour régler la 3D sur la tablette
+startFpsProbe()

@@ -469,8 +469,8 @@ function finish(me: State) {
   const names: Record<Mode, string> = { classic: '', fog: ' dans le noir', ice: ' sur la glace' }
   ctx.finish({
     title: 'Famille réunie !',
-    msg: `${ctx.playerName} a traversé ${me.sizes.length} labyrinthes${names[me.mode]} et ramassé ${me.grainsGot} graine${me.grainsGot > 1 ? 's' : ''} sur ${me.grainsTotal}`,
-    stars, starsEarned: stars
+    msg: `Tu as traversé ${me.sizes.length} labyrinthes${names[me.mode]} et ramassé ${me.grainsGot} graine${me.grainsGot > 1 ? 's' : ''} sur ${me.grainsTotal}`,
+    stars
   })
 }
 

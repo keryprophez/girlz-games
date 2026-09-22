@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COLLECT, OLD_COLLECT, rnd, shuffle, uniqueNumbers } from './utils'
+import { rnd, shuffle, uniqueNumbers } from './utils'
 
 describe('utils', () => {
   it('shuffle garde les mêmes éléments', () => {
@@ -15,8 +15,5 @@ describe('utils', () => {
     const u = uniqueNumbers(12, 1, 30, 4)
     expect(u).toContain(12)
     expect(new Set(u).size).toBe(4)
-  })
-  it("l'ancienne collection emoji se migre index par index", () => {
-    expect(OLD_COLLECT.length).toBe(COLLECT.length)
   })
 })

@@ -189,9 +189,3 @@ export const GREEN_GRASS = ['grass4', 'grass5', 'grass6']
 /** Cactus de la planche `nature` — utiles pour un décor sec. */
 export const CACTI = ['tree16', 'tree17', 'tree18', 'tree19']
 
-/** Les autres animaux de la planche — pour l'album et la variété. */
-export const WILD_ANIMALS = [
-  'bear', 'buffalo', 'crocodile', 'elephant', 'giraffe', 'gorilla', 'hippo',
-  'monkey', 'moose', 'narwhal', 'panda', 'penguin', 'rhino', 'sloth', 'snake',
-  'walrus', 'whale', 'zebra'
-]

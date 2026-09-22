@@ -125,8 +125,8 @@ function finish() {
   const stars = pt.score >= pt.total - 1 ? 3 : pt.score >= pt.total - 3 ? 2 : 1
   ctx.finish({
     title: 'Sacré sens logique !',
-    msg: `${ctx.playerName} a trouvé ${pt.score} suites sur ${pt.total}`,
-    stars, starsEarned: stars
+    msg: `Tu as trouvé ${pt.score} suites sur ${pt.total}`,
+    stars
   })
 }
 

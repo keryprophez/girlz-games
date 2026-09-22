@@ -125,7 +125,7 @@ function finish(me: State) {
   const p = me.picked, j = n - p
   me.game.end({
     title: n >= th[0] ? 'Champion du volant !' : n >= th[1] ? 'Belle course !' : 'Le tracteur a versé !',
-    msg: `${ctx.playerName} a ramassé ${p} récolte${p > 1 ? 's' : ''} et sauté ${j} obstacle${j > 1 ? 's' : ''} sur ${m} mètres`,
+    msg: `Tu as ramassé ${p} récolte${p > 1 ? 's' : ''} et sauté ${j} obstacle${j > 1 ? 's' : ''} sur ${m} mètres`,
     outroMs: 1300
   })
 }

@@ -7,6 +7,7 @@
    bundle de départ reste léger et l'app démarre vite sur tablette. */
 
 import { onPause, isPaused } from './session'
+import { probeFrame, probeRenderer } from './fps'
 
 export type T3 = typeof import('three')
 export type Cannon = typeof import('cannon-es')
@@ -171,6 +172,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         try { update(dt, now) } catch (e) { stage.alive = false; throw e }
         if (!stage.alive) return
         renderer.render(scene, camera)
+        probeFrame(performance.now() - now)
         raf = requestAnimationFrame(loop)
       }
       unPause = onPause(p => {
@@ -179,9 +181,11 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         raf = requestAnimationFrame(loop)
       })
       raf = requestAnimationFrame(loop)
+      probeRenderer(renderer)
     },
     dispose() {
       stage.alive = false
+      probeRenderer(null)
       cancelAnimationFrame(raf)
       unPause()
       window.removeEventListener('resize', onResize)

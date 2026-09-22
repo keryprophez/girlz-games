@@ -127,8 +127,8 @@ function finish() {
   const stars = mr.mistakes <= 2 ? 3 : mr.mistakes <= 7 ? 2 : 1
   ctx.finish({
     title: 'Miroir, joli miroir !',
-    msg: `${ctx.playerName} a complété ${mr.rounds} symétries`,
-    stars, starsEarned: stars
+    msg: `Tu as complété ${mr.rounds} symétries`,
+    stars
   })
 }
 

@@ -334,8 +334,8 @@ function finishRound(me: State) {
   const stars = e <= 1 ? 3 : e <= 4 ? 2 : 1
   ctx.finish({
     title: me.map === 'monde' ? 'Tour du monde !' : 'Tour de France !',
-    msg: `${ctx.playerName} a trouvé ${me.total} ${me.map === 'monde' ? 'endroits sur le globe' : 'endroits en France'}`,
-    stars, starsEarned: stars, outroMs: 400
+    msg: `Tu as trouvé ${me.total} ${me.map === 'monde' ? 'endroits sur le globe' : 'endroits en France'}`,
+    stars, outroMs: 400
   })
 }
 
@@ -599,7 +599,7 @@ export const geoGame: GameDef = {
       done.addEventListener('click', () => {
         if (me.over) return
         me.over = true
-        ctx.finish({ title: 'Belle exploration !', msg: `${ctx.playerName} a exploré ${me.map === 'monde' ? 'le globe' : 'la France'}`, stars: 3, starsEarned: 3 })
+        ctx.finish({ title: 'Belle exploration !', msg: `Tu as exploré ${me.map === 'monde' ? 'le globe' : 'la France'}`, stars: 3 })
       })
 
       /* --- Le doigt : glisser fait tourner le globe, un tap touche --- */

@@ -294,8 +294,8 @@ function finishQuizMode(me: State) {
   const stars = me.score >= me.total - 1 ? 3 : me.score >= me.total - 3 ? 2 : 1
   ctx.finish({
     title: 'Maîtresse du temps !',
-    msg: `${ctx.playerName} : ${me.score} sur ${me.total} ${names[me.mode]}`,
-    stars, starsEarned: stars
+    msg: `${me.score} sur ${me.total} ${names[me.mode]}`,
+    stars
   })
 }
 
@@ -332,8 +332,8 @@ export const clock: GameDef = {
       if (ck !== me || me.mode !== 'discover') return
       ctx.finish({
         title: 'Belle découverte !',
-        msg: `${ctx.playerName} a fait tourner les aiguilles ${me.touched} fois`,
-        stars: 3, starsEarned: 3
+        msg: `Tu as fait tourner les aiguilles ${me.touched} fois`,
+        stars: 3
       })
     }
     const face = $('ckFace')

@@ -169,7 +169,7 @@ function finish(me: State) {
   const n = me.eaten
   me.game.end({
     title: n >= th[0] ? 'Chenille GÉANTE !' : n >= th[1] ? 'Belle chenille !' : 'Elle s\'est cognée !',
-    msg: `${ctx.playerName} a croqué ${n} fruit${n > 1 ? 's' : ''}`,
+    msg: `Tu as croqué ${n} fruit${n > 1 ? 's' : ''}`,
     outroMs: 1200
   })
 }

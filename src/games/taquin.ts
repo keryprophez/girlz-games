@@ -134,8 +134,8 @@ function finish(me: State) {
   const stars = me.moves <= me.par * 1.8 ? 3 : me.moves <= me.par * 3.2 ? 2 : 1
   ctx.finish({
     title: mode === 'image' ? 'Image reconstituée !' : 'Nombres remis en ordre !',
-    msg: `${ctx.playerName} a réussi en ${me.moves} coup${me.moves > 1 ? 's' : ''}`,
-    stars, starsEarned: stars
+    msg: `Tu as réussi en ${me.moves} coup${me.moves > 1 ? 's' : ''}`,
+    stars
   })
 }
 

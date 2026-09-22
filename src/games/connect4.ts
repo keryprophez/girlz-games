@@ -5,7 +5,7 @@ import { impact } from '../core/impact'
 import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
 import { loadAtlas, spriteSpan, type Atlas } from '../core/sprites'
-import { useFerme } from '../core/store'
+import { SHOW_PROFILES, useFerme } from '../core/store'
 
 /* Puissance 4 des Sœurs — LE jeu à deux sur la même tablette, au tour par
    tour : chacune joue avec SA tête comme jeton. Aligne 4 pour gagner !
@@ -185,16 +185,16 @@ function drop(me: State, col: number) {
       ctx.after(1400, () => {
         if (c4 !== me) return
         ctx.finish({
-          title: winnerIsAI ? 'La poule a gagné !' : `${p.name} gagne !`,
-          msg: winnerIsAI ? `${ctx.playerName} a bien joué, la revanche est à portée` : me.solo ? `${p.name} a aligné quatre têtes contre la poule` : 'Quatre à la suite, bravo les deux !',
-          stars: winnerIsAI ? 1 : 3, starsEarned: winnerIsAI ? 1 : 2
+          title: winnerIsAI ? 'La poule a gagné !' : me.solo ? 'Tu as gagné !' : `${cap(p.name)} gagne !`,
+          msg: winnerIsAI ? 'Bien joué, la revanche est à portée' : me.solo ? 'Quatre têtes alignées contre la poule' : 'Quatre à la suite, bravo les deux !',
+          stars: winnerIsAI ? 1 : 3
         })
       })
       return
     }
     if (me.grid.every(r => r.every(v => v !== -1))) {
       me.over = true
-      ctx.after(1000, () => { if (c4 === me) ctx.finish({ title: 'Égalité parfaite !', msg: 'La grille est pleine, match nul', stars: 2, starsEarned: 2 }) })
+      ctx.after(1000, () => { if (c4 === me) ctx.finish({ title: 'Égalité parfaite !', msg: 'La grille est pleine, match nul', stars: 2 }) })
       return
     }
     me.turn = 1 - me.turn
@@ -219,14 +219,20 @@ function newGame(me: State) {
   paintTurn(me)
 }
 
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+
 export const connect4: GameDef = {
   id: 'connect4', name: 'Puissance 4', icon: '🔴', sq: 'sq-sun', cat: 'reflexion',
   subtitle: 'À deux, chacune son tour, ou seule contre la poule : aligne 4 têtes !',
   mount(c) {
     ctx = c
+    // Tant que le choix de joueuse est masqué, on ne sait pas qui tient la
+    // tablette : chacune est son pion (le poussin, la poule), pas un prénom
     const profiles = useFerme.getState().profiles
-    const cur = profiles.find(p => p.id === useFerme.getState().currentId) || profiles[0]
-    const other = profiles.find(p => p.id !== cur.id) || cur
+    const curP = profiles.find(p => p.id === useFerme.getState().currentId) || profiles[0]
+    const otherP = profiles.find(p => p.id !== curP.id) || curP
+    const cur = SHOW_PROFILES ? curP : { name: 'le poussin', avatar: null }
+    const other = SHOW_PROFILES ? otherP : { name: 'la poule', avatar: null }
     c.root.innerHTML = `
       <div class="arena c4-wrap" id="c4Wrap">
         <div id="c4Board"></div>

@@ -100,8 +100,8 @@ function finish(me: State) {
   const stars = best >= th[0] ? 3 : best >= th[1] ? 2 : 1
   ctx.finish({
     title: best >= th[0] ? 'Oreille d\'or !' : best >= th[1] ? 'Belle mélodie !' : 'Fausse note !',
-    msg: `${ctx.playerName} a retenu ${best} note${best > 1 ? 's' : ''}`,
-    stars, starsEarned: stars
+    msg: `Tu as retenu ${best} note${best > 1 ? 's' : ''}`,
+    stars
   })
 }
 

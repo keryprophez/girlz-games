@@ -303,7 +303,7 @@ function gameOver(me: State) {
   const th = ctx.byTier([10, 22], [14, 30], [18, 40])
   me.game.end({
     title: s.score >= th[1] ? 'Championne du chamboule-tout !' : s.score >= th[0] ? 'Ça dégringole !' : 'Les caisses tiennent bon !',
-    msg: `${ctx.playerName} a fait tomber ${s.hits} caisses` + (me.round > 0 ? `, ${me.round} pile${me.round > 1 ? 's' : ''} entière${me.round > 1 ? 's' : ''}` : ''),
+    msg: `Tu as fait tomber ${s.hits} caisses` + (me.round > 0 ? `, ${me.round} pile${me.round > 1 ? 's' : ''} entière${me.round > 1 ? 's' : ''}` : ''),
     outroMs: 1500
   })
 }

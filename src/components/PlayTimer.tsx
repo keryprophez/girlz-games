@@ -76,7 +76,7 @@ export function TimerButton() {
         </button>
       </div>
       {open && (
-        <div id="album" className="show" onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
+        <div id="sheet" className="show" onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
           <div className="modal">
             {gate ? (
               <MathGate

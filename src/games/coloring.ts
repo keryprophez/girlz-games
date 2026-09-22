@@ -102,8 +102,8 @@ function finish() {
   // Une création ne se note pas : toujours la même fête
   ctx.finish({
     title: 'Chef-d\'œuvre !',
-    msg: `${ctx.playerName} a colorié ${col.scene.name.toLowerCase()}`,
-    stars: 3, starsEarned: 3
+    msg: `Tu as colorié ${col.scene.name.toLowerCase()}`,
+    stars: 3
   })
 }
 
