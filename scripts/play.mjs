@@ -508,7 +508,7 @@ await scenario('ninja-a-deux', async () => {
   let deux = false
   for (let k = 0; k < 24; k++) {
     const vu = await page.evaluate(async ({ b, k }) => {
-      const cv = document.querySelector('#njArena canvas')
+      const cv = document.querySelector('#njArena canvas:not(#njBlade)') // le canvas 3D, pas la lame
       const ev = (type, id, x, y, target) => target.dispatchEvent(new PointerEvent(type, {
         pointerId: id, pointerType: 'touch', isPrimary: id === 11, clientX: x, clientY: y, bubbles: true
       }))
