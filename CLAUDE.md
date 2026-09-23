@@ -66,6 +66,10 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            lapin, cactus (Tape-Trous) + vache, poule, chien,
                            canard, mouton (`FARM`, les pions des jeux en DOM)
              runner.ts   ← socle des jeux qui défilent (Course, Poussin Volant)
+             doll3d.ts   ← LEUR personnage en 3D (le look d'Habille-toi) :
+                           `makeDoll(T, look)`, `poseDoll(d, 'cheer'|'wave'|'sit'…)`
+             winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
+                           chalet Kenney assemblé pièce par pièce, lanternes)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -87,7 +91,11 @@ Puissance 4, la Boîte à rythme, l'image du Taquin) est fait des personnages
 3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
 `critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
 WebGL jetable), `portraitImg(url, px)` les insère, `farmScene(kinds, px)` rend
-un pré 3D entier. Ce sont les mêmes personnages que Tape-Trous. Pour ajouter un mot : une ligne dans
+un pré 3D entier. Ce sont les mêmes personnages que Tape-Trous. **Le
+personnage des filles** (23/09) suit la même règle : construit en formes
+rondes dans `core/doll3d.ts` à partir de `ctx.look`, en vraie 3D dans
+Habille-toi et au volant du tracteur, en images (`dollPortraits(look, poses,
+px)`) sur l'écran de fin et en promenade sur l'accueil. Pour ajouter un mot : une ligne dans
 `TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
 **regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
 
@@ -124,7 +132,11 @@ affiche trois boutons sans un mot — fleur (douce), éclair (normale), flamme
 (expert) — et ne monte le jeu qu'après le choix, qui alimente `ctx.tier` et
 `ctx.byTier`. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
 et signalé d'un liseré ; un bouton de la barre en jeu rouvre le choix et
-relance la partie. L'accueil n'est plus qu'une **grille de jeux** : le choix
+relance la partie. Un jeu qui déclare `duo: true` (Ninja, Tape-Trous) ajoute
+au-dessus un choix « seule / à deux » (deux silhouettes) : `ctx.duo` = deux
+sœurs sur la même tablette, EN ÉQUIPE — plusieurs doigts à la fois, un seul
+score, les messages de fin disent « vous », jamais qui a fait quoi.
+L'accueil n'est plus qu'une **grille de jeux** : le choix
 de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans
 `core/store.ts` — prêt à revenir ; tant qu'il l'est, les encouragements
 enregistrés sont communs à la famille — le Défi à deux et la fenêtre de
@@ -160,7 +172,8 @@ en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 **Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
 antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,
 lumières et brouillard. Puis `fixedStep()` pour la physique, `orbitCam()` pour la
-caméra, `loadThree()`/`loadPhysics()` + `loader()` pour le chargement à la
+caméra, `loadThree()`/`loadPhysics()` + `loader(arena, gameId)` (la vignette
+`BADGE` du jeu qui respire) pour le chargement à la
 demande, `stage.dispose()` pour le nettoyage GPU (et `stage.keep(tex)` pour les
 textures non attachées à la scène). Puis **`core/scene3d.ts`** : `ground()`,
 `decor()` (modèles du kit `nature` ou `holiday`, avec `shade` pour assombrir
@@ -169,7 +182,7 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole`. Pour un jeu de physique rigide
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` · `dressup`. Pour un jeu de physique rigide
 (cannon-es) sur le socle, `stand3d.ts` est le modèle : `loadPhysics()`,
 `fixedStep` autour de `world.step`, corps figé avec `mass = 0`.
 
@@ -216,6 +229,8 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **La planche-contact ne ment pas** | 22/09, recherche iNaturalist par taxon : sur 5 « bisons », 4 antilopes ; sur 5 « tigres », un léopard, une lionne, un jaguar et une panthère — les observations sont identifiées au genre ou à la famille. Toujours regarder avant `garder`. |
 | **`import-assets.mjs` et CREDITS.md** | Le script réécrivait TOUT `public/assets/CREDITS.md` : relancé, il effaçait les crédits des photos et de l'Espace. Il ne remplace plus que sa section (jusqu'au premier `## `). |
 | **`pkill -f` qui se tue lui-même** | `pkill -f "vite preview"` dans une commande qui relance aussi `vite preview` tue le shell qui l'exécute (la ligne de commande contient le motif). Arrêter le serveur dans une commande à part. |
+| **Deux doigts, une seule lame** | Le Ninja gardait UN « dernier point » : un second doigt le faisait sauter d'un bout de l'écran à l'autre, et le segment tranchait tout entre les deux. Tout geste de glissé se suit **par `pointerId`** (une `Map`), même dans un jeu pensé pour un doigt. |
+| **Chalet Kenney en pièces** | Les pièces `cabin-*` du kit Holiday tiennent dans une case de 1 : un mur est posé sur le bord +z de sa case (on le tourne pour les autres bords), le coin est au coin (−x, +z), le toit et le pignon sont des DEMI-pièces dont le faîtage est en x = −0,5 — le côté gauche est la même pièce tournée de π (toit) ou en miroir `scale.x = −1` (pignon). Voir `cabin()` dans `core/winter.ts`. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -230,7 +245,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (22/09 : les 31) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (22/09 : les 31 ; `BOTS=poste,atelier` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

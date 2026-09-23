@@ -153,22 +153,22 @@ function gameOver(me: State) {
   me.stage.timeScale = 0.55
   for (const h of me.holes) if (h.phase === 'down' && Math.random() < 0.6) popOne(me)
   const s = me.game.s
-  const th = ctx.byTier([24, 12], [34, 18], [46, 24])
+  const th = ctx.byTier([24, 12], [34, 18], [46, 24]).map(v => Math.round(v * (ctx.duo ? 1.5 : 1)))
   me.game.end({
     title: s.score >= th[0] ? 'Quel coup d\'œil !' : s.score >= th[1] ? 'Animaux attrapés !' : 'Ils se sont sauvés !',
-    msg: `Tu as marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
+    msg: `${ctx.duo ? 'Vous avez' : 'Tu as'} marqué ${s.score} points` + (s.bestCombo >= 5 ? `, ${s.bestCombo} d'affilée` : ''),
     outroMs: 1300
   })
 }
 
 export const moleGame: GameDef = {
-  id: 'mole', name: 'Tape-Trous', icon: '🔨', sq: 'sq-peach', cat: 'action', music: 'meadow',
+  id: 'mole', name: 'Tape-Trous', icon: '🔨', sq: 'sq-peach', cat: 'action', music: 'meadow', duo: true,
   subtitle: 'Tape les animaux qui sortent… mais pas le cactus !',
   mount(c) {
     ctx = c
     c.root.innerHTML = `<div class="arena g3-arena mo-arena" id="moArena"></div>`
     const arena = $('moArena')
-    const hideLoader = loader(arena, '🔨')
+    const hideLoader = loader(arena, 'mole')
     preloadSfx(['tick', 'bong', 'drop', 'error', 'pluck'])
     let dead = false
 
@@ -241,9 +241,12 @@ export const moleGame: GameDef = {
         { up: 900, gap: 600, cactus: 0.18, multi: 0.25 },
         { up: 680, gap: 460, cactus: 0.25, multi: 0.4 }
       )
+      // À deux (23/09) : deux mains qui tapent en même temps, donc des animaux
+      // qui sortent plus souvent, souvent par deux — un seul score, commun
+      if (c.duo) { cfg.gap *= 0.72; cfg.multi = Math.min(0.9, cfg.multi + 0.35) }
       const game = arcade(c, {
         host: arena,
-        lives: c.byTier(5, 3, 3),
+        lives: c.byTier(5, 3, 3) + (c.duo ? 1 : 0),
         scoreIcon: ICON.mallet,
         ramp: { every: 8, max: 8 },
         onLevel: () => {
@@ -253,7 +256,10 @@ export const moleGame: GameDef = {
           me.cfg.cactus = Math.min(0.32, me.cfg.cactus + 0.02)
           me.game.flash(ICON.bolt)
         },
-        stars: s => { const th = c.byTier([24, 12], [34, 18], [46, 24]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
+        stars: s => {
+          const th = c.byTier([24, 12], [34, 18], [46, 24]).map(v => Math.round(v * (c.duo ? 1.5 : 1)))
+          return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1
+        }
       })
       const kit = critterKit(T)
       const me: State = {
@@ -261,6 +267,7 @@ export const moleGame: GameDef = {
         holes, kit, cfg: { ...cfg }, over: false, tapHint
       }
       mo = me
+      if (c.duo) game.flash(ICON.duo)
 
       // Qui sort, et quand : sur l'horloge simulée (pause, hoquets d'onglet)
       const spawner = () => {

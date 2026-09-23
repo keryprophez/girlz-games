@@ -4,12 +4,13 @@
    des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
    catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
-   Boîte à rythme, Feu d'artifice, Coloriage et Habille-toi compris.
+   Boîte à rythme, Feu d'artifice, l'Atelier et Habille-toi compris.
 
    Les jeux exposent leur état de pilotage seulement quand `window.__BOT` est
    posé avant le chargement — inerte en production.
 
-   Usage : npm run build && npm run test:play */
+   Usage : npm run build && npm run test:play
+   (BOTS=poste,atelier npm run test:play pour n'en lancer que quelques-uns) */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
@@ -75,7 +76,10 @@ const openGame = async (name, hook) => {
 }
 
 const failures = []
+// BOTS=poste,bonhomme npm run test:play → seulement les scénarios dont le nom contient l'un des mots
+const only = process.env.BOTS ? process.env.BOTS.split(',') : null
 const scenario = async (name, fn) => {
+  if (only && !only.some(k => name.includes(k))) return
   try {
     await fn()
     if (errors.length) throw new Error('erreurs JS : ' + errors.join(' | '))
@@ -488,6 +492,51 @@ await scenario('ninja-tranche', async () => {
   throw new Error('moins de 2 fruits tranchés en 8 s')
 })
 
+/* 🥷 À deux (23/09) : deux doigts en même temps, chacun sa lame, un seul
+   score. Avant, le second doigt faisait sauter l'unique lame d'un bout de
+   l'écran à l'autre. On choisit « à deux », puis deux balayages simultanés
+   (événements pointeur synthétiques : Playwright n'a qu'une souris). */
+await scenario('ninja-a-deux', async () => {
+  errors.length = 0
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.locator('.gc', { hasText: 'Ninja Verger' }).first().click()
+  await page.locator('.duobtn[aria-label="À deux"]').click()
+  await page.locator('.tierbtn.tier-easy').click()
+  await page.waitForFunction(() => window.__nj, null, { timeout: 30000 })
+  if (!(await page.evaluate(() => window.__nj.duo))) throw new Error('le mode à deux n\'est pas passé au jeu')
+  const box = await page.locator('#njArena').boundingBox()
+  let deux = false
+  for (let k = 0; k < 24; k++) {
+    const vu = await page.evaluate(async ({ b, k }) => {
+      const cv = document.querySelector('#njArena canvas')
+      const ev = (type, id, x, y, target) => target.dispatchEvent(new PointerEvent(type, {
+        pointerId: id, pointerType: 'touch', isPrimary: id === 11, clientX: x, clientY: y, bubbles: true
+      }))
+      const y0 = b.y + b.height * (0.62 + (k % 3) * 0.06)
+      const L = b.x + b.width * 0.08, R = b.x + b.width * 0.92
+      ev('pointerdown', 11, L, y0, cv)
+      ev('pointerdown', 12, R, y0, cv)
+      let both = 0
+      for (let i = 1; i <= 10; i++) {
+        ev('pointermove', 11, L + i * b.width * 0.04, y0 - i * 24, window)
+        ev('pointermove', 12, R - i * b.width * 0.04, y0 - i * 24, window)
+        both = Math.max(both, window.__nj.blades())
+        await new Promise(r => requestAnimationFrame(r))
+      }
+      ev('pointerup', 11, 0, 0, window)
+      ev('pointerup', 12, 0, 0, window)
+      return both
+    }, { b: box, k })
+    if (vu >= 2) deux = true
+    await page.waitForTimeout(200)
+    const score = parseInt(await page.locator('.hud-score b').textContent())
+    if (score >= 2 && deux) break
+    if (k === 23) throw new Error(`à deux : score ${score}, deux lames vues : ${deux}`)
+  }
+  if ((await page.evaluate(() => window.__nj.blades())) !== 0) throw new Error('une lame reste accrochée après les doigts levés')
+  await page.evaluate(() => localStorage.removeItem('ferme:duo:ninja'))
+})
+
 /* 🔨 Tape-Trous : taper 8 animaux sortis (accroche window.__mole), aucun raté. */
 await scenario('taupe-huit-animaux', async () => {
   await openGame('Tape-Trous')
@@ -723,12 +772,34 @@ await scenario('feu-bouquet-final', async () => {
   await finDe('Quel spectacle', 15000)
 })
 
-/* 🎨 Coloriage et 👗 Habille-toi : les deux créations vont jusqu'à leur fin. */
-await scenario('coloriage-papillon', async () => {
-  await openGame('Coloriage')
-  const n = await page.locator('#colSvg .creg').count()
-  for (let i = 0; i < n; i++) await page.locator('#colSvg .creg').nth(i).dispatchEvent('pointerdown')
-  await page.locator('#colDone').click()
+/* 🎨 L'Atelier et 👗 Habille-toi : les deux créations vont jusqu'à leur fin.
+   L'Atelier : un trait au doigt, un tampon, le papillon rempli au pot de
+   peinture, un « annuler » — et la peinture doit être sur la feuille. */
+await scenario('atelier-papillon', async () => {
+  await openGame("L'Atelier", '__at')
+  const box = await page.locator('#atPaint').boundingBox()
+  const X = f => box.x + box.width * f, Y = f => box.y + box.height * f
+  await page.mouse.move(X(0.15), Y(0.5))
+  await page.mouse.down()
+  for (let i = 1; i <= 12; i++) await page.mouse.move(X(0.15 + i * 0.05), Y(0.5 + Math.sin(i / 2) * 0.1))
+  await page.mouse.up()
+  await page.locator('.at-tool[data-t="stamp"]').click()
+  await page.locator('.at-stamp img').first().waitFor({ timeout: 20000 })
+  await page.mouse.click(X(0.3), Y(0.8))
+  await page.locator('.at-page[data-p="papillon"]').click()
+  await page.locator('.at-tool[data-t="brush"]').click()
+  await page.locator('.at-color[data-c="#FFA94D"]').click()
+  await page.locator('.at-tool[data-t="bucket"]').click()
+  await page.waitForTimeout(600)
+  // L'aile gauche du papillon (x 130 du dessin 400 × 300, centré dans 450 × 300)
+  await page.mouse.click(X(155 / 450), Y(120 / 300))
+  await page.waitForFunction(() => window.__at.marks >= 3 && !window.__at.pouring, null, { timeout: 5000 })
+  const avant = await page.evaluate(() => window.__at.painted())
+  if (avant < 0.04) throw new Error(`le pot de peinture n'a rien rempli (${avant})`)
+  await page.locator('#atUndo').click()
+  const apres = await page.evaluate(() => window.__at.painted())
+  if (apres > 0.001) throw new Error(`« annuler » n'a pas effacé le remplissage (${apres})`)
+  await page.locator('#atDone').click()
   await finDe('Chef-d')
 })
 await scenario('habille-toi-surprise', async () => {

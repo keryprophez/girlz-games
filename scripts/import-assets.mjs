@@ -77,9 +77,15 @@ const MODELS = [
     // Pêche Précise
     'fish.glb'
   ] },
-  // Sapins enneigés du Bonhomme de neige (colormap externe, comme food)
+  // Le paysage d'hiver du Bonhomme de neige (colormap externe, comme food) :
+  // sapins, le chalet en pièces modulaires (assemblé dans core/winter.ts),
+  // lanternes, luge, banc, rennes, rochers et congères
   { pack: 'holiday', dir: 'Models/GLB format', out: 'holiday', files: [
-    'tree-snow-a.glb', 'tree-snow-b.glb', 'tree-snow-c.glb'
+    'tree-snow-a.glb', 'tree-snow-b.glb', 'tree-snow-c.glb', 'tree-decorated-snow.glb',
+    'cabin-wall.glb', 'cabin-window-a.glb', 'cabin-door-rotate.glb', 'cabin-corner-logs.glb',
+    'cabin-roof-snow.glb', 'cabin-roof-snow-chimney.glb', 'cabin-wall-roof.glb', 'cabin-wall-wreath.glb',
+    'cabin-fence.glb', 'lantern.glb', 'sled.glb', 'bench.glb', 'reindeer.glb',
+    'rocks-large.glb', 'rocks-medium.glb', 'snow-pile.glb', 'snow-bunker.glb', 'snow-flat-large.glb'
   ] },
   // La vraie fusée de Voyage dans l'Espace : modulaire, on l'assemble en jeu
   // (matériaux embarqués, pas de colormap dans ce kit)

@@ -2,12 +2,14 @@ import type { GameContext, GameDef } from '../core/types'
 import { impact } from '../core/impact'
 import { $ } from '../core/utils'
 import { ICON } from '../core/icons'
+import { makeDoll, poseDoll } from '../core/doll3d'
+import { defaultLook } from '../core/character'
 import { sfx, preloadSfx } from '../core/sfx'
 import { arcade, type Arcade } from '../core/arcade'
 import { runner, type Runner } from '../core/runner'
 import { ground, decor, particles, camShake, type Particles, type CamShake } from '../core/scene3d'
 import {
-  createStage, loadThree, loader, loadModel, fitModel, avatarMedallion,
+  createStage, loadThree, loader, loadModel, fitModel,
   type Stage, type T3
 } from '../core/three3d'
 
@@ -251,7 +253,7 @@ export const runGame: GameDef = {
     let dead = false
     c.root.innerHTML = `<div class="arena g3-arena run3-arena" id="runArea"></div>`
     const area = $('runArea')
-    const hideLoader = loader(area, '🚜')
+    const hideLoader = loader(area, 'run')
     preloadSfx(['cloth', 'bong', 'whoosh', 'confirm', 'pluck'])
 
     ;(async () => {
@@ -371,7 +373,13 @@ export const runGame: GameDef = {
       /* Le tracteur, et c'est ELLE qui conduit : assise sur le siège */
       const { g: tractor, wheels, load } = makeTractor(T)
       scene.add(tractor)
-      avatarMedallion(T, c.avatar, 0.24).then(med => { if (med && rn) { med.position.set(-0.2, 0.74, 0); tractor.add(med) } })
+      // Au volant : SON personnage, habillé comme dans Habille-toi (23/09)
+      const DS = 0.55
+      const driver = makeDoll(T, c.look || defaultLook(), DS)
+      driver.obj.position.set(-0.23, 0.55 - 0.27 * DS, 0)
+      driver.obj.rotation.y = Math.PI / 2
+      tractor.add(driver.obj)
+      stage.keep(driver)
 
       hideLoader()
       const tapHint = document.createElement('div')
@@ -512,6 +520,12 @@ export const runGame: GameDef = {
         for (const cl of clouds) cl.position.x -= dt * 0.06
         // Le tracteur : hauteur, cabrage, trépidation, renversement d'outro
         tractor.position.y = me.y + (me.jumping ? 0 : Math.abs(Math.sin(now / 90)) * 0.012)
+        // Elle conduit ; en l'air elle lève les bras, et la voilà qui s'accroche au renversement
+        poseDoll(driver, 'sit', now / 1000, dt)
+        if (me.jumping || me.over) {
+          const w = Math.sin(now / 70) * 0.25
+          driver.armL.rotation.set(0, 0, 2.3 + w); driver.armR.rotation.set(0, 0, -2.3 - w)
+        }
         if (me.over) { tilt = Math.min(1.1, tilt + dt * 2.2); tractor.rotation.z = tilt; tractor.position.y = me.y + Math.sin(tilt) * 0.3 }
         else tractor.rotation.z = me.jumping ? Math.max(-0.35, Math.min(0.3, me.vy * 0.07)) : Math.sin(now / 60) * 0.008
         run.blink(tractor, now)

@@ -1,5 +1,7 @@
 import { loadThree, loadModel, fitModel, dotTex, type T3 } from './three3d'
 import { critterKit, type CritterKind } from './critters'
+import { makeDoll, poseDoll, type DollPose } from './doll3d'
+import type { Look } from './character'
 
 /* Les personnages 3D de la ferme, rendus en IMAGES pour les jeux en DOM
    (Simon, Puissance 4, la Boîte à rythme, le Taquin). Ils remplacent les
@@ -112,6 +114,62 @@ function renderPortraits(T: T3, renderer: Renderer, env: import('three').Texture
     shadowTex.dispose()
     kit.dispose()
   }
+}
+
+/** Le personnage des filles (Habille-toi) rendu en images, une par pose :
+    debout, qui saute de joie, qui fait coucou, qui marche. Cache par look. */
+const inflight = new Map<string, Promise<Record<string, string>>>()
+export function dollPortraits(look: Look, poses: DollPose[], px: number): Promise<Record<string, string>> {
+  // Deux demandes identiques en même temps partagent le même rendu
+  const k = JSON.stringify(look) + poses.join() + px
+  let p = inflight.get(k)
+  if (!p) {
+    p = renderDolls(look, poses, px).finally(() => inflight.delete(k))
+    inflight.set(k, p)
+  }
+  return p
+}
+
+async function renderDolls(look: Look, poses: DollPose[], px: number): Promise<Record<string, string>> {
+  const out: Record<string, string> = {}
+  const key = (p: DollPose) => 'doll:' + JSON.stringify(look) + ':' + p + '@' + px
+  const missing = poses.filter(p => { const hit = cache.get(key(p)); if (hit) out[p] = hit; return !hit })
+  if (!missing.length) return out
+  const size = Math.min(512, Math.round(px * 2))
+  await withRenderer(size, size, (T, renderer, env) => {
+    const shadowTex = dotTex(T, '#2A2018')
+    const doll = makeDoll(T, look, 1)
+    try {
+      for (const pose of missing) {
+        const scene = new T.Scene()
+        lights(T, scene, env)
+        // Des instants choisis : en haut du saut, main levée, pas en avant
+        poseDoll(doll, pose, pose === 'cheer' ? 0.26 : pose === 'wave' ? 0.17 : pose === 'walk' || pose === 'stride' ? 0.2 : 0)
+        doll.obj.rotation.y = -0.3
+        scene.add(doll.obj)
+        const blob = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.3, depthWrite: false }))
+        blob.rotation.x = -Math.PI / 2
+        blob.position.y = 0.002
+        blob.scale.set(0.5, 0.36, 1)
+        scene.add(blob)
+        // Cadrage fixe (pas sur la boîte englobante : le saut et le ballon la
+        // déformeraient, et les poses ne se superposeraient plus)
+        const cam = new T.PerspectiveCamera(30, 1, 0.05, 50)
+        cam.position.set(0, 0.92, 2.45)
+        cam.lookAt(0, 0.6, 0)
+        renderer.render(scene, cam)
+        const url = renderer.domElement.toDataURL('image/png')
+        cache.set(key(pose), url)
+        out[pose] = url
+        scene.remove(doll.obj)
+        blob.geometry.dispose(); (blob.material as import('three').Material).dispose()
+      }
+    } finally {
+      doll.dispose()
+      shadowTex.dispose()
+    }
+  }).catch(() => { /* pas de WebGL : rien à montrer, rien de cassé */ })
+  return out
 }
 
 /** Une image prête à insérer dans du HTML. */

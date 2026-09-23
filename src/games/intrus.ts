@@ -14,7 +14,11 @@ import { photoImg } from '../core/sprites'
      famille ; un petit titre positif (« Les oiseaux ») reste pour celles
      qui lisent, et la voix dit la famille (du contenu, pas une consigne) ;
    - plein écran : les tuiles sont aussi grandes que la place le permet,
-     manches en pastilles sur le côté ; timers de partie, état typé.
+     manches en pastilles ; timers de partie, état typé.
+   - 23/09 : des photos GÉANTES (la grille choisit le nombre de colonnes qui
+     les fait les plus grandes), et la réponse se VOIT : la famille file dans
+     le panier en bas, l'intrus reste seul au milieu. Trompée, la joueuse
+     voit quand même le tri se faire — c'est là qu'elle apprend.
 
    Depuis le 12/09, **tout le jeu est en photos réelles** (68 sujets, voir
    `scripts/import-photos.mjs`) : une vraie vache, une vraie fraise, une vraie
@@ -47,7 +51,17 @@ const CATS = [
   { q: 'Dans la cuisine', maj: OBJECTS, intr: FOODS }
 ]
 
+/* Le panier d'osier où file la famille */
+const BASKET = `<svg viewBox="0 0 120 80" width="150" height="100">
+  <path d="M30 34 Q60 -6 90 34" fill="none" stroke="#8B5E3C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M8 32 H112 L100 74 Q99 78 94 78 H26 Q21 78 20 74 Z" fill="#D9A05B"/>
+  <path d="M14 46 H106 M17 58 H103 M20 70 H100" stroke="#B97F3F" stroke-width="3"/>
+  <path d="M34 34 L38 78 M52 34 L53 78 M68 34 L67 78 M86 34 L82 78" stroke="#B97F3F" stroke-width="3"/>
+  <rect x="4" y="26" width="112" height="12" rx="6" fill="#B97F3F"/></svg>`
+
 interface State {
+  /** Les cases de la manche : les membres de la famille filent au panier. */
+  tiles: HTMLButtonElement[]
   round: number
   total: number
   score: number
@@ -74,13 +88,20 @@ function load(me: State) {
   $('intQ').textContent = cat.q
   ctx.say(cat.q)
   const grid = $('intGrid')
-  const n = items.length, cols = n <= 4 ? 2 : n <= 6 ? 3 : 4
-  const rows = Math.ceil(n / cols)
+  const n = items.length
+  // Le nombre de colonnes qui donne les plus grandes photos
   const wrap = $('intWrap')
-  const gap = 14
-  const px = Math.floor(Math.min((wrap.clientWidth - 280 - gap * (cols - 1)) / cols, (wrap.clientHeight - 90 - gap * (rows - 1)) / rows, 220))
+  const gap = 18
+  const W = wrap.clientWidth - 40, H = wrap.clientHeight - 64 - 60 - 130 // barre, titre, panier
+  let cols = 1, px = 0
+  for (let c = 1; c <= n; c++) {
+    const r = Math.ceil(n / c)
+    const p = Math.floor(Math.min((W - gap * (c - 1)) / c, (H - gap * (r - 1)) / r, 380))
+    if (p > px) { px = p; cols = c }
+  }
   grid.style.gridTemplateColumns = `repeat(${cols},${px}px)`
   grid.innerHTML = ''
+  me.tiles = []
   me.lock = false
   items.forEach((item, i) => {
     const b = document.createElement('button')
@@ -89,8 +110,10 @@ function load(me: State) {
     // La photo remplit la case : elle a déjà son cadre arrondi
     b.innerHTML = photoImg(item.e, Math.round(px * 0.86))
     b.dataset.i = String(i)
+    b.style.animationDelay = `${i * 60}ms`
     b.onclick = () => pickTile(me, b, item.intruder)
     grid.appendChild(b)
+    me.tiles.push(b)
   })
 }
 
@@ -109,11 +132,33 @@ function pickTile(me: State, btn: HTMLButtonElement, isIntruder: boolean) {
   }
   paintSide(me)
   me.round++
-  ctx.after(isIntruder ? 800 : 1300, () => {
+  ctx.after(isIntruder ? 350 : 900, () => { if (intr === me) toBasket(me) })
+  ctx.after(isIntruder ? 1500 : 2100, () => {
     if (intr !== me) return
     if (me.round < me.total) load(me)
     else finish(me)
   })
+}
+
+/* La famille file dans le panier, une photo après l'autre ; l'intrus reste */
+function toBasket(me: State) {
+  const basket = $('intBasket')
+  const to = basket.getBoundingClientRect()
+  const members = me.tiles.filter((_, i) => i !== me.intruder)
+  members.forEach((t, k) => {
+    const r = t.getBoundingClientRect()
+    const dx = to.left + to.width / 2 - (r.left + r.width / 2)
+    const dy = to.top + to.height * 0.35 - (r.top + r.height / 2)
+    t.style.transitionDelay = `${k * 90}ms`
+    t.style.transform = `translate(${dx}px,${dy}px) scale(.16) rotate(${(k % 2 ? 1 : -1) * 20}deg)`
+    t.classList.add('int-fly')
+  })
+  ctx.after(380 + members.length * 90, () => {
+    if (intr !== me) return
+    basket.classList.remove('int-got'); void basket.offsetWidth; basket.classList.add('int-got')
+    sfx('pluck', { vol: 0.5 })
+  })
+  me.tiles[me.intruder]?.classList.add('int-alone')
 }
 
 function finish(me: State) {
@@ -132,13 +177,14 @@ export const intrus: GameDef = {
           <div class="int-q saytext" id="intQ"></div>
           <div class="igrid int-grid" id="intGrid"></div>
         </div>
-        <div class="tq-side">
+        <div class="int-side">
           <div class="tq-moves" id="intScore"></div>
           <div class="mem-dots" id="intDots"></div>
         </div>
+        <div class="int-basket" id="intBasket">${BASKET}</div>
       </div>`
-    preloadSfx(['confirm', 'drop'])
-    const me: State = { round: 0, total: 6, score: 0, lock: false, intruder: -1 }
+    preloadSfx(['confirm', 'drop', 'pluck'])
+    const me: State = { tiles: [], round: 0, total: 6, score: 0, lock: false, intruder: -1 }
     intr = me
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {

@@ -315,7 +315,7 @@ export const stand3d: GameDef = {
     ctx = c
     c.root.innerHTML = `<div class="arena g3-arena s3-arena" id="s3Arena"></div>`
     const arena = $('s3Arena')
-    const hideLoader = loader(arena, '🎪')
+    const hideLoader = loader(arena, 'stand3d')
     preloadSfx(['whoosh', 'chop', 'creak', 'confirm', 'error', 'pluck'])
     let dead = false
 

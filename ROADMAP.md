@@ -481,19 +481,56 @@ sur l'écran de fin, sessions A puis B puis C.
     phrase à 15 px. Au passage : l'animation `goodp` (la bonne réponse qui
     rebondit) était utilisée partout et jamais définie.
 
-Ordre pour la suite : relever `?fps` sur la Tab A9+, faire tester aux filles
-les pions 3D et les jeux repris, puis la phase 3 (l'Atelier à la place du
-Coloriage, le personnage partagé).
+- ✅ **« 10 autres améliorations, un truc vraiment stylé » (23/09, les 10
+  validées).**
+  1. **Habille-toi en 3D** : leur personnage construit en formes rondes
+     comme les animaux de la ferme (`core/doll3d.ts`) — robe évasée,
+     couettes, couronne, ballon… —, sur une estrade dans un petit décor ; on
+     le fait tourner au doigt, il saute de joie à chaque habit.
+  2. **Il vient jouer** : au volant du tracteur de la Course (bras en l'air au
+     saut), et sur l'écran de fin de tous les jeux — il saute de joie à
+     3 étoiles, fait coucou « encore ! » à 1 étoile. `ctx.look` sert enfin.
+  3. **Accueil vivant** : il se promène avec la poule et le poussin ; la tuile
+     touchée grandit jusqu'au plein écran avant d'ouvrir le jeu.
+  4. **L'Atelier remplace le Coloriage** : feuille 1500 × 1000 au doigt,
+     pinceau en trois tailles, arc-en-ciel, pot de peinture qui se déverse en
+     rond, gomme, tampons des animaux 3D, annuler (10 crans), quatre feuilles
+     (blanche, papillon, fleur, maison) gardées dans IndexedDB avec leur
+     vignette ; les coloriages de l'ancien jeu reviennent dans la feuille.
+  5. **Bonhomme de neige** : un vrai paysage d'hiver (`core/winter.ts`) — ciel
+     en dégradé, montagnes, collines, chalet en rondins assemblé pièce par
+     pièce avec sa cheminée qui fume, sapin décoré, luge, banc, lanternes qui
+     luisent, rennes, rochers ; flocons ronds.
+  6. **Le Marché plein écran** : modes en colonne (trois grosses icônes),
+     étal à auvent rayé avec la marchandise en grand et son étiquette,
+     tiroir-caisse à afficheur, bourse de grosses pièces ; Découvre = les
+     pièces en très grand sur tout l'écran.
+  7. **L'Intrus plein écran** : photos géantes (la grille prend le nombre de
+     colonnes qui les fait les plus grandes), la famille file dans le panier,
+     l'intrus reste seul au milieu — même quand on s'est trompée.
+  8. **Pizzeria** : deux grosses flèches posées sur la scène à la place des
+     deux minuscules du haut ; doigt posé = ça continue de tourner.
+  9. **Écrans de chargement** : la vignette dessinée du jeu qui respire.
+  10. **À deux en équipe** sur Ninja et Tape-Trous : choix « seule / à deux »
+      sur l'écran de niveau, une lame par doigt (bleue à gauche, rose à
+      droite), plus de fruits et d'animaux, un seul score, « vous avez
+      marqué ». Le Ninja suit maintenant chaque doigt à part : avant, un
+      second doigt faisait sauter la lame d'un bout à l'autre de l'écran.
+
+Ordre pour la suite : relever `?fps` sur la Tab A9+ (l'Atelier et le
+paysage d'hiver compris), faire tester aux filles l'Atelier et le jeu à
+deux, puis la phase 3.
 
 Chaque itération : une demi-page de design (geste, enjeu, rampe, outro,
 sons), l'implémentation, un bot qui gagne, une capture de référence.
 
 ## Phase 3 — Ce qui fait « un jeu » plutôt que vingt
 
-- Personnage partagé glTF animé avec la photo en visage ; `ctx.look` lu.
-- Coopération à deux doigts sur la même tablette (Attrape, Taupe, Ninja).
-- L'Atelier (refonte de `coloring`) : pinceau, tampons, annuler, album.
-- Chargement paresseux par jeu + CSS colocalisé ; IndexedDB pour les blobs.
+- ✅ Personnage partagé (23/09, en formes rondes plutôt qu'en glTF) ; reste :
+  le mettre dans d'autres jeux 3D (Attrape : c'est elle qui tient le panier).
+- ✅ Coopération à deux (Ninja, Tape-Trous) ; reste : Attrape (deux paniers ?).
+- ✅ L'Atelier ; reste : plus de dessins à colorier (des animaux de la ferme).
+- Chargement paresseux par jeu + CSS colocalisé (IndexedDB sert déjà à l'Atelier).
 - À décider plus tard : `letters` (refonte ou sortie).
 
 ---

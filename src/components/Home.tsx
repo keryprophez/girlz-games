@@ -30,6 +30,25 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
 
   const [adjust, setAdjust] = useState<{ img: HTMLImageElement; pid: string } | null>(null)
 
+  /* Ouvrir un jeu (23/09) : la vignette touchée grandit jusqu'à remplir
+     l'écran, puis le jeu apparaît dessous — on VOIT où on entre. */
+  const launching = useRef(false)
+  const launch = (tile: HTMLElement, id: string, sq: string, badge: string) => {
+    if (launching.current) return
+    launching.current = true
+    sFlip()
+    const from = (tile.querySelector('.sq') || tile).getBoundingClientRect()
+    const z = document.createElement('div')
+    z.className = 'gc-zoom sq ' + sq
+    z.innerHTML = `<span class="gc-zoom-badge">${badge}</span>`
+    Object.assign(z.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' })
+    document.body.appendChild(z)
+    requestAnimationFrame(() => requestAnimationFrame(() => z.classList.add('go')))
+    window.setTimeout(() => { launching.current = false; onPlay(id) }, 380)
+    window.setTimeout(() => z.classList.add('out'), 520)
+    window.setTimeout(() => z.remove(), 1000)
+  }
+
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -91,7 +110,7 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
               {w.games.map(g => {
                 const best = prog.bestStars[g.id] || 0
                 return (
-                  <button className="gc" key={g.id} onClick={() => onPlay(g.id)}>
+                  <button className="gc" key={g.id} onClick={e => launch(e.currentTarget, g.id, g.sq, BADGE[g.id] || g.icon)}>
                     <span className={'sq ' + g.sq}>{BADGE[g.id] ? <Svg html={BADGE[g.id]} /> : g.icon}</span>
                     <span className="nm">{g.name}</span>
                     {w.id !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}

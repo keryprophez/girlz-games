@@ -396,7 +396,7 @@ export const geoGame: GameDef = {
     ctx = c
     c.root.innerHTML = `<div class="arena g3-arena geo-arena" id="geoArena"></div>`
     const arena = $('geoArena')
-    const hideLoader = loader(arena, '🌍', 25000)
+    const hideLoader = loader(arena, 'geo', 25000)
     preloadSfx(['confirm', 'error', 'pluck', 'click'])
     let dead = false
 

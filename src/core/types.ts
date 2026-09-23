@@ -27,6 +27,10 @@ export interface GameContext {
   /** Look choisi dans Habille-toi — suit la joueuse dans les autres jeux. */
   look: Look | null
   byTier<T>(e: T, m: T, x: T): T
+  /** À deux sur la même tablette, EN ÉQUIPE (23/09) : deux doigts à la
+      fois, un seul score commun, aucune comparaison (règle 1). Toujours
+      false pour un jeu qui ne déclare pas `duo`. */
+  duo: boolean
   finish(p: FinishPayload): void
   toast(msg: string): void
   /** Lit un texte à voix haute. UNIQUEMENT du contenu pédagogique (une
@@ -55,6 +59,9 @@ export interface GameDef {
   subtitle: string
   /** Thème de musique d'ambiance générative (voir core/music.ts) ; absent = silence. */
   music?: string
+  /** Le jeu se joue aussi à deux en équipe : l'écran de niveau propose
+      « seule / à deux » (deux silhouettes, zéro mot) et `ctx.duo` suit. */
+  duo?: boolean
   /** Monte le jeu dans root et renvoie une fonction de nettoyage idempotente. */
   mount(ctx: GameContext): () => void
 }

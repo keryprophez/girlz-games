@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { SHOW_PROFILES, useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Tier } from '../core/types'
@@ -12,6 +12,8 @@ import { playMusic, stopMusic } from '../core/music'
 import { ICON, starsHTML } from '../core/icons'
 import { BADGE } from '../core/badges'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
+import { dollPortraits } from '../core/portraits'
+import { defaultLook, type Look } from '../core/character'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
    Le jeu ne voit que `ctx` ; tout ce qui est commun à 30 jeux vit ici. */
@@ -31,9 +33,29 @@ function lastTier(gameId: string): Tier | null {
   } catch { /* stockage refusé : tant pis */ }
   return null
 }
+/* À deux (jeux `duo`) : retenu par jeu, comme le niveau */
+const duoKey = (gameId: string) => `ferme:duo:${gameId}`
+function lastDuo(gameId: string): boolean {
+  try { return localStorage.getItem(duoKey(gameId)) === '1' } catch { return false }
+}
 
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
+
+/** Leur personnage (Habille-toi) sur l'écran de fin : elle saute de joie
+    pour une belle partie, elle fait coucou « encore ! » pour une partie ratée.
+    Les images sont rendues dès l'ouverture du jeu (cache) : elles sont prêtes. */
+function EndDoll({ look, mood }: { look: Look; mood: 'joy' | 'soft' | 'again' }) {
+  const [img, setImg] = useState<Record<string, string>>({})
+  useEffect(() => {
+    let on = true
+    dollPortraits(look, ['cheer', 'wave'], 200).then(r => { if (on) setImg(r) })
+    return () => { on = false }
+  }, [look])
+  const src = mood === 'again' ? img.wave : img.cheer
+  if (!src) return null
+  return <img className={'result-doll ' + mood} src={src} alt="" />
+}
 
 /** Le score de fin en géant, qui défile de 0 jusqu'au résultat avec un tic
     par cran (≈ 0,9 s en tout) : on VOIT et on ENTEND combien on a fait. */
@@ -71,6 +93,10 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const [crashed, setCrashed] = useState(false)
   // Tant que la difficulté n'est pas choisie, le jeu n'est pas monté
   const [tier, setTier] = useState<Tier | null>(null)
+  const [duo, setDuo] = useState(() => lastDuo(gameId))
+  // Lu au montage du jeu (l'effet ne dépend pas de `duo` : changer se fait
+  // dans le choix du niveau, qui relance de toute façon la partie)
+  const duoRef = useRef(duo)
   const [card, setCard] = useState(true)
   const [paused, setPausedState] = useState(isPaused())
   const [outro, setOutro] = useState(false)
@@ -123,6 +149,11 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   }, [game.music, result])
 
   const profile = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
+  // Un objet stable : un nouveau look à chaque rendu relancerait le rendu 3D
+  const lookKey = JSON.stringify(profile.look || defaultLook())
+  const look = useMemo(() => JSON.parse(lookKey) as Look, [lookKey])
+  // Préparer tout de suite les images du personnage pour l'écran de fin
+  useEffect(() => { dollPortraits(look, ['cheer', 'wave'], 200) }, [look])
 
   // Cérémonie des étoiles : chaque étoile gagnée sonne et étincelle
   useEffect(() => {
@@ -169,6 +200,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       avatar: p.avatar,
       look: p.look || null,
       byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
+      duo: !!game.duo && duoRef.current,
       toast,
       say,
       after: (ms, fn) => session.after(ms, fn),
@@ -240,6 +272,12 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     setRunId(r => r + 1)
   }
   const askTier = () => { setPaused(false); setResult(null); setTier(null) }
+  const pickDuo = (v: boolean) => {
+    try { localStorage.setItem(duoKey(gameId), v ? '1' : '0') } catch { /* stockage refusé */ }
+    duoRef.current = v
+    setDuo(v)
+    tone(v ? 660 : 440, 0.1, 'sine', 0.09)
+  }
 
   return (
     <section className="screen play active">
@@ -268,6 +306,12 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
         <div className="tierpick">
           <span className={'titlecard-sq ' + game.sq}>{BADGE[game.id] ? <Svg html={BADGE[game.id]} /> : game.icon}</span>
           <span className="titlecard-name">{game.name}</span>
+          {game.duo && (
+            <div className="duorow">
+              <button className={'duobtn' + (!duo ? ' sel' : '')} onClick={() => pickDuo(false)} aria-label="Seule"><Svg html={ICON.solo} /></button>
+              <button className={'duobtn' + (duo ? ' sel' : '')} onClick={() => pickDuo(true)} aria-label="À deux"><Svg html={ICON.duo} /></button>
+            </div>
+          )}
           <div className="tierrow">
             {TIERS.map(t => (
               <button key={t} className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
@@ -314,6 +358,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             ? e => { if (e.target === e.currentTarget) replay() }
             : undefined}>
           <div className="modal">
+            <EndDoll look={look} mood={creative || result.stars === 3 ? 'joy' : result.stars === 2 ? 'soft' : 'again'} />
             <h2>{result.title}</h2>
             {result.score !== undefined && <BigScore value={result.score} icon={result.scoreIcon ?? ICON.star} />}
             <p>{result.msg}</p>

@@ -5,9 +5,10 @@ import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 import { impact } from '../core/impact'
 import { confetti } from '../core/fx'
-import { decor, ring, particles, toScreen, type Particles } from '../core/scene3d'
+import { particles, toScreen, type Particles } from '../core/scene3d'
+import { winterScene, WINTER_SKY } from '../core/winter'
 import {
-  createStage, loadPhysics, loader, fixedStep, orbitCam, snowTex, bumpyNormal, picker,
+  createStage, loadPhysics, loader, fixedStep, orbitCam, snowTex, bumpyNormal, picker, dotTex,
   type Stage, type Cannon, type T3, type Orbit
 } from '../core/three3d'
 
@@ -120,7 +121,7 @@ function digAt(me: State, x: number, z: number, r: number) {
 }
 
 /** Flocons qui tombent en continu : un nuage de points recyclé, ça ne coûte rien. */
-function addSnowfall(T: T3, scene: import('three').Scene) {
+function addSnowfall(T: T3, scene: import('three').Scene, flake: import('three').Texture) {
   const N = 700
   const pos = new Float32Array(N * 3)
   for (let i = 0; i < N; i++) {
@@ -131,7 +132,7 @@ function addSnowfall(T: T3, scene: import('three').Scene) {
   const geo = new T.BufferGeometry()
   geo.setAttribute('position', new T.BufferAttribute(pos, 3))
   const pts = new T.Points(geo, new T.PointsMaterial({
-    color: 0xFFFFFF, size: 0.07, transparent: true, opacity: 0.85, depthWrite: false
+    color: 0xFFFFFF, size: 0.11, map: flake, transparent: true, opacity: 0.9, depthWrite: false
   }))
   scene.add(pts)
   return { pts, pos, N }
@@ -464,15 +465,15 @@ export const snowman: GameDef = {
         </div>
       </div>`
     const arena = $('snArena')
-    const hideLoader = loader(arena, '⛄')
+    const hideLoader = loader(arena, 'snowman')
     preloadSfx(['whoosh', 'confirm', 'drop', 'pluck'])
 
     ;(async () => {
       const [, CANNON] = await loadPhysics()
       if (dead) return
       const stage: Stage = await createStage(arena, {
-        sky: '#AEDCF5',
-        fog: [12, 34], fogColor: '#D3EAF8',
+        sky: WINTER_SKY.horizon,
+        fog: [16, 110], fogColor: WINTER_SKY.horizon,
         cam: [0, 2.9, 6.1], target: [0, 0.85, 0], fov: 46,
         hemi: ['#DDF0FF', '#9FBBD0', 1.15],
         sun: { pos: [5.5, 8, 5], color: '#FFF4E0', intensity: 2.5, area: 8, far: 26 },
@@ -485,10 +486,11 @@ export const snowman: GameDef = {
       /* Sol de neige + calque de sillon */
       const snowMap = stage.keep(snowTex(T, 9))
       const snowNrm = stage.keep(bumpyNormal(T, 10, 9))
-      const groundMesh = new T.Mesh(
-        new T.PlaneGeometry(60, 60),
-        new T.MeshStandardMaterial({ map: snowMap, normalMap: snowNrm, roughness: 0.86, metalness: 0 })
-      )
+      // Le sol va jusqu'aux montagnes : même grain de neige, répété plus loin
+      const farMap = stage.keep(snowMap.clone()), farNrm = stage.keep(snowNrm.clone())
+      farMap.repeat.multiplyScalar(200 / 60); farNrm.repeat.multiplyScalar(200 / 60)
+      const groundMat = new T.MeshStandardMaterial({ map: farMap, normalMap: farNrm, roughness: 0.86, metalness: 0 })
+      const groundMesh = new T.Mesh(new T.PlaneGeometry(200, 200), groundMat)
       groundMesh.rotation.x = -Math.PI / 2
       groundMesh.receiveShadow = true
       scene.add(groundMesh)
@@ -507,11 +509,8 @@ export const snowman: GameDef = {
       trailMesh.receiveShadow = true
       scene.add(trailMesh)
 
-      /* Vrais sapins enneigés du kit holiday, en couronne autour du terrain */
-      decor(stage, ring(22, FIELD + 1.4, FIELD + 6.4).map(([x, z], i) => ({
-        model: `holiday/tree-snow-${['a', 'b', 'c'][i % 3]}`, x, z, size: 1.6 + Math.random() * 1.5
-      }))).catch(() => { /* sans sapins, le jeu tourne */ })
-      const fall = addSnowfall(T, scene)
+      const winter = winterScene(stage, { field: FIELD, snowMat: groundMat })
+      const fall = addSnowfall(T, scene, stage.keep(dotTex(T)))
 
       /* La pile : un cercle de neige tassée, et une flèche qui dit « ici » quand la boule est prête */
       const pileRing = new T.Mesh(new T.TorusGeometry(0.5, 0.035, 8, 40), new T.MeshStandardMaterial({ color: 0x8FC3E8, roughness: 0.8 }))
@@ -737,6 +736,7 @@ export const snowman: GameDef = {
           if (p[i * 3 + 1] < 0) { p[i * 3 + 1] = 11 + Math.random() * 2 }
         }
         fall.pts.geometry.attributes.position.needsUpdate = true
+        winter.update(dt, now / 1000)
 
         // La montée en arc vers la pile
         if (me.lift) {

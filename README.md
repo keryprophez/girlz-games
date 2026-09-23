@@ -27,16 +27,19 @@ aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).
 
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
-neige), Habille-toi (le look est persisté), Boîte à Rythme (les animaux chantent
-en sautant), Petit Piano (la chanson en partition de couleurs), Feu
-d'artifice, Coloriage, la Pizzeria.
+neige, devant un chalet qui fume), Habille-toi (son personnage en 3D, qui la
+suit ensuite dans les jeux), Boîte à Rythme (les animaux chantent en
+sautant), Petit Piano (la chanson en partition de couleurs), Feu d'artifice,
+l'Atelier (dessin au doigt, pot de peinture, tampons, dessins gardés), la
+Pizzeria.
 
 **Autour** — une grille de jeux, la difficulté choisie dans chaque jeu (fleur,
-éclair, flamme), minuteur parental avec verrou « question de grand », voix de
-la famille enregistrées (« Bravo ! »), musique générative par univers qui
-s'enrichit quand le combo monte, vrais bruitages foley sur les chocs, mise à
-jour automatique de la PWA. Le choix de joueuse (profils avec photo) est
-masqué pour l'instant, prêt à revenir.
+éclair, flamme), le Ninja et Tape-Trous à deux en équipe sur la même tablette,
+minuteur parental avec verrou « question de grand », voix de la famille
+enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
+quand le combo monte, vrais bruitages foley sur les chocs, mise à jour
+automatique de la PWA. Le choix de joueuse (profils avec photo) est masqué
+pour l'instant, prêt à revenir.
 
 **Ce qu'il n'y aura jamais** : monnaie, boutique, paliers de déblocage ni
 collection à compléter (l'album d'autocollants est sorti le 22/09), séries

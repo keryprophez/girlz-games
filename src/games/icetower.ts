@@ -299,7 +299,7 @@ export const icetower: GameDef = {
     ctx = c
     c.root.innerHTML = `<div class="arena it-arena" id="itArena"></div>`
     const arena = $('itArena')
-    const hideLoader = loader(arena, '🧊')
+    const hideLoader = loader(arena, 'icetower')
     preloadSfx(['tick', 'drop', 'glass', 'confirm', 'pluck', 'error'])
     let dead = false
 

@@ -44,6 +44,11 @@ button{font-family:inherit;color:inherit;}
    La poule a 1,4 s d'avance : le poussin la suit, à l'aller comme au retour. */
 .walker{bottom:2.5%;left:0;width:64px;height:64px;animation:henWalk 42s linear infinite;animation-delay:-1.4s;}
 .walker.chick{width:40px;height:40px;animation-delay:0s;}
+/* Leur personnage marche devant la poule : deux images de pas qui alternent */
+.walker.doll{width:92px;height:92px;bottom:1.6%;animation-delay:-3.2s;}
+.walker.doll img{position:absolute;inset:0;width:100%;height:100%;animation:dollStep .5s steps(1) infinite;}
+.walker.doll img+img{animation-delay:-.25s;}
+@keyframes dollStep{50%{opacity:0;}}
 @keyframes henWalk{0%{transform:translateX(-6vw) scaleX(-1);}48%{transform:translateX(96vw) scaleX(-1);}
   50%{transform:translateX(96vw) scaleX(1);}98%{transform:translateX(-6vw) scaleX(1);}100%{transform:translateX(-6vw) scaleX(-1);}}
 @media(prefers-reduced-motion:reduce){.halo,.critter{animation:none;}}
@@ -127,6 +132,15 @@ body.ingame .critter{display:none;}
 .gc .nm{font-family:'Baloo 2';font-weight:700;font-size:clamp(12.5px,2.8vmin,15px);line-height:1.1;text-align:center;}
 .gc-stars{font-size:11px;display:flex;justify-content:center;min-height:14px;}
 .gc .sq{position:relative;}
+/* La vignette touchée grandit jusqu'à remplir l'écran (23/09) */
+.gc-zoom{position:fixed;z-index:50;border-radius:18px;display:grid;place-items:center;pointer-events:none;
+  transition:left .38s cubic-bezier(.6,0,.3,1),top .38s cubic-bezier(.6,0,.3,1),width .38s cubic-bezier(.6,0,.3,1),
+  height .38s cubic-bezier(.6,0,.3,1),border-radius .38s ease,opacity .45s ease;}
+.gc-zoom.go{left:0 !important;top:0 !important;width:100vw !important;height:100vh !important;border-radius:0;}
+.gc-zoom.out{opacity:0;}
+.gc-zoom-badge{display:grid;place-items:center;width:44px;height:44px;transition:transform .38s cubic-bezier(.6,0,.3,1);}
+.gc-zoom-badge svg{width:100%;height:100%;}
+.gc-zoom.go .gc-zoom-badge{transform:scale(4);}
 .sq-pink{background:#FFE3E0;}.sq-mint{background:#DDF5E4;}.sq-sky{background:#DDEFFC;}
 .sq-sun{background:#FFF0CC;}.sq-lilac{background:#EDE3FD;}.sq-peach{background:#FFE8D6;}
 
@@ -190,9 +204,26 @@ button.chip:active{transform:scale(.92);}
    INTRUS
    ============================================================ */
 .igrid{display:grid;gap:clamp(8px,1.9vmin,13px);width:100%;justify-content:center;}
-.int-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#FFF6E3;touch-action:manipulation;}
+.int-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#FFF6E3;touch-action:manipulation;
+  padding:64px 20px 130px;overflow:hidden;}
 .int-main{display:flex;flex-direction:column;align-items:center;gap:12px;}
-.int-grid{width:auto;gap:14px;}
+.int-grid{width:auto;gap:18px;}
+.int-grid .itile{animation:intIn .4s var(--spring) both;border-radius:28px;border:5px solid #fff;padding:0;overflow:hidden;
+  box-shadow:0 10px 22px rgba(80,55,30,.18);}
+.int-grid .itile img{width:100%;height:100%;object-fit:cover;border-radius:0;display:block;}
+@keyframes intIn{from{transform:scale(.4) translateY(40px);opacity:0}}
+.int-grid .itile.good{border-color:var(--meadow);background:#E3F7E8;}
+.int-grid .itile.bad{border-color:var(--coral);animation:intNo .45s ease both;}
+.int-grid .itile.reveal{border-color:var(--mango);}
+@keyframes intNo{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.itile.int-fly{transition:transform .55s cubic-bezier(.5,-.3,.7,1),opacity .55s ease;opacity:.2;pointer-events:none;}
+.itile.int-alone{animation:intAlone 1s ease-in-out infinite alternate;z-index:2;}
+@keyframes intAlone{to{transform:scale(1.08) rotate(-2deg);box-shadow:0 0 0 8px rgba(255,197,51,.55),0 14px 28px rgba(80,55,30,.25);}}
+.int-side{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;z-index:6;}
+.int-side .mem-dots{flex-direction:row;}
+.int-basket{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);filter:drop-shadow(0 8px 10px rgba(80,55,30,.25));}
+.int-basket.int-got{animation:intGot .4s var(--spring);}
+@keyframes intGot{40%{transform:translateX(-50%) scale(1.18,.86)}}
 .int-q{font-family:'Baloo 2';font-weight:800;font-size:clamp(18px,3.6vmin,26px);color:var(--ink-soft);}
 /* Sprites et icônes insérés dans du HTML (quiz, intrus, marché) */
 .portrait{display:block;pointer-events:none;user-select:none;-webkit-user-drag:none;}
@@ -248,6 +279,18 @@ button.chip:active{transform:scale(.92);}
   text-align:center;max-width:440px;width:88%;box-shadow:var(--e2);}
 .modal h2{font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,5.6vmin,36px);margin-bottom:4px;}
 .modal p{font-size:15.5px;color:var(--ink-soft);margin-bottom:10px;}
+/* Leur personnage à côté de l'écran de fin : il danse, ou il encourage */
+.modal{position:relative;}
+.result-doll{position:absolute;left:-168px;bottom:-6px;width:200px;height:200px;pointer-events:none;
+  transform-origin:50% 100%;animation:dollIn .5s var(--spring) both;}
+.result-doll.joy{animation:dollIn .5s var(--spring) both,dollJoy .55s ease-in-out .5s infinite alternate;}
+.result-doll.soft{animation:dollIn .5s var(--spring) both,dollSway 1.2s ease-in-out .5s infinite alternate;}
+.result-doll.again{animation:dollIn .5s var(--spring) both,dollWave .9s ease-in-out .5s infinite alternate;}
+@keyframes dollIn{from{opacity:0;transform:translateX(40px) scale(.6);}to{opacity:1;transform:none;}}
+@keyframes dollJoy{from{transform:translateY(0) rotate(-4deg);}to{transform:translateY(-26px) rotate(4deg);}}
+@keyframes dollSway{from{transform:rotate(-5deg);}to{transform:rotate(5deg);}}
+@keyframes dollWave{from{transform:rotate(-3deg) translateY(0);}to{transform:rotate(3deg) translateY(-6px);}}
+@media (max-width:760px){.result-doll{display:none;}}
 /* La « bonne réponse » qui rebondit : utilisée partout, jamais définie avant le 23/09 */
 @keyframes goodp{0%{transform:scale(.9);}45%{transform:scale(1.14);}100%{transform:scale(1);}}
 /* Le résultat en géant sur l'écran de fin : le chiffre, pas une phrase (23/09) */
@@ -329,39 +372,79 @@ body.playing .g3-bar{max-width:820px;}
 .fl-arena{background:#7FB8E0;cursor:pointer;}
 
 /* ============================================================
-   COLORIAGE
+   L'ATELIER (dessin au doigt, 23/09)
    ============================================================ */
-.colpanel{width:100%;max-width:520px;padding:10px;}
-#colSvg svg{width:100%;height:auto;display:block;}
-.creg{fill:#FFFFFF;stroke:#45362A;stroke-width:3;stroke-linejoin:round;cursor:pointer;transition:fill .15s;}
-.cdeco{fill:none;stroke:#45362A;stroke-width:3;stroke-linecap:round;}
-.palette{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;max-width:420px;}
-.pchip{width:40px;height:40px;border-radius:50%;border:3px solid #fff;cursor:pointer;
-  box-shadow:var(--e1);transition:transform .2s var(--spring);font-size:18px;}
-.pchip.sel{transform:scale(1.2);box-shadow:0 0 0 3px var(--mango), var(--e1);}
-.pchip:active{transform:scale(.9);}
-.cmini{width:44px;height:33px;display:block;pointer-events:none;}
-.cmini .creg,.cmini .cdeco{stroke-width:10;}
-.cscene-btn{padding:6px 10px;}
-.cscene-btn.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
+.at-arena{display:flex;align-items:stretch;padding:0;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 40%,#F3E6CF 0%,#E3CFAE 70%,#D6BE97 100%);}
+.at-tools,.at-side{display:flex;flex-direction:column;align-items:center;gap:min(10px,1.2vh);
+  padding:64px 10px 16px;background:rgba(255,255,255,.55);backdrop-filter:blur(8px);overflow-y:auto;z-index:2;}
+.at-tools{width:min(96px,11vw);}
+.at-side{width:min(176px,18vw);padding-bottom:96px;}
+.at-tool{width:min(64px,8vh);height:min(64px,8vh);flex:none;border-radius:18px;border:2px solid var(--line);background:#fff;
+  cursor:pointer;display:grid;place-items:center;box-shadow:var(--e1);transition:transform .2s var(--spring),border-color .2s;}
+.at-tool svg{width:72%;height:72%;}
+.at-tool.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.12);box-shadow:0 0 0 3px var(--mango),var(--e1);}
+.at-tool:active{transform:scale(.9);}
+.at-sizes{display:flex;flex-direction:column;gap:6px;padding:6px 0;}
+.at-size{width:min(52px,6.6vh);height:min(52px,6.6vh);border-radius:50%;border:2px solid transparent;background:#fff;cursor:pointer;
+  display:grid;place-items:center;box-shadow:var(--e1);}
+.at-size i{display:block;border-radius:50%;}
+.at-size.sel{border-color:var(--mango);box-shadow:0 0 0 2px var(--mango),var(--e1);}
+.at-desk{flex:1;min-width:0;display:grid;place-items:center;position:relative;}
+.at-paper{position:relative;background:#FFFDF8;border-radius:6px;
+  box-shadow:0 2px 0 #E9DFD0,0 18px 40px rgba(80,55,30,.28),0 4px 10px rgba(80,55,30,.18);}
+.at-paper canvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:6px;}
+#atPaint{touch-action:none;cursor:crosshair;}
+#atLines{pointer-events:none;}
+.at-paper.at-swish{animation:atSwish .45s var(--spring);}
+@keyframes atSwish{0%{transform:rotate(0)}30%{transform:rotate(-1.5deg) scale(.97)}100%{transform:none}}
+.at-ghost{position:absolute;pointer-events:none;transform:translate(-50%,-50%) rotate(var(--rot)) scale(1);
+  animation:atStamp .23s cubic-bezier(.3,1.6,.6,1) both;filter:drop-shadow(0 10px 8px rgba(0,0,0,.25));}
+@keyframes atStamp{0%{transform:translate(-50%,-50%) rotate(var(--rot)) scale(1.9);opacity:.3}
+  100%{transform:translate(-50%,-50%) rotate(var(--rot)) scale(1);opacity:1}}
+.at-pages{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+.at-page{position:relative;aspect-ratio:3/2;border-radius:8px;border:2px solid var(--line);background:#FFFDF8;padding:0;
+  cursor:pointer;overflow:hidden;box-shadow:var(--e1);transition:transform .2s var(--spring);}
+.at-page img,.at-page svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.at-page img:not([src]){display:none;}
+.at-page.sel{border-color:var(--mango);box-shadow:0 0 0 3px var(--mango),var(--e1);transform:scale(1.06);}
+.at-pal,.at-stamps{display:grid;grid-template-columns:1fr 1fr;gap:min(10px,1.2vh);justify-items:center;width:100%;}
+.at-stamps{display:none;}
+.at-arena.stamping .at-pal{display:none;}
+.at-arena.stamping .at-stamps{display:grid;}
+.at-color{width:min(54px,6.8vh);height:min(54px,6.8vh);border-radius:50%;border:4px solid #fff;cursor:pointer;
+  box-shadow:var(--e1);transition:transform .2s var(--spring);}
+.at-color.sel{transform:scale(1.18);box-shadow:0 0 0 3px var(--mango),var(--e1);}
+.at-color:active{transform:scale(.9);}
+.at-stamp{width:min(66px,8.4vh);height:min(66px,8.4vh);border-radius:16px;border:2px solid var(--line);background:#fff;padding:2px;
+  cursor:pointer;box-shadow:var(--e1);transition:transform .2s var(--spring);}
+.at-stamp img{width:100%;height:100%;display:block;}
+.at-stamp.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.1);}
+.at-done{position:absolute;right:16px;bottom:16px;width:74px;height:74px;font-size:38px;z-index:3;}
 
 /* ============================================================
    HABILLE-TOI (personnage illustré)
    ============================================================ */
-.du-stage{position:relative;width:100%;max-width:380px;height:260px;border-radius:var(--r-xl);
-  border:1px solid var(--line);box-shadow:var(--e2);overflow:hidden;margin-bottom:10px;}
-.du-doll{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
-  filter:drop-shadow(0 6px 6px rgba(69,54,42,.22));}
-.du-doll svg{display:block;}
-.du-rows{display:flex;flex-direction:column;gap:7px;width:100%;max-width:420px;}
-.du-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;}
-.du-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;width:70px;text-align:right;flex-shrink:0;}
-.du-opt{min-width:42px;height:42px;border-radius:13px;border:2px solid var(--line);background:var(--card);
+/* Habille-toi en 3D (23/09) : la scène à gauche, la garde-robe à droite */
+.du-arena{display:flex;align-items:stretch;gap:0;background:#F4EEFB;padding:0;overflow:hidden;}
+.du-scene{position:relative;flex:1;min-width:0;touch-action:none;}
+.du-scene canvas{display:block;width:100%;height:100%;}
+.du-side{width:min(410px,40%);display:flex;flex-direction:column;justify-content:center;gap:12px;padding:62px 14px 90px;
+  background:rgba(255,255,255,.72);backdrop-filter:blur(8px);overflow-y:auto;}
+.du-top{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.du-tool{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:#fff;cursor:pointer;font-size:24px;
+  display:grid;place-items:center;box-shadow:var(--e1);}
+.du-tool:active{transform:scale(.9);}
+.du-rows{display:flex;flex-direction:column;gap:10px;width:100%;}
+.du-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-start;}
+.du-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;width:100%;text-align:left;}
+.du-done{position:absolute;right:16px;bottom:16px;width:74px;height:74px;font-size:38px;}
+.du-opt{min-width:54px;height:54px;border-radius:13px;border:2px solid var(--line);background:var(--card);
   cursor:pointer;box-shadow:var(--e1);transition:transform .2s var(--spring),border-color .2s;
   display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;}
 .du-opt.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.1);}
 .du-opt:active{transform:scale(.9);}
-.du-opt.du-color{min-width:30px;width:30px;height:30px;border-radius:50%;border:3px solid #fff;
+.du-opt.du-color{min-width:40px;width:40px;height:40px;border-radius:50%;border:3px solid #fff;
   box-shadow:var(--e1);padding:0;}
 .du-opt.du-color.sel{box-shadow:0 0 0 3px var(--mango), var(--e1);border-color:#fff;}
 
@@ -655,8 +738,6 @@ body.playing .g3-bar{max-width:820px;}
   padding:3px 8px;border-radius:99px;box-shadow:var(--e1);white-space:nowrap;}
 .tool-item.sel .tool-cap{background:var(--mango);color:#fff;}
 .mz-tools .tool-item,.tq-tools .tool-item{align-items:center;}
-.mk-mode b{font-family:'Baloo 2';font-weight:700;font-size:13px;}
-.mk-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;border-color:transparent;}
 .tq-side{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:6;}
 .tq2-mini{width:96px;height:96px;border-radius:18px;overflow:hidden;box-shadow:var(--e2);border:3px solid #fff;background:#fff;}
 .tq2-mini img{width:100%;height:100%;display:block;object-fit:cover;}
@@ -680,15 +761,8 @@ body.playing #catchArea,body.playing #runArea,body.playing .arena{
   flex:1;width:100%;max-width:none;height:auto;max-height:none;min-height:0;border-radius:20px;}
 /* Les plateaux 2D : aussi grands que la hauteur le permet */
 body.playing .board{max-width:min(92vw,78vh) !important;}
-body.playing .colpanel{max-width:min(780px,calc((100vh - 250px) * 4 / 3));}
-body.playing .palette{max-width:560px;}
-body.playing .du-stage{max-width:600px;height:min(52vh,420px);}
-body.playing .du-doll{transform:translateX(-50%) scale(1.4);transform-origin:bottom center;}
 body.playing .tbar{max-width:800px !important;}
 body.playing .g3-bar{max-width:820px;margin-top:4px;}
-body.playing .mk-bank,body.playing .mk-traywrap{max-width:760px;}
-body.playing .mk-coin{width:76px;height:76px;}
-body.playing .mk-coin.mk-note{width:116px;height:66px;}
 body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 
 /* HUD d'arcade (core/arcade.ts) : posé DANS l'arène, en haut au centre */
@@ -826,6 +900,11 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .tierbtn.tier-med{background:linear-gradient(135deg,#FFC65C,#FF9E5C);}
 .tierbtn.tier-exp{background:linear-gradient(135deg,#FF8F6B,#E8574C);}
 .tierbtn.last{box-shadow:0 0 0 4px var(--mango),var(--e2);}
+.duorow{display:flex;gap:6px;padding:6px;border-radius:99px;background:rgba(255,255,255,.8);box-shadow:var(--e1);}
+.duobtn{width:64px;height:52px;border-radius:99px;border:none;background:transparent;cursor:pointer;color:var(--ink-soft);
+  font-size:30px;display:grid;place-items:center;transition:transform .2s var(--spring),background .2s;}
+.duobtn.sel{background:linear-gradient(135deg,var(--lilac,#B197FC),#8F74E0);color:#fff;transform:scale(1.06);}
+.duobtn:active{transform:scale(.9);}
 .tierdots{display:flex;gap:5px;}
 .tierdots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.92);}
 .pbtn-tier{color:#fff;border-color:#fff;}
@@ -846,8 +925,18 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 
 /* ---- Ninja WebGL ---- */
 #njArea canvas{display:block;width:100%;height:100%;touch-action:none;}
-.nj-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:40px;animation:rbob 1s ease-in-out infinite;}
+.nj-loading{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  pointer-events:none;animation:ldIn .35s 1.4s ease-out both;} /* après le carton titre (1,5 s), jamais par-dessus */
+@keyframes ldIn{from{opacity:0;transform:scale(.8)}}
+.ld-badge{width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;
+  box-shadow:0 14px 34px rgba(0,0,0,.22);animation:ldBreath 1.6s ease-in-out infinite;}
+.ld-badge svg{width:104px;height:104px;}
+@keyframes ldBreath{50%{transform:scale(1.08)}}
+.ld-dots{display:flex;gap:10px;}
+.ld-dots i{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.95);box-shadow:0 2px 6px rgba(0,0,0,.25);
+  animation:ldDot .9s ease-in-out infinite;}
+.ld-dots i:nth-child(2){animation-delay:.15s}.ld-dots i:nth-child(3){animation-delay:.3s}
+@keyframes ldDot{30%{transform:translateY(-12px)}60%{transform:none}}
 
 /* ---- Taquin : mode chiffres + chips ---- */
 /* ---- Grand Tableau : réglette numérique sur UNE ligne ---- */
@@ -937,35 +1026,65 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
    LE MARCHÉ (euros)
    ============================================================ */
 .mk-svg{display:block;width:100%;height:100%;}
-.mk-bank{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:520px;
-  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
-  padding:12px;box-shadow:var(--e1);}
-.mk-coin{width:62px;height:62px;border:none;background:transparent;cursor:pointer;padding:2px;
-  transition:transform .15s var(--spring);}
+/* Plein écran (23/09) : les modes en colonne à gauche, l'étal au milieu
+   (auvent rayé, la marchandise en grand sur son présentoir, l'étiquette du
+   prix), le tiroir-caisse dessous, la bourse de pièces à droite. */
+.mk-arena{display:flex;align-items:stretch;gap:14px;padding:64px 16px 16px;overflow:hidden;
+  background:linear-gradient(180deg,#CFEAF7 0%,#E9F5E4 55%,#CFE7B9 100%);}
+.mk-modes{display:flex;flex-direction:column;justify-content:center;gap:14px;}
+.mk-mode{width:84px;height:84px;border-radius:24px;border:3px solid #fff;background:rgba(255,255,255,.85);cursor:pointer;
+  display:grid;place-items:center;font-size:40px;color:var(--ink);box-shadow:var(--e2);transition:transform .2s var(--spring);}
+.mk-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;transform:scale(1.08);}
+.mk-mode:active{transform:scale(.9);}
+.mk-main{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.mk-stall{position:relative;width:min(100%,640px);display:flex;flex-direction:column;align-items:stretch;
+  filter:drop-shadow(0 12px 18px rgba(80,55,30,.22));}
+.mk-awning{height:54px;border-radius:16px 16px 0 0;position:relative;z-index:1;
+  background:repeating-linear-gradient(90deg,#E8414F 0 52px,#FFF6EA 52px 104px);}
+.mk-awning::after{content:'';position:absolute;left:0;right:0;top:100%;height:20px;
+  background:radial-gradient(circle at 26px 0,#E8414F 25px,transparent 26px) 0 0/104px 20px repeat-x,
+    radial-gradient(circle at 78px 0,#FFF6EA 25px,transparent 26px) 0 0/104px 20px repeat-x;}
+.mk-item{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:26px;padding:34px 20px 6px;
+  min-height:250px;background:linear-gradient(180deg,#FFF9EE,#F6E7C9);}
+.mk-show{position:relative;width:210px;height:210px;border-radius:26px;overflow:hidden;border:6px solid #fff;
+  box-shadow:0 10px 20px rgba(80,55,30,.25);transform:rotate(-3deg);animation:mkIn .45s var(--spring) both;}
+.mk-show img{width:100%;height:100%;object-fit:cover;display:block;}
+@keyframes mkIn{from{transform:translateY(-30px) rotate(-10deg) scale(.6);opacity:0}}
+.mk-price{align-self:center;position:relative;font-family:'Baloo 2';font-weight:800;font-size:46px;line-height:1;color:#3E3428;
+  background:#F2D9A6;border-radius:10px 26px 26px 10px;padding:14px 22px 10px 40px;transform:rotate(5deg);
+  box-shadow:0 6px 12px rgba(80,55,30,.2);animation:mkIn .5s .1s var(--spring) both;}
+.mk-price::before{content:'';position:absolute;left:14px;top:50%;width:13px;height:13px;margin-top:-6px;border-radius:50%;
+  background:#FFF9EE;box-shadow:inset 0 2px 3px rgba(0,0,0,.25);}
+.mk-paid{align-self:center;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:40px;color:var(--coral);}
+.mk-paynote{display:block;width:150px;height:82px;transform:rotate(-6deg);filter:drop-shadow(0 6px 8px rgba(0,0,0,.2));}
+.mk-counter{height:26px;border-radius:0 0 12px 12px;background:linear-gradient(180deg,#B97F3F,#8B5E3C);}
+.mk-traywrap{width:min(100%,640px);display:flex;flex-direction:column;align-items:center;}
+.mk-till{background:#45362A;border-radius:16px 16px 0 0;padding:8px 18px 6px;box-shadow:var(--e1);}
+.mk-total{min-width:180px;text-align:center;font-family:'Baloo 2';font-weight:800;font-size:40px;line-height:1.1;
+  color:#B8F5A8;background:#1F2A22;border-radius:10px;padding:2px 16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.6);}
+.mk-total.over{color:#FF8A8A;animation:lgpulse .6s ease-in-out infinite;}
+.mk-total.exact{color:#7CFF6B;}
+.mk-tray{width:100%;min-height:118px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:12px;
+  border-radius:18px;background:linear-gradient(180deg,#6B4A2B,#50361F);
+  box-shadow:inset 0 6px 14px rgba(0,0,0,.45),0 10px 18px rgba(80,55,30,.25);}
+.mk-tray .mk-coin{width:92px;height:92px;animation:mkDrop .3s var(--spring) both;}
+.mk-tray .mk-coin.mk-note{width:130px;height:72px;}
+@keyframes mkDrop{from{transform:translateY(-40px) scale(1.2);opacity:0}}
+.mk-bank{width:min(350px,31vw);display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:10px;padding:14px;
+  border-radius:28px;background:rgba(255,255,255,.7);backdrop-filter:blur(6px);box-shadow:var(--e1);overflow-y:auto;}
+.mk-coin{width:124px;height:124px;border:none;background:transparent;cursor:pointer;padding:2px;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.2));transition:transform .15s var(--spring);}
 .mk-coin:active{transform:scale(.85);}
-.mk-coin.mk-note{width:96px;height:56px;}
+.mk-coin.mk-note{width:170px;height:95px;}
 .mk-coin.boing{animation:goodp .4s var(--spring);}
-.mk-item{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
-  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
-  padding:10px 16px;margin-bottom:10px;box-shadow:var(--e1);min-height:64px;}
-
-.mk-price{font-family:'Baloo 2';font-weight:800;font-size:26px;background:#FFF0CC;
-  border:2px dashed var(--mango);border-radius:12px;padding:2px 14px;}
-.mk-paid{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-soft);font-weight:600;}
-.mk-paid svg{width:64px;height:36px;}
-.mk-dots{position:absolute;right:14px;top:50%;transform:translateY(-50%);}
-.mk-traywrap{width:100%;max-width:520px;margin-bottom:10px;}
-.mk-tray{min-height:70px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;
-  background:linear-gradient(180deg,#FDF6E9,#F6E9CF);border:2px dashed #D9A05B;
-  border-radius:var(--r-lg);padding:8px;}
-.mk-tray .mk-coin{width:48px;height:48px;}
-.mk-tray .mk-coin.mk-note{width:74px;height:42px;}
-.mk-total{text-align:center;font-family:'Baloo 2';font-weight:800;font-size:22px;margin-top:4px;}
-.mk-total.over{color:var(--coral);animation:lgpulse .6s ease-in-out infinite;}
-.mk-total.exact{color:var(--meadow);}
-body.playing .mk-bank,body.playing .mk-traywrap{max-width:760px;}
-body.playing .mk-coin{width:76px;height:76px;}
-body.playing .mk-coin.mk-note{width:116px;height:66px;}
+.mk-dots{position:absolute;top:18px;left:50%;transform:translateX(-50%);}
+.mk-done{position:absolute;right:16px;bottom:16px;width:74px;height:74px;font-size:38px;display:none;}
+/* Découvre : la bourse devient l'étal entier, les pièces en très grand */
+.mk-arena.explore .mk-main,.mk-arena.explore .mk-dots{display:none;}
+.mk-arena.explore .mk-done{display:grid;}
+.mk-arena.explore .mk-bank{flex:1;width:auto;gap:22px 30px;padding:30px 100px 30px 30px;background:rgba(255,255,255,.45);}
+.mk-arena.explore .mk-coin{width:150px;height:150px;}
+.mk-arena.explore .mk-coin.mk-note{width:220px;height:124px;}
 
 /* ============================================================
    BONHOMME DE NEIGE 3D — palette d'habillage
@@ -1222,6 +1341,16 @@ body.playing .po-card{max-width:880px;}
    LA PIZZERIA 3D
    ============================================================ */
 .pz-arena{background:#3B2A22;}
+.pz-turn{position:absolute;top:50%;z-index:6;width:92px;height:92px;margin-top:-46px;border-radius:50%;border:4px solid rgba(255,255,255,.9);
+  background:rgba(255,248,236,.28);backdrop-filter:blur(6px);color:#fff;font-size:52px;display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 8px 22px rgba(0,0,0,.35);transition:transform .2s var(--spring),background .2s;touch-action:none;}
+.pz-turn.left{left:18px;}
+.pz-turn.right{right:18px;}
+.pz-turn:active{background:rgba(255,178,92,.6);transform:scale(.9);}
+.pz-turn.spin svg{animation:pzSpinL .35s var(--spring);}
+.pz-turn.right.spin svg{animation-name:pzSpinR;}
+@keyframes pzSpinL{from{transform:rotate(60deg)}}
+@keyframes pzSpinR{from{transform:rotate(-60deg)}}
 .pz-act{background:linear-gradient(135deg,#FF9E5C,#E8574C);color:#fff;}
 
 /* --- Le mini-jeu de cuisson : une jauge qui se remplit, une zone verte,

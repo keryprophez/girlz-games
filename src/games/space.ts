@@ -406,7 +406,7 @@ export const space: GameDef = {
     let dead = false
     c.root.innerHTML = `<div class="arena g3-arena sp3-arena" id="spArena"></div>`
     const arena = c.root.querySelector<HTMLElement>('#spArena')!
-    const hideLoader = loader(arena, '🚀')
+    const hideLoader = loader(arena, 'space')
     const cleanups: (() => void)[] = []
 
     ;(async () => {

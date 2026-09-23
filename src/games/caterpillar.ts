@@ -210,7 +210,7 @@ export const caterpillar: GameDef = {
     let dead = false
     c.root.innerHTML = `<div class="arena g3-arena cp3-arena" id="cpArena"></div>`
     const arena = $('cpArena')
-    const hideLoader = loader(arena, '🐛')
+    const hideLoader = loader(arena, 'caterpillar')
     preloadSfx(['tick', 'chop', 'pluck', 'error'])
 
     ;(async () => {

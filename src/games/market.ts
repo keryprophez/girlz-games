@@ -181,15 +181,15 @@ function nextRound(me: State) {
   const item = pick(ITEMS)
   if (me.mode === 'pay') {
     me.goal = price
-    $('mkItem').innerHTML = `${photoImg(item, 62)}
+    $('mkItem').innerHTML = `<div class="mk-show">${photoImg(item, 210)}</div>
       <span class="mk-price">${fmt(price)}</span>`
   } else {
     // La monnaie : payé avec le plus petit billet au-dessus du prix
     const note = price < 500 ? 500 : price < 1000 ? 1000 : 2000
     me.goal = note - price
-    $('mkItem').innerHTML = `${photoImg(item, 62)}
+    $('mkItem').innerHTML = `<div class="mk-show">${photoImg(item, 210)}</div>
       <span class="mk-price">${fmt(price)}</span>
-      <span class="mk-paid">${ICON.turnLeft} ${moneySVG(note)}</span>`
+      <span class="mk-paid"><span class="mk-paynote">${moneySVG(note)}</span>${ICON.turnLeft}</span>`
   }
   // Les manches en pastilles, plus « 2/4 » à lire
   $('mkDots').innerHTML = Array.from({ length: me.totalQ }, (_, i) =>
@@ -203,10 +203,8 @@ function setMode(me: State, mode: Mode) {
   me.lock = false
   me.q = 0; me.mistakes = 0; me.tray = []
   const explore = mode === 'explore'
-  $('mkItem').style.display = explore ? 'none' : ''
-  $('mkTrayWrap').style.display = explore ? 'none' : ''
-  $('mkDone').style.display = explore ? '' : 'none'
-  $('mkDots').style.display = explore ? 'none' : ''
+  // Découvre : les pièces prennent tout l'étal ; Paye / Monnaie : l'étal, la caisse, la bourse
+  $('mkArena').classList.toggle('explore', explore)
   if (explore) {
     me.seen = new Set()
     buildBank(me, DENOMS.map(d => d.v))
@@ -232,19 +230,27 @@ export const market: GameDef = {
   mount(c) {
     ctx = c
     c.root.innerHTML = `
-      <div class="topbar">
-        <button class="chip mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}<b>Découvre</b></button>
-        <button class="chip mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}<b>Paye</b></button>
-        <button class="chip mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}<b>Monnaie</b></button>
-      </div>
-      <div class="mk-item" id="mkItem"></div>
-      <div class="mk-traywrap" id="mkTrayWrap">
-        <div class="mk-tray" id="mkTray"></div>
-        <div class="mk-total" id="mkTotal">—</div>
-      </div>
-      <div class="mk-bank" id="mkBank"></div>
-      <button class="sn-tool go" id="mkDone" style="margin-top:10px" aria-label="Fini">${ICON.check}</button>
-      <div class="mem-dots mk-dots" id="mkDots"></div>`
+      <div class="arena mk-arena explore" id="mkArena">
+        <div class="mk-modes">
+          <button class="mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}</button>
+          <button class="mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}</button>
+          <button class="mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}</button>
+        </div>
+        <div class="mk-main">
+          <div class="mk-stall">
+            <div class="mk-awning"></div>
+            <div class="mk-item" id="mkItem"></div>
+            <div class="mk-counter"></div>
+          </div>
+          <div class="mk-traywrap" id="mkTrayWrap">
+            <div class="mk-till"><div class="mk-total" id="mkTotal">—</div></div>
+            <div class="mk-tray" id="mkTray"></div>
+          </div>
+        </div>
+        <div class="mk-bank" id="mkBank"></div>
+        <div class="mem-dots mk-dots" id="mkDots"></div>
+        <button class="sn-tool go mk-done" id="mkDone" aria-label="Fini">${ICON.check}</button>
+      </div>`
     preloadSfx(['coins', 'confirm', 'drop'])
     const me: State = { running: true, lock: false, mode: 'explore', tray: [], goal: 0, q: 0, totalQ: 0, mistakes: 0, seen: new Set() }
     mk = me

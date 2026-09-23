@@ -146,7 +146,7 @@ export const flappy: GameDef = {
     let dead = false
     c.root.innerHTML = `<div id="flArea" class="arena g3-arena fl-arena"></div>`
     const area = $('flArea')
-    const hideLoader = loader(area, '🐤')
+    const hideLoader = loader(area, 'flappy')
     preloadSfx(['cloth', 'whoosh', 'confirm', 'pluck'])
     const cfg: Cfg = c.byTier(
       { speed: 1.2, inc: 0.07, gap: 1.25, gapDec: 0.03, space: 4.4 },

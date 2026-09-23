@@ -402,11 +402,10 @@ export const pizza: GameDef = {
     ctx = c
     let dead = false
     c.root.innerHTML = `
-      <div class="topbar">
-        <button class="chip" id="pzLeft" aria-label="Tourner">${ICON.turnLeft}</button>
-        <button class="chip" id="pzRight" aria-label="Tourner">${ICON.turnRight}</button>
-      </div>
       <div class="arena g3-arena pz-arena" id="pzArena">
+        <!-- Deux grosses flèches posées sur la scène, de part et d'autre de la pizza -->
+        <button class="pz-turn left" id="pzLeft" aria-label="Tourner">${ICON.turnLeft}</button>
+        <button class="pz-turn right" id="pzRight" aria-label="Tourner">${ICON.turnRight}</button>
         <!-- LE mini-jeu de cuisson : la jauge, sa zone verte, le curseur -->
         <div class="pz-cook" id="pzCook">
           <div class="pz-gauge"><span class="pz-perfect"></span><b id="pzNeedle"></b></div>
@@ -435,7 +434,7 @@ export const pizza: GameDef = {
       </div>`
 
     const arena = $('pzArena')
-    const hideLoader = loader(arena, '🍕')
+    const hideLoader = loader(arena, 'pizza')
     preloadSfx(['cloth', 'tick', 'chop'])
 
     ;(async () => {
@@ -714,8 +713,20 @@ export const pizza: GameDef = {
       $('pzOut').onclick = () => pullOut()
       $('pzEat').onclick = () => { if (S) { S.tool = 'eat'; sPop(); paintUI() } }
       $('pzDone').onclick = () => finish()
-      $('pzLeft').onclick = () => { S?.orbit.turn(-0.5); sPop() }
-      $('pzRight').onclick = () => { S?.orbit.turn(0.5); sPop() }
+      // Tourner : un toucher = un cran, le doigt posé = ça continue de tourner
+      for (const [id, dir] of [['pzLeft', -1], ['pzRight', 1]] as const) {
+        const btn = $(id)
+        let hold = 0
+        const stop = () => { if (hold) { c.cancel(hold); hold = 0 } }
+        btn.onpointerdown = () => {
+          if (!S) return
+          S.orbit.turn(0.5 * dir); sPop()
+          btn.classList.remove('spin'); void btn.offsetWidth; btn.classList.add('spin')
+          stop()
+          hold = c.every(280, () => { S?.orbit.turn(0.4 * dir) })
+        }
+        btn.onpointerup = btn.onpointercancel = btn.onpointerleave = stop
+      }
 
       /* --- Boucle --- */
       stage.start((dt, now) => {

@@ -68,8 +68,12 @@ interface State {
   cfg: Cfg
   /** Demi-largeur visible à z = 0 : les fruits utilisent TOUT l'écran. */
   lane: number
-  trail: { x: number; y: number; t: number }[]
-  /** Fruits tranchés dans le trait en cours (bonus multi-tranche). */
+  /** Les traînes des lames : une par doigt (`id`), teintée par côté. */
+  trail: { x: number; y: number; t: number; id: number; tint: number }[]
+  /** Les doigts posés : dernier point et fruits tranchés dans ce trait
+      (bonus multi-tranche). Plusieurs doigts = plusieurs lames (à deux). */
+  blades: Map<number, { x: number; y: number; stroke: number; tint: number }>
+  /** Fruits tranchés dans le trait en cours (le doigt qui tranche). */
   stroke: number
   /** Cran de rampe à partir duquel un fruit raté coûte un cœur. */
   strictAt: number
@@ -194,16 +198,16 @@ function finish(me: State, peppered: boolean) {
   // retombent tranquillement, puis le score.
   me.stage.timeScale = peppered ? 0.4 : 0.7
   const s = me.game.s
-  const th = ctx.byTier([22, 12], [32, 17], [44, 24])
+  const th = ctx.byTier([22, 12], [32, 17], [44, 24]).map(v => Math.round(v * (ctx.duo ? 1.5 : 1)))
   me.game.end({
     title: peppered ? 'Aïe, le piment !' : s.score >= th[0] ? 'Sabre d\'or !' : 'Beau tranchage !',
-    msg: `Tu as marqué ${s.score} points` + (s.bestCombo >= 6 ? `, ${s.bestCombo} fruits d'affilée` : ''),
+    msg: `${ctx.duo ? 'Vous avez' : 'Tu as'} marqué ${s.score} points` + (s.bestCombo >= 6 ? `, ${s.bestCombo} fruits d'affilée` : ''),
     outroMs: peppered ? 1100 : 700
   })
 }
 
 export const ninja: GameDef = {
-  id: 'ninja', name: 'Ninja Verger', icon: '🥷', sq: 'sq-mint', cat: 'action', music: 'fair',
+  id: 'ninja', name: 'Ninja Verger', icon: '🥷', sq: 'sq-mint', cat: 'action', music: 'fair', duo: true,
   subtitle: 'Tranche les fruits d\'un trait de doigt… pas le piment !',
   mount(c) {
     ctx = c
@@ -213,7 +217,7 @@ export const ninja: GameDef = {
         <canvas id="njBlade"></canvas>
       </div>`
     const arena = $('njArena')
-    const hideLoader = loader(arena, '🥷')
+    const hideLoader = loader(arena, 'ninja')
     preloadSfx(['slice', 'whoosh', 'confirm', 'error'])
 
     ;(async () => {
@@ -291,9 +295,11 @@ export const ninja: GameDef = {
         { min: 2, max: 3, every: 1300, bad: 0.12, side: 0.12 },
         { min: 3, max: 4, every: 1050, bad: 0.22, side: 0.3 }
       )
+      // À deux : deux lames, donc plus de fruits à la fois et un peu plus vite
+      if (c.duo) { cfg.min += 1; cfg.max += 2; cfg.every *= 0.82 }
       const game = arcade(c, {
         host: arena,
-        lives: c.byTier(5, 3, 3),
+        lives: c.byTier(5, 3, 3) + (c.duo ? 1 : 0),
         scoreIcon: ICON.blade,
         // La rampe suit la performance : tous les 6 fruits, plus de fruits, plus vite
         ramp: { every: c.byTier(8, 6, 6), max: 6 },
@@ -304,15 +310,23 @@ export const ninja: GameDef = {
           me.cfg.side = Math.min(0.45, me.cfg.side + 0.08)
           me.game.flash(ICON.bolt)
         },
-        stars: s => { const th = c.byTier([22, 12], [32, 17], [44, 24]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
+        stars: s => {
+          // À deux, il tombe plus de fruits : la barre monte d'autant
+          const th = c.byTier([22, 12], [32, 17], [44, 24]).map(v => Math.round(v * (c.duo ? 1.5 : 1)))
+          return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1
+        }
       })
       const me: State = {
         stage, T, CANNON, world, models, fruits: [], halves: [], game,
         fx: particles(stage, 700), shake: camShake(stage), cfg: { ...cfg }, lane,
-        trail: [], stroke: 0, strictAt: STRICT_AT[c.tier], lift: LIFT[c.tier], hit: HIT[c.tier],
+        trail: [], blades: new Map(), stroke: 0, strictAt: STRICT_AT[c.tier], lift: LIFT[c.tier], hit: HIT[c.tier],
         over: false, lastWhoosh: 0
       }
       nj = me
+      if (c.duo) game.flash(ICON.duo)
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        ;(window as unknown as { __nj: unknown }).__nj = { duo: c.duo, blades: () => me.blades.size }
+      }
 
       /* --- La lame : un canvas 2D par-dessus la scène, net sur tablette (DPR) --- */
       const blade = $('njBlade') as unknown as HTMLCanvasElement
@@ -325,26 +339,29 @@ export const ninja: GameDef = {
       sizeBlade()
       window.addEventListener('resize', sizeBlade)
 
-      let slicing = false
-      let last: { x: number; y: number } | null = null
+      // Une lame PAR DOIGT : avant le 23/09, un second doigt faisait sauter
+      // la lame d'un bout de l'écran à l'autre (et tranchait tout entre les
+      // deux). À deux, chaque sœur a sa couleur : bleu à gauche, rose à droite.
       const onDown = (e: PointerEvent) => {
-        slicing = true
-        last = { x: e.clientX, y: e.clientY }
-        me.stroke = 0
+        const r = stage.renderer.domElement.getBoundingClientRect()
+        const tint = c.duo && e.clientX > r.left + r.width / 2 ? 1 : 0
+        me.blades.set(e.pointerId, { x: e.clientX, y: e.clientY, stroke: 0, tint })
       }
       const onMove = (e: PointerEvent) => {
-        if (!slicing || !last || nj !== me || me.over) return
+        const last = me.blades.get(e.pointerId)
+        if (!last || nj !== me || me.over) return
         const cur = { x: e.clientX, y: e.clientY }
         const dx = cur.x - last.x, dy = cur.y - last.y
         const len = Math.hypot(dx, dy)
         if (len < 6) return
         const now = performance.now()
-        me.trail.push({ x: cur.x, y: cur.y, t: now })
+        me.trail.push({ x: cur.x, y: cur.y, t: now, id: e.pointerId, tint: last.tint })
         // Un « whoosh » quand la lame file vite, jamais plus de 6 par seconde
         if (len > 26 && now - me.lastWhoosh > 160) { me.lastWhoosh = now; sfx('whoosh', { vol: 0.35, rate: 1.15 }) }
         // La lame tranche tout fruit dont la projection écran passe à moins de
         // `hit` px du segment (plus large en douce). Juste au-delà d'un PIMENT :
         // on l'a frôlé — « ouf ! », une fois.
+        me.stroke = last.stroke
         for (const f of [...me.fruits]) {
           const s = toScreen(stage, f.obj.position)
           const d = segDist(s.x, s.y, last.x, last.y, cur.x, cur.y)
@@ -357,9 +374,10 @@ export const ninja: GameDef = {
             me.game.flash(ICON.bolt, 'near')
           }
         }
-        last = cur
+        last.stroke = me.stroke
+        last.x = cur.x; last.y = cur.y
       }
-      const onUp = () => { slicing = false; last = null; me.stroke = 0 }
+      const onUp = (e: PointerEvent) => { me.blades.delete(e.pointerId) }
       stage.renderer.domElement.addEventListener('pointerdown', onDown)
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
@@ -429,9 +447,15 @@ export const ninja: GameDef = {
           bctx.lineCap = 'round'; bctx.lineJoin = 'round'
           for (const pass of [0, 1]) {
             for (let i = 1; i < me.trail.length; i++) {
-              const a = me.trail[i - 1], b = me.trail[i]
+              const b = me.trail[i]
+              // Le point précédent DE LA MÊME LAME (deux doigts s'entrelacent)
+              let j = i - 1
+              while (j >= 0 && me.trail[j].id !== b.id) j--
+              if (j < 0) continue
+              const a = me.trail[j]
               const age = 1 - (now - b.t) / 160
-              bctx.strokeStyle = pass === 0 ? `rgba(180,230,255,${0.35 * age})` : `rgba(255,255,255,${0.9 * age})`
+              const halo = b.tint ? '255,170,210' : '180,230,255'
+              bctx.strokeStyle = pass === 0 ? `rgba(${halo},${0.35 * age})` : `rgba(255,255,255,${0.9 * age})`
               bctx.lineWidth = pass === 0 ? 6 + 14 * age : 1.5 + 5 * age
               bctx.beginPath()
               bctx.moveTo(a.x - r.left, a.y - r.top)

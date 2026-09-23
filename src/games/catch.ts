@@ -156,7 +156,7 @@ export const catchGame: GameDef = {
     let dead = false
     c.root.innerHTML = `<div class="arena g3-arena ca-arena" id="caArena"></div>`
     const arena = $('caArena')
-    const hideLoader = loader(arena, '🧺')
+    const hideLoader = loader(arena, 'catch')
     preloadSfx(['drop', 'error', 'confirm', 'pluck'])
 
     ;(async () => {

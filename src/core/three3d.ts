@@ -6,6 +6,7 @@
    Three.js est toujours chargé À LA DEMANDE (`await import('three')`) : le
    bundle de départ reste léger et l'app démarre vite sur tablette. */
 
+import { BADGE } from './badges'
 import { onPause, isPaused } from './session'
 import { probeFrame, probeRenderer } from './fps'
 
@@ -18,10 +19,12 @@ export const loadPhysics = (): Promise<[T3, Cannon]> =>
   Promise.all([import('three'), import('cannon-es')])
 
 /* ---------- Écran d'attente ---------- */
-export function loader(arena: HTMLElement, icon: string, timeoutMs = 15000): () => void {
+export function loader(arena: HTMLElement, gameId: string, timeoutMs = 15000): () => void {
   const el = document.createElement('div')
   el.className = 'nj-loading'
-  el.textContent = icon
+  // La vignette dessinée du jeu (celle de sa tuile) qui respire, et trois
+  // points qui sautillent — plus d'emoji qui change de dessin selon la tablette
+  el.innerHTML = `<div class="ld-badge">${BADGE[gameId] || ''}</div><div class="ld-dots"><i></i><i></i><i></i></div>`
   arena.appendChild(el)
   // Un chargement qui n'aboutit jamais (glTF en 404, import cassé) laissait
   // tourner l'écran d'attente sans fin : au-delà du délai, c'est une erreur

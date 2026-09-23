@@ -1,7 +1,7 @@
-/* Système de personnage illustré — SVG dessiné main, cohérent dans toute l'app.
-   La photo de la joueuse est détourée en ovale et devient le VISAGE d'un vrai
-   personnage (cheveux, corps, habits dessinés). Le look choisi dans Habille-toi
-   est persisté et suit la joueuse dans les autres jeux. */
+/* Le look de la joueuse — choisi dans Habille-toi, persisté, et porté par
+   son personnage 3D (`core/doll3d.ts`) dans les autres jeux : au volant du
+   tracteur, sur l'écran de fin, en promenade sur l'accueil. Ici ne restent
+   que le type, les palettes et les petites icônes dessinées des boutons. */
 
 export interface Look {
   outfit: 'dress' | 'tee'
@@ -20,42 +20,7 @@ export function defaultLook(): Look {
   return { outfit: 'dress', color: '#FF6B81', hair: 'pigtails', hairColor: '#5B3A21', hat: 'none', glasses: 'none', held: 'none' }
 }
 
-const SKIN = '#F6C99F'
 const INK = '#45362A'
-
-/** Assombrit une couleur hexadécimale (f entre 0 et 1). */
-export function shade(hex: string, f: number): string {
-  const n = parseInt(hex.slice(1), 16)
-  const r = Math.round(((n >> 16) & 255) * (1 - f))
-  const g = Math.round(((n >> 8) & 255) * (1 - f))
-  const b = Math.round((n & 255) * (1 - f))
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
-}
-
-let uid = 0
-
-/* ---- Tête : photo détourée en ovale, cheveux dessinés autour ----
-   Coordonnées de référence : tête centrée en (100,72), rx32 ry36, haut y=36. */
-function headSVG(photo: string | null, look: Look): string {
-  const id = 'face' + ++uid
-  const hc = look.hairColor, hcd = shade(hc, 0.2)
-  const back = look.hair === 'pigtails'
-    ? `<circle cx="58" cy="62" r="15" fill="${hc}"/><circle cx="142" cy="62" r="15" fill="${hc}"/>
-       <circle cx="58" cy="62" r="15" fill="none" stroke="${hcd}" stroke-width="2"/>
-       <circle cx="142" cy="62" r="15" fill="none" stroke="${hcd}" stroke-width="2"/>
-       <circle cx="66" cy="52" r="4.5" fill="#FF6B81"/><circle cx="134" cy="52" r="4.5" fill="#FF6B81"/>`
-    : `<path d="M62,70 Q56,150 74,158 L126,158 Q144,150 138,70 Q138,30 100,27 Q62,30 62,70 Z" fill="${hc}" stroke="${hcd}" stroke-width="2"/>`
-  const face = photo
-    ? `<clipPath id="${id}"><ellipse cx="100" cy="72" rx="29" ry="33"/></clipPath>
-       <ellipse cx="100" cy="72" rx="32" ry="36" fill="${SKIN}"/>
-       <image href="${photo}" x="67" y="35" width="66" height="74" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>`
-    : `<ellipse cx="100" cy="72" rx="32" ry="36" fill="${SKIN}"/>
-       <circle cx="88" cy="68" r="3.6" fill="${INK}"/><circle cx="112" cy="68" r="3.6" fill="${INK}"/>
-       <path d="M90,84 Q100,92 110,84" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
-       <circle cx="78" cy="80" r="5" fill="#FF9C8F" opacity=".55"/><circle cx="122" cy="80" r="5" fill="#FF9C8F" opacity=".55"/>`
-  const fringe = `<path d="M67,60 Q69,32 100,30 Q131,32 133,60 Q116,44 100,45 Q84,44 67,60 Z" fill="${hc}" stroke="${hcd}" stroke-width="2" stroke-linejoin="round"/>`
-  return back + face + fringe
-}
 
 /* ---- Chapeaux dessinés, posés sur le haut de tête (autour de y=36) ---- */
 export function hatSVG(hat: Look['hat']): string {
@@ -103,62 +68,6 @@ function heldSVG(held: Look['held']): string {
       <circle cx="151" cy="118" r="3.5" fill="#E04E63"/>`
     default: return ''
   }
-}
-
-/* ---- Corps + habits ---- */
-function bodySVG(look: Look): string {
-  const c = look.color, cd = shade(c, 0.22)
-  const arms = `<path d="M78,124 Q52,142 50,166" fill="none" stroke="${SKIN}" stroke-width="11" stroke-linecap="round"/>
-    <path d="M122,124 Q148,142 150,166" fill="none" stroke="${SKIN}" stroke-width="11" stroke-linecap="round"/>
-    <circle cx="50" cy="167" r="7" fill="${SKIN}"/><circle cx="150" cy="167" r="7" fill="${SKIN}"/>`
-  const legs = `<path d="M87,214 L87,250 M113,214 L113,250" stroke="${SKIN}" stroke-width="12" stroke-linecap="round"/>
-    <ellipse cx="85" cy="258" rx="12" ry="7.5" fill="${cd}"/><ellipse cx="115" cy="258" rx="12" ry="7.5" fill="${cd}"/>`
-  const neck = `<rect x="94" y="100" width="12" height="12" fill="${SKIN}"/>`
-  let clothes: string
-  if (look.outfit === 'dress') {
-    clothes = `<path d="M79,114 Q100,105 121,114 L137,206 Q139,215 129,215 L71,215 Q61,215 63,206 Z"
-        fill="${c}" stroke="${cd}" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M70,168 Q100,178 130,168" fill="none" stroke="${cd}" stroke-width="2.5" opacity=".6"/>
-      <circle cx="100" cy="128" r="3" fill="${cd}"/><circle cx="100" cy="142" r="3" fill="${cd}"/>
-      <ellipse cx="78" cy="120" rx="9" ry="7" fill="${c}" stroke="${cd}" stroke-width="2"/>
-      <ellipse cx="122" cy="120" rx="9" ry="7" fill="${c}" stroke="${cd}" stroke-width="2"/>`
-  } else {
-    clothes = `<rect x="74" y="110" width="52" height="56" rx="11" fill="${c}" stroke="${cd}" stroke-width="2.5"/>
-      <circle cx="100" cy="136" r="9" fill="#fff" opacity=".85"/>
-      <path d="M96,136 L99,140 L106,132" fill="none" stroke="${cd}" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M71,162 L129,162 L139,204 Q141,211 132,211 L68,211 Q59,211 61,204 Z"
-        fill="${cd}" stroke="${shade(c, 0.38)}" stroke-width="2.5" stroke-linejoin="round"/>`
-  }
-  return neck + legs + arms + clothes
-}
-
-/** Le personnage complet (viewBox 0 0 200 300). */
-export function characterSVG(photo: string | null, look: Look, widthPx: number): string {
-  return `<svg viewBox="0 0 200 300" width="${widthPx}" height="${widthPx * 1.5}" xmlns="http://www.w3.org/2000/svg">
-    ${bodySVG(look)}
-    ${headSVG(photo, look)}
-    ${glassesSVG(look.glasses)}
-    ${hatSVG(look.hat)}
-    ${heldSVG(look.held)}
-  </svg>`
-}
-
-/* Tête compacte réutilisable (photo ovale + frange + chapeau/lunettes du look). */
-function miniHead(photo: string | null, look: Look | null, cx: number, cy: number, r: number): string {
-  const lk = look || defaultLook()
-  const s = r / 32
-  const inner = headSVG(photo, lk) + glassesSVG(lk.glasses) + hatSVG(lk.hat)
-  return `<g transform="translate(${cx - 100 * s},${cy - 72 * s}) scale(${s})">${inner}</g>`
-}
-
-/** Panier de récolte avec la joueuse dedans (viewBox 0 0 120 116). */
-export function basketSVG(photo: string | null, look: Look | null, widthPx: number): string {
-  return `<svg viewBox="0 0 120 116" width="${widthPx}" height="${widthPx * 0.97}" xmlns="http://www.w3.org/2000/svg">
-    ${miniHead(photo, look, 60, 34, 20)}
-    <path d="M22,58 L98,58 L88,106 Q87,112 80,112 L40,112 Q33,112 32,106 Z" fill="#D9A05B" stroke="#B97F3F" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M30,70 L90,70 M28,84 L92,84 M31,98 L89,98 M44,60 L40,110 M60,60 L60,112 M76,60 L80,110" stroke="#B97F3F" stroke-width="2" opacity=".7"/>
-    <rect x="16" y="50" width="88" height="12" rx="6" fill="#B97F3F" stroke="#96632F" stroke-width="2.5"/>
-  </svg>`
 }
 
 /* ---- Icônes pour les boutons du jeu Habille-toi (extraits dessinés) ---- */
