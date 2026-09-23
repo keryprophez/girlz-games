@@ -35,6 +35,31 @@ function lastTier(gameId: string): Tier | null {
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
+/** Le score de fin en géant, qui défile de 0 jusqu'au résultat avec un tic
+    par cran (≈ 0,9 s en tout) : on VOIT et on ENTEND combien on a fait. */
+function BigScore({ value, icon }: { value: number; icon: string }) {
+  const [shown, setShown] = useState(0)
+  useEffect(() => {
+    setShown(0)
+    if (value <= 0) return
+    const steps = Math.min(value, 30)
+    const ts: number[] = []
+    for (let k = 1; k <= steps; k++) {
+      ts.push(window.setTimeout(() => {
+        setShown(Math.round(value * k / steps))
+        tone(520 + k * 14, 0.04, 'triangle', 0.05)
+      }, 250 + k * (900 / steps)))
+    }
+    return () => ts.forEach(clearTimeout)
+  }, [value])
+  return (
+    <div className="result-score">
+      <Svg html={icon} />
+      <b className={shown === value ? 'done' : ''}>{shown}</b>
+    </div>
+  )
+}
+
 export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => void }) {
   const game = gameById(gameId)!
   const creative = game.cat === 'creatif'
@@ -290,6 +315,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             : undefined}>
           <div className="modal">
             <h2>{result.title}</h2>
+            {result.score !== undefined && <BigScore value={result.score} icon={result.scoreIcon ?? ICON.star} />}
             <p>{result.msg}</p>
             {!creative && <Svg className="stars" html={starsHTML(result.stars)} />}
             <div className="rbtns">

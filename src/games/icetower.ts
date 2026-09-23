@@ -287,6 +287,7 @@ function gameOver(me: State, collapsed: boolean) {
   me.game.end({
     title: h >= 14 ? 'Tour GÉANTE !' : h >= 7 ? 'Belle tour !' : 'La tour s\'écroule !',
     msg: `Tu as empilé ${h} blocs de glace` + (best >= 4 ? ` et enchaîné ${Math.floor(best / 2)} parfaits` : ''),
+    score: h,
     outroMs: OUTRO_MS
   })
 }
@@ -384,6 +385,8 @@ export const icetower: GameDef = {
         // multiplicateur de combo (demande du 12/09) : on suit sa tour d'un
         // coup d'œil, et le score de fin est ce même nombre.
         plainScore: true,
+        // Le nombre de blocs en GÉANT : c'est tout l'enjeu de la partie (23/09)
+        bigScore: true,
         stars: s => (s.score >= 14 ? 3 : s.score >= 7 ? 2 : 1)
       })
 

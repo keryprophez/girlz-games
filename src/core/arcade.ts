@@ -48,6 +48,8 @@ export interface ArcadeOpts {
   ramp?: { every: number; max: number }
   /** Pas de multiplicateur de combo : le score reste un simple compte (fruits croqués…). */
   plainScore?: boolean
+  /** Score géant en haut de l'écran : quand le compteur EST le jeu (la Tour). */
+  bigScore?: boolean
   /** Barème d'étoiles, calculé à `end()`. */
   stars: (s: ArcadeState) => 1 | 2 | 3
   onLevel?: (level: number) => void
@@ -67,7 +69,7 @@ export interface Arcade {
   /** Timer sur l'horloge simulée. */
   after(ms: number, fn: () => void): void
   /** Fin de partie : étoiles par le barème, puis ctx.finish (après l'outro). */
-  end(o: { title: string; msg: string; outroMs?: number }): void
+  end(o: { title: string; msg: string; outroMs?: number; score?: number }): void
   /** Un gros mot-image au centre de l'arène, 0,8 s (« ×3 », une icône…). */
   flash(html: string, cls?: string): void
   dispose(): void
@@ -82,7 +84,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
 
   /* ---- HUD ---- */
   const hud = document.createElement('div')
-  hud.className = 'hud'
+  hud.className = 'hud' + (o.bigScore ? ' hud-big' : '')
   hud.innerHTML = `
     <span class="hud-score"><i>${o.scoreIcon ?? ICON.star}</i><b>0</b></span>
     ${s.maxLives ? `<span class="hud-lives">${heartsHTML(s.lives, s.maxLives)}</span>` : ''}
@@ -167,7 +169,7 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
       setMusicIntensity(0)
       const stars = o.stars(s)
       hud.classList.add('off')
-      ctx.finish({ title: e.title, msg: e.msg, stars, outroMs: e.outroMs })
+      ctx.finish({ title: e.title, msg: e.msg, stars, outroMs: e.outroMs, score: e.score ?? s.score, scoreIcon: o.scoreIcon ?? ICON.star })
     },
     flash(html, cls = '') {
       flashEl.innerHTML = html

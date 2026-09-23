@@ -16,10 +16,26 @@ import { ICON } from '../core/icons'
    - les aiguilles se déplacent au doigt dans TOUS les modes où on règle
      (Découvre et Règle), plus seulement dans le plus dur ;
    - « une heure », « une heure moins le quart » : la voix parle français ;
-   - aucune sanction : pas de vies, pas de chrono ; timers de partie. */
+   - aucune sanction : pas de vies, pas de chrono ; timers de partie.
+
+   Retours tablette du 23/09 (« très difficile de bouger les aiguilles :
+   quand on en place une, l'autre vient en même temps ; les boutons sont
+   peu clairs et trop petits ») :
+   - l'aiguille est choisie UNE FOIS, au toucher (celle dont on touche la
+     direction ; si les deux se superposent, la courte près du centre, la
+     longue vers le bord), puis elle reste en main jusqu'au lever du doigt.
+     Avant, le choix était refait à chaque mouvement selon la distance au
+     centre : en passant près du centre, on attrapait l'autre aiguille.
+     Chaque aiguille a une grosse boule au bout, et celle qu'on tient brille ;
+   - Règle ne démarre plus à 12:00 (les deux aiguilles l'une sur l'autre) ;
+   - les réglages sont deux grosses rangées −/+ avec le dessin de l'aiguille
+     qu'elles bougent (la courte, la longue), à droite de l'horloge, et un
+     gros bouton vert « Valide » ; les modes sont de grosses icônes dessinées
+     (une horloge qui montre la courte, la longue…) avec leur mot en grand. */
 
 type Mode = 'discover' | 'hours' | 'minutes' | 'quiz' | 'set'
-interface FaceOpts { minuteRing?: boolean; hideMinute?: boolean; fadeHour?: boolean }
+type Hand = 'hour' | 'minute'
+interface FaceOpts { minuteRing?: boolean; hideMinute?: boolean; fadeHour?: boolean; grab?: Hand | null }
 
 interface State {
   mode: Mode
@@ -32,19 +48,39 @@ interface State {
   score: number
   lock: boolean
   touched: number
+  /** L'aiguille tenue par le doigt, choisie au toucher et gardée jusqu'au lever. */
+  grab: Hand | null
 }
 
 let ck: State | null = null
 let ctx: GameContext
 
+/** Une petite horloge dessinée pour les boutons : on y voit QUELLE aiguille
+    compte (la courte, la longue, les deux), plus un badge pour le geste. */
+function miniClock(o: { hour?: boolean; minute?: boolean; badge?: string }): string {
+  const hand = (len: number, ang: number, col: string, w: number) => {
+    const a = (ang - 90) * Math.PI / 180
+    return `<line x1="24" y1="24" x2="${24 + len * Math.cos(a)}" y2="${24 + len * Math.sin(a)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`
+  }
+  return `<svg class="ck-mini" viewBox="0 0 48 48" aria-hidden="true">
+    <circle cx="24" cy="24" r="21" fill="#FFFDF8" stroke="#FFB84D" stroke-width="4"/>
+    ${o.hour ? hand(10, 120, '#45362A', 5.5) : ''}${o.minute ? hand(16, 0, '#FF7B6B', 3.6) : ''}
+    <circle cx="24" cy="24" r="3" fill="#45362A"/>
+    ${o.badge ? `<g transform="translate(26 26) scale(.9)"><circle cx="11" cy="11" r="11" fill="#fff"/><g transform="translate(1 1) scale(.83)" color="#45362A">${o.badge.replace('width="1em" height="1em"', 'width="24" height="24"')}</g></g>` : ''}
+  </svg>`
+}
+
 /* Chaque mode porte SON mot : l'icône dit le geste, le mot le confirme. */
 const MODES: { id: Mode; icon: string; cap: string }[] = [
-  { id: 'discover', icon: ICON.search, cap: 'Découvre' },
-  { id: 'hours', icon: ICON.clock, cap: 'Heures' },
-  { id: 'minutes', icon: ICON.timer, cap: 'Minutes' },
-  { id: 'quiz', icon: ICON.target, cap: 'Trouve' },
-  { id: 'set', icon: ICON.tap, cap: 'Règle' }
+  { id: 'discover', icon: miniClock({ hour: true, minute: true, badge: ICON.search }), cap: 'Découvre' },
+  { id: 'hours', icon: miniClock({ hour: true }), cap: 'Heures' },
+  { id: 'minutes', icon: miniClock({ minute: true }), cap: 'Minutes' },
+  { id: 'quiz', icon: miniClock({ hour: true, minute: true, badge: ICON.target }), cap: 'Trouve' },
+  { id: 'set', icon: miniClock({ hour: true, minute: true, badge: ICON.tap }), cap: 'Règle' }
 ]
+
+const MINUS = '<svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>'
+const PLUS = '<svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>'
 
 function clockSVG(h: number, m: number, px: number, o: FaceOpts = {}): string {
   const hourAngle = ((h % 12) + m / 60) * 30 - 90
@@ -72,8 +108,14 @@ function clockSVG(h: number, m: number, px: number, o: FaceOpts = {}): string {
     <circle cx="100" cy="100" r="97" fill="#FFFDF8" stroke="#FFB84D" stroke-width="6"/>
     ${o.minuteRing ? `<circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,123,107,.18)" stroke-width="9"/>` : ''}
     ${ticks}${nums}${ring}
-    <line x1="100" y1="100" x2="${hx}" y2="${hy}" stroke="#45362A" stroke-width="8" stroke-linecap="round" opacity="${o.fadeHour ? 0.2 : 1}"/>
-    ${o.hideMinute ? '' : `<line x1="100" y1="100" x2="${mx}" y2="${my}" stroke="#FF7B6B" stroke-width="4.5" stroke-linecap="round"/>`}
+    ${o.grab === 'hour' ? `<circle cx="${hx}" cy="${hy}" r="15" fill="rgba(69,54,42,.18)"/>` : ''}
+    ${o.grab === 'minute' ? `<circle cx="${mx}" cy="${my}" r="15" fill="rgba(255,123,107,.28)"/>` : ''}
+    <g opacity="${o.fadeHour ? 0.2 : 1}">
+      <line x1="100" y1="100" x2="${hx}" y2="${hy}" stroke="#45362A" stroke-width="${o.grab === 'hour' ? 10 : 8}" stroke-linecap="round"/>
+      <circle cx="${hx}" cy="${hy}" r="${o.grab === 'hour' ? 8 : 6.5}" fill="#45362A"/>
+    </g>
+    ${o.hideMinute ? '' : `<line x1="100" y1="100" x2="${mx}" y2="${my}" stroke="#FF7B6B" stroke-width="${o.grab === 'minute' ? 6 : 4.5}" stroke-linecap="round"/>
+    <circle cx="${mx}" cy="${my}" r="${o.grab === 'minute' ? 7.5 : 6}" fill="#FF7B6B"/>`}
     <circle cx="100" cy="100" r="6.5" fill="#45362A"/>
   </svg>`
 }
@@ -92,14 +134,14 @@ const digital = (h: number, m: number) => `${h}:${String(m).padStart(2, '0')}`
 
 function facePx(): number {
   const w = $('ckWrap')
-  return Math.max(220, Math.min(w.clientHeight - 150, w.clientWidth - 320))
+  return Math.max(220, Math.min(w.clientHeight - 130, w.clientWidth - 520))
 }
 
 function faceOpts(me: State): FaceOpts {
   if (me.mode === 'minutes') return { minuteRing: true, fadeHour: true }
   if (me.mode === 'quiz') return { minuteRing: ctx.tier !== 'exp' }
   if (me.mode === 'hours') return {}
-  return { minuteRing: true }
+  return { minuteRing: true, grab: me.grab }
 }
 
 function renderFace(me: State) {
@@ -122,7 +164,9 @@ function setMode(me: State, mode: Mode) {
     b.classList.toggle('sel', on)
     b.parentElement?.classList.toggle('sel', on)
   })
-  $('ckDone').style.display = mode === 'discover' ? '' : 'none'
+  $('ckDone').parentElement!.style.display = mode === 'discover' ? '' : 'none'
+  $('ckCtrl').innerHTML = ''
+  $('ckOpts').innerHTML = ''
   if (mode === 'discover') loadDiscover(me)
   if (mode === 'hours') nextHours(me)
   if (mode === 'minutes') nextMinutes(me)
@@ -136,24 +180,36 @@ function refreshDiscover(me: State) {
   renderFace(me)
   $('ckDigital').textContent = digital(me.h, me.m)
 }
+/** Les réglages : une rangée par aiguille (− le dessin de l'aiguille +),
+    et en Règle un gros bouton vert pour valider. */
 function adjustButtons(me: State, withCheck: boolean) {
-  $('ckOpts').innerHTML = `
-    <button class="ck-btn" id="ckPlusH">+1 ${ICON.clock}</button>
-    <button class="ck-btn ck-btn-min" id="ckPlusM">+5 ${ICON.timer}</button>
-    ${withCheck ? `<button class="ck-btn ck-check" id="ckCheck">${ICON.check}</button>` : ''}`
-  ;($('ckPlusH') as HTMLButtonElement).onclick = () => {
-    if (ck !== me || me.lock) return
-    me.h = (me.h % 12) + 1; me.touched++
-    sfx('tick', { vol: 0.4, rate: 1.2 })
-    afterAdjust(me)
-  }
-  ;($('ckPlusM') as HTMLButtonElement).onclick = () => {
-    if (ck !== me || me.lock) return
-    me.m += 5; me.touched++
-    if (me.m >= 60) { me.m = 0; me.h = (me.h % 12) + 1 }
-    sfx('tick', { vol: 0.4, rate: 1.5 })
-    afterAdjust(me)
-  }
+  const row = (k: Hand) => `
+    <div class="ck-row ck-row-${k}">
+      <button class="ck-pm" data-k="${k}" data-d="-1" aria-label="${k === 'hour' ? 'Heure' : 'Minutes'} moins">${MINUS}</button>
+      ${miniClock(k === 'hour' ? { hour: true } : { minute: true })}
+      <button class="ck-pm" data-k="${k}" data-d="1" aria-label="${k === 'hour' ? 'Heure' : 'Minutes'} plus">${PLUS}</button>
+    </div>`
+  $('ckCtrl').innerHTML = row('hour') + row('minute') + (withCheck
+    ? `<span class="tool-item ck-valid"><button class="ck-check" id="ckCheck" aria-label="Valide">${ICON.check}</button><i class="tool-cap">Valide</i></span>`
+    : '')
+  $('ckCtrl').querySelectorAll<HTMLElement>('.ck-pm').forEach(b => {
+    b.onclick = () => {
+      if (ck !== me || me.lock) return
+      const d = +b.dataset.d!
+      if (b.dataset.k === 'hour') {
+        me.h = ((me.h - 1 + d + 12) % 12) + 1
+        sfx('tick', { vol: 0.4, rate: 1.2 })
+      } else {
+        me.m += 5 * d
+        // Découvre : une vraie horloge, la grande aiguille entraîne la petite
+        if (me.m >= 60) { me.m -= 60; if (me.mode === 'discover') me.h = (me.h % 12) + 1 }
+        if (me.m < 0) { me.m += 60; if (me.mode === 'discover') me.h = ((me.h + 10) % 12) + 1 }
+        sfx('tick', { vol: 0.4, rate: 1.5 })
+      }
+      me.touched++
+      afterAdjust(me)
+    }
+  })
   if (withCheck) ($('ckCheck') as HTMLButtonElement).onclick = () => checkSet(me)
 }
 function afterAdjust(me: State) {
@@ -244,7 +300,9 @@ function nextSet(me: State) {
   me.total = 6
   const mins = ctx.byTier([0], [0, 30], [0, 15, 30, 45])
   me.th = rnd(1, 12); me.tm = mins[rnd(0, mins.length - 1)]
-  me.h = 12; me.m = 0
+  // Pas 12:00 au départ : les deux aiguilles l'une sur l'autre, on ne sait
+  // pas laquelle on attrape. Une heure au hasard, jamais la réponse.
+  do { me.h = rnd(1, 11); me.m = 0 } while (me.h === me.th && me.m === me.tm)
   $('ckDigital').style.display = ''
   $('ckDigital').innerHTML = `${ICON.target} ${digital(me.th, me.tm)}`
   renderFace(me)
@@ -268,25 +326,55 @@ function checkSet(me: State) {
   }
 }
 
-/* Déplacement des aiguilles au doigt (Découvre et Règle) :
-   près du centre = petite aiguille (heures), vers le bord = grande (minutes) */
-function dragHands(me: State, e: PointerEvent) {
-  if (me.mode !== 'set' && me.mode !== 'discover') return
+/* Déplacement des aiguilles au doigt (Découvre et Règle). L'aiguille est
+   choisie AU TOUCHER et gardée jusqu'au lever du doigt. */
+function fingerOnFace(e: PointerEvent): { ang: number; dist: number } | null {
   const svg = $('ckFace').querySelector('svg')
-  if (!svg) return
+  if (!svg) return null
   const r = svg.getBoundingClientRect()
   const dx = e.clientX - (r.left + r.width / 2)
   const dy = e.clientY - (r.top + r.height / 2)
-  const dist = Math.hypot(dx, dy) / (r.width / 2)
-  if (dist > 1.05 || dist < 0.06) return
-  const ang = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360
-  if (dist < 0.45) {
-    const h = Math.round(ang / 30) % 12 || 12
-    if (h !== me.h) { me.h = h; sfx('tick', { vol: 0.3, rate: 1.2 }); me.touched++; renderFace(me); if (me.mode === 'discover') $('ckDigital').textContent = digital(me.h, me.m) }
+  return { ang: (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360, dist: Math.hypot(dx, dy) / (r.width / 2) }
+}
+const angGap = (a: number, b: number) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d }
+
+/** Quelle aiguille le doigt vient-il de prendre ? */
+function pickHand(me: State, e: PointerEvent): Hand | null {
+  const f = fingerOnFace(e)
+  if (!f || f.dist > 1.08 || f.dist < 0.08) return null
+  const dh = angGap(f.ang, ((me.h % 12) + me.m / 60) * 30)
+  const dm = angGap(f.ang, me.m * 6)
+  // Les deux aiguilles dans la même direction : la courte près du centre
+  if (Math.abs(dh - dm) < 25 && Math.min(dh, dm) < 40) return f.dist < 0.5 ? 'hour' : 'minute'
+  if (Math.min(dh, dm) < 45) return dh < dm ? 'hour' : 'minute'
+  // Loin des deux : la zone décide (le centre pour les heures, le bord pour les minutes)
+  return f.dist < 0.5 ? 'hour' : 'minute'
+}
+
+function dragHand(me: State, e: PointerEvent) {
+  if (!me.grab) return
+  const f = fingerOnFace(e)
+  if (!f || f.dist < 0.06) return
+  if (me.grab === 'hour') {
+    // La petite aiguille avance aussi avec les minutes : on retire ce décalage
+    const h = Math.round((f.ang - me.m * 0.5) / 30 + 12) % 12 || 12
+    if (h === me.h) return
+    me.h = h
+    sfx('tick', { vol: 0.3, rate: 1.2 })
   } else {
-    const m = (Math.round(ang / 30) * 5) % 60
-    if (m !== me.m) { me.m = m; sfx('tick', { vol: 0.3, rate: 1.5 }); me.touched++; renderFace(me); if (me.mode === 'discover') $('ckDigital').textContent = digital(me.h, me.m) }
+    const m = (Math.round(f.ang / 30) * 5) % 60
+    if (m === me.m) return
+    // Découvre : passer le 12 fait avancer (ou reculer) l'heure, comme une vraie horloge
+    if (me.mode === 'discover') {
+      if (me.m >= 45 && m <= 15) me.h = (me.h % 12) + 1
+      else if (me.m <= 15 && m >= 45) me.h = ((me.h + 10) % 12) + 1
+    }
+    me.m = m
+    sfx('tick', { vol: 0.3, rate: 1.5 })
   }
+  me.touched++
+  renderFace(me)
+  if (me.mode === 'discover') $('ckDigital').textContent = digital(me.h, me.m)
 }
 
 function finishQuizMode(me: State) {
@@ -311,6 +399,7 @@ export const clock: GameDef = {
           <div id="ckFace"></div>
           <div class="qopts ck-opts" id="ckOpts"></div>
         </div>
+        <div class="ck-ctrl" id="ckCtrl"></div>
         <div class="tq-tools">
           ${MODES.map((m, i) => `<span class="tool-item${i === 0 ? ' sel' : ''}">
             <button class="sn-tool ck-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.cap}">${m.icon}</button>
@@ -319,11 +408,11 @@ export const clock: GameDef = {
         <div class="tq-side">
           <div class="tq-moves" id="ckScore"></div>
           <div class="mem-dots" id="ckDots"></div>
-          <button class="sn-tool go" id="ckDone" aria-label="Fini">${ICON.check}</button>
+          <span class="tool-item"><button class="sn-tool go ck-done" id="ckDone" aria-label="Fini">${ICON.check}</button><i class="tool-cap">Fini</i></span>
         </div>
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
-    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0 }
+    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null }
     ck = me
     document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => {
       b.onclick = () => { if (ck === me) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
@@ -337,22 +426,32 @@ export const clock: GameDef = {
       })
     }
     const face = $('ckFace')
-    let dragging = false
-    const pd = (e: PointerEvent) => { dragging = true; dragHands(me, e) }
-    const pm = (e: PointerEvent) => { if (dragging) dragHands(me, e) }
+    const pd = (e: PointerEvent) => {
+      if (me.lock || (me.mode !== 'set' && me.mode !== 'discover')) return
+      me.grab = pickHand(me, e)
+      if (!me.grab) return
+      e.preventDefault()
+      sfx('click', { vol: 0.3, rate: me.grab === 'hour' ? 0.9 : 1.3 })
+      renderFace(me)
+      dragHand(me, e)
+    }
+    const pm = (e: PointerEvent) => { if (me.grab) dragHand(me, e) }
     const pu = () => {
-      if (dragging && me.mode === 'discover' && ck === me) ctx.say(timeSpoken(me.h, me.m))
-      dragging = false
+      if (!me.grab || ck !== me) return
+      me.grab = null
+      renderFace(me)
+      if (me.mode === 'discover') ctx.say(timeSpoken(me.h, me.m))
     }
     const onResize = () => { if (ck === me) renderFace(me) }
     face.addEventListener('pointerdown', pd)
     window.addEventListener('pointermove', pm)
     window.addEventListener('pointerup', pu)
+    window.addEventListener('pointercancel', pu)
     window.addEventListener('resize', onResize)
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __ck: unknown }).__ck = {
-        get h() { return me.h }, get m() { return me.m }, get mode() { return me.mode }, get round() { return me.round }, get score() { return me.score }, get lock() { return me.lock }
+        get h() { return me.h }, get m() { return me.m }, get th() { return me.th }, get tm() { return me.tm }, get grab() { return me.grab }, get mode() { return me.mode }, get round() { return me.round }, get score() { return me.score }, get lock() { return me.lock }
       }
     }
     setMode(me, 'discover')
@@ -361,6 +460,7 @@ export const clock: GameDef = {
       face.removeEventListener('pointerdown', pd)
       window.removeEventListener('pointermove', pm)
       window.removeEventListener('pointerup', pu)
+      window.removeEventListener('pointercancel', pu)
       window.removeEventListener('resize', onResize)
     }
   }

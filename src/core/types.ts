@@ -5,6 +5,10 @@ export interface FinishPayload {
   msg: string
   /** Simple retour de fin de partie (règle 1) : rien ne s'accumule. */
   stars: 1 | 2 | 3
+  /** Le résultat en GRAND sur l'écran de fin (blocs, fruits, points…),
+      avec son icône : une phrase à 15 px ne se lit pas à 6 ans (23/09). */
+  score?: number
+  scoreIcon?: string
   /** Outro : le jeu reste monté ce temps-là (ralenti, chute, caméra qui
       recule…) avant l'écran de résultat. 0 = tout de suite. */
   outroMs?: number

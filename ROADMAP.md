@@ -463,6 +463,24 @@ sur l'écran de fin, sessions A puis B puis C.
       se promènent au bas de l'accueil, et l'écran « dodo » du minuteur a sa
       lune dessinée et trois personnages qui dorment.
 
+- ✅ **Retours tablette du 23/09.**
+  - **Quelle heure ?** « Très difficile de bouger les aiguilles : quand on en
+    place une, l'autre vient en même temps. » Le jeu choisissait l'aiguille
+    à CHAQUE mouvement du doigt selon la distance au centre : en passant près
+    du centre, on attrapait l'autre. L'aiguille est maintenant choisie au
+    toucher (celle dont on touche la direction) et gardée jusqu'au lever du
+    doigt ; chaque aiguille a une boule au bout, celle qu'on tient brille ;
+    Règle ne démarre plus à 12:00 (aiguilles superposées). « Les boutons sont
+    peu clairs et trop petits » : modes en grosses horloges dessinées (la
+    courte, la longue…) avec leur mot en grand ; réglages en deux rangées
+    −/+ avec le dessin de l'aiguille qu'elles bougent ; gros bouton vert
+    « Valide ».
+  - **Tour de Glace** : le nombre de blocs est géant en haut de l'écran, et
+    l'écran de fin de TOUS les jeux d'adresse montre le résultat en très
+    grand (icône + chiffre qui défile avec un tic par cran) au lieu d'une
+    phrase à 15 px. Au passage : l'animation `goodp` (la bonne réponse qui
+    rebondit) était utilisée partout et jamais définie.
+
 Ordre pour la suite : relever `?fps` sur la Tab A9+, faire tester aux filles
 les pions 3D et les jeux repris, puis la phase 3 (l'Atelier à la place du
 Coloriage, le personnage partagé).
