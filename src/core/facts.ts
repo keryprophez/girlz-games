@@ -28,11 +28,15 @@
 export type Level = 0 | 1 | 2 | 3 | 4
 export const LV = { discover: 0, plants: 1, outline: 2, numbers: 3, heart: 4 } as const
 
-/** Un calcul. Pour × et +, 7 × 8 et 8 × 7 sont UN SEUL calcul (a ≤ b). */
+/** Un calcul. Pour ×, 7 × 8 et 8 × 7 sont UN SEUL calcul (a ≤ b). Pour ÷,
+    le calcul est orienté : (a × b) ÷ a = b — 56 ÷ 7 et 56 ÷ 8 sont deux
+    calculs, qui ne s'ouvrent que quand 7 × 8 est su (on lit la table à
+    l'envers : dans la rangée du 7, où est 56 ?). */
 export interface Fact {
   key: string
   a: number
   b: number
+  op: 'mul' | 'div'
 }
 
 export interface FactRec {
@@ -90,7 +94,7 @@ export function mulPool(tables: number[]): Fact[] {
   const out: Fact[] = []
   for (let a = 1; a <= 10; a++) {
     for (let b = a; b <= 10; b++) {
-      if (tables.includes(a) || tables.includes(b)) out.push({ key: mulKey(a, b), a, b })
+      if (tables.includes(a) || tables.includes(b)) out.push({ key: mulKey(a, b), a, b, op: 'mul' })
     }
   }
   return out
@@ -106,9 +110,35 @@ export function mulEase(f: Fact): number {
   return 3
 }
 
-/** Pose le calcul dans un sens ou dans l'autre : 7 × 8 ou 8 × 7. */
+/** Pose le calcul dans un sens ou dans l'autre : 7 × 8 ou 8 × 7. Une
+    division, elle, ne se retourne pas. */
 export function orient(f: Fact, rng: Rng = Math.random): [number, number] {
+  if (f.op === 'div') return [f.a, f.b]
   return rng() < 0.5 ? [f.a, f.b] : [f.b, f.a]
+}
+
+/* ---------- Les divisions : la table lue à l'envers ---------- */
+
+/** (a × b) ÷ a = b. Clé « 56:7 ». */
+export function divFact(a: number, b: number): Fact {
+  return { key: `${a * b}:${a}`, a, b, op: 'div' }
+}
+
+/** Les divisions des multiplications SUES (niveau 3 ou plus) du lot :
+    56 ÷ 7 et 56 ÷ 8 pour 7 × 8. Pas de ÷ 1, qui n'apprend rien. */
+export function divPool(mulFacts: Fact[], mem: Memory): Fact[] {
+  const out: Fact[] = []
+  for (const f of mulFacts) {
+    if (f.op !== 'mul' || recOf(mem, f.key).lv < 3) continue
+    if (f.a > 1) out.push(divFact(f.a, f.b))
+    if (f.b > 1 && f.b !== f.a) out.push(divFact(f.b, f.a))
+  }
+  return out
+}
+
+/** Facilité d'une division : celle de sa multiplication. */
+export function factEase(f: Fact): number {
+  return mulEase(f.op === 'div' ? { key: '', a: Math.min(f.a, f.b), b: Math.max(f.a, f.b), op: 'mul' } : f)
 }
 
 /* ---------- Composer une récolte ---------- */
@@ -294,6 +324,20 @@ export function mulChoices(a: number, b: number, count: number, rng: Rng = Math.
     for (const v of [ans + d, ans - d]) if (out.length < count - 1 && ok(v) && !out.includes(v)) out.push(v)
   }
   return shuffled([ans, ...out], rng)
+}
+
+/** Les réponses d'une division (a × b) ÷ a = b : des quotients voisins
+    (b ± 1, b ± 2), jamais hors de la table. */
+export function divChoices(a: number, b: number, count: number, rng: Rng = Math.random, exclude: number[] = []): number[] {
+  const ok = (v: number) => v >= 1 && v <= 10 && v !== b && !exclude.includes(v)
+  const out: number[] = []
+  for (const group of [[b - 1, b + 1], [b - 2, b + 2, a === b ? b + 3 : a], [b - 3, b + 3, b - 4, b + 4]]) {
+    for (const v of shuffled(group, rng)) {
+      if (out.length >= count - 1) break
+      if (ok(v) && !out.includes(v)) out.push(v)
+    }
+  }
+  return shuffled([b, ...out], rng)
 }
 
 /** Le « presque » : si la réponse est le produit d'un rectangle voisin

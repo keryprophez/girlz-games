@@ -57,8 +57,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
              sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
              portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
-                           (+ `meadowBanner` : le pré de l'accueil ;
-                           `gardenPortraits` : les plantes du Grand Tableau)
+                           (+ `meadowBanner` : le pré de l'accueil)
+             plants.ts   ← les 10 plantes illustrées du potager (une par rangée)
+             facts.ts    ← LA MÉMOIRE DES CALCULS (phase 4) : niveaux d'aide,
+                           récolte composée, révisions espacées, pièges voisins,
+                           « presque », divisions — logique pure, testée
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
@@ -107,6 +110,19 @@ code (`loadAtlas`, `frameStyle`, `spriteFromAtlas`…). Kenney reste la source
 des modèles 3D (kits food, holiday, space, nature) et des bruitages : pour en
 ajouter, éditer `scripts/import-assets.mjs` et le relancer — les fichiers
 triés sont commités, les zips ne le sont pas. Pas d'emoji dans les jeux.
+
+**Une illustration se commande, elle ne se dessine pas** (23/09). Deux
+refus nets du père le même jour : les modèles Kenney vus de près (« cette 3D
+immonde avec 5 triangles par objet ») et des plantes dessinées à la main en
+SVG (« hideux »). Ce qui a été validé : une **planche générée d'un coup avec
+Canva** (les dix plantes dans UN style, fond retiré dans Canva), découpée en
+carrés WebP — voir `core/plants.ts` et la section des plantes de
+`public/assets/CREDITS.md` (texte de commande à réutiliser). Canva refuse le
+téléchargement depuis la session : le père dépose le PNG dans son Google Drive
+et on le récupère par le connecteur Drive (un sous-agent, le fichier arrive en
+base64). Et avant toute nouvelle direction visuelle : **des maquettes au
+format de la tablette, montrées AVANT de coder** (c'est ainsi que le rendu du
+Potager a été choisi).
 
 **Contrat d'un jeu** — volontairement minimal, c'est la force du projet :
 
@@ -236,6 +252,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **Deux doigts, une seule lame** | Le Ninja gardait UN « dernier point » : un second doigt le faisait sauter d'un bout de l'écran à l'autre, et le segment tranchait tout entre les deux. Tout geste de glissé se suit **par `pointerId`** (une `Map`), même dans un jeu pensé pour un doigt. |
 | **Chalet Kenney en pièces** | Les pièces `cabin-*` du kit Holiday tiennent dans une case de 1 : un mur est posé sur le bord +z de sa case (on le tourne pour les autres bords), le coin est au coin (−x, +z), le toit et le pignon sont des DEMI-pièces dont le faîtage est en x = −0,5 — le côté gauche est la même pièce tournée de π (toit) ou en miroir `scale.x = −1` (pignon). Voir `cabin()` dans `core/winter.ts`. |
 | **Secteur de disque retourné** | Un `CircleGeometry(r, n, a0, da)` tourné de −π/2 sur X couvre les angles monde a0…a0+da ; tourné de **+π/2** (pour faire un dessous), il couvre −a0−da…−a0 : le dessous d'une part de pizza se retrouvait SOUS LA PART VOISINE, et la recouvrait dès qu'on la soulevait. Prendre `thetaStart = −a0 − da` pour la face retournée. |
+| **Répondre pendant une animation** | Dans le Potager, la rangée des nombres s'écrit case par case (`ctx.after`) : une réponse donnée avant la fin laissait des nombres apparaître APRÈS la bonne réponse. Tout ce qui répond (`success`, `showMiss`) change d'abord le jeton de question (`me.gen++`), et chaque rappel vérifie ce jeton. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -250,7 +267,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (22/09 : les 31 ; `BOTS=poste,atelier` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (23/09 : 34 scénarios, le Potager en a trois ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

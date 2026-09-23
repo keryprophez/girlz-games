@@ -574,9 +574,29 @@ sons), l'implémentation, un bot qui gagne, une capture de référence.
 
 ## Phase 4 — La Ferme des calculs (plan validé le 23/09)
 
-Les deux Grands Tableaux (× et +) deviennent **deux vrais jeux 3D** où
-chaque opération est un geste sur un objet de la ferme qui EST le modèle
+Les deux Grands Tableaux (× et +) deviennent **deux vrais jeux** où chaque
+opération est un geste sur un objet de la ferme qui EST le modèle
 mathématique. Un moteur commun retient ce que l'enfant sait.
+
+- ✅ **Le Potager livré le 23/09 — en 2D, pas en 3D.** Une première version
+  en 3D (modèles Kenney) a été refusée net : « cette 3D immonde avec 5
+  triangles par objet ». Trois maquettes au format tablette, puis des plantes
+  commandées à Canva : le père a choisi la **5a** — la table de Pythagore en
+  grille claire, une plante illustrée par case du rectangle (une espèce par
+  rangée), le total de chaque rangée en grand sur la plante estompée de la
+  dernière colonne, le résultat en pastille corail (« la 5b est une
+  aberration mathématique » : le total doit être là où il vit dans la table).
+  Il remplace le Grand Tableau × (sorti du catalogue avec son bot) ; le
+  Grand Tableau + prend les mêmes plantes. Modes : **Découvre** (tracé au
+  doigt, comptage chanté, « Tourne » : chaque plante saute sur sa case
+  miroir), **Récolte** (12 questions de `core/facts.ts`, cinq niveaux d'aide,
+  le « presque » dessiné à sa vraie place dans la table, pavé au dernier
+  niveau, divisions des calculs sus en flamme : 56 ÷ 7 = chercher 56 dans la
+  rangée du 7), **Tableau** (les calculs sus gardent leur plante, « Tout
+  montrer »). Trois bots (`potager-*`).
+- Reste du plan ci-dessous : **Partage** (÷ avec les lapins) et le
+  **Poulailler** — leurs illustrations (lapins, poules, œufs, boîtes) sont à
+  commander en UNE planche Canva, maquettes d'abord.
 
 - **Le Potager** (× et ÷, Joyce) : un carré de légumes de 7 rangées de 8,
   c'est 7 × 8 — tracé au doigt, il pousse rangée par rangée, chaque rangée
@@ -601,12 +621,14 @@ mathématique. Un moteur commun retient ce que l'enfant sait.
   recompté), jamais affiché ; profils masqués → mémoire commune par jeu, le
   moteur se corrige tout seul ; le Potager d'abord.
 
-Itérations (demi-page de design validée avant chacune) :
-1. `core/facts.ts` (testé) + **Potager ×** : Découvre, Récolte — en cours.
-2. **Potager ÷** : Partage, divisions dans la Récolte, le Tableau.
+Itérations (maquettes au format tablette validées avant chacune) :
+1. ✅ `core/facts.ts` (testé) + **Potager** : Découvre, Récolte, Tableau,
+   divisions (23/09).
+2. **Partage** (÷ avec les lapins, le reste que le chien vole) — à décider
+   après les retours des filles sur le Potager.
 3. **Poulailler** jusqu'à 10 et 20.
-4. **Poulailler jusqu'à 100** (la retenue) ; `tables.ts` et ses deux bots
-   sortent du catalogue.
+4. **Poulailler jusqu'à 100** (la retenue) ; le Grand Tableau + sort alors du
+   catalogue avec son bot.
 
 ---
 

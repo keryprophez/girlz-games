@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  beginGame, emptyMemory, HARVEST, isFast, LV, mulChoices, mulEase, mulKey, mulPool, nearMiss,
-  planHarvest, record, recOf, requeue, viewLevel, WORK_MAX, type Fact, type Item, type Memory
+  beginGame, divChoices, divFact, divPool, emptyMemory, factEase, HARVEST, isFast, LV, mulChoices, mulEase, mulKey, mulPool,
+  nearMiss, orient, planHarvest, record, recOf, requeue, viewLevel, WORK_MAX, type Fact, type Item, type Memory
 } from './facts'
 
 /** Hasard reproductible (mulberry32). */
@@ -16,7 +16,7 @@ function seeded(seed: number) {
   }
 }
 
-const fact = (a: number, b: number): Fact => ({ key: mulKey(a, b), a: Math.min(a, b), b: Math.max(a, b) })
+const fact = (a: number, b: number): Fact => ({ key: mulKey(a, b), a: Math.min(a, b), b: Math.max(a, b), op: 'mul' })
 const item = (a: number, b: number, kind: Item['kind'] = 'learn'): Item => ({ fact: fact(a, b), kind })
 
 describe('les calculs de la multiplication', () => {
@@ -208,5 +208,41 @@ describe('la mémoire se relit', () => {
     record(m, item(7, 8, 'probe'), { ok: false, fast: false })
     const back = JSON.parse(JSON.stringify(m)) as Memory
     expect(recOf(back, mulKey(8, 7)).lv).toBe(LV.discover)
+  })
+})
+
+describe('les divisions : la table lue à l\'envers', () => {
+  it('56 ÷ 7 = 8, clé orientée, jamais retournée', () => {
+    const d = divFact(7, 8)
+    expect(d).toMatchObject({ key: '56:7', a: 7, b: 8, op: 'div' })
+    for (let i = 0; i < 20; i++) expect(orient(d, Math.random)).toEqual([7, 8])
+  })
+  it('ne s\'ouvrent que pour les multiplications sues, sans ÷ 1', () => {
+    const m = emptyMemory()
+    m.facts[mulKey(7, 8)] = { lv: LV.numbers, last: 0, gap: 1, seen: 4 }
+    m.facts[mulKey(6, 7)] = { lv: LV.plants, last: 0, gap: 0, seen: 2 }
+    m.facts[mulKey(1, 5)] = { lv: LV.heart, last: 0, gap: 4, seen: 6 }
+    m.facts[mulKey(4, 4)] = { lv: LV.heart, last: 0, gap: 4, seen: 6 }
+    const keys = divPool(mulPool([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), m).map(f => f.key).sort()
+    expect(keys).toEqual(['16:4', '56:7', '56:8', '5:5'])
+  })
+  it('les réponses : le quotient et ses voisins, dans la table', () => {
+    for (let s = 0; s < 30; s++) {
+      const ch = divChoices(7, 8, 4, seeded(s))
+      expect(ch).toContain(8)
+      expect(new Set(ch).size).toBe(4)
+      expect(ch.every(v => v >= 1 && v <= 10)).toBe(true)
+    }
+    expect(divChoices(3, 10, 4, seeded(2))).toContain(10)
+  })
+  it('même facilité que la multiplication', () => {
+    expect(factEase(divFact(10, 7))).toBe(0)
+    expect(factEase(divFact(7, 8))).toBe(3)
+  })
+  it('une division se note comme une multiplication', () => {
+    const m = emptyMemory(); beginGame(m)
+    record(m, { fact: divFact(7, 8), kind: 'probe' }, { ok: true, fast: true })
+    expect(recOf(m, '56:7').lv).toBe(LV.numbers)
+    expect(recOf(m, mulKey(7, 8)).seen).toBe(0)
   })
 })

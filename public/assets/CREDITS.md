@@ -17,6 +17,30 @@ Les kits ont été **triés** : on ne garde que les modèles et les sons réelle
 utilisés par les jeux. Pour en ajouter, modifier `scripts/import-assets.mjs` et
 le relancer.
 
+## Plantes du potager (`plants/`)
+
+Les dix plantes du Potager et du Grand Tableau + (tulipe, bouton d'or,
+violette, fraisier, carotte, maïs, pommier, brocoli, aubergine, ananas) sont
+des **illustrations générées avec Canva** (génération d'images par IA) le
+23/09/2026, pour cette app privée et familiale. Une seule planche de 5 × 2
+(même style pour toutes), fond retiré dans Canva (médias Canva `MAHWDXWkHTg`
+puis `MAHWDfyEwNk`, copie dans le Drive du père), découpée en carrés de
+224 px en WebP.
+
+Pour en ajouter ou en changer une : regénérer **toute la planche** (jamais
+une plante seule, sinon deux styles), avec ce texte de commande :
+
+> A sprite sheet of 10 separate garden plants for a children's educational
+> tablet game, arranged in a clean grid of 5 columns and 2 rows, each plant
+> centered in its own cell with generous empty space between them, on a
+> plain flat pure white background. Each plant grows from a small round mound
+> of brown soil, seen from a slight three-quarter top view. [liste des
+> plantes, rangée par rangée] Style: polished, cute, high-quality mobile farm
+> game icons, soft painterly shading with gentle gradients and highlights,
+> clean thin dark brown outlines, warm saturated colors, consistent lighting
+> from the top left, all plants the same scale. No text, no labels, no
+> numbers, no shadows on the background.
+
 ## Espace et géographie
 
 - **La Terre** (`space/earth.jpg`, `geo/earth.jpg`) : NASA Blue Marble, *Visible Earth*

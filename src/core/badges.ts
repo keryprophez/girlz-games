@@ -162,19 +162,18 @@ export const BADGE: Record<string, string> = {
     <path d="M24 13v11l8 5" stroke="${C.ink}" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="24" cy="24" r="2.2" fill="${C.coral}"/>`),
 
-  /* Le Potager : le carré de terre dans ses planches, un rectangle de
-     trois rangées qui pousse (une plante par rangée, comme dans le jeu) */
+  /* Le Potager : la table en grille claire, un rectangle de trois rangées
+     planté (une plante par rangée, comme dans le jeu) et le résultat en
+     pastille corail dans son coin */
   potager: svg(`
-    <rect x="5" y="8" width="38" height="33" rx="5" fill="${C.woodDark}"/>
-    <rect x="8" y="11" width="32" height="27" rx="3" fill="${C.ink}"/>
-    ${[0, 1, 2, 3].map(i => [0, 1, 2, 3].map(j => `<circle cx="${13.5 + j * 7}" cy="${33 - i * 6.5}" r="2.2" fill="${C.woodDark}"/>`).join('')).join('')}
-    ${[[C.coral, 33], [C.sun, 26.5], [C.lilac, 20]].map(([col, y]) => [0, 1, 2].map(j =>
-      `<ellipse cx="${13.5 + j * 7}" cy="${Number(y) + 1.4}" rx="3.2" ry="1.6" fill="${C.meadowDark}"/><circle cx="${13.5 + j * 7}" cy="${Number(y) - 0.8}" r="2.7" fill="${col}"/>`).join('')).join('')}`),
-
-  tables: svg(`
-    <rect x="6" y="8" width="36" height="32" rx="5" fill="${C.meadowDark}"/>
-    <rect x="10" y="12" width="28" height="24" rx="3" fill="${C.cream}"/>
-    <path d="M17 19l14 10M31 19L17 29" stroke="${C.lilacDark}" stroke-width="4" stroke-linecap="round"/>`),
+    <rect x="5" y="5" width="38" height="38" rx="8" fill="${C.white}"/>
+    ${[0, 1, 2, 3].map(i => [0, 1, 2, 3].map(j => `<rect x="${8.5 + j * 8}" y="${8.5 + i * 8}" width="7" height="7" rx="2" fill="${C.cream}"/>`).join('')).join('')}
+    ${[[C.coral, 0], [C.sun, 1], [C.lilac, 2]].map(([col, i]) => [0, 1, 2].map(j => {
+      const x = 12 + j * 8, y = 12 + Number(i) * 8
+      return `<ellipse cx="${x}" cy="${y + 2.4}" rx="2.8" ry="1.2" fill="${C.woodDark}"/><rect x="${x - 0.5}" y="${y - 1}" width="1" height="3.2" fill="${C.meadowDark}"/><circle cx="${x}" cy="${y - 1.4}" r="2.1" fill="${col}"/>`
+    }).join('')).join('')}
+    <rect x="23" y="23" width="13" height="13" rx="4" fill="${C.coralDark}"/>
+    <rect x="23" y="23" width="13" height="10.5" rx="4" fill="${C.coral}"/>`),
 
   addboard: svg(`
     <rect x="6" y="8" width="36" height="32" rx="5" fill="${C.meadowDark}"/>

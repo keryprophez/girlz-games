@@ -439,20 +439,59 @@ await scenario('horloge-huit-heures', async () => {
   if (!fini) throw new Error('l\'écran de fin de l\'horloge n\'est pas apparu')
 })
 
-/* ✖️ Grand Tableau : mode « trouve », la case cible tapée huit fois. */
-await scenario('tableau-huit-cases', async () => {
-  await openGame('Grand Tableau ×')
-  await page.waitForFunction(() => window.__tb, null, { timeout: 15000 })
-  await page.locator('.tb-tool[data-m="find"]').click()
-  for (let i = 0; i < 8; i++) {
-    await page.waitForFunction(q => window.__tb.q === q && !window.__tb.lock, i, { timeout: 15000 })
-    const ok = await page.evaluate(() => window.__tb.find(window.__tb.target))
-    if (!ok) throw new Error('cible introuvable dans la grille')
-    await page.waitForTimeout(200)
+/* 🥕 Le Potager : une récolte entière, douze caisses. Le bot se trompe une
+   fois (deuxième question) pour faire jouer le « presque » et le nouvel
+   essai, puis répond juste ; il attend que les réponses soient touchables
+   (jamais une durée murale). */
+await scenario('potager-recolte-douze-caisses', async () => {
+  await openGame('Le Potager', '__pg')
+  let wrongDone = false
+  for (let i = 0; i < 40; i++) {
+    await page.waitForFunction(() => window.__pg.ready || window.__pg.over, null, { timeout: 30000 })
+    const s = await page.evaluate(() => ({ over: window.__pg.over, ans: window.__pg.answer, opts: window.__pg.opts, qi: window.__pg.qi, tries: window.__pg.tries }))
+    if (s.over) break
+    if (!wrongDone && s.qi === 1 && s.tries === 0 && s.opts.length) {
+      wrongDone = true
+      const ok = await page.evaluate(v => window.__pg.pick(v), s.opts.find(v => v !== s.ans))
+      if (!ok) throw new Error('mauvaise réponse introuvable')
+      continue
+    }
+    const ok = await page.evaluate(v => window.__pg.pick(v), s.ans)
+    if (!ok) throw new Error(`réponse ${s.ans} introuvable`)
+    await page.waitForFunction(q => window.__pg.qi !== q || window.__pg.over, s.qi, { timeout: 30000 })
   }
-  await page.waitForTimeout(2000)
-  const fini = await page.evaluate(() => document.body.innerText.includes('Chasse aux cases'))
-  if (!fini) throw new Error('l\'écran de fin du tableau n\'est pas apparu')
+  if (!wrongDone) throw new Error('le presque n\'a pas été joué')
+  await page.waitForFunction(() => document.body.innerText.includes('La récolte est rentrée'), null, { timeout: 15000 })
+})
+
+/* 🥕 Le Potager, Découvre : un vrai glissé du coin jusqu'à la case 7 × 8,
+   le comptage par rangées jusqu'à 56, puis « Tourne » : 8 × 7, toujours 56. */
+await scenario('potager-decouvre-et-pivot', async () => {
+  await openGame('Le Potager', '__pg')
+  await page.locator('.pg-tool[data-m="discover"]').click()
+  const cell = (r, c) => page.evaluate(([r, c]) => window.__pg.cell(r, c), [r, c])
+  const a = await cell(1, 1), b = await cell(7, 8)
+  await page.mouse.move(a.x, a.y)
+  await page.mouse.down()
+  for (let i = 1; i <= 8; i++) { await page.mouse.move(a.x + (b.x - a.x) * i / 8, a.y + (b.y - a.y) * i / 8); await page.waitForTimeout(20) }
+  await page.mouse.up()
+  const rect = await page.evaluate(() => window.__pg.rect)
+  if (rect[0] !== 7 || rect[1] !== 8) throw new Error(`rectangle ${rect} au lieu de 7 × 8`)
+  await page.waitForFunction(() => !window.__pg.counting && document.querySelector('.pg-cell.res')?.textContent === '56', null, { timeout: 20000 })
+  await page.locator('#pgPivot').click()
+  await page.waitForFunction(() => {
+    const [r, c] = window.__pg.rect
+    return r === 8 && c === 7 && !window.__pg.counting && document.querySelector('.pg-cell.res')?.textContent === '56'
+  }, null, { timeout: 20000 })
+})
+
+/* 🥕 Le Potager, Tableau : une case touchée montre son calcul. */
+await scenario('potager-tableau', async () => {
+  await openGame('Le Potager', '__pg')
+  await page.locator('.pg-tool[data-m="table"]').click()
+  const p = await page.evaluate(() => window.__pg.cell(6, 7))
+  await page.mouse.click(p.x, p.y)
+  await page.waitForFunction(() => [...document.querySelectorAll('.pg-cell.num')].some(el => el.textContent === '42'), null, { timeout: 5000 })
 })
 
 /* ➕ Grand Tableau + : la même chasse aux cases, sur la table d'addition. */

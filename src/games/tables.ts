@@ -3,7 +3,7 @@ import { $, pick, rnd, uniqueNumbers } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
-import { gardenPortraits, GARDEN } from '../core/portraits'
+import { plantUrl, rowPlant, preloadPlants } from '../core/plants'
 
 /* Le Grand Tableau — un cadran 10×10 avec quatre façons de jouer :
    Explore (tape une case, elle se révèle et la voix la lit),
@@ -21,7 +21,7 @@ import { gardenPortraits, GARDEN } from '../core/portraits'
 
    Le potager (23/09) : la grille est un carré de terre dans son cadre de
    bois. Chaque case trouvée fait pousser sa plante — une espèce par rangée
-   (`GARDEN` de core/portraits.ts, en 3D rendue en images) : la table de 3,
+   (`core/plants.ts`, les illustrations du Potager) : la table de 3,
    c'est la rangée des violettes. Tableau complet ou ligne remplie : le
    jardin se balance au vent. Le nombre reste sur son étiquette de semis. */
 
@@ -363,16 +363,10 @@ let tb: State | null = null
       }
       tb = me
       buildGrid(me)
-      // Les plantes arrivent après la grille : en attendant (ou sans WebGL),
-      // les étiquettes de semis suffisent à jouer
-      gardenPortraits(96).then(urls => {
-        if (tb !== me) return
-        for (const b of Object.values(me.cells)) {
-          const u = urls[GARDEN[b._r - 1]]
-          if (u) b.style.setProperty('--pl', `url(${u})`)
-        }
-        $('tbGrid').classList.add('tb-garden')
-      })
+      // Une plante par rangée (les illustrations du Potager), chargées d'avance
+      preloadPlants()
+      for (const b of Object.values(me.cells)) b.style.setProperty('--pl', `url(${plantUrl(rowPlant(b._r))})`)
+      $('tbGrid').classList.add('tb-garden')
       document.querySelectorAll<HTMLElement>('.tb-tool').forEach(b => {
         b.onclick = () => { if (tb === me) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
       })
@@ -406,23 +400,6 @@ let tb: State | null = null
     }
   }
 }
-
-/** « une fois huit », pas « un fois huit » */
-function fois(a: number, b: number, v: number): string {
-  return `${a === 1 ? 'une' : a} fois ${b}, ${v}`
-}
-
-export const tables = createBoard({
-  id: 'tables', name: 'Grand Tableau ×', icon: '✖️', sq: 'sq-mint',
-  subtitle: 'Explore le tableau des multiplications, ou relève un défi !',
-  symbol: '×',
-  compute: (r, c) => r * c,
-  voice: fois,
-  vMin: 1, vMax: 100,
-  allowed: ctx => ctx.byTier([1, 2, 5, 10], [1, 2, 3, 4, 5, 10], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
-  fillTitle: t => `Table de ${t} complète !`,
-  exploreWord: 'multiplications'
-})
 
 export const additions = createBoard({
   id: 'addboard', name: 'Grand Tableau +', icon: '➕', sq: 'sq-sun',

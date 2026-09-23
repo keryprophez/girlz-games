@@ -20,8 +20,11 @@ ramassant des grains ; et des classiques : Taquin (une photo ou un pré en
 personnages 3D de la ferme (vache, poule, cochon, canard, mouton…) en pions.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
-Grand Tableau × et + (un potager : chaque case trouvée fait pousser sa
-plante), le Marché (vrais euros), l'Intrus, le Tour du Monde
+le Potager (les tables de multiplication : on trace au doigt un rectangle de
+plantes, on le compte par rangées sur une petite mélodie, et une récolte de
+douze questions retient ce qui est déjà su ; les divisions en expert), le
+Grand Tableau + (un potager : chaque case trouvée fait pousser sa plante), le
+Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
 Voyage dans l'Espace (vraies planètes, une fusée, un mode « Trouve »),
 Suites logiques, le Miroir (on peint en glissant, le reflet se replie), Chasse
