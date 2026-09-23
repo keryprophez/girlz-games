@@ -72,12 +72,12 @@ const clickTile = async name => {
   throw new Error(`tuile introuvable : ${name}`)
 }
 
-const openGame = async (name, hook) => {
+const openGame = async (name, hook, tier = 'easy') => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
   await clickTile(name)
-  // Le niveau se choisit dans le jeu : les bots jouent en douce
-  await page.locator('.tierbtn.tier-easy').click()
+  // Le niveau se choisit dans le jeu : les bots jouent en douce (sauf besoin)
+  await page.locator('.tierbtn.tier-' + tier).click()
   await page.waitForTimeout(3200)
   // Un jeu 3D n'installe son accroche qu'une fois ses modèles chargés : sur
   // un serveur d'intégration lent, 3,2 s ne suffisent pas toujours (la
@@ -677,7 +677,9 @@ const finDe = async (texte, ms = 9000) => {
    au four, sortie DANS la zone parfaite (une sortie trop tôt ne sort pas),
    la pizza se coupe, et on croque les six parts jusqu'à l'écran de fin. */
 await scenario('pizza-du-four-a-la-bouche', async () => {
-  await openGame('La Pizzeria', '__pz')
+  // En expert, la cuisson dure 5 s simulées au lieu de 11 : sous swiftshader
+  // en CI (2 à 3 images/s, dt borné à 100 ms), la douce dépassait la minute
+  await openGame('La Pizzeria', '__pz', 'exp')
   const cv = await page.locator('#pzArena canvas').first().boundingBox()
   const cx = cv.x + cv.width / 2, cy = cv.y + cv.height / 2
   await page.locator('.pz-bowl[data-t="cheese"]').click()
@@ -690,7 +692,7 @@ await scenario('pizza-du-four-a-la-bouche', async () => {
   // Trop tôt : elle ne sort pas
   await page.locator('#pzOut').click({ force: true })
   if (await page.evaluate(() => window.__pz.phase) !== 'cuisson') throw new Error('sortie trop tôt acceptée')
-  await page.waitForFunction(() => window.__pz.bake > window.__pz.from + 0.04, null, { timeout: 60000 })
+  await page.waitForFunction(() => window.__pz.bake > window.__pz.from + 0.04, null, { timeout: 150000 })
   await page.locator('#pzOut').click({ force: true })
   await page.waitForFunction(() => window.__pz.phase === 'servi' && window.__pz.cut >= 3, null, { timeout: 15000 })
   for (let i = 0; i < 40; i++) {

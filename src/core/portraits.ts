@@ -357,3 +357,103 @@ export async function meadowBanner(w: number, h: number): Promise<string> {
   if (url) cache.set(key, url)
   return url
 }
+
+/** Les plantes du potager (Grand Tableau, 23/09) : une espèce par rangée du
+    tableau, pour que la table de 3 soit « la rangée des violettes ». Fleurs
+    du kit Nature, fruits et légumes du kit Food, chacun posé sur sa butte de
+    terre avec une touffe d'herbe : même rendu que les personnages. */
+export const GARDEN = ['tulipe', 'bouton', 'violette', 'fraise', 'carotte', 'mais', 'pomme', 'brocoli', 'aubergine', 'ananas'] as const
+export type Plant = typeof GARDEN[number]
+const PLANT_MODEL: Record<Plant, [kit: string, model: string, size: number, tilt: number /* debout : autour de z */]> = {
+  tulipe: ['nature', 'flower_redA', 1.05, 0],
+  bouton: ['nature', 'flower_yellowA', 1.05, 0],
+  violette: ['nature', 'flower_purpleA', 1.05, 0],
+  fraise: ['food', 'strawberry', 0.5, 0],
+  carotte: ['food', 'carrot', 1.05, 0],
+  mais: ['food', 'corn', 0.8, 0],
+  pomme: ['food', 'apple', 0.5, 0],
+  brocoli: ['food', 'broccoli', 0.6, 0],
+  aubergine: ['food', 'eggplant', 0.7, 0],
+  ananas: ['food', 'pineapple', 0.9, 0]
+}
+
+export async function gardenPortraits(px: number): Promise<Partial<Record<Plant, string>>> {
+  const out: Partial<Record<Plant, string>> = {}
+  const missing = GARDEN.filter(k => {
+    const hit = cache.get('plante:' + k + '@' + px)
+    if (hit) out[k] = hit
+    return !hit
+  })
+  if (!missing.length) return out
+  const size = Math.min(512, Math.round(px * 2))
+  await withRenderer(size, size, async (T, renderer, env) => {
+    const own: { dispose(): void }[] = []
+    const soil = new T.MeshStandardMaterial({ color: 0x3E2616, roughness: 1 })
+    const moundGeo = new T.SphereGeometry(0.5, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2)
+    own.push(soil, moundGeo)
+    let grass: import('three').Group | null = null
+    try { grass = await loadModel('nature', 'grass') } catch { /* sans herbe */ }
+    try {
+      for (const kind of missing) {
+        const [kit, name, h, tilt] = PLANT_MODEL[kind]
+        const scene = new T.Scene()
+        lights(T, scene, env)
+        const mound = new T.Mesh(moundGeo, soil)
+        mound.scale.set(1, 0.32, 0.8)
+        mound.receiveShadow = true
+        scene.add(mound)
+        const mats: import('three').Material[] = []
+        const tint = (m: import('three').Object3D, green: boolean) => m.traverse(o => {
+          const mesh = o as import('three').Mesh
+          if (!mesh.isMesh) return
+          mesh.castShadow = true
+          const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
+          mat.color.multiplyScalar(0.62)
+          if (green) mat.color.multiply(new T.Color(0x9CCB6E))
+          else {
+            // Les fleurs du kit sont pastel : l'ACES les délave encore. On
+            // ravive les pétales et on passe les tiges menthe au vert de pré.
+            const hsl = { h: 0, s: 0, l: 0 }
+            mat.color.getHSL(hsl)
+            if (hsl.h > 0.2 && hsl.h < 0.55) mat.color.multiply(new T.Color(0x9CCB6E))
+            else mat.color.setHSL(hsl.h, Math.min(1, hsl.s * 1.7), hsl.l * 0.85)
+          }
+          mesh.material = mat
+          mats.push(mat)
+        })
+        if (grass) for (const [x, z, r] of [[-0.24, -0.1, 0.4], [0.26, -0.06, 2.1]] as const) {
+          const g = grass.clone()
+          fitModel(T, g, 0.42)
+          g.position.set(x, 0.08, z)
+          g.rotation.y = r
+          tint(g, true)
+          scene.add(g)
+        }
+        try {
+          const m = await loadModel(kit, name)
+          fitModel(T, m, h)
+          tint(m, false)
+          m.rotation.set(0, -0.5, tilt)
+          const box = new T.Box3().setFromObject(m)
+          m.position.y = 0.12 - box.min.y
+          scene.add(m)
+        } catch { /* modèle absent : la butte seule */ }
+        const box = new T.Box3().setFromObject(scene)
+        const ctr = box.getCenter(new T.Vector3())
+        const rad = box.getSize(new T.Vector3()).length() / 2
+        const cam = new T.PerspectiveCamera(30, 1, 0.05, 50)
+        const dist = rad / Math.sin(15 * Math.PI / 180) * 0.78
+        cam.position.set(ctr.x, ctr.y + dist * 0.42, ctr.z + dist * 0.9)
+        cam.lookAt(ctr.x, ctr.y - rad * 0.08, ctr.z)
+        renderer.render(scene, cam)
+        const url = renderer.domElement.toDataURL('image/png')
+        cache.set('plante:' + kind + '@' + px, url)
+        out[kind] = url
+        mats.forEach(x => x.dispose())
+      }
+    } finally {
+      own.forEach(o => o.dispose())
+    }
+  }).catch(() => { /* pas de WebGL : le tableau garde ses nombres */ })
+  return out
+}

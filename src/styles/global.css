@@ -615,21 +615,41 @@ body.playing .g3-bar{max-width:820px;}
    GRAND TABLEAU (tables de multiplication)
    ============================================================ */
 /* Grand Tableau plein écran : grille carrée dimensionnée par le jeu, cases lisibles */
-.tb-wrap{position:relative;display:flex;align-items:center;justify-content:center;background:#EEF6EA;touch-action:manipulation;}
+.tb-wrap{position:relative;display:flex;align-items:center;justify-content:center;touch-action:manipulation;
+  background:radial-gradient(ellipse at 40% 35%,#B9DE98,#8DC46C 60%,#6EA852);}
 .tb-wrap #tbGrid{margin-right:min(36vw,360px);} /* la colonne de droite (consigne, pavé) a sa place */
+/* Le potager (23/09) : un carré de terre dans un cadre de planches */
 #tbGrid{display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);gap:3px;
-  background:var(--card);border:1px solid var(--line);border-radius:22px;padding:8px;box-shadow:var(--e2);}
+  background:repeating-linear-gradient(90deg,#8A5A36 0 38px,#7C4F2E 38px 40px);border-radius:18px;padding:9px;
+  box-shadow:inset 0 0 0 3px #5E3B20,inset 0 4px 0 3px rgba(255,220,170,.18),0 12px 26px rgba(40,70,20,.35);}
 .tb-h{display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;
-  font-size:.9em;color:var(--ink-soft);}
-.tb-corner{color:var(--mango);}
-.tb-cell{border:none;border-radius:8px;cursor:pointer;background:var(--cc,#FFE08A);
-  opacity:.45;font-family:'Baloo 2';font-weight:800;font-size:1em;color:#fff;
-  text-shadow:0 1px 1px rgba(69,54,42,.3);transition:transform .15s var(--spring),opacity .2s;padding:0;}
+  font-size:.9em;color:#FFE7BF;text-shadow:0 1px 1px rgba(40,20,5,.5);}
+.tb-corner{color:#FFC75A;}
+.tb-cell{position:relative;overflow:visible;border:none;border-radius:7px;cursor:pointer;padding:0;
+  background:radial-gradient(ellipse at 50% 38%,#6E4629,#4B2D18 75%);box-shadow:inset 0 -2px 0 rgba(0,0,0,.25);
+  font-family:'Baloo 2';font-weight:800;font-size:1em;color:#fff;
+  display:flex;align-items:center;justify-content:center;transition:transform .15s var(--spring);}
 .tb-cell:active{transform:scale(.88);}
-.tb-cell.shown{opacity:1;}
-.tb-cell.good{box-shadow:0 0 0 3px var(--meadow);animation:goodp .4s var(--spring);}
+/* L'étiquette de semis : le nombre, sur la couleur de sa valeur (petit → jaune, grand → corail) */
+.tb-num{position:relative;z-index:1;display:inline-block;min-width:1.3em;padding:0 .18em;border-radius:.4em;
+  background:var(--cc,#FFE08A);font-size:.9em;line-height:1.2;text-shadow:0 1px 1px rgba(69,54,42,.35);
+  box-shadow:0 1px 2px rgba(40,20,5,.4);}
+/* La plante pousse depuis la terre, derrière l'étiquette */
+.tb-cell::before{content:'';position:absolute;left:-12%;right:-12%;top:-34%;bottom:10%;pointer-events:none;
+  background:var(--pl) 50% 100%/contain no-repeat;transform:scale(0);transform-origin:50% 92%;}
+.tb-garden .tb-cell.shown{align-items:flex-end;padding-bottom:2px;}
+.tb-garden .tb-cell.shown .tb-num{font-size:.74em;}
+.tb-garden .tb-cell.shown::before{transform:scale(1);animation:tbGrow .6s var(--spring) both;}
+.tb-garden .tb-cell.shown.nope{align-items:center;}
+.tb-garden .tb-cell.shown.nope::before{display:none;}
+.tb-cell.bloom::before{animation:tbSway 1.3s ease-in-out var(--d,0ms) both;}
+@keyframes tbGrow{0%{transform:scale(0);}100%{transform:scale(1);}}
+@keyframes tbSway{0%,100%{transform:scale(1) rotate(0);}25%{transform:scale(1.14) rotate(-7deg);}
+  55%{transform:scale(1.08) rotate(6deg);}80%{transform:scale(1.02) rotate(-2deg);}}
+.tb-cell.good{box-shadow:0 0 0 3px #7BE08F;animation:goodp .4s var(--spring);z-index:2;}
 .tb-cell.bad{box-shadow:0 0 0 3px var(--coral);}
-.tb-cell.want{opacity:1;background:#fff;box-shadow:0 0 0 3px var(--mango);animation:lgpulse 1s ease-in-out infinite;}
+.tb-cell.want{background:radial-gradient(ellipse at 50% 38%,#8A5A36,#5E3B20 75%);
+  box-shadow:0 0 0 3px #FFC75A,0 0 14px 2px rgba(255,199,90,.8);animation:lgpulse 1s ease-in-out infinite;z-index:2;}
 .tb-side{width:min(38vw,380px);gap:14px;}
 .tb-prompt{display:flex;align-items:center;justify-content:center;gap:10px;min-height:72px;font-family:'Baloo 2';font-weight:800;color:var(--ink);}
 .tb-prompt .ico{font-size:42px;color:var(--coral);}

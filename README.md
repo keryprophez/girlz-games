@@ -13,13 +13,15 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 Glace, Ninja Verger, Attrape, la Chenille, Course (le tracteur saute les
 obstacles et remplit sa remorque de pommes), Poussin Volant, le Stand ;
 Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
-et un cactus qui pique) ; le Labyrinthe (classique, brouillard, glace) et son
-poussin qui marche entre les haies en ramassant des grains ; et des classiques :
-Taquin (une photo ou un pré en 3D), Memory, Simon et Puissance 4, avec les
+et un cactus qui pique) ; le Labyrinthe en vraies haies 3D (classique,
+brouillard à la lanterne, glace), où le poussin rejoint sa maman poule en
+ramassant des grains ; et des classiques : Taquin (une photo ou un pré en
+3D), Memory (de vraies cartes qui se retournent), Simon et Puissance 4, avec les
 personnages 3D de la ferme (vache, poule, cochon, canard, mouton…) en pions.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
-Grand Tableau × et +, le Marché (vrais euros), l'Intrus, le Tour du Monde
+Grand Tableau × et + (un potager : chaque case trouvée fait pousser sa
+plante), le Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
 Voyage dans l'Espace (vraies planètes, une fusée, un mode « Trouve »),
 Suites logiques, le Miroir (on peint en glissant, le reflet se replie), Chasse
@@ -29,11 +31,13 @@ phrase avec le bon signe, et le point s'imprime tout seul).
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
 neige, devant un chalet qui fume), Habille-toi (son personnage en 3D, qui la
 suit ensuite dans les jeux), Boîte à Rythme (les animaux chantent en
-sautant), Petit Piano (la chanson en partition de couleurs), Feu d'artifice,
+sautant), Petit Piano (un piano laqué, la partition qui descend, les animaux
+qui chantent), Feu d'artifice (au-dessus du village, reflété dans le lac),
 l'Atelier (dessin au doigt, pot de peinture, tampons, dessins gardés), la
 Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
 
-**Autour** — une grille de jeux, la difficulté choisie dans chaque jeu (fleur,
+**Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
+d'un pré en 3D, la difficulté choisie dans chaque jeu (fleur,
 éclair, flamme), le Ninja et Tape-Trous à deux en équipe sur la même tablette,
 minuteur parental avec verrou « question de grand », voix de la famille
 enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit

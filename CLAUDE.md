@@ -57,6 +57,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
              sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
              portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
+                           (+ `meadowBanner` : le pré de l'accueil ;
+                           `gardenPortraits` : les plantes du Grand Tableau)
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
@@ -136,7 +138,8 @@ relance la partie. Un jeu qui déclare `duo: true` (Ninja, Tape-Trous) ajoute
 au-dessus un choix « seule / à deux » (deux silhouettes) : `ctx.duo` = deux
 sœurs sur la même tablette, EN ÉQUIPE — plusieurs doigts à la fois, un seul
 score, les messages de fin disent « vous », jamais qui a fait quoi.
-L'accueil n'est plus qu'une **grille de jeux** : le choix
+L'accueil est une **grille de jeux en trois onglets** (Jouer / Apprendre /
+Créer, `.hm-tab[data-w]`, dernier onglet retenu dans `ferme:univers`) : le choix
 de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans
 `core/store.ts` — prêt à revenir ; tant qu'il l'est, les encouragements
 enregistrés sont communs à la famille — le Défi à deux et la fenêtre de
@@ -182,7 +185,8 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` · `dressup`. Pour un jeu de physique rigide
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` · `dressup` ·
+`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). Pour un jeu de physique rigide
 (cannon-es) sur le socle, `stand3d.ts` est le modèle : `loadPhysics()`,
 `fixedStep` autour de `world.step`, corps figé avec `mass = 0`.
 
