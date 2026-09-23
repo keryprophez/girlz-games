@@ -57,6 +57,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
              sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
              portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
+                           (+ `meadowBanner` : le pré de l'accueil ;
+                           `gardenPortraits` : les plantes du Grand Tableau)
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
@@ -136,7 +138,8 @@ relance la partie. Un jeu qui déclare `duo: true` (Ninja, Tape-Trous) ajoute
 au-dessus un choix « seule / à deux » (deux silhouettes) : `ctx.duo` = deux
 sœurs sur la même tablette, EN ÉQUIPE — plusieurs doigts à la fois, un seul
 score, les messages de fin disent « vous », jamais qui a fait quoi.
-L'accueil n'est plus qu'une **grille de jeux** : le choix
+L'accueil est une **grille de jeux en trois onglets** (Jouer / Apprendre /
+Créer, `.hm-tab[data-w]`, dernier onglet retenu dans `ferme:univers`) : le choix
 de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans
 `core/store.ts` — prêt à revenir ; tant qu'il l'est, les encouragements
 enregistrés sont communs à la famille — le Défi à deux et la fenêtre de
@@ -182,7 +185,8 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` · `dressup`. Pour un jeu de physique rigide
+`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` · `dressup` ·
+`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). Pour un jeu de physique rigide
 (cannon-es) sur le socle, `stand3d.ts` est le modèle : `loadPhysics()`,
 `fixedStep` autour de `world.step`, corps figé avec `mass = 0`.
 
@@ -219,7 +223,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
-| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` cliquent les tuiles `.gc`, lisent le nom dans `.nm`, puis choisissent le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
+| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` touchent l'onglet de l'univers (`.hm-tab[data-w]`, un univers affiché à la fois depuis le 23/09), puis la tuile `.gc` (nom dans `.nm`), puis le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
 | **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
 | **Bot sur une valeur périmée** | Un crochet de test (`__towerX`) qui n'est écrit que quand l'objet existe garde sa dernière valeur : le bot de la Tour cliquait « au centre » pendant la chute du bloc précédent, un bloc sur trois manquait, trois déploiements ont échoué sans qu'on le voie. Écrire `NaN` quand il n'y a rien à piloter, et faire attendre le bot sur le score plutôt que sur une durée murale. |
 | **Bot qui sonde avant l'accroche** | `openGame` attendait 3,2 s à plat, puis le bot de la Course lisait `window.__run` : un jeu 3D n'installe son accroche qu'APRÈS ses modèles, et sur le serveur d'intégration (plus lent que la session) elle n'était pas là — première sonde à `null`, « partie terminée avant 60 m », déploiement bloqué alors que tout passait ici. Un bot attend son accroche (`openGame(nom, '__run')` → `waitForFunction`) ou la disparition de `.nj-loading`, jamais une durée murale. |

@@ -11,6 +11,7 @@ import { BADGE, WORLD_BADGE } from '../core/badges'
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
+const WORLD_KEY = 'ferme:univers'
 const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
 const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
 
@@ -29,6 +30,19 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
   }
 
   const [adjust, setAdjust] = useState<{ img: HTMLImageElement; pid: string } | null>(null)
+
+  /* L'univers ouvert est retenu : on revient là où on jouait */
+  const [world, setWorld] = useState(() => {
+    try { const w = localStorage.getItem(WORLD_KEY); if (w && WORLDS.some(x => x.id === w)) return w } catch { /* stockage refusé */ }
+    return WORLDS[0].id
+  })
+  const shown = WORLDS.find(w => w.id === world) || WORLDS[0]
+  const pickWorld = (id: string) => {
+    if (id === world) return
+    sFlip()
+    setWorld(id)
+    try { localStorage.setItem(WORLD_KEY, id) } catch { /* stockage refusé */ }
+  }
 
   /* Ouvrir un jeu (23/09) : la vignette touchée grandit jusqu'à remplir
      l'écran, puis le jeu apparaît dessous — on VOIT où on entre. */
@@ -61,10 +75,17 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
   }
 
   return (
-    <section className="screen active">
-      <div className="brand">
-        <h1>La Ferme Magique</h1>
-        <div className="tag">Les jeux de Jade et Joyce</div>
+    <section className="screen active home">
+      <div className="hm-top">
+        <div className="brand">
+          <h1>La Ferme Magique</h1>
+          <div className="tag">Les jeux de Jade et Joyce</div>
+        </div>
+        <div className="statrow">
+          <div className="stat"><button onClick={() => store.toggleSound()}><Svg html={store.sound ? ICON.sound : ICON.mute} /></button></div>
+          <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille"><Svg html={ICON.mic} /></button></div>
+          <TimerButton />
+        </div>
       </div>
 
       {SHOW_PROFILES && (<>
@@ -96,30 +117,27 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
       </>)}
       {SHOW_PROFILES && <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />}
 
-      <div className="statrow">
-        <div className="stat"><button onClick={() => store.toggleSound()}><Svg html={store.sound ? ICON.sound : ICON.mute} /></button></div>
-        <div className="stat"><button onClick={() => setVoicesOpen(true)} title="Voix de la famille"><Svg html={ICON.mic} /></button></div>
-        <TimerButton />
-      </div>
-
-      <div className="cats">
+      {/* Trois univers en gros onglets dessinés ; un univers = un écran, sans défilement */}
+      <nav className="hm-tabs">
         {WORLDS.map(w => (
-          <div className="cat" key={w.id}>
-            <div className="eyebrow">{WORLD_BADGE[w.id] ? <Svg className="eyebrow-badge" html={WORLD_BADGE[w.id]} /> : w.icon} {w.label}</div>
-            <div className="grid">
-              {w.games.map(g => {
-                const best = prog.bestStars[g.id] || 0
-                return (
-                  <button className="gc" key={g.id} onClick={e => launch(e.currentTarget, g.id, g.sq, BADGE[g.id] || g.icon)}>
-                    <span className={'sq ' + g.sq}>{BADGE[g.id] ? <Svg html={BADGE[g.id]} /> : g.icon}</span>
-                    <span className="nm">{g.name}</span>
-                    {w.id !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <button key={w.id} data-w={w.id} className={'hm-tab w-' + w.id + (w.id === world ? ' sel' : '')}
+            onClick={() => pickWorld(w.id)} aria-label={w.label}>
+            <Svg className="hm-tab-badge" html={WORLD_BADGE[w.id] || ''} />
+            <span className="hm-tab-nm">{w.label}</span>
+          </button>
         ))}
+      </nav>
+      <div className={'hm-grid w-' + world + ' n' + shown.games.length} key={world}>
+        {shown.games.map(g => {
+          const best = prog.bestStars[g.id] || 0
+          return (
+            <button className="gc" key={g.id} onClick={e => launch(e.currentTarget, g.id, g.sq, BADGE[g.id] || g.icon)}>
+              <span className={'sq ' + g.sq}>{BADGE[g.id] ? <Svg html={BADGE[g.id]} /> : g.icon}</span>
+              <span className="nm">{g.name}</span>
+              {world !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}
+            </button>
+          )
+        })}
       </div>
       {voicesOpen && <VoiceStudio onClose={() => setVoicesOpen(false)} />}
       {adjust && (

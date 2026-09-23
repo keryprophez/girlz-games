@@ -2,7 +2,8 @@ import type { GameContext, GameDef } from '../core/types'
 import { tone } from '../core/audio'
 import { sfx, preloadSfx } from '../core/sfx'
 import { ICON } from '../core/icons'
-import { fxAt, JUICE } from '../core/fx'
+import { critterPortraits, portraitImg } from '../core/portraits'
+import type { CritterKind } from '../core/critters'
 
 /* Petit Piano — mode libre + mélodies guidées « suis les lumières ».
    Créatif et musical : on ne peut pas perdre, on suit la touche qui brille.
@@ -11,11 +12,25 @@ import { fxAt, JUICE } from '../core/fx'
    largeur), chansons choisies sur des dessins et plus sur des numéros, et la
    chanson s'affiche en PARTITION DE COULEURS au-dessus du clavier : une
    pastille par note, de la couleur de sa touche. Celle à jouer bat, celles
-   jouées se remplissent — on voit où on en est sans lire « 7/14 ». */
+   jouées se remplissent — on voit où on en est sans lire « 7/14 ».
+
+   Refait le 23/09 (« huit barres colorées ») : un VRAI piano laqué noir,
+   touches d'ivoire qui s'enfoncent (et leurs dièses noirs, pour le décor),
+   et au-dessus huit animaux de la ferme — un par note, du plus grave (la
+   vache) au plus aigu (le poussin). Chaque note jouée monte le long de son
+   couloir jusqu'à son animal, qui saute en chantant. En mode chanson, la
+   partition DESCEND vers les touches : la prochaine note attend juste
+   au-dessus de sa touche, en battant, les suivantes empilées derrière. */
 
 const NOTES = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25]
 const NAMES = ['Do', 'Ré', 'Mi', 'Fa', 'Sol', 'La', 'Si', 'Do']
 const KEY_COLORS = ['#FF6B81', '#FFA94D', '#FFD43B', '#94D82D', '#5EC97B', '#4FB8E7', '#B197FC', '#F58FB8']
+/** Un chanteur par note, du plus grave au plus aigu */
+const SINGERS: CritterKind[] = ['cow', 'pig', 'sheep', 'dog', 'duck', 'hen', 'rabbit', 'chick']
+/** Les dièses (décor) : entre Do-Ré, Ré-Mi, Fa-Sol, Sol-La, La-Si */
+const SHARPS = [0, 1, 3, 4, 5]
+/** Notes de la partition visibles d'un coup dans les couloirs */
+const AHEAD = 6
 
 const svg = (body: string) => `<svg class="ico" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">${body}</svg>`
 const BELL = svg('<path d="M12 3.2c-3.4 0-5.8 2.6-5.8 6v4.2L4.5 16.6h15l-1.7-3.2V9.2c0-3.4-2.4-6-5.8-6z" fill="currentColor"/><circle cx="12" cy="19" r="2.1" fill="currentColor"/>')
@@ -38,38 +53,76 @@ interface State {
   running: boolean
   root: HTMLElement
   keys: HTMLElement[]
+  singers: HTMLElement[]
+  lanes: HTMLElement
 }
 
 let pn: State | null = null
 let ctx: GameContext
 
-/** La partition de couleurs de la chanson en cours (vide en mode libre). */
+/** La partition qui descend : la note à jouer attend au-dessus de sa touche,
+    les suivantes montent derrière elle dans leurs couloirs. */
 function paintScore(me: State) {
-  const el = me.root.querySelector<HTMLElement>('.pn-score')!
-  if (me.mode !== 'song' || !me.song) { el.innerHTML = ''; return }
-  el.innerHTML = me.song.seq.map((n, k) =>
-    `<i class="${k < me.idx ? 'done' : k === me.idx ? 'cur' : ''}" style="--kc:${KEY_COLORS[n]}"></i>`).join('')
-  me.keys.forEach((k, i) => k.classList.toggle('pulse', me.song!.seq[me.idx] === i))
+  const el = me.lanes
+  el.querySelectorAll('.pn-note').forEach(n => n.remove())
+  if (me.mode === 'song' && me.song) {
+    const seq = me.song.seq
+    for (let k = me.idx; k < Math.min(seq.length, me.idx + AHEAD); k++) {
+      const n = document.createElement('i')
+      n.className = 'pn-note' + (k === me.idx ? ' cur' : '')
+      n.style.setProperty('--kc', KEY_COLORS[seq[k]])
+      n.style.setProperty('--lane', String(seq[k]))
+      n.style.setProperty('--row', String(k - me.idx))
+      el.appendChild(n)
+    }
+  }
+  // La barre d'avancement : une pastille par note, sans chiffre
+  const bar = me.root.querySelector<HTMLElement>('.pn-score')!
+  bar.innerHTML = me.mode === 'song' && me.song
+    ? me.song.seq.map((n, k) => `<b class="${k < me.idx ? 'done' : ''}" style="--kc:${KEY_COLORS[n]}"></b>`).join('')
+    : ''
+  me.keys.forEach((k, i) => k.classList.toggle('pulse', me.mode === 'song' && !!me.song && me.song.seq[me.idx] === i))
+}
+
+/** La note jouée monte le long de son couloir jusqu'à son chanteur */
+function rise(me: State, i: number) {
+  const n = document.createElement('i')
+  n.className = 'pn-rise'
+  n.style.setProperty('--kc', KEY_COLORS[i])
+  n.style.setProperty('--lane', String(i))
+  me.lanes.appendChild(n)
+  ctx.after(520, () => {
+    n.remove()
+    if (pn !== me) return
+    const s = me.singers[i]
+    s.classList.remove('sing'); void s.offsetWidth; s.classList.add('sing')
+  })
 }
 
 function press(me: State, i: number) {
   if (pn !== me || !me.running) return
   const key = me.keys[i]
-  tone(NOTES[i], 0.45, 'triangle', 0.2)
+  // Un son plus rond : la note, et son octave tout doucement par-dessus
+  tone(NOTES[i], 0.6, 'triangle', 0.17)
+  tone(NOTES[i] * 2, 0.35, 'sine', 0.04)
   key.classList.remove('play'); void key.offsetWidth; key.classList.add('play')
+  // La touche remonte d'elle-même (sinon elle restait enfoncée jusqu'au toucher suivant)
+  ctx.after(170, () => key.classList.remove('play'))
+  rise(me, i)
   if (me.mode === 'free' || !me.song) { me.played++; return }
   // Mode chanson : guidé, sans punition
   if (i === me.song.seq[me.idx]) {
     me.idx++
-    fxAt(key, JUICE.mix, 6)
     paintScore(me)
     if (me.idx >= me.song.seq.length) {
       me.running = false
       me.keys.forEach(k => k.classList.remove('pulse'))
       sfx('confirm', { vol: 0.8 })
       me.root.querySelector('.pn-score')!.classList.add('won')
+      // Tout le chœur saute pour saluer
+      me.singers.forEach((s, k) => ctx.after(k * 70, () => { s.classList.remove('sing'); void s.offsetWidth; s.classList.add('sing') }))
       const song = me.song.name
-      ctx.after(1200, () => { if (pn === me) finish(me, song) })
+      ctx.after(1400, () => { if (pn === me) finish(me, song) })
     }
   } else {
     key.classList.remove('oops'); void key.offsetWidth; key.classList.add('oops')
@@ -111,11 +164,16 @@ export const piano: GameDef = {
         </div>
         <div class="pn-main">
           <div class="pn-score"></div>
-          <div class="pn-keys">
-            ${NOTES.map((_, i) => `
-              <button class="pkey" data-i="${i}" style="--kc:${KEY_COLORS[i]}">
-                <span class="pkname">${NAMES[i]}</span>
-              </button>`).join('')}
+          <div class="pn-choir">${SINGERS.map((_, i) => `<span class="pn-singer" style="--kc:${KEY_COLORS[i]}"></span>`).join('')}</div>
+          <div class="pn-lanes">${NOTES.map((_, i) => `<span class="pn-lane" style="--lane:${i};--kc:${KEY_COLORS[i]}"></span>`).join('')}</div>
+          <div class="pn-piano">
+            <div class="pn-keys">
+              ${NOTES.map((_, i) => `
+                <button class="pkey" data-i="${i}" style="--kc:${KEY_COLORS[i]}">
+                  <span class="pkname">${NAMES[i]}</span>
+                </button>`).join('')}
+              ${SHARPS.map(i => `<span class="pn-sharp" style="--after:${i}"></span>`).join('')}
+            </div>
           </div>
         </div>
         <button class="sn-tool go bb-done" id="pnDone" aria-label="Fini">${ICON.check}</button>
@@ -123,9 +181,15 @@ export const piano: GameDef = {
     preloadSfx(['confirm'])
     const me: State = {
       mode: 'free', song: null, idx: 0, played: 0, running: true, root: c.root,
-      keys: Array.from(c.root.querySelectorAll<HTMLElement>('.pkey'))
+      keys: Array.from(c.root.querySelectorAll<HTMLElement>('.pkey')),
+      singers: Array.from(c.root.querySelectorAll<HTMLElement>('.pn-singer')),
+      lanes: c.root.querySelector<HTMLElement>('.pn-lanes')!
     }
     pn = me
+    critterPortraits(SINGERS, 110).then(img => {
+      if (pn !== me) return
+      me.singers.forEach((el, i) => { el.innerHTML = portraitImg(img[SINGERS[i]], 110) })
+    })
     me.keys.forEach((k, i) => {
       k.addEventListener('pointerdown', e => { e.preventDefault(); press(me, i) })
     })

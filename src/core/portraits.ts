@@ -257,3 +257,203 @@ export async function farmScene(kinds: CritterKind[], px: number): Promise<strin
   if (url) cache.set(key, url)
   return url
 }
+
+/** Le pré de l'accueil (23/09) : un panorama 3D large et bas, fond
+    transparent — collines, haie d'arbres, clôture, fleurs, et les animaux
+    de la ferme qui paissent. Rendu UNE fois en image (cache) : l'accueil
+    garde un seul contexte WebGL jetable, aucun rendu en continu. */
+export async function meadowBanner(w: number, h: number): Promise<string> {
+  const key = `pre-large@${w}x${h}`
+  const hit = cache.get(key)
+  if (hit) return hit
+  const url = await withRenderer(w, h, async (T, renderer, env) => {
+    const scene = new T.Scene()
+    lights(T, scene, env)
+    // Le soleil doit couvrir tout le panorama, pas un carré de 8 m
+    scene.traverse(o => {
+      const d = o as import('three').DirectionalLight
+      if (!d.isDirectionalLight) return
+      const sc = d.shadow.camera
+      sc.left = -16; sc.right = 16; sc.top = 8; sc.bottom = -8
+      sc.updateProjectionMatrix()
+      d.shadow.mapSize.set(2048, 1024)
+    })
+    const own: { dispose(): void }[] = []
+    const grassMat = new T.MeshStandardMaterial({ color: 0x5E9A45, roughness: 1 })
+    const grassFar = new T.MeshStandardMaterial({ color: 0x7DB35C, roughness: 1 })
+    own.push(grassMat, grassFar)
+    const ground = new T.Mesh(new T.CircleGeometry(40, 48), grassMat)
+    ground.rotation.x = -Math.PI / 2
+    ground.receiveShadow = true
+    scene.add(ground)
+    own.push(ground.geometry)
+    // Des collines douces derrière : elles dessinent la ligne d'horizon
+    const hillGeo = new T.SphereGeometry(1, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2)
+    own.push(hillGeo)
+    for (const [x, z, s, hh] of [[-9, -7, 5.5, 1.5], [-2.5, -9, 6.5, 2], [5, -8, 5.8, 1.6], [11, -7.5, 5, 1.3], [-14, -8, 5, 1.2]] as const) {
+      const m = new T.Mesh(hillGeo, grassFar)
+      m.scale.set(s, hh, s * 0.6)
+      m.position.set(x, -0.05, z)
+      m.receiveShadow = true
+      scene.add(m)
+    }
+    const kit = critterKit(T)
+    const loaded: import('three').Object3D[] = []
+    try {
+      const deco: [string, number, number, number][] = [
+        ['tree_oak', -8.2, -3.6, 2.6], ['tree_default', -5.6, -4.4, 2.3], ['tree_fat', -2.2, -4.8, 2.1],
+        ['tree_detailed', 2.6, -4.2, 2.5], ['tree_oak', 6.2, -4.6, 2.7], ['tree_default', 9.4, -3.8, 2.2],
+        ['plant_bush', -6.6, -1.6, 0.7], ['plant_bush', 4.4, -1.8, 0.6], ['plant_bushLarge', 8.2, -2.2, 0.9],
+        ['flower_redA', -4.4, 1.4, 0.4], ['flower_yellowA', -1.2, 1.9, 0.38], ['flower_purpleA', 1.8, 1.6, 0.4],
+        ['flower_yellowA', 5.6, 1.2, 0.4], ['flower_redA', 8.6, 1.8, 0.38], ['flower_purpleA', -7.8, 1.6, 0.4]
+      ]
+      for (let i = -6; i <= 6; i++) deco.push(['fence_simple', i * 1.45, -2.6, 1.2])
+      for (const [name, x, z, size] of deco) {
+        try {
+          const m = await loadModel('nature', name)
+          fitModel(T, m, size)
+          m.traverse(o => {
+            const mesh = o as import('three').Mesh
+            if (!mesh.isMesh) return
+            mesh.castShadow = true
+            const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
+            mat.color.multiplyScalar(0.62)
+            if (name.startsWith('tree') || name.startsWith('plant')) mat.color.multiply(new T.Color(0x9CCB6E))
+            mesh.material = mat
+          })
+          const box = new T.Box3().setFromObject(m)
+          m.position.set(x, -box.min.y, z)
+          m.rotation.y = name.startsWith('fence') ? 0 : Math.random() * 6.3
+          scene.add(m)
+          loaded.push(m)
+        } catch { /* un modèle absent : le pré reste joli sans lui */ }
+      }
+      // Les animaux paissent, chacun tourné à sa façon
+      const herd: [CritterKind, number, number, number][] = [
+        ['cow', -6.2, -0.4, 0.5], ['sheep', -3.6, 0.3, -0.4], ['pig', 3.4, -0.2, 0.7],
+        ['duck', 6.4, 0.6, -0.8], ['rabbit', 0.4, -1.2, 0.2], ['dog', 9.2, -0.4, -0.5]
+      ]
+      for (const [k, x, z, r] of herd) {
+        const c = kit.make(k, 1.1)
+        c.obj.position.set(x, 0, z)
+        c.obj.rotation.y = r
+        c.obj.traverse(o => { o.castShadow = true })
+        scene.add(c.obj)
+      }
+      const cam = new T.PerspectiveCamera(22, w / h, 0.1, 80)
+      cam.position.set(0, 1.9, 14)
+      cam.lookAt(0, 0.9, -1)
+      renderer.render(scene, cam)
+      return renderer.domElement.toDataURL('image/png')
+    } finally {
+      kit.dispose()
+      own.forEach(o => o.dispose())
+      for (const m of loaded) m.traverse(o => {
+        const mesh = o as import('three').Mesh
+        if (mesh.isMesh) (mesh.material as import('three').Material).dispose()
+      })
+    }
+  }).catch(() => '')
+  if (url) cache.set(key, url)
+  return url
+}
+
+/** Les plantes du potager (Grand Tableau, 23/09) : une espèce par rangée du
+    tableau, pour que la table de 3 soit « la rangée des violettes ». Fleurs
+    du kit Nature, fruits et légumes du kit Food, chacun posé sur sa butte de
+    terre avec une touffe d'herbe : même rendu que les personnages. */
+export const GARDEN = ['tulipe', 'bouton', 'violette', 'fraise', 'carotte', 'mais', 'pomme', 'brocoli', 'aubergine', 'ananas'] as const
+export type Plant = typeof GARDEN[number]
+const PLANT_MODEL: Record<Plant, [kit: string, model: string, size: number, tilt: number /* debout : autour de z */]> = {
+  tulipe: ['nature', 'flower_redA', 1.05, 0],
+  bouton: ['nature', 'flower_yellowA', 1.05, 0],
+  violette: ['nature', 'flower_purpleA', 1.05, 0],
+  fraise: ['food', 'strawberry', 0.5, 0],
+  carotte: ['food', 'carrot', 1.05, 0],
+  mais: ['food', 'corn', 0.8, 0],
+  pomme: ['food', 'apple', 0.5, 0],
+  brocoli: ['food', 'broccoli', 0.6, 0],
+  aubergine: ['food', 'eggplant', 0.7, 0],
+  ananas: ['food', 'pineapple', 0.9, 0]
+}
+
+export async function gardenPortraits(px: number): Promise<Partial<Record<Plant, string>>> {
+  const out: Partial<Record<Plant, string>> = {}
+  const missing = GARDEN.filter(k => {
+    const hit = cache.get('plante:' + k + '@' + px)
+    if (hit) out[k] = hit
+    return !hit
+  })
+  if (!missing.length) return out
+  const size = Math.min(512, Math.round(px * 2))
+  await withRenderer(size, size, async (T, renderer, env) => {
+    const own: { dispose(): void }[] = []
+    const soil = new T.MeshStandardMaterial({ color: 0x3E2616, roughness: 1 })
+    const moundGeo = new T.SphereGeometry(0.5, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2)
+    own.push(soil, moundGeo)
+    let grass: import('three').Group | null = null
+    try { grass = await loadModel('nature', 'grass') } catch { /* sans herbe */ }
+    try {
+      for (const kind of missing) {
+        const [kit, name, h, tilt] = PLANT_MODEL[kind]
+        const scene = new T.Scene()
+        lights(T, scene, env)
+        const mound = new T.Mesh(moundGeo, soil)
+        mound.scale.set(1, 0.32, 0.8)
+        mound.receiveShadow = true
+        scene.add(mound)
+        const mats: import('three').Material[] = []
+        const tint = (m: import('three').Object3D, green: boolean) => m.traverse(o => {
+          const mesh = o as import('three').Mesh
+          if (!mesh.isMesh) return
+          mesh.castShadow = true
+          const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
+          mat.color.multiplyScalar(0.62)
+          if (green) mat.color.multiply(new T.Color(0x9CCB6E))
+          else {
+            // Les fleurs du kit sont pastel : l'ACES les délave encore. On
+            // ravive les pétales et on passe les tiges menthe au vert de pré.
+            const hsl = { h: 0, s: 0, l: 0 }
+            mat.color.getHSL(hsl)
+            if (hsl.h > 0.2 && hsl.h < 0.55) mat.color.multiply(new T.Color(0x9CCB6E))
+            else mat.color.setHSL(hsl.h, Math.min(1, hsl.s * 1.7), hsl.l * 0.85)
+          }
+          mesh.material = mat
+          mats.push(mat)
+        })
+        if (grass) for (const [x, z, r] of [[-0.24, -0.1, 0.4], [0.26, -0.06, 2.1]] as const) {
+          const g = grass.clone()
+          fitModel(T, g, 0.42)
+          g.position.set(x, 0.08, z)
+          g.rotation.y = r
+          tint(g, true)
+          scene.add(g)
+        }
+        try {
+          const m = await loadModel(kit, name)
+          fitModel(T, m, h)
+          tint(m, false)
+          m.rotation.set(0, -0.5, tilt)
+          const box = new T.Box3().setFromObject(m)
+          m.position.y = 0.12 - box.min.y
+          scene.add(m)
+        } catch { /* modèle absent : la butte seule */ }
+        const box = new T.Box3().setFromObject(scene)
+        const ctr = box.getCenter(new T.Vector3())
+        const rad = box.getSize(new T.Vector3()).length() / 2
+        const cam = new T.PerspectiveCamera(30, 1, 0.05, 50)
+        const dist = rad / Math.sin(15 * Math.PI / 180) * 0.78
+        cam.position.set(ctr.x, ctr.y + dist * 0.42, ctr.z + dist * 0.9)
+        cam.lookAt(ctr.x, ctr.y - rad * 0.08, ctr.z)
+        renderer.render(scene, cam)
+        const url = renderer.domElement.toDataURL('image/png')
+        cache.set('plante:' + kind + '@' + px, url)
+        out[kind] = url
+        mats.forEach(x => x.dispose())
+      }
+    } finally {
+      own.forEach(o => o.dispose())
+    }
+  }).catch(() => { /* pas de WebGL : le tableau garde ses nombres */ })
+  return out
+}

@@ -532,8 +532,32 @@ sur l'écran de fin, sessions A puis B puis C.
   une part. Plus de physique cannon : trajectoires maîtrisées. Bot de la
   partie entière (`pizza-du-four-a-la-bouche`).
 
-Ordre pour la suite : relever `?fps` sur la Tab A9+ (l'Atelier, la Pizzeria et le
-paysage d'hiver compris), faire tester aux filles l'Atelier et le jeu à
+- ✅ **« Continue à améliorer le site » (23/09, six chantiers, « fais tout »).**
+  1. **Accueil en trois univers** : onglets Jouer / Apprendre / Créer (le
+     dernier ouvert est retenu), grandes tuiles, et au pied de l'écran un pré
+     en 3D rendu en une image (`meadowBanner`) où paissent les animaux.
+  2. **Memory en 3D** : de vraies cartes épaisses, distribuées sur une nappe,
+     qui se retournent en se soulevant ; les paires trouvées sautent sur une
+     pile. Les faces restent en photos (règle des imagiers).
+  3. **Petit Piano** : un vrai piano laqué (touches ivoire, noires décoratives),
+     le chœur des animaux qui chante la note, la partition qui descend vers
+     la touche à jouer.
+  4. **Labyrinthe en haies 3D** : haies instanciées (enneigées sur la glace),
+     le poussin qui se dandine et bute contre les murs, sa maman poule à
+     l'arrivée, une lanterne dans le brouillard de nuit. Logique inchangée.
+  5. **Feu d'artifice** : un village, une ferme (grange, silo, moulin) et un
+     lac qui reflète les bouquets et la rive ; croissant de lune.
+  6. **Grand Tableau × et + : le potager** : la grille est un carré de terre
+     dans un cadre de planches ; chaque case trouvée fait pousser sa plante,
+     une espèce par rangée (`gardenPortraits`, fleurs et légumes 3D rendus en
+     images) — la table de 3 est la rangée des violettes. Tableau complet ou
+     ligne remplie : le jardin se balance au vent. Une case fausse montre son
+     nombre mais rien n'y pousse.
+  Et le bot de la Pizzeria cuit en expert : en douce, la cuisson dépassait la
+  minute sous swiftshader en CI (deux déploiements bloqués).
+
+Ordre pour la suite : relever `?fps` sur la Tab A9+ (l'Atelier, la Pizzeria, le
+Memory, le Labyrinthe et le paysage d'hiver compris), faire tester aux filles l'Atelier et le jeu à
 deux, puis la phase 3.
 
 Chaque itération : une demi-page de design (geste, enjeu, rampe, outro,
@@ -588,7 +612,7 @@ Itérations (demi-page de design validée avant chacune) :
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅
 
-- Vraie 3D + physique sur `core/three3d.ts` pour 12 jeux ; kits glTF `food`,
+- Vraie 3D + physique sur `core/three3d.ts` pour 14 jeux ; kits glTF `food`,
   `holiday`, `space`, `nature` + icônes food, importés par
   `scripts/import-assets.mjs` ; personnages 3D de la ferme (`core/critters.ts`)
   rendus en images pour les jeux en DOM (`core/portraits.ts`).

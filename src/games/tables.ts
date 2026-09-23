@@ -3,6 +3,7 @@ import { $, pick, rnd, uniqueNumbers } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
+import { gardenPortraits, GARDEN } from '../core/portraits'
 
 /* Le Grand Tableau — un cadran 10×10 avec quatre façons de jouer :
    Explore (tape une case, elle se révèle et la voix la lit),
@@ -16,7 +17,13 @@ import { ICON } from '../core/icons'
      à la taille de la case, cases cachées à 45 % au lieu de 28 %) ;
    - les modes sont une colonne d'icônes, la consigne devient un grand
      nombre-cible ou une opération sur le côté : plus une phrase à lire ;
-   - aucune sanction ; timers de partie ; état typé. */
+   - aucune sanction ; timers de partie ; état typé.
+
+   Le potager (23/09) : la grille est un carré de terre dans son cadre de
+   bois. Chaque case trouvée fait pousser sa plante — une espèce par rangée
+   (`GARDEN` de core/portraits.ts, en 3D rendue en images) : la table de 3,
+   c'est la rangée des violettes. Tableau complet ou ligne remplie : le
+   jardin se balance au vent. Le nombre reste sur son étiquette de semis. */
 
 interface BoardOp {
   id: string
@@ -105,8 +112,19 @@ let tb: State | null = null
   }
 
   function revealCell(b: Cell, ...cls: string[]) {
-    b.textContent = String(op.compute(b._r, b._c))
+    b.innerHTML = `<b class="tb-num">${op.compute(b._r, b._c)}</b>`
     b.classList.add('shown', ...cls)
+  }
+
+  /** Le jardin se balance au vent, en vague depuis le coin haut-gauche. */
+  function bloom(me: State, cells: Cell[]) {
+    cells.forEach(b => {
+      b.style.setProperty('--d', ((b._r + b._c) * 45) + 'ms')
+      b.classList.remove('bloom'); void b.offsetWidth; b.classList.add('bloom')
+    })
+    sfx('confirm', { vol: 0.8, rate: 1.12 })
+    cells.filter((_, i) => i % 7 === 0).forEach((b, i) =>
+      ctx.after(i * 90, () => { if (tb === me) fxAt(b, i % 2 ? JUICE.green : JUICE.warm, 8) }))
   }
 
   /** Montre toutes les cases d'un coup, en cascade (mode Explore). */
@@ -120,11 +138,12 @@ let tb: State | null = null
       const d = (b._r + b._c) * 22
       ctx.after(d, () => { if (tb === me && me.mode === 'explore') revealCell(b) })
     })
+    ctx.after(21 * 22 + 500, () => { if (tb === me && me.mode === 'explore') bloom(me, cells) })
     me.explored = 100
   }
 
   function resetCells(me: State) {
-    Object.values(me.cells).forEach(b => { b.textContent = ''; b.className = 'tb-cell' })
+    Object.values(me.cells).forEach(b => { b.innerHTML = ''; b.className = 'tb-cell' })
   }
 
   function paintSide(me: State, html: string) {
@@ -177,7 +196,10 @@ let tb: State | null = null
     document.querySelectorAll('.tb-cell.want').forEach(x => x.classList.remove('want'))
     if (me.col > 10) {
       const stars = me.mistakes <= 1 ? 3 : me.mistakes <= 4 ? 2 : 1
+      // La rangée complète se balance avant l'écran de fin
+      bloom(me, Array.from({ length: 10 }, (_, i) => me.cells[me.table + ':' + (i + 1)]))
       ctx.finish({
+        outroMs: 1600,
         title: op.fillTitle(me.table),
         msg: `Tu as rempli toute la ligne${me.mistakes ? ` (${me.mistakes} essai${me.mistakes > 1 ? 's' : ''} de trop)` : ' sans se tromper'}`,
         stars
@@ -275,7 +297,7 @@ let tb: State | null = null
       revealCell(b); sfx('tick', { vol: 0.35, rate: 1.3 }); fxAt(b, JUICE.warm, 6)
       ctx.say(op.voice(b._r, b._c, v))
       me.explored++
-      if (me.explored === 100) sfx('confirm', { vol: 0.8 })
+      if (me.explored === 100) bloom(me, Object.values(me.cells))
       return
     }
     if (me.mode === 'find') {
@@ -284,9 +306,18 @@ let tb: State | null = null
         revealCell(b, 'good'); me.score++; sfx('confirm', { vol: 0.7 }); fxAt(b, JUICE.green, 10)
         ctx.say(op.voice(b._r, b._c, v))
       } else {
-        revealCell(b, 'bad'); sfx('drop', { vol: 0.4, rate: 0.8 })
+        // Une case fausse montre son nombre (la voix le lit), mais rien n'y
+        // pousse : la terre se referme ensuite
+        const was = b.classList.contains('shown')
+        if (was) b.classList.add('bad')
+        else revealCell(b, 'bad', 'nope')
+        sfx('drop', { vol: 0.4, rate: 0.8 })
         ctx.say(op.voice(b._r, b._c, v))
-        ctx.after(900, () => b.classList.remove('bad'))
+        ctx.after(1100, () => {
+          if (tb !== me) return
+          b.classList.remove('bad')
+          if (!was && b.classList.contains('nope')) { b.innerHTML = ''; b.className = 'tb-cell' }
+        })
       }
       me.q++
       paintSide(me, `${ICON.target}<b class="tb-big">${me.target}</b>`)
@@ -332,6 +363,16 @@ let tb: State | null = null
       }
       tb = me
       buildGrid(me)
+      // Les plantes arrivent après la grille : en attendant (ou sans WebGL),
+      // les étiquettes de semis suffisent à jouer
+      gardenPortraits(96).then(urls => {
+        if (tb !== me) return
+        for (const b of Object.values(me.cells)) {
+          const u = urls[GARDEN[b._r - 1]]
+          if (u) b.style.setProperty('--pl', `url(${u})`)
+        }
+        $('tbGrid').classList.add('tb-garden')
+      })
       document.querySelectorAll<HTMLElement>('.tb-tool').forEach(b => {
         b.onclick = () => { if (tb === me) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
       })
