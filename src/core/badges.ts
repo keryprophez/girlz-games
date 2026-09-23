@@ -162,6 +162,15 @@ export const BADGE: Record<string, string> = {
     <path d="M24 13v11l8 5" stroke="${C.ink}" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="24" cy="24" r="2.2" fill="${C.coral}"/>`),
 
+  /* Le Potager : le carré de terre dans ses planches, un rectangle de
+     trois rangées qui pousse (une plante par rangée, comme dans le jeu) */
+  potager: svg(`
+    <rect x="5" y="8" width="38" height="33" rx="5" fill="${C.woodDark}"/>
+    <rect x="8" y="11" width="32" height="27" rx="3" fill="${C.ink}"/>
+    ${[0, 1, 2, 3].map(i => [0, 1, 2, 3].map(j => `<circle cx="${13.5 + j * 7}" cy="${33 - i * 6.5}" r="2.2" fill="${C.woodDark}"/>`).join('')).join('')}
+    ${[[C.coral, 33], [C.sun, 26.5], [C.lilac, 20]].map(([col, y]) => [0, 1, 2].map(j =>
+      `<ellipse cx="${13.5 + j * 7}" cy="${Number(y) + 1.4}" rx="3.2" ry="1.6" fill="${C.meadowDark}"/><circle cx="${13.5 + j * 7}" cy="${Number(y) - 0.8}" r="2.7" fill="${col}"/>`).join('')).join('')}`),
+
   tables: svg(`
     <rect x="6" y="8" width="36" height="32" rx="5" fill="${C.meadowDark}"/>
     <rect x="10" y="12" width="28" height="24" rx="3" fill="${C.cream}"/>

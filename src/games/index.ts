@@ -14,6 +14,7 @@ import { piano } from './piano'
 import { patterns } from './patterns'
 import { clock } from './clock'
 import { tables, additions } from './tables'
+import { potager } from './potager'
 import { mirror } from './mirror'
 import { market } from './market'
 import { maze } from './maze'
@@ -33,7 +34,7 @@ import { sentences } from './sentences'
 export const GAMES: GameDef[] = [
   icetower, ninja, moleGame, catchGame, caterpillar, runGame, flappy, maze, taquin, memory, simonGame, stand3d,
   connect4,
-  clock, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
+  clock, potager, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
 ]
 
@@ -59,7 +60,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences]
+    games: [clock, potager, tables, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',

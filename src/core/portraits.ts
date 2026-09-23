@@ -364,7 +364,7 @@ export async function meadowBanner(w: number, h: number): Promise<string> {
     terre avec une touffe d'herbe : même rendu que les personnages. */
 export const GARDEN = ['tulipe', 'bouton', 'violette', 'fraise', 'carotte', 'mais', 'pomme', 'brocoli', 'aubergine', 'ananas'] as const
 export type Plant = typeof GARDEN[number]
-const PLANT_MODEL: Record<Plant, [kit: string, model: string, size: number, tilt: number /* debout : autour de z */]> = {
+export const PLANT_MODEL: Record<Plant, [kit: string, model: string, size: number, tilt: number /* debout : autour de z */]> = {
   tulipe: ['nature', 'flower_redA', 1.05, 0],
   bouton: ['nature', 'flower_yellowA', 1.05, 0],
   violette: ['nature', 'flower_purpleA', 1.05, 0],
@@ -375,6 +375,18 @@ const PLANT_MODEL: Record<Plant, [kit: string, model: string, size: number, tilt
   brocoli: ['food', 'broccoli', 0.6, 0],
   aubergine: ['food', 'eggplant', 0.7, 0],
   ananas: ['food', 'pineapple', 0.9, 0]
+}
+
+/** La teinte d'une plante du potager — la même dans le Grand Tableau (en
+    image) et dans le Potager (en 3D, 23/09) : un seul style. */
+export function tintPlant(T: T3, mat: import('three').MeshStandardMaterial) {
+  mat.color.multiplyScalar(0.62)
+  // Les fleurs du kit sont pastel : l'ACES les délave encore. On ravive les
+  // pétales et on passe les tiges menthe au vert de pré.
+  const hsl = { h: 0, s: 0, l: 0 }
+  mat.color.getHSL(hsl)
+  if (hsl.h > 0.2 && hsl.h < 0.55) mat.color.multiply(new T.Color(0x9CCB6E))
+  else mat.color.setHSL(hsl.h, Math.min(1, hsl.s * 1.7), hsl.l * 0.85)
 }
 
 export async function gardenPortraits(px: number): Promise<Partial<Record<Plant, string>>> {
@@ -408,16 +420,8 @@ export async function gardenPortraits(px: number): Promise<Partial<Record<Plant,
           if (!mesh.isMesh) return
           mesh.castShadow = true
           const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
-          mat.color.multiplyScalar(0.62)
-          if (green) mat.color.multiply(new T.Color(0x9CCB6E))
-          else {
-            // Les fleurs du kit sont pastel : l'ACES les délave encore. On
-            // ravive les pétales et on passe les tiges menthe au vert de pré.
-            const hsl = { h: 0, s: 0, l: 0 }
-            mat.color.getHSL(hsl)
-            if (hsl.h > 0.2 && hsl.h < 0.55) mat.color.multiply(new T.Color(0x9CCB6E))
-            else mat.color.setHSL(hsl.h, Math.min(1, hsl.s * 1.7), hsl.l * 0.85)
-          }
+          if (green) mat.color.multiplyScalar(0.62).multiply(new T.Color(0x9CCB6E))
+          else tintPlant(T, mat)
           mesh.material = mat
           mats.push(mat)
         })
