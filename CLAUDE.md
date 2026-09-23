@@ -231,6 +231,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 | **`pkill -f` qui se tue lui-même** | `pkill -f "vite preview"` dans une commande qui relance aussi `vite preview` tue le shell qui l'exécute (la ligne de commande contient le motif). Arrêter le serveur dans une commande à part. |
 | **Deux doigts, une seule lame** | Le Ninja gardait UN « dernier point » : un second doigt le faisait sauter d'un bout de l'écran à l'autre, et le segment tranchait tout entre les deux. Tout geste de glissé se suit **par `pointerId`** (une `Map`), même dans un jeu pensé pour un doigt. |
 | **Chalet Kenney en pièces** | Les pièces `cabin-*` du kit Holiday tiennent dans une case de 1 : un mur est posé sur le bord +z de sa case (on le tourne pour les autres bords), le coin est au coin (−x, +z), le toit et le pignon sont des DEMI-pièces dont le faîtage est en x = −0,5 — le côté gauche est la même pièce tournée de π (toit) ou en miroir `scale.x = −1` (pignon). Voir `cabin()` dans `core/winter.ts`. |
+| **Secteur de disque retourné** | Un `CircleGeometry(r, n, a0, da)` tourné de −π/2 sur X couvre les angles monde a0…a0+da ; tourné de **+π/2** (pour faire un dessous), il couvre −a0−da…−a0 : le dessous d'une part de pizza se retrouvait SOUS LA PART VOISINE, et la recouvrait dès qu'on la soulevait. Prendre `thetaStart = −a0 − da` pour la face retournée. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---

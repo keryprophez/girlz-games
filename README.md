@@ -31,7 +31,7 @@ neige, devant un chalet qui fume), Habille-toi (son personnage en 3D, qui la
 suit ensuite dans les jeux), Boîte à Rythme (les animaux chantent en
 sautant), Petit Piano (la chanson en partition de couleurs), Feu d'artifice,
 l'Atelier (dessin au doigt, pot de peinture, tampons, dessins gardés), la
-Pizzeria.
+Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
 
 **Autour** — une grille de jeux, la difficulté choisie dans chaque jeu (fleur,
 éclair, flamme), le Ninja et Tape-Trous à deux en équipe sur la même tablette,

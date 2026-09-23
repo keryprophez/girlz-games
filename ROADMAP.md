@@ -509,7 +509,8 @@ sur l'écran de fin, sessions A puis B puis C.
      colonnes qui les fait les plus grandes), la famille file dans le panier,
      l'intrus reste seul au milieu — même quand on s'est trompée.
   8. **Pizzeria** : deux grosses flèches posées sur la scène à la place des
-     deux minuscules du haut ; doigt posé = ça continue de tourner.
+     deux minuscules du haut (sorties le jour même avec la refonte : la
+     pizza vue de haut n'a plus besoin de tourner).
   9. **Écrans de chargement** : la vignette dessinée du jeu qui respire.
   10. **À deux en équipe** sur Ninja et Tape-Trous : choix « seule / à deux »
       sur l'écran de niveau, une lame par doigt (bleue à gauche, rose à
@@ -517,7 +518,21 @@ sur l'écran de fin, sessions A puis B puis C.
       marqué ». Le Ninja suit maintenant chaque doigt à part : avant, un
       second doigt faisait sauter la lame d'un bout à l'autre de l'écran.
 
-Ordre pour la suite : relever `?fps` sur la Tab A9+ (l'Atelier et le
+- ✅ **La Pizzeria refaite (23/09, « absolument éclaté » selon les filles).**
+  Les ingrédients étaient illisibles (un fromage en pommes de terre, un épi
+  de maïs debout, un oignon pour une olive), la cuisson ne se voyait pas,
+  la pizza était petite sur une planche floue. Maintenant : la pizza en
+  grand sur sa pelle, dix bols dessinés de part et d'autre ; de vrais
+  ingrédients construits en 3D (mozzarella râpée, tomate, champignon,
+  olive, jambon, poivron, basilic, maïs) qui tombent sous le doigt et se
+  posent à plat ; la pelle glisse au four et la cuisson SE VOIT (pâte qui
+  dore, bord qui gonfle, fromage qui fond en nappe puis gratine, noir et
+  fumée si on oublie) ; sortie trop tôt = « pas encore », elle continue de
+  cuire ; puis la pizza se coupe en six et le fromage file quand on tire
+  une part. Plus de physique cannon : trajectoires maîtrisées. Bot de la
+  partie entière (`pizza-du-four-a-la-bouche`).
+
+Ordre pour la suite : relever `?fps` sur la Tab A9+ (l'Atelier, la Pizzeria et le
 paysage d'hiver compris), faire tester aux filles l'Atelier et le jeu à
 deux, puis la phase 3.
 

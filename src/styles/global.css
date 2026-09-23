@@ -1341,28 +1341,37 @@ body.playing .po-card{max-width:880px;}
    LA PIZZERIA 3D
    ============================================================ */
 .pz-arena{background:#3B2A22;}
-.pz-turn{position:absolute;top:50%;z-index:6;width:92px;height:92px;margin-top:-46px;border-radius:50%;border:4px solid rgba(255,255,255,.9);
-  background:rgba(255,248,236,.28);backdrop-filter:blur(6px);color:#fff;font-size:52px;display:grid;place-items:center;cursor:pointer;
-  box-shadow:0 8px 22px rgba(0,0,0,.35);transition:transform .2s var(--spring),background .2s;touch-action:none;}
-.pz-turn.left{left:18px;}
-.pz-turn.right{right:18px;}
-.pz-turn:active{background:rgba(255,178,92,.6);transform:scale(.9);}
-.pz-turn.spin svg{animation:pzSpinL .35s var(--spring);}
-.pz-turn.right.spin svg{animation-name:pzSpinR;}
-@keyframes pzSpinL{from{transform:rotate(60deg)}}
-@keyframes pzSpinR{from{transform:rotate(-60deg)}}
-.pz-act{background:linear-gradient(135deg,#FF9E5C,#E8574C);color:#fff;}
+/* Refaite le 23/09 : dix bols en deux colonnes de part et d'autre de la
+   pizza, un gros bouton flamme pour enfourner, rien d'autre à l'écran */
+.pz-bowls{position:absolute;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;gap:min(10px,1.4vh);}
+.pz-bowls.left{left:14px;}
+.pz-bowls.right{right:14px;}
+.pz-bowl{width:min(96px,12vh);height:min(96px,12vh);border-radius:24px;border:3px solid rgba(255,255,255,.55);
+  background:rgba(255,248,236,.82);backdrop-filter:blur(6px);display:grid;place-items:center;cursor:pointer;padding:0;
+  box-shadow:0 8px 18px rgba(0,0,0,.3);transition:transform .2s var(--spring),border-color .2s,background .2s;}
+.pz-bowl svg{width:84%;height:84%;}
+.pz-bowl.sel{border-color:#FFC857;background:#FFF4D6;transform:scale(1.12);box-shadow:0 0 0 4px rgba(255,200,87,.55),0 10px 22px rgba(0,0,0,.35);}
+.pz-bowl:active{transform:scale(.92);}
+.pz-oven{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;width:104px;height:104px;border-radius:50%;
+  border:4px solid #fff;background:linear-gradient(135deg,#FFB25C,#E8433C);color:#fff;font-size:56px;display:grid;place-items:center;
+  cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.45);transition:transform .2s var(--spring);}
+.pz-oven:active{transform:translateX(-50%) scale(.9);}
+.pz-done{position:absolute;right:18px;bottom:18px;z-index:6;width:80px;height:80px;font-size:40px;display:none;}
+.pz-arena:not(.garnir) .pz-bowls,.pz-arena:not(.garnir) .pz-oven{display:none;}
+.pz-arena.servi .pz-done{display:grid;}
+.pz-gauge.pz-nope{animation:pzNope .4s ease;}
+@keyframes pzNope{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
 
 /* --- Le mini-jeu de cuisson : une jauge qui se remplit, une zone verte,
        un seul gros bouton. Rien d'autre à l'écran pendant ce temps-là. --- */
 .pz-cook{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
   display:none;flex-direction:column;align-items:center;gap:10px;z-index:8;pointer-events:none;}
 .pz-cook.on{display:flex;}
-.pz-cook .tool-item{pointer-events:auto;}
+.pz-cook .pz-pull{pointer-events:auto;}
 .pz-gauge{position:relative;width:min(520px,74vw);height:32px;border-radius:16px;overflow:hidden;
   background:linear-gradient(90deg,#F5E6C0 0%,#EBCF9A 28%,#D09B53 58%,#8A4E20 80%,#2A1810 100%);
   border:3px solid rgba(255,255,255,.9);box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 2px 4px rgba(0,0,0,.25);}
-.pz-perfect{position:absolute;top:0;bottom:0;left:62%;width:30%;
+.pz-perfect{position:absolute;top:0;bottom:0;left:58%;width:28%;
   background:linear-gradient(180deg,rgba(90,220,120,.55),rgba(50,180,90,.75));
   border-left:3px solid rgba(255,255,255,.85);border-right:3px solid rgba(255,255,255,.85);}
 #pzNeedle{position:absolute;top:-5px;bottom:-5px;left:0;width:8px;margin-left:-4px;border-radius:5px;
@@ -1388,14 +1397,6 @@ body.playing .po-card{max-width:880px;}
 .pz-verdict.burnt{color:#6B4530;}
 .pz-vmore svg{width:62px;height:62px;color:#FF9E5C;}
 
-/* Le four qui réclame la pizza pâle */
-.tool-item.pulse .sn-tool{animation:pzPull .45s ease-in-out infinite alternate;}
-.pz-eat{background:linear-gradient(135deg,#FFE08A,#F2A03C);}
-
-/* Les ingrédients : de vraies tuiles, assez grandes pour un doigt de 6 ans */
-body.playing #pzTools .g3-tool{width:68px;height:68px;border-radius:20px;}
-body.playing #pzTools .g3-tool .spr,body.playing #pzTools .g3-tool svg{width:50px;height:50px;}
-#pzTools .g3-tool.sel{box-shadow:0 0 0 4px rgba(255,190,80,.45);}
 .g3-tool .spr,.g3-tool svg{display:block;width:40px;height:40px;object-fit:contain;}
 
 

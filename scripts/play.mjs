@@ -254,6 +254,7 @@ await scenario('pizza-sauce-sous-le-doigt', async () => {
   if (!ok) throw new Error('pas de sauce détectée sous le point touché')
 })
 
+
 /* 🏔 La Tour de Glace : lâcher 3 blocs quand le balancier passe au centre. */
 await scenario('tour-trois-blocs', async () => {
   await openGame('La Tour de Glace')
@@ -660,6 +661,36 @@ for (const [mode, titre] of [['type', 'tamponné'], ['phrase', 'tamponné'], ['p
 const finDe = async (texte, ms = 9000) => {
   await page.waitForFunction(t => document.querySelector('#result.show') && document.body.innerText.includes(t), texte, { timeout: ms })
 }
+
+/* 🍕 La Pizzeria, refaite le 23/09 : la partie entière. Du fromage au doigt,
+   au four, sortie DANS la zone parfaite (une sortie trop tôt ne sort pas),
+   la pizza se coupe, et on croque les six parts jusqu'à l'écran de fin. */
+await scenario('pizza-du-four-a-la-bouche', async () => {
+  await openGame('La Pizzeria', '__pz')
+  const cv = await page.locator('#pzArena canvas').first().boundingBox()
+  const cx = cv.x + cv.width / 2, cy = cv.y + cv.height / 2
+  await page.locator('.pz-bowl[data-t="cheese"]').click()
+  await page.mouse.move(cx - 120, cy); await page.mouse.down()
+  for (let i = 1; i <= 12; i++) await page.mouse.move(cx - 120 + i * 20, cy + Math.sin(i) * 40)
+  await page.mouse.up()
+  await page.waitForFunction(() => window.__pz.pieces >= 4, null, { timeout: 10000 })
+  await page.locator('#pzOven').click()
+  await page.waitForFunction(() => window.__pz.phase === 'cuisson', null, { timeout: 5000 })
+  // Trop tôt : elle ne sort pas
+  await page.locator('#pzOut').click({ force: true })
+  if (await page.evaluate(() => window.__pz.phase) !== 'cuisson') throw new Error('sortie trop tôt acceptée')
+  await page.waitForFunction(() => window.__pz.bake > window.__pz.from + 0.04, null, { timeout: 60000 })
+  await page.locator('#pzOut').click({ force: true })
+  await page.waitForFunction(() => window.__pz.phase === 'servi' && window.__pz.cut >= 3, null, { timeout: 15000 })
+  for (let i = 0; i < 40; i++) {
+    const n = await page.evaluate(() => window.__pz.eaten)
+    if (n >= 6) break
+    const s = await page.evaluate(() => window.__pz.slices())
+    if (s.length) await page.mouse.click(s[0].x, s[0].y)
+    await page.waitForTimeout(700)
+  }
+  await finDe('Pizza dévorée', 15000)
+})
 
 /* 🔷 Suites logiques : six manches, la bonne forme lue sur le crochet. */
 await scenario('suites-six-manches', async () => {
