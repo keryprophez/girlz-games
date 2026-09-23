@@ -368,8 +368,8 @@ await scenario('taquin-remis-en-ordre', async () => {
 /* 🃏 Memory : le bot connaît le paquet, il retourne les paires dans l'ordre
    sur les trois manches — l'écran de fin doit venir. */
 await scenario('memory-toutes-les-paires', async () => {
-  await openGame('Memory')
-  await page.waitForFunction(() => window.__mem && window.__mem.deck.length > 0, null, { timeout: 15000 })
+  await openGame('Memory', '__mem')
+  await page.waitForFunction(() => window.__mem && window.__mem.deck.length > 0, null, { timeout: 30000 })
   const rounds = await page.evaluate(() => window.__mem.rounds)
   for (let r = 0; r < rounds; r++) {
     // La manche suivante est DISTRIBUÉE une seconde après la dernière paire : attendre le nouveau paquet
@@ -378,14 +378,15 @@ await scenario('memory-toutes-les-paires', async () => {
     const seen = new Map()
     for (let i = 0; i < deck.length; i++) {
       if (seen.has(deck[i])) {
+        // Une paire à la fois : les cartes 3D prennent le temps de se retourner
+        await page.waitForFunction(() => !window.__mem.lock, null, { timeout: 10000 })
         await page.evaluate(([a, b]) => { window.__mem.flip(a); window.__mem.flip(b) }, [seen.get(deck[i]), i])
-        await page.waitForTimeout(450)
+        await page.waitForTimeout(150)
       } else seen.set(deck[i], i)
     }
   }
-  await page.waitForTimeout(1500)
-  const fini = await page.evaluate(() => document.body.innerText.includes('paires trouvées'))
-  if (!fini) throw new Error('l\'écran de fin du Memory n\'est pas apparu')
+  // (finDe est défini plus bas dans le script : zone morte si on l'appelle ici)
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('paires trouvées'), null, { timeout: 12000 })
 })
 
 /* 🎵 Simon : le bot lit la mélodie sur le crochet et la rejoue, cinq tours. */
