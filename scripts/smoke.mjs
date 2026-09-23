@@ -43,17 +43,24 @@ const pageErrors = []
 page.on('pageerror', e => pageErrors.push(e.message))
 
 const TILE = '.gc'
+const TAB = '.hm-tab'
 await page.goto(URL)
-await page.waitForSelector(TILE, { timeout: 10000 })
-const games = await page.$$eval(TILE, els => els.map(el => el.querySelector('.nm')?.textContent || '?'))
+await page.waitForSelector(TAB, { timeout: 15000 })
+// Depuis le 23/09 l'accueil montre UN univers à la fois : on passe les onglets
+const games = []
+for (const w of await page.$$eval(TAB, els => els.map(el => el.dataset.w))) {
+  await page.locator(`${TAB}[data-w="${w}"]`).click()
+  await page.waitForSelector(TILE)
+  for (const name of await page.$$eval(TILE, els => els.map(el => el.querySelector('.nm')?.textContent || '?'))) games.push({ w, name })
+}
 console.log(`${games.length} jeux à vérifier…`)
 
 const failures = []
 for (let i = 0; i < games.length; i++) {
   pageErrors.length = 0
   await page.goto(URL)
-  await page.waitForSelector(TILE)
-  await page.locator(TILE).nth(i).click()
+  await page.locator(`${TAB}[data-w="${games[i].w}"]`).click()
+  await page.locator(TILE, { hasText: games[i].name }).first().click()
   // La difficulté se choisit dans le jeu : on prend la douce (comme Jade)
   await page.locator('.tierbtn.tier-easy').click()
   // Laisse le temps au jeu de se monter (la 3D charge three.js à la demande)
@@ -64,9 +71,9 @@ for (let i = 0; i < games.length; i++) {
     .then(() => true).catch(() => false)
   if (pageErrors.length || !mounted || !loaded) {
     failures.push({ game: games[i], errors: [...pageErrors], mounted, loaded })
-    console.error(`✗ ${games[i]} — monté: ${mounted}, chargé: ${loaded}, erreurs: ${pageErrors.join(' | ') || 'aucune'}`)
+    console.error(`✗ ${games[i].name} — monté: ${mounted}, chargé: ${loaded}, erreurs: ${pageErrors.join(' | ') || 'aucune'}`)
   } else {
-    console.log(`✓ ${games[i]}`)
+    console.log(`✓ ${games[i].name}`)
   }
 }
 

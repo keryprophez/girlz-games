@@ -257,3 +257,103 @@ export async function farmScene(kinds: CritterKind[], px: number): Promise<strin
   if (url) cache.set(key, url)
   return url
 }
+
+/** Le pré de l'accueil (23/09) : un panorama 3D large et bas, fond
+    transparent — collines, haie d'arbres, clôture, fleurs, et les animaux
+    de la ferme qui paissent. Rendu UNE fois en image (cache) : l'accueil
+    garde un seul contexte WebGL jetable, aucun rendu en continu. */
+export async function meadowBanner(w: number, h: number): Promise<string> {
+  const key = `pre-large@${w}x${h}`
+  const hit = cache.get(key)
+  if (hit) return hit
+  const url = await withRenderer(w, h, async (T, renderer, env) => {
+    const scene = new T.Scene()
+    lights(T, scene, env)
+    // Le soleil doit couvrir tout le panorama, pas un carré de 8 m
+    scene.traverse(o => {
+      const d = o as import('three').DirectionalLight
+      if (!d.isDirectionalLight) return
+      const sc = d.shadow.camera
+      sc.left = -16; sc.right = 16; sc.top = 8; sc.bottom = -8
+      sc.updateProjectionMatrix()
+      d.shadow.mapSize.set(2048, 1024)
+    })
+    const own: { dispose(): void }[] = []
+    const grassMat = new T.MeshStandardMaterial({ color: 0x5E9A45, roughness: 1 })
+    const grassFar = new T.MeshStandardMaterial({ color: 0x7DB35C, roughness: 1 })
+    own.push(grassMat, grassFar)
+    const ground = new T.Mesh(new T.CircleGeometry(40, 48), grassMat)
+    ground.rotation.x = -Math.PI / 2
+    ground.receiveShadow = true
+    scene.add(ground)
+    own.push(ground.geometry)
+    // Des collines douces derrière : elles dessinent la ligne d'horizon
+    const hillGeo = new T.SphereGeometry(1, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2)
+    own.push(hillGeo)
+    for (const [x, z, s, hh] of [[-9, -7, 5.5, 1.5], [-2.5, -9, 6.5, 2], [5, -8, 5.8, 1.6], [11, -7.5, 5, 1.3], [-14, -8, 5, 1.2]] as const) {
+      const m = new T.Mesh(hillGeo, grassFar)
+      m.scale.set(s, hh, s * 0.6)
+      m.position.set(x, -0.05, z)
+      m.receiveShadow = true
+      scene.add(m)
+    }
+    const kit = critterKit(T)
+    const loaded: import('three').Object3D[] = []
+    try {
+      const deco: [string, number, number, number][] = [
+        ['tree_oak', -8.2, -3.6, 2.6], ['tree_default', -5.6, -4.4, 2.3], ['tree_fat', -2.2, -4.8, 2.1],
+        ['tree_detailed', 2.6, -4.2, 2.5], ['tree_oak', 6.2, -4.6, 2.7], ['tree_default', 9.4, -3.8, 2.2],
+        ['plant_bush', -6.6, -1.6, 0.7], ['plant_bush', 4.4, -1.8, 0.6], ['plant_bushLarge', 8.2, -2.2, 0.9],
+        ['flower_redA', -4.4, 1.4, 0.4], ['flower_yellowA', -1.2, 1.9, 0.38], ['flower_purpleA', 1.8, 1.6, 0.4],
+        ['flower_yellowA', 5.6, 1.2, 0.4], ['flower_redA', 8.6, 1.8, 0.38], ['flower_purpleA', -7.8, 1.6, 0.4]
+      ]
+      for (let i = -6; i <= 6; i++) deco.push(['fence_simple', i * 1.45, -2.6, 1.2])
+      for (const [name, x, z, size] of deco) {
+        try {
+          const m = await loadModel('nature', name)
+          fitModel(T, m, size)
+          m.traverse(o => {
+            const mesh = o as import('three').Mesh
+            if (!mesh.isMesh) return
+            mesh.castShadow = true
+            const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
+            mat.color.multiplyScalar(0.62)
+            if (name.startsWith('tree') || name.startsWith('plant')) mat.color.multiply(new T.Color(0x9CCB6E))
+            mesh.material = mat
+          })
+          const box = new T.Box3().setFromObject(m)
+          m.position.set(x, -box.min.y, z)
+          m.rotation.y = name.startsWith('fence') ? 0 : Math.random() * 6.3
+          scene.add(m)
+          loaded.push(m)
+        } catch { /* un modèle absent : le pré reste joli sans lui */ }
+      }
+      // Les animaux paissent, chacun tourné à sa façon
+      const herd: [CritterKind, number, number, number][] = [
+        ['cow', -6.2, -0.4, 0.5], ['sheep', -3.6, 0.3, -0.4], ['pig', 3.4, -0.2, 0.7],
+        ['duck', 6.4, 0.6, -0.8], ['rabbit', 0.4, -1.2, 0.2], ['dog', 9.2, -0.4, -0.5]
+      ]
+      for (const [k, x, z, r] of herd) {
+        const c = kit.make(k, 1.1)
+        c.obj.position.set(x, 0, z)
+        c.obj.rotation.y = r
+        c.obj.traverse(o => { o.castShadow = true })
+        scene.add(c.obj)
+      }
+      const cam = new T.PerspectiveCamera(22, w / h, 0.1, 80)
+      cam.position.set(0, 1.9, 14)
+      cam.lookAt(0, 0.9, -1)
+      renderer.render(scene, cam)
+      return renderer.domElement.toDataURL('image/png')
+    } finally {
+      kit.dispose()
+      own.forEach(o => o.dispose())
+      for (const m of loaded) m.traverse(o => {
+        const mesh = o as import('three').Mesh
+        if (mesh.isMesh) (mesh.material as import('three').Material).dispose()
+      })
+    }
+  }).catch(() => '')
+  if (url) cache.set(key, url)
+  return url
+}

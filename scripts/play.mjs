@@ -62,10 +62,20 @@ if (!gl) {
   process.exit(0)
 }
 
+/* L'accueil montre un univers à la fois (23/09) : on cherche la tuile onglet par onglet */
+const clickTile = async name => {
+  for (const w of ['jouer', 'apprendre', 'creer']) {
+    await page.locator(`.hm-tab[data-w="${w}"]`).click()
+    const t = page.locator('.gc', { hasText: name })
+    if (await t.count()) { await t.first().click(); return }
+  }
+  throw new Error(`tuile introuvable : ${name}`)
+}
+
 const openGame = async (name, hook) => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.locator('.gc', { hasText: name }).first().click()
+  await clickTile(name)
   // Le niveau se choisit dans le jeu : les bots jouent en douce
   await page.locator('.tierbtn.tier-easy').click()
   await page.waitForTimeout(3200)
@@ -500,7 +510,7 @@ await scenario('ninja-tranche', async () => {
 await scenario('ninja-a-deux', async () => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.locator('.gc', { hasText: 'Ninja Verger' }).first().click()
+  await clickTile('Ninja Verger')
   await page.locator('.duobtn[aria-label="À deux"]').click()
   await page.locator('.tierbtn.tier-easy').click()
   await page.waitForFunction(() => window.__nj, null, { timeout: 30000 })
