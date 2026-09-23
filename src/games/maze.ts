@@ -3,8 +3,10 @@ import { $, shuffle } from '../core/utils'
 import { impact } from '../core/impact'
 import { sfx, preloadSfx } from '../core/sfx'
 import { ICON } from '../core/icons'
-import { FX } from '../core/fx'
 import { tone } from '../core/audio'
+import { createStage, loader, bumpyNormal, type Stage, type T3 } from '../core/three3d'
+import { particles, camShake, type Particles, type CamShake } from '../core/scene3d'
+import { critterKit, type Critter, type CritterKit } from '../core/critters'
 
 /* Labyrinthe — trois façons de se perdre : le jour (classique), la nuit
    (on ne voit qu'autour du poussin), la glace (on glisse jusqu'au mur).
@@ -26,12 +28,48 @@ import { tone } from '../core/audio'
    - le poussin et la poule sont dessinés (SVG), plus la pastille ronde de la
      planche Kenney que les filles ont trouvée « digne d'un Minitel » ;
    - des graines à ramasser en chemin : les étoiles viennent des graines, pas
-     du chronomètre ; il pépie en marchant, et les murs sont des haies. */
+     du chronomètre ; il pépie en marchant, et les murs sont des haies.
+
+   En 3D depuis le 23/09 (« des traits verts sur fond pâle ») : de VRAIES
+   haies taillées, vues de haut et un peu de biais ; le poussin et sa maman
+   poule sont les personnages 3D de la ferme (ceux de Tape-Trous), le
+   poussin trottine en se dandinant et regarde où il va ; des graines dorées
+   qui tournent sur elles-mêmes ; la nuit, une lanterne suit le poussin et
+   le reste du jardin est noir ; sur la glace, le sol est un étang gelé et
+   les haies ont de la neige sur le dos. La logique (génération, doigt qui
+   suit le couloir, glisse sur la glace, graines) n'a pas changé. */
 
 interface Cell { walls: boolean[] } // haut, droite, bas, gauche
 type Mode = 'classic' | 'fog' | 'ice'
 
+interface Scene3D {
+  stage: Stage
+  T: T3
+  kit: CritterKit
+  chick: Critter
+  hen: Critter
+  maze: import('three').Group | null
+  grains: Map<string, import('three').Object3D>
+  crumbs: import('three').InstancedMesh
+  crumbN: number
+  fx: Particles
+  shake: CamShake
+  lantern: import('three').PointLight
+  hemi: import('three').HemisphereLight | null
+  ground: import('three').Mesh
+  groundMat: import('three').MeshStandardMaterial
+  hedgeMat: import('three').MeshStandardMaterial
+  snowMat: import('three').MeshStandardMaterial
+  grainGeo: import('three').BufferGeometry
+  grainMat: import('three').MeshStandardMaterial
+  ray: import('three').Raycaster
+  hug: number
+  bumpT: number
+  t: number
+}
+
 interface State {
+  s3: Scene3D
   running: boolean
   ready: boolean
   mode: Mode
@@ -50,13 +88,13 @@ interface State {
   /** Position VISIBLE du poussin (en cases, à virgule) et son chemin à suivre. */
   vis: { x: number; y: number }
   path: { x: number; y: number; fast?: boolean }[]
-  facing: 1 | -1
+  /** Où regarde le poussin (angle autour de Y) */
+  heading: number
   lastPeep: number
   /** Les graines restantes de la manche (clé « x:y »), et le compte. */
   grains: Set<string>
   grainsTotal: number
   grainsGot: number
-  ticker: number
 }
 
 let mz: State | null = null
@@ -149,88 +187,168 @@ function makeGrid(me: State, n: number): Cell[][] {
   return generate(n)
 }
 
-/* ---------- Les personnages, dessinés ---------- */
-/** Le poussin : rond, jaune, une houppette, un bec, des pattes. */
-function chickSVG(px: number): string {
-  return `<svg class="mz-spr mz-body" viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true">
-    <ellipse cx="32" cy="58" rx="16" ry="3.5" fill="rgba(69,54,42,.18)"/>
-    <path d="M24 56l-4 5M40 56l4 5M24 56l-5-1M40 56l5-1" stroke="#E8873A" stroke-width="3" stroke-linecap="round"/>
-    <ellipse cx="32" cy="40" rx="19" ry="17" fill="#F2C230"/>
-    <ellipse cx="14" cy="40" rx="6" ry="10" fill="#E0AE22" transform="rotate(20 14 40)"/>
-    <circle cx="34" cy="22" r="15" fill="#F5CB3C"/>
-    <path d="M30 8c1-4 4-6 6-4M35 8c0-4 3-6 5-4" stroke="#E0AE22" stroke-width="3" stroke-linecap="round" fill="none"/>
-    <path d="M46 22l9 3-9 4z" fill="#E8873A"/>
-    <circle cx="40" cy="20" r="4.2" fill="#fff"/><circle cx="41.4" cy="20.4" r="2.2" fill="#2B2118"/>
-    <circle cx="42.4" cy="19.2" r=".8" fill="#fff"/>
-  </svg>`
-}
-/** La poule : blanche, crête rouge, barbillon, plus grande. */
-function henSVG(px: number): string {
-  return `<svg class="mz-spr" viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true">
-    <ellipse cx="32" cy="59" rx="18" ry="3.5" fill="rgba(69,54,42,.18)"/>
-    <path d="M24 55l-3 6M40 55l3 6M24 55l-5-1M40 55l5-1" stroke="#E8873A" stroke-width="3" stroke-linecap="round"/>
-    <ellipse cx="30" cy="40" rx="21" ry="17" fill="#F7F3EA"/>
-    <path d="M10 36c-4-2-8 2-6 8 2 4 8 4 10 1z" fill="#E8DED0"/>
-    <ellipse cx="16" cy="42" rx="7" ry="10" fill="#E8DED0" transform="rotate(15 16 42)"/>
-    <circle cx="38" cy="22" r="13" fill="#F7F3EA"/>
-    <path d="M30 11c-1-6 4-8 6-3 2-5 7-5 7 1 1-4 6-3 5 2l-1 3H30z" fill="#E8574C"/>
-    <path d="M49 30c4 1 4 6 0 7z" fill="#E8574C"/>
-    <path d="M50 22l9 3-9 4z" fill="#E8873A"/>
-    <circle cx="43" cy="20" r="4" fill="#fff"/><circle cx="44.4" cy="20.4" r="2.1" fill="#2B2118"/>
-  </svg>`
-}
-/** Une graine : deux petits grains dorés. */
-function grainSVG(px: number): string {
-  return `<svg viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true">
-    <ellipse cx="9" cy="14" rx="4" ry="6" fill="#D9A72A" transform="rotate(-25 9 14)"/>
-    <ellipse cx="16" cy="12" rx="4" ry="6" fill="#E8B830" transform="rotate(20 16 12)"/>
-    <ellipse cx="8" cy="12" rx="1.2" ry="2.5" fill="#FFE08A" transform="rotate(-25 8 12)"/>
-  </svg>`
+/* ---------- La scène 3D ---------- */
+/** Case (x, y) → coordonnées monde : le labyrinthe est centré, une case = 1 */
+const wx = (me: State, x: number) => x + 0.5 - me.n / 2
+const wz = (me: State, y: number) => y + 0.5 - me.n / 2
+
+/** La caméra cadre tout le labyrinthe, de haut et un peu de biais */
+function frame(me: State) {
+  const cam = me.s3.stage.camera
+  const tan = Math.tan(cam.fov / 2 * Math.PI / 180)
+  const need = me.n * 0.62 + 0.6
+  const dist = Math.max(need / tan, need / (tan * cam.aspect * 0.86))
+  cam.position.set(0.35, dist * 0.9, dist * 0.44)
+  cam.lookAt(0.35, 0, 0.35)
 }
 
-/* ---------- Le plateau ---------- */
-
-/** Le plus grand carré qui tient dans l'arène, quelle que soit la tablette. */
-function fitPx(): number {
-  const w = $('mzWrap')
-  return Math.max(240, Math.min(w.clientWidth, w.clientHeight) - 20)
-}
-
+/** Les haies, les graines, la poule : reconstruits à chaque manche */
 function render(me: State) {
+  const S3 = me.s3, { T, stage } = S3
+  if (S3.maze) {
+    stage.scene.remove(S3.maze)
+    S3.maze.traverse(o => { const m = o as import('three').Mesh; if (m.isMesh && m.geometry !== S3.grainGeo) m.geometry.dispose() })
+  }
+  const g = new T.Group()
   const n = me.n
-  me.px = fitPx()
-  me.cell = me.px / n
-  const area = $('mzArea')
-  area.style.width = me.px + 'px'
-  area.style.height = me.px + 'px'
-  area.className = me.mode === 'ice' ? 'ice' : ''
-  let walls = ''
-  const cw = me.cell
+  // Chaque mur est une haie : un bloc taillé (instancié : un seul appel de dessin)
+  const walls: [number, number, boolean][] = []   // centre x, centre z, horizontale ?
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const c = me.grid[y][x]
-    if (c.walls[0]) walls += `<line x1="${x * cw}" y1="${y * cw}" x2="${(x + 1) * cw}" y2="${y * cw}"/>`
-    if (c.walls[3]) walls += `<line x1="${x * cw}" y1="${y * cw}" x2="${x * cw}" y2="${(y + 1) * cw}"/>`
+    if (c.walls[0]) walls.push([x + 0.5 - n / 2, y - n / 2, true])
+    if (c.walls[3]) walls.push([x - n / 2, y + 0.5 - n / 2, false])
   }
-  walls += `<line x1="0" y1="${me.px}" x2="${me.px}" y2="${me.px}"/><line x1="${me.px}" y1="0" x2="${me.px}" y2="${me.px}"/>`
-  const sw = Math.max(4, Math.min(9, cw / 5))
-  // Les murs sont des haies : une ombre en dessous, la haie sombre, un liseré clair
-  const grains = [...me.grains].map(k => {
+  for (let k = 0; k < n; k++) { walls.push([k + 0.5 - n / 2, n / 2, true]); walls.push([n / 2, k + 0.5 - n / 2, false]) }
+  const HT = 0.62, TH = 0.26
+  const box = new T.BoxGeometry(1 + TH, HT, TH)
+  box.translate(0, HT / 2, 0)
+  const hedges = new T.InstancedMesh(box, S3.hedgeMat, walls.length)
+  const cap = new T.BoxGeometry(1 + TH + 0.02, 0.06, TH + 0.04)
+  cap.translate(0, HT + 0.02, 0)
+  const snow = new T.InstancedMesh(cap, S3.snowMat, walls.length)
+  const m4 = new T.Matrix4(), q = new T.Quaternion(), up = new T.Vector3(0, 1, 0), one = new T.Vector3(1, 1, 1)
+  walls.forEach(([x, z, h], i) => {
+    q.setFromAxisAngle(up, h ? 0 : Math.PI / 2)
+    m4.compose(new T.Vector3(x, 0, z), q, one)
+    hedges.setMatrixAt(i, m4)
+    snow.setMatrixAt(i, m4)
+  })
+  hedges.castShadow = true; hedges.receiveShadow = true
+  snow.visible = me.mode === 'ice'
+  g.add(hedges, snow)
+  // Les graines : deux grains dorés qui tournent doucement
+  S3.grains.clear()
+  for (const k of me.grains) {
     const [gx, gy] = k.split(':').map(Number)
-    return `<i class="mz-grain" data-k="${k}" style="left:${(gx + 0.5) * cw}px;top:${(gy + 0.5) * cw}px">${grainSVG(Math.round(cw * 0.42))}</i>`
-  }).join('')
-  area.innerHTML = `
-    <svg viewBox="0 0 ${me.px} ${me.px}" width="${me.px}" height="${me.px}">
-      <g stroke="rgba(40,70,30,.28)" stroke-width="${sw + 2}" stroke-linecap="round" transform="translate(0,${sw * 0.5})">${walls}</g>
-      <g stroke="#4B8A3A" stroke-width="${sw}" stroke-linecap="round">${walls}</g>
-      <g stroke="#7CC25C" stroke-width="${sw * 0.4}" stroke-linecap="round" transform="translate(0,${-sw * 0.18})">${walls}</g>
-    </svg>
-    <div class="mz-crumbs" id="mzCrumbs"></div>
-    ${grains}
-    <div class="mz-goal" id="mzGoal" style="left:${(n - 1) * cw}px;top:${(n - 1) * cw}px;width:${cw}px;height:${cw}px">${henSVG(cw * 0.9)}</div>
-    <div class="mz-chick" id="mzChick" style="width:${cw}px;height:${cw}px">${chickSVG(cw * 0.8)}</div>
-    ${me.mode === 'fog' ? '<div class="mz-fog" id="mzFog"></div>' : ''}`
-  placeChick(me)
+    const m = new T.Mesh(S3.grainGeo, S3.grainMat)
+    m.position.set(wx(me, gx), 0.18, wz(me, gy))
+    m.castShadow = true
+    g.add(m)
+    S3.grains.set(k, m)
+  }
+  stage.scene.add(g)
+  S3.maze = g
+  // La poule attend au bout, tournée vers le labyrinthe
+  S3.hen.obj.position.set(wx(me, n - 1), 0, wz(me, n - 1))
+  S3.hen.obj.rotation.y = Math.PI * 1.25
+  S3.chick.obj.position.set(wx(me, 0), 0, wz(me, 0))
+  S3.crumbN = 0
+  S3.crumbs.count = 0
+  S3.hug = 0
+  applyMode(me)
+  frame(me)
   paintDots(me)
+}
+
+/** Jour, nuit (une lanterne suit le poussin) ou glace (étang gelé, haies enneigées) */
+function applyMode(me: State) {
+  const S3 = me.s3, { stage } = S3
+  const night = me.mode === 'fog', ice = me.mode === 'ice'
+  stage.scene.background = new S3.T.Color(night ? '#0E1424' : ice ? '#CFE6F5' : '#BFE3F2')
+  if (stage.sun) stage.sun.intensity = night ? 0.05 : 2.2
+  if (S3.hemi) S3.hemi.intensity = night ? 0.03 : 0.32
+  stage.scene.environmentIntensity = night ? 0.04 : 0.6
+  S3.lantern.visible = night
+  S3.groundMat.color.set(ice ? 0x9CC6E0 : 0x4C8538)
+  S3.groundMat.roughness = ice ? 0.12 : 0.95
+  S3.hedgeMat.color.set(ice ? 0x2F6444 : 0x24561F)
+  if (S3.maze) S3.maze.children[1].visible = ice
+}
+
+/** Une trace de pas à la case quittée : le chemin parcouru se lit d'un œil */
+function dropCrumb(me: State, x: number, y: number) {
+  const S3 = me.s3
+  const i = S3.crumbN % 120
+  const m = new S3.T.Matrix4().makeTranslation(wx(me, x) + (Math.random() - 0.5) * 0.2, 0.012, wz(me, y) + (Math.random() - 0.5) * 0.2)
+  S3.crumbs.setMatrixAt(i, m)
+  S3.crumbN++
+  S3.crumbs.count = Math.min(120, S3.crumbN)
+  S3.crumbs.instanceMatrix.needsUpdate = true
+}
+
+/** Le poussin avance vers le prochain point de son chemin — case par case,
+    donc jamais à travers un coin. */
+function advance(me: State, dt: number) {
+  if (!me.path.length) return
+  const w = me.path[0]
+  const speed = w.fast ? 26 : 13   // cases par seconde
+  const dx = w.x - me.vis.x, dy = w.y - me.vis.y
+  const dist = Math.hypot(dx, dy)
+  const step = speed * dt
+  if (dist > 0.01) me.heading = Math.atan2(dx, dy)
+  if (dist <= step) {
+    me.vis = { x: w.x, y: w.y }
+    me.path.shift()
+    arrived(me, w.x, w.y)
+  } else {
+    me.vis = { x: me.vis.x + dx / dist * step, y: me.vis.y + dy / dist * step }
+  }
+}
+
+/** Le poussin pose la patte sur une case : graine, miette, pépiement. */
+function arrived(me: State, x: number, y: number) {
+  const k = `${x}:${y}`
+  const S3 = me.s3
+  if (me.grains.has(k)) {
+    me.grains.delete(k)
+    me.grainsGot++
+    const m = S3.grains.get(k)
+    if (m) {
+      S3.fx.burst({ x: m.position.x, y: 0.25, z: m.position.z }, { count: 12, color: [0xFFE08A, 0xD9A72A, 0xFFFFFF], speed: 1.2, spread: 1, life: 0.6, size: 0.08, gravity: 2 })
+      m.parent?.remove(m)
+      S3.grains.delete(k)
+    }
+    sfx('pluck', { vol: 0.5, rate: 1 + me.grainsGot * 0.04 })
+  }
+  dropCrumb(me, x, y)
+  const now = performance.now()
+  if (now - me.lastPeep > 260) {
+    me.lastPeep = now
+    tone(1300 + Math.random() * 300, 0.045, 'square', 0.025)
+  }
+  if (!me.path.length && x === me.n - 1 && y === me.n - 1) roundWon(me)
+}
+
+/** Un pas logique : la position de jeu change tout de suite (le doigt peut
+    continuer), et le poussin visible rattrape en marchant. */
+function moveTo(me: State, x: number, y: number, fast = false) {
+  if (me.won) return
+  me.pos = { x, y }
+  me.path.push({ x, y, fast })
+  // Un doigt très rapide ne doit pas laisser le poussin dix cases derrière
+  if (me.path.length > 8) { me.vis = { x: me.path[me.path.length - 6].x, y: me.path[me.path.length - 6].y }; me.path = me.path.slice(-5) }
+}
+
+/** Cogner un mur : ça se sent, mais pas plus de quatre fois par seconde. */
+function bump(me: State, d: number) {
+  const now = performance.now()
+  if (now - me.lastBump < 250) return
+  me.lastBump = now
+  impact(0.25, { matter: 'bois', noShake: true })
+  const S3 = me.s3
+  S3.bumpT = 0.001
+  S3.fx.burst({ x: wx(me, me.vis.x) + D[d][0] * 0.4, y: 0.3, z: wz(me, me.vis.y) + D[d][1] * 0.4 },
+    { count: 8, color: [0x4B8A3A, 0x7CC25C, 0xB97F3F], speed: 0.8, spread: 1, life: 0.5, size: 0.07, gravity: 2 })
 }
 
 /** Les graines de la manche : quatre sur le chemin de la poule, une à l'écart. */
@@ -256,112 +374,6 @@ function sowGrains(me: State) {
   const off = shuffle([...prev.keys()].filter(k => k > 0 && !path.includes(k) && k !== key(n - 1, n - 1)))
   if (off.length) me.grains.add(`${off[0] % n}:${Math.floor(off[0] / n)}`)
   me.grainsTotal += me.grains.size
-}
-
-function newRound(me: State) {
-  me.n = me.sizes[me.round]
-  me.grid = makeGrid(me, me.n)
-  me.pos = { x: 0, y: 0 }
-  me.vis = { x: 0, y: 0 }
-  me.path = []
-  me.won = false
-  sowGrains(me)
-  render(me)
-}
-
-function paintDots(me: State) {
-  $('mzDots').innerHTML = me.sizes.map((_, i) => `<i class="sn-dot${i < me.round ? ' on' : ''}"></i>`).join('')
-}
-
-/** Une trace de pas à la case quittée : le chemin parcouru se lit d'un œil. */
-function dropCrumb(me: State, x: number, y: number) {
-  const box = document.getElementById('mzCrumbs')
-  if (!box) return
-  const c = document.createElement('i')
-  c.className = 'mz-crumb'
-  c.style.left = (x + 0.5) * me.cell + 'px'
-  c.style.top = (y + 0.5) * me.cell + 'px'
-  box.appendChild(c)
-  while (box.children.length > 80) box.removeChild(box.firstChild!)
-}
-
-function placeChick(me: State) {
-  const el = document.getElementById('mzChick')
-  if (!el) return
-  el.style.left = me.vis.x * me.cell + 'px'
-  el.style.top = me.vis.y * me.cell + 'px'
-  el.classList.toggle('walk', me.path.length > 0)
-  el.classList.toggle('left', me.facing < 0)
-  if (me.mode === 'fog') {
-    const r = me.cell * 2.3
-    const fog = document.getElementById('mzFog')
-    if (fog) fog.style.background = `radial-gradient(circle ${r}px at ${(me.vis.x + 0.5) * me.cell}px ${(me.vis.y + 0.5) * me.cell}px, transparent 0 52%, rgba(48,36,24,.96) 78%)`
-  }
-}
-
-/** Le poussin avance vers le prochain point de son chemin — case par case,
-    donc jamais à travers un coin. Un tour toutes les 30 ms (horloge de jeu). */
-function advance(me: State, dt: number) {
-  if (!me.path.length) return
-  const w = me.path[0]
-  const speed = w.fast ? 26 : 13   // cases par seconde
-  const dx = w.x - me.vis.x, dy = w.y - me.vis.y
-  const dist = Math.hypot(dx, dy)
-  const step = speed * dt
-  if (Math.abs(dx) > 0.01) me.facing = dx > 0 ? 1 : -1
-  if (dist <= step) {
-    me.vis = { x: w.x, y: w.y }
-    me.path.shift()
-    arrived(me, w.x, w.y)
-  } else {
-    me.vis = { x: me.vis.x + dx / dist * step, y: me.vis.y + dy / dist * step }
-  }
-  placeChick(me)
-}
-
-/** Le poussin pose la patte sur une case : graine, miette, pépiement. */
-function arrived(me: State, x: number, y: number) {
-  const k = `${x}:${y}`
-  if (me.grains.has(k)) {
-    me.grains.delete(k)
-    me.grainsGot++
-    const el = document.querySelector<HTMLElement>(`.mz-grain[data-k="${k}"]`)
-    if (el) {
-      const r = el.getBoundingClientRect()
-      FX.burst(r.left + r.width / 2, r.top + r.height / 2, { colors: ['#FFE08A', '#D9A72A', '#FFFFFF'], count: 8, speed: 0.8 })
-      el.remove()
-    }
-    sfx('pluck', { vol: 0.5, rate: 1 + me.grainsGot * 0.04 })
-  }
-  dropCrumb(me, x, y)
-  const now = performance.now()
-  if (now - me.lastPeep > 260) {
-    me.lastPeep = now
-    tone(1300 + Math.random() * 300, 0.045, 'square', 0.025)
-  }
-  if (!me.path.length && x === me.n - 1 && y === me.n - 1) roundWon(me)
-}
-
-/** Un pas logique : la position de jeu change tout de suite (le doigt peut
-    continuer), et le poussin visible rattrape en marchant. */
-function moveTo(me: State, x: number, y: number, fast = false) {
-  if (me.won) return
-  me.pos = { x, y }
-  me.path.push({ x, y, fast })
-  // Un doigt très rapide ne doit pas laisser le poussin dix cases derrière
-  if (me.path.length > 8) { const w = me.path[me.path.length - 1]; me.vis = { x: me.path[me.path.length - 6].x, y: me.path[me.path.length - 6].y }; me.path = me.path.slice(-5); void w }
-}
-
-/** Cogner un mur : ça se sent, mais pas plus de quatre fois par seconde. */
-function bump(me: State, d: number) {
-  const now = performance.now()
-  if (now - me.lastBump < 250) return
-  me.lastBump = now
-  impact(0.25, { matter: 'bois', noShake: true })
-  const el = $('mzChick')
-  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump')
-  const r = el.getBoundingClientRect()
-  FX.burst(r.left + r.width / 2 + D[d][0] * r.width * 0.45, r.top + r.height / 2 + D[d][1] * r.height * 0.45, { colors: ['#B97F3F', '#D9B784'], count: 5, speed: 0.6 })
 }
 
 const open = (me: State, x: number, y: number, d: number) => !me.grid[y][x].walls[d]
@@ -438,14 +450,14 @@ function roundWon(me: State) {
   if (me.won) return
   me.won = true
   sfx('confirm', { vol: 0.8, rate: 1.1 })
-  const goal = $('mzGoal')
-  goal.classList.add('hug')
-  const r = goal.getBoundingClientRect()
-  FX.burst(r.left + r.width / 2, r.top + r.height / 2, { colors: ['#FF5A6E', '#FFC533', '#FFFFFF'], count: 16, speed: 1.1 })
+  const S3 = me.s3
+  S3.hug = 0.001
+  const p = S3.hen.obj.position
+  S3.fx.burst({ x: p.x, y: 0.7, z: p.z }, { count: 22, color: [0xFF5A6E, 0xFFC533, 0xFFFFFF], speed: 1.6, spread: 1, life: 0.9, size: 0.11, gravity: 1 })
   me.round++
   paintDots(me)
-  if (me.round < me.sizes.length) ctx.after(1000, () => { if (mz === me) newRound(me) })
-  else ctx.after(900, () => { if (mz === me) finish(me) })
+  if (me.round < me.sizes.length) ctx.after(1100, () => { if (mz === me) newRound(me) })
+  else ctx.after(1000, () => { if (mz === me) finish(me) })
 }
 
 function setMode(me: State, mode: Mode) {
@@ -460,6 +472,21 @@ function setMode(me: State, mode: Mode) {
     b.parentElement?.classList.toggle('sel', on)
   })
   newRound(me)
+}
+
+function newRound(me: State) {
+  me.n = me.sizes[me.round]
+  me.grid = makeGrid(me, me.n)
+  me.pos = { x: 0, y: 0 }
+  me.vis = { x: 0, y: 0 }
+  me.path = []
+  me.won = false
+  sowGrains(me)
+  render(me)
+}
+
+function paintDots(me: State) {
+  $('mzDots').innerHTML = me.sizes.map((_, i) => `<i class="sn-dot${i < me.round ? ' on' : ''}"></i>`).join('')
 }
 
 function finish(me: State) {
@@ -479,9 +506,9 @@ export const maze: GameDef = {
   subtitle: 'Classique, dans le noir… ou sur la glace !',
   mount(c) {
     ctx = c
+    let dead = false
     c.root.innerHTML = `
-      <div class="arena mz-wrap" id="mzWrap">
-        <div id="mzArea"></div>
+      <div class="arena g3-arena mz-wrap" id="mzWrap">
         <div class="mz-tools">
           ${MODES.map((m, i) => `<span class="tool-item${i === 0 ? ' sel' : ''}">
             <button class="sn-tool mz-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.cap}">${m.icon}</button>
@@ -489,85 +516,210 @@ export const maze: GameDef = {
         </div>
         <div class="mz-dots" id="mzDots"></div>
       </div>`
-    preloadSfx(['tick', 'confirm', 'whoosh'])
-    const me: State = {
-      running: true, ready: true, mode: 'classic', sizes: [], round: 0, grid: [], n: 0, px: 0, cell: 1,
-      pos: { x: 0, y: 0 }, down: false, swipe: null, t0: performance.now(), lastBump: 0, won: false,
-      vis: { x: 0, y: 0 }, path: [], facing: 1, lastPeep: 0, grains: new Set(), grainsTotal: 0, grainsGot: 0, ticker: 0
-    }
-    mz = me
-    // Le poussin marche sur l'horloge de jeu : suspendu en pause, annulé au démontage
-    let lastTick = performance.now()
-    me.ticker = c.every(30, () => {
-      const now = performance.now()
-      const dt = Math.min(0.1, (now - lastTick) / 1000)
-      lastTick = now
-      if (mz === me) advance(me, dt)
-    })
-    document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
-      b.onclick = () => { if (mz === me && me.ready) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
-    })
-    const area = $('mzArea')
-    const cellAt = (e: PointerEvent) => {
-      const r = area.getBoundingClientRect()
-      return { tx: Math.floor((e.clientX - r.left) / me.cell), ty: Math.floor((e.clientY - r.top) / me.cell) }
-    }
-    const onMove = (e: PointerEvent) => {
-      if (mz !== me || !me.down || !me.ready || me.mode === 'ice') return
-      const { tx, ty } = cellAt(e)
-      if (tx >= 0 && ty >= 0 && tx < me.n && ty < me.n) walkTo(me, tx, ty)
-    }
-    const onDown = (e: PointerEvent) => {
-      if (mz !== me) return
-      me.down = true
-      me.swipe = { x: e.clientX, y: e.clientY }
-      onMove(e)
-    }
-    const onUp = (e: PointerEvent) => {
-      if (mz !== me) return
-      me.down = false
-      if (me.mode === 'ice' && me.swipe && me.ready) {
-        const dx = e.clientX - me.swipe.x, dy = e.clientY - me.swipe.y
-        if (Math.abs(dx) + Math.abs(dy) > 24) slide(me, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0))
-      }
-      me.swipe = null
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (mz !== me || !me.ready) return
-      const dirs: Record<string, number> = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
-      if (!(e.key in dirs)) return
-      e.preventDefault()
-      const d = dirs[e.key]
-      if (me.mode === 'ice') slide(me, d)
-      else step(me, D[d][0], D[d][1])
-    }
-    const onResize = () => { if (mz === me && me.ready) render(me) }
-    area.addEventListener('pointerdown', onDown)
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
-    window.addEventListener('keydown', onKey)
-    window.addEventListener('resize', onResize)
+    preloadSfx(['tick', 'confirm', 'whoosh', 'pluck', 'click'])
+    const arena = $('mzWrap')
+    const hideLoader = loader(arena, 'maze')
+    const cleanups: (() => void)[] = []
 
-    // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
-    if ((window as unknown as { __BOT?: boolean }).__BOT) {
-      ;(window as unknown as { __mz: unknown }).__mz = {
-        get grid() { return me.grid.map(row => row.map(c => c.walls)) }, get n() { return me.n }, get pos() { return me.pos },
-        get round() { return me.round }, get mode() { return me.mode },
-        cellCenter: (x: number, y: number) => { const r = area.getBoundingClientRect(); return { x: r.left + (x + 0.5) * me.cell, y: r.top + (y + 0.5) * me.cell } }
+    ;(async () => {
+      const stage = await createStage(arena, {
+        sky: '#BFE3F2', cam: [0, 12, 6], target: [0, 0, 0], fov: 40,
+        hemi: ['#E6F4FF', '#5E7A40', 1],
+        sun: { pos: [4, 12, 6], color: '#FFF3DE', intensity: 2.2, area: 11, far: 40 },
+        fill: 0.35, exposure: 1
+      })
+      if (dead) { stage.dispose(); return }
+      const T = stage.T
+      const scene = stage.scene
+      let hemi: import('three').HemisphereLight | null = null
+      scene.traverse(o => { if ((o as import('three').HemisphereLight).isHemisphereLight) hemi = o as import('three').HemisphereLight })
+      const groundMat = new T.MeshStandardMaterial({ color: 0x5E9A45, roughness: 0.95, normalMap: stage.keep(bumpyNormal(T, 6, 18)) })
+      const ground = new T.Mesh(new T.PlaneGeometry(60, 60), groundMat)
+      ground.rotation.x = -Math.PI / 2
+      ground.receiveShadow = true
+      scene.add(ground)
+      // Une haie feuillue : couleur sombre (l'éclairage la remonte), relief de feuillage marqué
+      const hedgeMat = new T.MeshStandardMaterial({ color: 0x24561F, roughness: 0.95, normalMap: stage.keep(bumpyNormal(T, 40, 4)), normalScale: new T.Vector2(2.2, 2.2) })
+      const snowMat = new T.MeshStandardMaterial({ color: 0xF4F8FF, roughness: 0.8 })
+      // Une graine : deux grains dorés
+      const g1 = new T.SphereGeometry(0.07, 10, 8); g1.scale(0.7, 1, 0.7); g1.rotateZ(0.4); g1.translate(-0.05, 0, 0)
+      const g2 = new T.SphereGeometry(0.07, 10, 8); g2.scale(0.7, 1, 0.7); g2.rotateZ(-0.4); g2.translate(0.05, 0.01, 0)
+      const grainGeo = mergeTwo(T, g1, g2)
+      const grainMat = new T.MeshStandardMaterial({ color: 0xC8901A, roughness: 0.35, metalness: 0.15, emissive: 0x3A2800 })
+      const crumbs = new T.InstancedMesh(new T.CircleGeometry(0.05, 8).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0x8A6A3A, transparent: true, opacity: 0.45 }), 120)
+      crumbs.count = 0
+      scene.add(crumbs)
+      const kit = critterKit(T)
+      const chick = kit.make('chick', 1)
+      const hen = kit.make('hen', 1)
+      const fit = (cr: Critter, h: number) => {
+        const b = new T.Box3().setFromObject(cr.obj)
+        cr.obj.scale.multiplyScalar(h / (b.max.y - b.min.y))
+        cr.obj.traverse(o => { o.castShadow = true })
       }
-    }
+      fit(chick, 0.82); fit(hen, 1.05)
+      scene.add(chick.obj, hen.obj)
+      const lantern = new T.PointLight(0xFFC46B, 7, 3.2, 1.6)
+      lantern.visible = false
+      scene.add(lantern)
+      const me: State = {
+        s3: {
+          stage, T, kit, chick, hen, maze: null, grains: new Map(), crumbs, crumbN: 0, fx: particles(stage, 300),
+          shake: camShake(stage), lantern, hemi, ground, groundMat, hedgeMat, snowMat, grainGeo, grainMat,
+          ray: new T.Raycaster(), hug: 0, bumpT: 0, t: 0
+        },
+        running: true, ready: true, mode: 'classic', sizes: [], round: 0, grid: [], n: 0, px: 0, cell: 1,
+        pos: { x: 0, y: 0 }, down: false, swipe: null, t0: performance.now(), lastBump: 0, won: false,
+        vis: { x: 0, y: 0 }, path: [], heading: 0, lastPeep: 0, grains: new Set(), grainsTotal: 0, grainsGot: 0
+      }
+      mz = me
+      hideLoader()
 
-    setMode(me, 'classic')
+      document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
+        b.onclick = () => { if (mz === me && me.ready) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
+      })
+      // Le doigt → la case visée, par un rayon sur le sol (la vue est de biais)
+      const ndc = new T.Vector2(), hit = new T.Vector3(), plane = new T.Plane(new T.Vector3(0, 1, 0), 0)
+      const cellAt = (e: PointerEvent) => {
+        const r = stage.renderer.domElement.getBoundingClientRect()
+        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+        me.s3.ray.setFromCamera(ndc, stage.camera)
+        if (!me.s3.ray.ray.intersectPlane(plane, hit)) return { tx: -1, ty: -1 }
+        return { tx: Math.floor(hit.x + me.n / 2), ty: Math.floor(hit.z + me.n / 2) }
+      }
+      const onMove = (e: PointerEvent) => {
+        if (mz !== me || !me.down || !me.ready || me.mode === 'ice') return
+        const { tx, ty } = cellAt(e)
+        if (tx >= 0 && ty >= 0 && tx < me.n && ty < me.n) walkTo(me, tx, ty)
+      }
+      const onDown = (e: PointerEvent) => {
+        if (mz !== me) return
+        me.down = true
+        me.swipe = { x: e.clientX, y: e.clientY }
+        onMove(e)
+      }
+      const onUp = (e: PointerEvent) => {
+        if (mz !== me) return
+        me.down = false
+        if (me.mode === 'ice' && me.swipe && me.ready) {
+          const dx = e.clientX - me.swipe.x, dy = e.clientY - me.swipe.y
+          if (Math.abs(dx) + Math.abs(dy) > 24) slide(me, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0))
+        }
+        me.swipe = null
+      }
+      const onKey = (e: KeyboardEvent) => {
+        if (mz !== me || !me.ready) return
+        const dirs: Record<string, number> = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
+        if (!(e.key in dirs)) return
+        e.preventDefault()
+        const d = dirs[e.key]
+        if (me.mode === 'ice') slide(me, d)
+        else step(me, D[d][0], D[d][1])
+      }
+      const onResize = () => { if (mz === me) frame(me) }
+      stage.renderer.domElement.addEventListener('pointerdown', onDown)
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
+      window.addEventListener('keydown', onKey)
+      window.addEventListener('resize', onResize)
+      cleanups.push(() => {
+        stage.renderer.domElement.removeEventListener('pointerdown', onDown)
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        window.removeEventListener('keydown', onKey)
+        window.removeEventListener('resize', onResize)
+      })
+
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        ;(window as unknown as { __mz: unknown }).__mz = {
+          get grid() { return me.grid.map(row => row.map(cc => cc.walls)) }, get n() { return me.n }, get pos() { return me.pos },
+          get round() { return me.round }, get mode() { return me.mode },
+          cellCenter: (x: number, y: number) => {
+            const v = new T.Vector3(wx(me, x), 0, wz(me, y)).project(stage.camera)
+            const r = stage.renderer.domElement.getBoundingClientRect()
+            return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }
+          }
+        }
+      }
+
+      stage.start(dt => {
+        if (mz !== me) return
+        const S3 = me.s3
+        S3.t += dt
+        advance(me, dt)
+        // Le poussin : il regarde où il va, se dandine en marchant, s'écrase sur un mur
+        const ch = S3.chick.obj
+        ch.position.x = wx(me, me.vis.x)
+        ch.position.z = wz(me, me.vis.y)
+        let dy = me.s3.chick.obj.rotation.y
+        let target = me.heading
+        while (target - dy > Math.PI) target -= Math.PI * 2
+        while (target - dy < -Math.PI) target += Math.PI * 2
+        dy += (target - dy) * Math.min(1, dt * 14)
+        ch.rotation.y = dy
+        const walking = me.path.length > 0
+        ch.rotation.z = walking ? Math.sin(S3.t * 22) * 0.16 : 0
+        ch.position.y = walking ? Math.abs(Math.sin(S3.t * 22)) * 0.06 : 0
+        if (S3.bumpT > 0) {
+          S3.bumpT += dt
+          const k = Math.max(0, 1 - S3.bumpT / 0.25)
+          ch.scale.setScalar(ch.userData.s0 ?? (ch.userData.s0 = ch.scale.x))
+          ch.scale.y *= 1 - 0.3 * k; ch.scale.x *= 1 + 0.2 * k; ch.scale.z *= 1 + 0.2 * k
+          if (S3.bumpT > 0.25) { S3.bumpT = 0; ch.scale.setScalar(ch.userData.s0) }
+        }
+        // La poule attend en picorant, et saute de joie quand le poussin arrive
+        const hen2 = S3.hen.obj
+        hen2.rotation.x = me.won ? 0 : Math.max(0, Math.sin(S3.t * 3)) * 0.25
+        if (S3.hug > 0) {
+          S3.hug += dt
+          hen2.position.y = Math.abs(Math.sin(S3.hug * 9)) * 0.3 * Math.max(0, 1 - S3.hug / 1)
+        } else hen2.position.y = 0
+        S3.kit.blink(S3.chick, dt); S3.kit.blink(S3.hen, dt)
+        // Les graines tournent et flottent un peu
+        for (const m of S3.grains.values()) { m.rotation.y += dt * 1.6; m.position.y = 0.18 + Math.sin(S3.t * 3 + m.position.x) * 0.04 }
+        // La lanterne de la nuit suit le poussin
+        if (S3.lantern.visible) S3.lantern.position.set(ch.position.x, 1.1, ch.position.z + 0.2)
+        S3.fx.update(dt)
+      })
+
+      cleanups.push(() => {
+        S3dispose(me)
+        delete (window as { __mz?: unknown }).__mz
+      })
+      stage.keep({ dispose() { cleanups.forEach(f => f()) } })
+      setMode(me, 'classic')
+    })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici') })
+
     return () => {
-      if (mz === me) mz = null
-      me.running = false
-      area.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
-      window.removeEventListener('keydown', onKey)
-      window.removeEventListener('resize', onResize)
+      dead = true
+      const me = mz
+      mz = null
+      if (me) { me.running = false; try { me.s3.stage.dispose() } catch { /* déjà démonté */ } }
     }
   }
+}
+
+function S3dispose(me: State) {
+  const S3 = me.s3
+  S3.fx.dispose()
+  S3.kit.dispose()
+  S3.grainGeo.dispose()
+}
+
+/** Deux géométries en une (positions + normales), pour la graine */
+function mergeTwo(T: T3, a: import('three').BufferGeometry, b: import('three').BufferGeometry) {
+  const pos: number[] = [], nor: number[] = []
+  for (const g0 of [a, b]) {
+    const g = g0.index ? g0.toNonIndexed() : g0
+    pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array)
+    if (g !== g0) g.dispose()
+    g0.dispose()
+  }
+  const out = new T.BufferGeometry()
+  out.setAttribute('position', new T.Float32BufferAttribute(pos, 3))
+  out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3))
+  return out
 }
