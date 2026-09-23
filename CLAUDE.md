@@ -280,21 +280,20 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 
 - Repo `keryprophez/girlz-games` (public), en ligne :
   https://keryprophez.github.io/girlz-games/
-- Branche **par défaut** `claude/magic-farm-game-q66bw4` ← c'est elle que
-  `deploy.yml` publie. `main` est maintenue au même commit (miroir).
+- **`main` est la branche par défaut ET la seule qui publie** (23/09) :
+  `deploy.yml` se déclenche sur un push de `main`. L'ancienne branche
+  déployée `claude/magic-farm-game-q66bw4` n'est plus à pousser (elle va être
+  supprimée).
 - Développer sur une branche de travail, ne jamais pousser ailleurs sans
-  demander. Livraison (les trois branches restent au même commit) :
+  demander. Livraison :
   ```bash
+  git fetch origin && git merge origin/main   # puis smoke + bots
   git push -u origin <branche-de-travail>
   git checkout main && git merge --ff-only <branche> && git push origin main
-  git checkout claude/magic-farm-game-q66bw4 && git merge --ff-only <branche> \
-    && git push origin claude/magic-farm-game-q66bw4
   git checkout <branche>
   ```
-  Si tu bascules la branche par défaut sur `main` dans les réglages GitHub,
-  simplifier `deploy.yml` et supprimer cette gymnastique.
 - CI : `npm ci` → `npm run build` → `npm run test:smoke` → `test:play` → Pages.
-  Seul un push sur `claude/magic-farm-game-q66bw4` déclenche `deploy.yml`
-  (`main` en est retiré : les deux runs s'annulaient l'un l'autre dans le
-  groupe `pages`, et `main` n'a pas le droit de déployer). Si un run est
-  annulé, relancer à la main : `workflow_dispatch` sur la branche déployée.
+  Si un run est annulé, le relancer à la main : `workflow_dispatch` sur `main`.
+  Si le déploiement est refusé par l'environnement `github-pages`, c'est sa
+  règle de branches (Settings → Environments → github-pages) qui n'accepte
+  pas encore `main`.
