@@ -548,6 +548,42 @@ sons), l'implémentation, un bot qui gagne, une capture de référence.
 - Chargement paresseux par jeu + CSS colocalisé (IndexedDB sert déjà à l'Atelier).
 - À décider plus tard : `letters` (refonte ou sortie).
 
+## Phase 4 — La Ferme des calculs (plan validé le 23/09)
+
+Les deux Grands Tableaux (× et +) deviennent **deux vrais jeux 3D** où
+chaque opération est un geste sur un objet de la ferme qui EST le modèle
+mathématique. Un moteur commun retient ce que l'enfant sait.
+
+- **Le Potager** (× et ÷, Joyce) : un carré de légumes de 7 rangées de 8,
+  c'est 7 × 8 — tracé au doigt, il pousse rangée par rangée, chaque rangée
+  sur une note plus haute (la table devient une mélodie). Modes : Découvre
+  (rectangles libres, le carré pivote : 7 × 8 = 8 × 7), Récolte (le cœur),
+  Partage (÷ : une tape = une carotte à chaque lapin ; le reste, le chien
+  le vole), le Tableau (le potager entier ; « tout montrer » = la colline
+  des résultats ; faucher ×1, ×2, ×5, ×10 et le miroir → il reste 21 cases).
+- **Le Poulailler** (+ et −, Jade) : boîtes de 10 œufs (2 × 5 = le cadre de
+  10 du CP). Une tape = une poule pond ; 8 + 5 complète la boîte à 10 et
+  déborde (« faire 10 » se voit) ; jusqu'à 100, une boîte pleine se ferme en
+  dizaine (la retenue se voit).
+- **La pédagogie** : aide qui s'efface calcul par calcul (carré entier →
+  contour → nombres → pavé), une erreur la fait revenir ; mémoire par calcul
+  (boîtes de Leitner, révisions espacées et entrelacées, un raté revient
+  2-3 questions plus tard) ; familles d'opérations (÷ = × à l'envers) ;
+  l'erreur DESSINÉE (49 pour 7 × 8 : le carré 7 × 7, puis la rangée qui
+  manque pousse).
+- **Décisions du 23/09** : la mémoire est visible dans le Tableau (les
+  légumes des calculs sus restent) mais **rien ne fane jamais** et rien ne
+  se débloque ; le temps de réponse est mesuré en silence (su par cœur ou
+  recompté), jamais affiché ; profils masqués → mémoire commune par jeu, le
+  moteur se corrige tout seul ; le Potager d'abord.
+
+Itérations (demi-page de design validée avant chacune) :
+1. `core/facts.ts` (testé) + **Potager ×** : Découvre, Récolte — en cours.
+2. **Potager ÷** : Partage, divisions dans la Récolte, le Tableau.
+3. **Poulailler** jusqu'à 10 et 20.
+4. **Poulailler jusqu'à 100** (la retenue) ; `tables.ts` et ses deux bots
+   sortent du catalogue.
+
 ---
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅
