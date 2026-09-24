@@ -79,13 +79,6 @@ export const BADGE: Record<string, string> = {
       <rect x="12" y="7" width="24" height="5" rx="2.5" fill="${C.white}" opacity=".35"/>
     </g>`),
 
-  catch: svg(`
-    <circle cx="14" cy="9" r="5" fill="${C.coral}"/>
-    <circle cx="32" cy="12" r="4.2" fill="${C.mango}"/>
-    <path d="M13 22a11 11 0 0 1 22 0" fill="none" stroke="${C.woodDark}" stroke-width="2.6"/>
-    <path d="M8 23h32l-4 16a4 4 0 0 1-4 3H16a4 4 0 0 1-4-3z" fill="${C.wood}"/>
-    <path d="M18 26l1.6 15M30 26l-1.6 15M11 31h26M12.6 37h22.8" stroke="${C.woodDark}" stroke-width="1.8" stroke-linecap="round" opacity=".75"/>
-    <rect x="6" y="20" width="36" height="5" rx="2.5" fill="${C.woodDark}"/>`),
 
   caterpillar: svg(`
     <circle cx="12" cy="30" r="7" fill="${C.meadowDark}"/>
@@ -95,14 +88,6 @@ export const BADGE: Record<string, string> = {
     <circle cx="37" cy="18" r="1.9" fill="${C.ink}"/>
     <path d="M31 12c-1-3 0-5 2-6M38 12c0-3 1-4 3-5" stroke="${C.meadowDark}" stroke-width="2" fill="none" stroke-linecap="round"/>`),
 
-  run: svg(`
-    <rect x="16" y="12" width="18" height="12" rx="3" fill="${C.meadow}"/>
-    <rect x="8" y="21" width="32" height="10" rx="3" fill="${C.meadowDark}"/>
-    <rect x="19" y="14" width="12" height="7" rx="2" fill="${C.ice}"/>
-    <circle cx="15" cy="34" r="7" fill="${C.ink}"/>
-    <circle cx="15" cy="34" r="3" fill="${C.cream}"/>
-    <circle cx="34" cy="35" r="5.5" fill="${C.ink}"/>
-    <circle cx="34" cy="35" r="2.3" fill="${C.cream}"/>`),
 
   flappy: svg(`
     <circle cx="26" cy="24" r="13" fill="${C.sun}"/>
@@ -138,13 +123,6 @@ export const BADGE: Record<string, string> = {
     <path d="M25 25h17A18 18 0 0 1 25 42z" fill="${C.sky}"/>
     <circle cx="24" cy="24" r="5" fill="${C.cream}"/>`),
 
-  stand3d: svg(`
-    <circle cx="24" cy="22" r="15" fill="${C.cream}"/>
-    <circle cx="24" cy="22" r="11" fill="${C.coral}"/>
-    <circle cx="24" cy="22" r="7" fill="${C.cream}"/>
-    <circle cx="24" cy="22" r="3.4" fill="${C.coralDark}"/>
-    <circle cx="35" cy="36" r="6" fill="${C.mango}"/>
-    <circle cx="33" cy="34" r="1.8" fill="${C.white}" opacity=".7"/>`),
 
   connect4: svg(`
     <rect x="6" y="10" width="36" height="32" rx="5" fill="${C.sky}"/>

@@ -1,10 +1,8 @@
 import type { GameDef } from '../core/types'
 import { memory } from './memory'
-import { catchGame } from './catch'
 import { intrus } from './intrus'
 import { moleGame } from './mole'
 import { simonGame } from './simon'
-import { runGame } from './run'
 import { ninja } from './ninja'
 import { flappy } from './flappy'
 import { letters } from './letters'
@@ -27,12 +25,11 @@ import { space } from './space'
 import { geoGame } from './geo'
 import { caterpillar } from './caterpillar'
 import { fireworks } from './fireworks'
-import { stand3d } from './stand3d'
 import { icetower } from './icetower'
 import { sentences } from './sentences'
 
 export const GAMES: GameDef[] = [
-  icetower, ninja, moleGame, catchGame, caterpillar, runGame, flappy, maze, taquin, memory, simonGame, stand3d,
+  icetower, ninja, moleGame, caterpillar, flappy, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
@@ -54,8 +51,8 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
-      icetower, ninja, moleGame, catchGame, caterpillar, runGame, flappy,
-      maze, taquin, memory, simonGame, stand3d, connect4
+      icetower, ninja, moleGame, caterpillar, flappy,
+      maze, taquin, memory, simonGame, connect4
     ]
   },
   {

@@ -20,7 +20,8 @@ import {
    plantes poussent, puis on compte par rangées. Le total de chaque rangée
    s'écrit EN GRAND sur la plante estompée de la dernière colonne (8, 16…
    56) — exactement là où ce nombre vit dans la table — et le résultat final
-   éclate en pastille corail. Chaque rangée sonne une note plus haute : la
+   éclate en pastille VERTE : dans ce jeu, le vert dit « juste » et le rouge
+   « faux » (24/09 : une bonne réponse en corail passait pour une erreur). Chaque rangée sonne une note plus haute : la
    table devient une petite mélodie.
 
    Trois modes :
@@ -357,7 +358,7 @@ function paintDots(me: State) {
 function paintQuestion(me: State, withAnswer = false) {
   const q = me.q
   if (!q) return
-  const tail = withAnswer ? `<span class="x">=</span><span class="${q.op === 'div' ? 'c' : 'v'}">${q.ans}</span>`
+  const tail = withAnswer ? `<span class="x">=</span><span class="ok">${q.ans}</span>`
     : q.pad ? `<span class="x">=</span><span class="v pg-typed" id="pgTyped">${q.typed || '…'}</span>` : ''
   $('pgQ').innerHTML = q.op === 'div'
     ? `<span class="v">${q.r * q.c}</span><span class="x">÷</span><span class="r">${q.r}</span>${tail}`

@@ -1,6 +1,6 @@
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — rouler les boules du bonhomme jusqu'au bout,
-   croquer des fruits à la chenille, sauter les obstacles du tracteur, passer
+   croquer des fruits à la chenille, passer
    des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
    catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
@@ -184,26 +184,6 @@ await scenario('chenille-croque-des-fruits', async () => {
   throw new Error('moins de 2 fruits croqués en 22 s')
 })
 
-/* 🚜 Course : sauter les obstacles, tenir 60 m avec au moins un cœur. */
-await scenario('course-soixante-metres', async () => {
-  await openGame('Course', '__run')
-  for (let i = 0; i < 420; i++) {
-    // Une décision par frame rendue : sous swiftshader la 3D tourne à 4 fps
-    const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
-      const r = window.__run
-      if (!r || !r.running) return res(null)
-      // Sauter quand l'avant de l'obstacle arrive sur le tracteur dans 0,14 à 0,3 s
-      // (l'entrée est appliquée à la frame suivante, soit 0,1 s de simulation)
-      const near = r.obstacles.some(o => { const t = (o.x - o.hw - r.front) / r.speed; return t > 0.14 && t < 0.3 })
-      res({ near, jumping: r.jumping, dist: Math.floor(r.dist), lives: r.lives })
-    })))
-    if (!st) throw new Error('partie terminée avant 60 m')
-    if (st.dist >= 60 && st.lives >= 1) return
-    if (st.near && !st.jumping) await page.keyboard.press('Space')
-  }
-  throw new Error('60 m non atteints')
-})
-
 /* 🐤 Poussin Volant : viser le milieu du passage, franchir 2 barrières. */
 await scenario('poussin-deux-barrieres', async () => {
   await openGame('Poussin Volant', '__fl')
@@ -263,7 +243,6 @@ await scenario('pizza-sauce-sous-le-doigt', async () => {
   })
   if (!ok) throw new Error('pas de sauce détectée sous le point touché')
 })
-
 
 /* 🏔 La Tour de Glace : lâcher 3 blocs quand le balancier passe au centre. */
 await scenario('tour-trois-blocs', async () => {
@@ -626,51 +605,6 @@ await scenario('tour-du-monde-vrais-pays', async () => {
   await page.waitForTimeout(300)
   if ((await page.evaluate(() => window.__geo.state())).map !== 'france') throw new Error('la France ne s\'affiche pas')
   if (errors.length) throw new Error('erreurs JS')
-})
-
-/* 🧺 Attrape : suivre le fruit le plus bas avec le panier, en ramasser 6. */
-await scenario('attrape-six-fruits', async () => {
-  await openGame('Attrape')
-  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
-  for (let i = 0; i < 400; i++) {
-    const st = await page.evaluate(() => window.__catch ? window.__catch.state() : null)
-    if (!st) throw new Error('pas d\'accroche __catch')
-    if (st.over) throw new Error('partie finie trop tôt')
-    const score = parseInt(await page.locator('.hud-score b').textContent())
-    if (score >= 6) return
-    const good = st.fruits.filter(f => !f.bad).sort((a, b) => a.y - b.y)[0]
-    const bad = st.fruits.filter(f => f.bad).sort((a, b) => a.y - b.y)[0]
-    let x = good ? good.x : st.basketX
-    // Un piment plus bas que le fruit visé : on s'en écarte
-    if (bad && (!good || bad.y < good.y) && Math.abs(bad.x - x) < 0.6) x = bad.x + (bad.x > 0 ? -0.9 : 0.9)
-    await page.evaluate(x => window.__catch.want(x), x)
-    await page.waitForTimeout(50)
-  }
-  throw new Error('moins de 6 fruits attrapés en 20 s')
-})
-
-/* 🎯 Le Stand 3D : tirer la balle vers le bas depuis sa position à l'écran,
-   manche après manche, jusqu'à coucher 6 caisses. Un lancer trop mou fait
-   perdre un cœur : le bot doit viser juste. */
-await scenario('stand-six-caisses', async () => {
-  await openGame('Le Stand 3D')
-  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 30000 })
-  await page.waitForTimeout(600)
-  const st = () => page.evaluate(() => new Promise(res => requestAnimationFrame(() => res(window.__stand ? window.__stand.state() : null))))
-  for (let k = 0; k < 60; k++) {
-    const s = await st()
-    if (!s) throw new Error('pas d\'accroche __stand')
-    if (s.over) throw new Error('partie finie trop tôt (score ' + s.score + ')')
-    if (s.score >= 6) return
-    if (s.thrown || s.building) { await page.waitForTimeout(250); continue }
-    const b = await page.evaluate(() => ({ ...window.__stand.ball(), dx: window.__stand.aimPx() }))
-    await page.mouse.move(b.x, b.y)
-    await page.mouse.down()
-    for (let i = 1; i <= 8; i++) { await page.mouse.move(b.x + b.dx * i / 8, b.y + b.norm * 0.85 * i / 8); await page.waitForTimeout(16) }
-    await page.mouse.up()
-    await page.waitForTimeout(600)
-  }
-  throw new Error('moins de 6 caisses tombées en 100 s')
 })
 
 /* 📮 La Poste aux Phrases : une partie entière dans CHACUN des trois modes,

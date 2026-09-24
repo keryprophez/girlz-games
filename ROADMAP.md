@@ -630,6 +630,23 @@ Itérations (maquettes au format tablette validées avant chacune) :
 4. **Poulailler jusqu'à 100** (la retenue) ; le Grand Tableau + sort alors du
    catalogue avec son bot.
 
+## Retours tablette du 24/09
+
+- ✅ **Trois jeux sortis** : la Course (« la voiture c'est éclatée »), le Stand
+  3D et Attrape (« le panier ») — fichiers, vignettes et bots retirés.
+- ✅ **Quelle heure ?** : un interrupteur « 5 10 15 » cache les minutes
+  écrites autour du cadran, comme sur une horloge ordinaire (retenu d'une
+  partie à l'autre) ; l'heure à régler s'écrit EN GRAND dans une carte à côté
+  du cadran (heures couleur petite aiguille, minutes couleur grande), et la
+  voix la dit.
+- ✅ **Le Potager** : « pas clair quand on dit une réponse fausse, la bonne
+  réponse apparaît en ROUGE ». Le vert dit maintenant « juste » (pastille du
+  résultat, réponse ajoutée à la question) et le rouge « faux » (sa réponse,
+  rouge pleine, barrée, qui tremble, à sa place dans la table).
+- **Ninja Verger** : « c'est confus » — en attente de précisions du père
+  (quoi trancher et quoi éviter ? trop de choses à l'écran ? le chrono ? le
+  mode à deux ?).
+
 ---
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅

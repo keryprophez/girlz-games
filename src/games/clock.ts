@@ -50,7 +50,27 @@ interface State {
   touched: number
   /** L'aiguille tenue par le doigt, choisie au toucher et gardée jusqu'au lever. */
   grab: Hand | null
+  /** Les minutes écrites autour du cadran (05, 10, 15…) : on peut les cacher,
+      comme sur une horloge ordinaire (demande du 24/09). Retenu d'une partie
+      à l'autre. */
+  showMin: boolean
 }
+
+const RING_KEY = 'ferme:horloge:minutes'
+function loadShowMin(): boolean {
+  try { return localStorage.getItem(RING_KEY) !== '0' } catch { return true }
+}
+function saveShowMin(on: boolean) {
+  try { localStorage.setItem(RING_KEY, on ? '1' : '0') } catch { /* stockage bloqué : le choix vaut pour la partie */ }
+}
+
+/** L'icône de l'interrupteur : un cadran et sa couronne de minutes. */
+const RING_ICON = `<svg class="ck-mini" viewBox="0 0 100 100" aria-hidden="true">
+  <circle cx="50" cy="50" r="46" fill="#FFE1DB"/>
+  ${Array.from({ length: 12 }, (_, i) => { const a = (i * 30 - 90) * Math.PI / 180; return `<circle cx="${50 + 40 * Math.cos(a)}" cy="${50 + 40 * Math.sin(a)}" r="5" fill="#FF7B6B"/>` }).join('')}
+  <circle cx="50" cy="50" r="30" fill="#FFFDF8" stroke="#FFB84D" stroke-width="5"/>
+  <path d="M50 50 L50 30 M50 50 L64 50" stroke="#45362A" stroke-width="6" stroke-linecap="round"/>
+</svg>`
 
 let ck: State | null = null
 let ctx: GameContext
@@ -138,10 +158,10 @@ function facePx(): number {
 }
 
 function faceOpts(me: State): FaceOpts {
-  if (me.mode === 'minutes') return { minuteRing: true, fadeHour: true }
-  if (me.mode === 'quiz') return { minuteRing: ctx.tier !== 'exp' }
+  if (me.mode === 'minutes') return { minuteRing: me.showMin, fadeHour: true }
+  if (me.mode === 'quiz') return { minuteRing: me.showMin && ctx.tier !== 'exp' }
   if (me.mode === 'hours') return {}
-  return { minuteRing: true, grab: me.grab }
+  return { minuteRing: me.showMin, grab: me.grab }
 }
 
 function renderFace(me: State) {
@@ -178,7 +198,16 @@ function setMode(me: State, mode: Mode) {
 /* ---- Découvre : manipuler et écouter ---- */
 function refreshDiscover(me: State) {
   renderFace(me)
-  $('ckDigital').textContent = digital(me.h, me.m)
+  paintDigital(me.h, me.m, false)
+}
+
+/** L'heure écrite, en GRAND à côté du cadran (24/09 : « l'heure à trouver est
+    marquée en beaucoup trop petit ») : les heures dans la couleur de la petite
+    aiguille, les minutes dans celle de la grande. */
+function paintDigital(h: number, m: number, target: boolean) {
+  const el = $('ckDigital')
+  el.classList.toggle('target', target)
+  el.innerHTML = `${target ? `<span class="ck-tg">${ICON.target}</span>` : ''}<span class="h">${h}</span><span class="x">:</span><span class="m">${String(m).padStart(2, '0')}</span>`
 }
 /** Les réglages : une rangée par aiguille (− le dessin de l'aiguille +),
     et en Règle un gros bouton vert pour valider. */
@@ -304,7 +333,8 @@ function nextSet(me: State) {
   // pas laquelle on attrape. Une heure au hasard, jamais la réponse.
   do { me.h = rnd(1, 11); me.m = 0 } while (me.h === me.th && me.m === me.tm)
   $('ckDigital').style.display = ''
-  $('ckDigital').innerHTML = `${ICON.target} ${digital(me.th, me.tm)}`
+  paintDigital(me.th, me.tm, true)
+  ctx.say(timeSpoken(me.th, me.tm))
   renderFace(me)
   adjustButtons(me, true)
   me.lock = false
@@ -395,25 +425,41 @@ export const clock: GameDef = {
     c.root.innerHTML = `
       <div class="arena ck-wrap" id="ckWrap">
         <div class="ck-main">
-          <div class="ck-digital" id="ckDigital"></div>
           <div id="ckFace"></div>
           <div class="qopts ck-opts" id="ckOpts"></div>
         </div>
-        <div class="ck-ctrl" id="ckCtrl"></div>
+        <div class="ck-right">
+          <div class="ck-digital" id="ckDigital"></div>
+          <div class="ck-ctrl" id="ckCtrl"></div>
+        </div>
         <div class="tq-tools">
           ${MODES.map((m, i) => `<span class="tool-item${i === 0 ? ' sel' : ''}">
             <button class="sn-tool ck-tool${i === 0 ? ' sel' : ''}" data-m="${m.id}" aria-label="${m.cap}">${m.icon}</button>
             <i class="tool-cap">${m.cap}</i></span>`).join('')}
         </div>
         <div class="tq-side">
+          <span class="tool-item ck-ringitem" id="ckRingItem"><button class="sn-tool ck-ringbtn" id="ckRing" aria-label="Les minutes du cadran">${RING_ICON}</button><i class="tool-cap">5 10 15</i></span>
           <div class="tq-moves" id="ckScore"></div>
           <div class="mem-dots" id="ckDots"></div>
           <span class="tool-item"><button class="sn-tool go ck-done" id="ckDone" aria-label="Fini">${ICON.check}</button><i class="tool-cap">Fini</i></span>
         </div>
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
-    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null }
+    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null, showMin: loadShowMin() }
     ck = me
+    const paintRing = () => {
+      $('ckRing').classList.toggle('sel', me.showMin)
+      $('ckRingItem').classList.toggle('sel', me.showMin)
+    }
+    paintRing()
+    ;($('ckRing') as HTMLButtonElement).onclick = () => {
+      if (ck !== me) return
+      me.showMin = !me.showMin
+      saveShowMin(me.showMin)
+      sfx('click', { vol: 0.4, rate: me.showMin ? 1.2 : 0.9 })
+      paintRing()
+      renderFace(me)
+    }
     document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => {
       b.onclick = () => { if (ck === me) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
     })

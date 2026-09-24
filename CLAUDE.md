@@ -70,7 +70,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
                            lapin, cactus (Tape-Trous) + vache, poule, chien,
                            canard, mouton (`FARM`, les pions des jeux en DOM)
-             runner.ts   ← socle des jeux qui défilent (Course, Poussin Volant)
+             runner.ts   ← socle des jeux qui défilent (Poussin Volant)
              doll3d.ts   ← LEUR personnage en 3D (le look d'Habille-toi) :
                            `makeDoll(T, look)`, `poseDoll(d, 'cheer'|'wave'|'sit'…)`
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
@@ -99,7 +99,7 @@ WebGL jetable), `portraitImg(url, px)` les insère, `farmScene(kinds, px)` rend
 un pré 3D entier. Ce sont les mêmes personnages que Tape-Trous. **Le
 personnage des filles** (23/09) suit la même règle : construit en formes
 rondes dans `core/doll3d.ts` à partir de `ctx.look`, en vraie 3D dans
-Habille-toi et au volant du tracteur, en images (`dollPortraits(look, poses,
+Habille-toi, en images (`dollPortraits(look, poses,
 px)`) sur l'écran de fin et en promenade sur l'accueil. Pour ajouter un mot : une ligne dans
 `TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
 **regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
@@ -177,14 +177,13 @@ combo pilote `setMusicIntensity()` de `core/music.ts` : à 3, 6 et 10
 d'affilée la musique gagne un shaker, un arpège, une contre-voix) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
 Modèles : `icetower.ts`, `ninja.ts`, `mole.ts` (personnages de
-`critters.ts`, raycast sur des zones de tape invisibles) et `stand3d.ts`
-(manches enchaînées, near-miss, démonstration du geste par la trajectoire). **Un jeu qui défile**
+`critters.ts`, raycast sur des zones de tape invisibles). **Un jeu qui défile**
 (la joueuse reste à x = 0, le monde avance vers −x) part en plus de
 `core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
 obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
 derrière la caméra), les couches de décor en parallaxe (`layer`), et le
 clignotement d'invulnérabilité (`hurt`/`blink`) ; `scrollTex` fait une
-texture de sol qui défile. Modèles : `run.ts` et `flappy.ts`. Pour un jeu Apprendre
+texture de sol qui défile. Modèle : `flappy.ts`. Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 `public/assets/geo/`, voix = noms de lieux uniquement).
 
@@ -200,11 +199,13 @@ les kits clairs), `particles()` (GPU, dans la scène — plus de divs au-dessus 
 canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()`.
 `stage.timeScale` fait les ralentis d'outro.
 
-Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `icetower` ·
-`catch` · `ninja` · `caterpillar` · `run` · `flappy` · `mole` · `dressup` ·
-`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). Pour un jeu de physique rigide
-(cannon-es) sur le socle, `stand3d.ts` est le modèle : `loadPhysics()`,
-`fixedStep` autour de `world.step`, corps figé avec `mass = 0`.
+Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
+`ninja` · `caterpillar` · `flappy` · `mole` · `dressup` ·
+`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
+le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève »). Pour
+un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
+modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
+`mass = 0`.
 
 ---
 
@@ -267,7 +268,7 @@ Jeux déjà en vraie 3D : `stand3d` · `snowman` · `pizza` · `space` · `iceto
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (23/09 : 34 scénarios, le Potager en a trois ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (24/09 : 31 scénarios, le Potager en a trois ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans
