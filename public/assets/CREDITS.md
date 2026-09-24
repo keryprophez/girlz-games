@@ -82,6 +82,23 @@ fruits (« A sprite sheet for a children's caterpillar tablet game where
 everything is seen from directly ABOVE (top-down view), in exactly the same
 art style as the reference image… »), avec la liste des douze sujets.
 
+## La Chenille qui fait des trous et Poussin Volant (25/09)
+
+Deuxième planche de la Chenille (tête vue de dessus, normale et qui croque,
+anneaux, queue, petite feuille, feuille trouée, soleil, lune, pomme trouée —
+et la poire et la prune rangées avec les fruits, `fruits/poire.webp`,
+`fruits/prune.webp`), la grande feuille qui sert de terrain
+(`chenille/grande-feuille.webp`), la planche de Poussin Volant (le poussin
+ailes hautes, ailes basses et étourdi, la plume, la maman poule, le
+poulailler, le poteau, les bottes de foin, le grain, le nuage, l'arbre —
+`poussin/`) et son panorama de ferme (`poussin/panorama.webp`) : quatre
+**illustrations générées avec Canva** le 25/09/2026, avec la planche des
+plantes en référence de style (médias Canva `MAHWJbLstl8`, `MAHWJUzb2fQ`,
+`MAHWJetaNbc`, `MAHWJRg3kx0`, fonds retirés), déposées par le père dans son
+Drive puis découpées en WebP. Les éléments de la première planche de la
+Chenille gardés : chrysalide, papillon, buisson, marguerites, caillou,
+coccinelle.
+
 ## Voix des animaux (`sounds/animals/`)
 
 Dix cris d'animaux enregistrés, pris sur **Wikimedia Commons** (licences
