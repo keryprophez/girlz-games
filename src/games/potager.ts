@@ -7,8 +7,8 @@ import { setMusicIntensity } from '../core/music'
 import { onPause } from '../core/session'
 import { plantUrl, rowPlant, preloadPlants, type Plant } from '../core/plants'
 import {
-  beginGame, divChoices, divPool, factEase, isFast, loadMemory, mulChoices, mulKey, mulPool, nearMiss, orient,
-  planHarvest, record, recOf, requeue, saveMemory, viewLevel, LV, type Fact, type Item, type Level, type Memory
+  beginGame, divChoices, divPool, factEase, isFast, loadMemory, mulChoices, mulPool, nearMiss, orient,
+  planHarvest, record, requeue, saveMemory, viewLevel, LV, type Fact, type Item, type Level, type Memory
 } from '../core/facts'
 
 /* 🥕 Le Potager — phase 4, « la Ferme des calculs » (23/09). Il remplace le
@@ -24,24 +24,27 @@ import {
    « faux » (24/09 : une bonne réponse en corail passait pour une erreur). Chaque rangée sonne une note plus haute : la
    table devient une petite mélodie.
 
-   Trois modes :
+   Deux modes (le Tableau est sorti le 25/09 : « c'est quoi la logique ») :
    - Découvre : rectangles libres au doigt ; « Tourne » fait sauter chaque
      plante sur sa case miroir (7 × 8 = 8 × 7, les mêmes plantes) ;
    - Récolte : douze questions composées par la mémoire des calculs
-     (`core/facts.ts`), une caisse par bonne réponse. L'aide s'efface calcul
-     par calcul : le carré qui se compte seul, le carré planté, le contour,
-     les nombres seuls, le pavé. En flamme, les divisions des calculs sus :
-     56 ÷ 7, c'est chercher 56 dans la rangée du 7 ;
-   - Tableau : toute la table ; les calculs sus gardent leur plante (rien ne
-     fane jamais), une case touchée dit son calcul, « Tout montrer ».
+     (`core/facts.ts`), une caisse par question. L'aide s'efface calcul par
+     calcul : le carré qui se compte en chantant jusqu'au « ? », le carré
+     planté, le contour, le « ? » seul, le pavé. En flamme, les divisions des
+     calculs sus : 56 ÷ 7, c'est chercher 56 dans la rangée du 7.
+     **La réponse n'apparaît JAMAIS avant qu'elle choisisse** (25/09) : même
+     à l'aide la plus forte, la dernière rangée garde son « ? ».
 
    Apprendre, donc AUCUNE sanction : ni vies, ni chrono, ni bonus de vitesse.
    Le temps de réponse est mesuré en silence (su par cœur ou recompté ?).
-   Le « presque » est dessiné : 49 pour 7 × 8, le champ plante SON carré 7 × 7
-   (et 49 s'écrit à sa vraie place dans la table), puis la colonne qui manque
-   pousse en or. La voix ne dit que le contenu (« sept fois huit, 56 »). */
+   Une erreur ne se refait pas sur-le-champ (25/09) : le « presque » est
+   dessiné — 49 pour 7 × 8, le champ plante SON carré 7 × 7 (et 49 s'écrit à
+   sa vraie place dans la table, barré) —, la colonne qui manque pousse en
+   or, la bonne réponse s'écrit en vert, puis on passe au calcul suivant ; le
+   calcul raté revient trois questions plus loin. La voix ne dit que le
+   contenu (« sept fois huit »… « 56 » une fois la réponse donnée). */
 
-type Mode = 'discover' | 'harvest' | 'table'
+type Mode = 'discover' | 'harvest'
 
 const N = 10
 const STEP = 380            // un temps de la mélodie des rangées (ms)
@@ -109,7 +112,6 @@ interface State {
   hint: HTMLElement | null
   pausedMs: number
   pauseAt: number
-  shownAll: boolean
 }
 
 let pg: State | null = null
@@ -244,7 +246,9 @@ function showFrame(me: State, R: number, C: number) {
 
 /* ---------- Compter par rangées : la table qui chante ---------- */
 
-function countRows(me: State, R: number, C: number, done?: () => void) {
+/** Compte le rectangle rangée par rangée. En question (`ask`), la dernière
+    rangée ne s'écrit pas : elle garde son « ? », c'est la réponse à trouver. */
+function countRows(me: State, R: number, C: number, done?: () => void, ask = false) {
   me.counting = true
   for (let i = 1; i <= R; i++) {
     later(me, i * STEP, () => {
@@ -252,10 +256,15 @@ function countRows(me: State, R: number, C: number, done?: () => void) {
         const cell = cellAt(me, i, c)
         cell.el.classList.remove('bump'); void cell.el.offsetWidth; cell.el.classList.add('bump')
       }
-      mark(cellAt(me, i, C), 'tot', i * C)
+      if (ask && i === R) mark(cellAt(me, i, C), 'q', '?')
+      else mark(cellAt(me, i, C), 'tot', i * C)
       tone(PENTA[i - 1], 0.32, 'triangle', 0.11)
       tone(PENTA[i - 1] * 2, 0.18, 'sine', 0.035, 0.02)
     })
+  }
+  if (ask) {
+    later(me, (R + 1) * STEP, () => { me.counting = false; done?.() })
+    return
   }
   later(me, (R + 1) * STEP, () => {
     const last = cellAt(me, R, C)
@@ -400,18 +409,7 @@ function ask(me: State) {
   const say = () => ctx.say(op === 'div' ? divise(r, c) : fois(r, c))
   if (op === 'div') {
     // 56 ÷ 7 : chercher 56 dans la rangée du 7
-    if (view === LV.discover) {
-      later(me, 300, () => {
-        rowNumbers(me, r)
-        later(me, 250 + N * 45, () => {
-          const hit = cellAt(me, r, c)
-          hit.el.classList.remove('num'); mark(hit, 'res', r * c)
-          lightHeads(me, r, c)
-          say()
-          later(me, 700, () => offer(me, 3))
-        })
-      })
-    } else if (view === LV.plants) {
+    if (view <= LV.plants) {
       later(me, 300, () => { rowNumbers(me, r); say(); later(me, 250 + N * 45, () => offer(me, 3)) })
     } else if (view === LV.outline) {
       later(me, 250, () => {
@@ -428,9 +426,9 @@ function ask(me: State) {
     later(me, 300, () => {
       setRect(me, r, c, true)
       later(me, 450 + (r + c) * 28, () => countRows(me, r, c, () => {
-        ctx.say(`${fois(r, c)}, ${r * c}`)
-        later(me, 600, () => offer(me, 3))
-      }))
+        say()
+        later(me, 500, () => offer(me, 3))
+      }, true))
     })
   } else if (view === LV.plants) {
     later(me, 250, () => {
@@ -512,31 +510,24 @@ function answer(me: State, v: number, btn: HTMLButtonElement | null) {
     success(me)
     return
   }
-  // Une erreur : aucune sanction, l'aide revient
+  // Une erreur : aucune sanction. On lui montre, puis on passe à la suite ;
+  // le calcul revient trois questions plus loin (requeue)
   q.tries++
   me.streak = 0
   setMusicIntensity(0)
   sfx('drop', { vol: 0.35, rate: 0.8 })
-  if (btn) { btn.classList.add('bad'); btn.disabled = true }
-  if (q.tries === 1) {
-    record(me.mem, q.item, { ok: false, fast: false })
-    saveMemory('potager', me.mem)
-    if (q.item.kind !== 'again') requeue(me.queue, me.qi, q.item.fact)
-    showMiss(me, v)
-  } else {
-    // Deuxième erreur : la bonne réponse brille, jamais d'impasse
-    document.querySelectorAll<HTMLButtonElement>('.pg-opt').forEach(b => {
-      if (Number(b.dataset.v) === q.ans) b.classList.add('hint')
-      else b.disabled = true
-    })
-    q.ready = true
-  }
+  if (btn) btn.classList.add('bad')
+  record(me.mem, q.item, { ok: false, fast: false })
+  saveMemory('potager', me.mem)
+  if (q.item.kind !== 'again') requeue(me.queue, me.qi, q.item.fact)
+  showMiss(me, v)
 }
 
 /** Le « presque » : SON rectangle, et sa réponse écrite à sa vraie place
     dans la table (49 est dans la case 7 × 7). Puis ce qui manque pousse en
     or — ou ce qui dépasse rentre sous terre. Sinon, le bon rectangle pousse
-    et se compte. Puis la même question revient, sa mauvaise réponse retirée. */
+    et se compte. Puis la bonne réponse s'écrit en vert, et on passe au calcul
+    suivant : pas de nouvel essai sur-le-champ. */
 function showMiss(me: State, v: number) {
   const q = me.q!
   me.gen++ // les animations de la question (rangée de nombres…) s'arrêtent là
@@ -547,14 +538,16 @@ function showMiss(me: State, v: number) {
   // La division 56 ÷ 7 = v, c'est le rectangle 7 × v ; la multiplication, son voisin
   const nm = q.op === 'div' ? (v >= 1 && v <= N ? { r: q.r, c: v } : null) : nearMiss(q.r, q.c, v)
   const total = q.r * q.c
-  // Le nouvel essai garde l'aide (les plantes, ou la rangée des nombres pour
-  // une division) mais pas la réponse : c'est à elle de la retrouver
-  const retry = () => {
-    clearMarks(me, true)
-    if (q.op === 'div') { setRect(me, 0, 0); rowNumbers(me, q.r); lightHeads(me, q.r, 0) }
-    else { setRect(me, q.r, q.c); lightHeads(me, q.r, q.c) }
-    me.lock = false
-    offer(me, 3, [v])
+  // La bonne réponse, APRÈS la sienne : le bon bouton en vert, « = 56 » dans
+  // la question, la voix qui la dit. Puis le calcul suivant.
+  const reveal = () => {
+    $('pgOpts').querySelectorAll<HTMLButtonElement>('.pg-opt').forEach(b => {
+      if (Number(b.dataset.v) === q.ans) b.classList.add('good')
+    })
+    paintQuestion(me, true)
+    sfx('pluck', { vol: 0.5, rate: 1.1 })
+    ctx.say(q.op === 'div' ? `${divise(q.r, q.c)}, ${q.c}` : `${fois(q.r, q.c)}, ${q.ans}`)
+    moveOn(me, 2600)
   }
   if (nm) {
     later(me, 200, () => {
@@ -576,14 +569,10 @@ function showMiss(me: State, v: number) {
             sfx('pluck', { vol: 0.5, rate: 1.25 })
           }
           later(me, 700, () => {
-            const her = cellAt(me, nm.r, nm.c)
-            her.el.classList.remove('her'); her.n.textContent = ''
+            // Sa réponse reste barrée à sa place, la bonne s'écrit en vert à côté
             mark(cellAt(me, q.r, q.c), 'res', total)
             lightHeads(me, q.r, q.c)
-            later(me, 1100, () => {
-              for (const cell of me.cells) cell.el.classList.remove('gold', 'over')
-              retry()
-            })
+            reveal()
           })
         })
       })
@@ -591,7 +580,7 @@ function showMiss(me: State, v: number) {
   } else {
     later(me, 200, () => {
       setRect(me, q.r, q.c, true)
-      later(me, 450 + (q.r + q.c) * 28, () => countRows(me, q.r, q.c, () => later(me, 500, retry)))
+      later(me, 450 + (q.r + q.c) * 28, () => countRows(me, q.r, q.c, reveal))
     })
   }
 }
@@ -611,15 +600,20 @@ function success(me: State) {
   paintQuestion(me, true)
   sfx('confirm', { vol: 0.65 })
   ctx.say(q.op === 'div' ? `${divise(q.r, q.c)}, ${q.c}` : `${fois(q.r, q.c)}, ${q.ans}`)
-  // La récolte : les plantes rentrent dans la caisse, une caisse de plus
-  later(me, 1500, () => {
+  moveOn(me, 1500)
+}
+
+/** La récolte : les plantes rentrent dans la caisse, une caisse de plus,
+    puis le calcul suivant. */
+function moveOn(me: State, ms: number) {
+  later(me, ms, () => {
+    clearMarks(me)
     setRect(me, 0, 0)
-    for (const cell of me.cells) { cell.el.classList.remove('res'); cell.n.textContent = '' }
     me.done++
     paintDots(me)
     sfx('pluck', { vol: 0.45, rate: 0.9 })
   })
-  later(me, 2050, () => { me.qi++; me.lock = false; ask(me) })
+  later(me, ms + 550, () => { me.qi++; me.lock = false; ask(me) })
 }
 
 function outro(me: State) {
@@ -642,42 +636,6 @@ function outro(me: State) {
     scoreIcon: ICON.basket,
     outroMs: 1600
   })
-}
-
-/* ---------- Tableau : toute la table, et ce qu'elle sait déjà ---------- */
-
-function showTable(me: State) {
-  clearMarks(me)
-  // Les calculs sus gardent leur plante — rien ne fane jamais
-  for (const cell of me.cells) {
-    const known = recOf(me.mem, mulKey(cell.r, cell.c)).lv >= LV.numbers
-    setSpecies(cell, rowPlant(cell.r))
-    cell.el.style.setProperty('--d', `${(cell.r + cell.c) * 18}ms`)
-    cell.el.classList.toggle('pl', known)
-  }
-  me.shownAll = false
-}
-
-function tapTable(me: State, cell: Cell) {
-  const v = cell.r * cell.c
-  lightHeads(me, cell.r, cell.c)
-  if (!cell.el.classList.contains('num')) {
-    mark(cell, 'num', v)
-    sfx('tick', { vol: 0.35, rate: 1.3 })
-  }
-  ctx.say(`${fois(cell.r, cell.c)}, ${v}`)
-}
-
-function toggleAll(me: State) {
-  me.gen++
-  me.shownAll = !me.shownAll
-  if (!me.shownAll) {
-    for (const cell of me.cells) { cell.el.classList.remove('num'); cell.n.textContent = '' }
-    sfx('drop', { vol: 0.3, rate: 0.9 })
-    return
-  }
-  sfx('confirm', { vol: 0.5 })
-  for (const cell of me.cells) later(me, (cell.r + cell.c) * 22, () => mark(cell, 'num', cell.r * cell.c))
 }
 
 /* ---------- Les modes ---------- */
@@ -717,10 +675,6 @@ function setMode(me: State, mode: Mode) {
     hint.innerHTML = ICON.tap
     me.grid.appendChild(hint)
     me.hint = hint
-  } else if (mode === 'table') {
-    extra.innerHTML = `<span class="tool-item"><button class="sn-tool pg-big pg-all" id="pgAll" aria-label="Tout montrer">${ICON.digits}</button><i class="tool-cap">Tout montrer</i></span>`
-    ;($('pgAll') as HTMLButtonElement).onclick = () => { if (pg === me) toggleAll(me) }
-    showTable(me)
   } else {
     startHarvest(me)
   }
@@ -740,7 +694,6 @@ export const potager: GameDef = {
         <div class="tq-tools pg-tools">
           <span class="tool-item"><button class="sn-tool pg-tool" data-m="discover" aria-label="Découvre">${ICON.tap}</button><i class="tool-cap">Découvre</i></span>
           <span class="tool-item sel"><button class="sn-tool pg-tool sel" data-m="harvest" aria-label="Récolte">${ICON.basket}</button><i class="tool-cap">Récolte</i></span>
-          <span class="tool-item"><button class="sn-tool pg-tool" data-m="table" aria-label="Tableau">${ICON.digits}</button><i class="tool-cap">Tableau</i></span>
         </div>
         <div class="tq-side pg-side">
           <div class="pg-q" id="pgQ"></div>
@@ -755,7 +708,7 @@ export const potager: GameDef = {
       mode: 'harvest', gen: 0, lock: false, over: false, counting: false,
       cells: [], rows: [], cols: [], grid: $('pgGrid'), frame: document.createElement('div'), R: 0, C: 0,
       mem: loadMemory('potager'), queue: [], qi: 0, q: null, firstTry: 0, streak: 0, done: 0,
-      drag: null, hint: null, pausedMs: 0, pauseAt: 0, shownAll: false
+      drag: null, hint: null, pausedMs: 0, pauseAt: 0
     }
     pg = me
     buildGrid(me)
@@ -777,7 +730,6 @@ export const potager: GameDef = {
       if (pg !== me) return
       const cell = cellFrom(ev.clientX, ev.clientY)
       if (!cell) return
-      if (me.mode === 'table') { tapTable(me, cell); return }
       if (me.mode !== 'discover' || me.drag !== null) return
       me.drag = ev.pointerId
       me.hint?.remove(); me.hint = null

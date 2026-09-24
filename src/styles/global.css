@@ -1527,15 +1527,14 @@ body.playing .po-card{max-width:880px;}
   transition:transform .18s ease-in,opacity .14s;}
 .pg-cell.pl img{opacity:1;transform:none;transition:transform .45s var(--spring) var(--d,0ms),opacity .12s var(--d,0ms);}
 .pg-cell.pl.tot img,.pg-cell.pl.res img,.pg-cell.pl.her img{opacity:.28;}
-.pg-cell.pl.num img{opacity:.5;}
 .pg-cell.bump img{animation:pgbump .36s var(--spring);}
 @keyframes pgbump{40%{transform:scale(1.2) translateY(-8%);}}
-/* Le nombre de la case : total de rangée, résultat, sa réponse, la table */
+/* Le nombre de la case : total de rangée, résultat, sa réponse, la rangée d'une division */
 .pg-n{position:relative;z-index:2;font-family:'Baloo 2';font-weight:800;line-height:1;color:var(--ink);pointer-events:none;}
 .pg-n:empty{display:none;}
 .pg-cell.tot .pg-n{font-size:1.4em;text-shadow:0 0 3px #fff,0 0 6px #fff,0 0 10px #fff;animation:pgpop .35s var(--spring);}
-.pg-cell.num .pg-n{font-size:.95em;color:#fff;text-shadow:0 1px 1px rgba(69,54,42,.35);animation:pgpop .3s var(--spring);}
-.pg-cell.num.pl .pg-n{color:var(--ink);font-size:1.05em;text-shadow:0 0 3px #fff,0 0 6px #fff,0 0 9px #fff;}
+/* Les nombres de la rangée d'une division (7, 14… 70) : à l'encre, lisibles (25/09 : blancs sur crème, illisibles) */
+.pg-cell.num .pg-n{font-size:1.1em;color:var(--ink);text-shadow:0 0 3px #fff,0 0 6px #fff;animation:pgpop .3s var(--spring);}
 .pg-cell.res,.pg-cell.her,.pg-cell.q{z-index:4;}
 .pg-cell.res .pg-n,.pg-cell.her .pg-n,.pg-cell.q .pg-n{position:absolute;left:50%;top:50%;width:2.1em;height:2.1em;
   margin:-1.05em 0 0 -1.05em;display:grid;place-items:center;border-radius:18px;font-size:1.3em;}
@@ -1566,7 +1565,6 @@ body.playing .po-card{max-width:880px;}
 .pg-arena .sn-tool.pg-tool,.pg-arena .sn-tool.pg-big{width:74px;height:74px;font-size:40px;}
 .pg-arena .tool-cap{font-size:15px;padding:4px 11px;}
 .pg-big:disabled{opacity:.4;}
-.pg-all{background:linear-gradient(135deg,var(--lagoon),#3A93BC);color:#fff;}
 .pg-side{width:min(34vw,370px);gap:14px;}
 .pg-q{display:flex;align-items:baseline;justify-content:center;gap:.16em;font-family:'Baloo 2';font-weight:800;
   font-size:clamp(46px,10.5vmin,86px);line-height:1.05;color:var(--ink);background:rgba(255,255,255,.92);
@@ -1585,7 +1583,6 @@ body.playing .po-card{max-width:880px;}
 .pg-opt:active{transform:scale(.93);}
 .pg-opt.good{background:#E3F7E8;border-color:var(--meadow);color:#2E7D4C;animation:goodp .45s var(--spring);}
 .pg-opt.bad{background:#FFE5E1;border-color:var(--coral);color:var(--coral);opacity:.5;animation:lgshake .3s ease;}
-.pg-opt.hint{border-color:var(--mango);box-shadow:0 0 0 6px rgba(255,169,77,.45),var(--e2);animation:lgpulse 1s ease-in-out infinite;}
 .pg-padbox{display:block;}
 .pg-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;}
 .pg-key{aspect-ratio:1.3;border-radius:18px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;

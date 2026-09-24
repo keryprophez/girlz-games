@@ -622,8 +622,8 @@ mathématique. Un moteur commun retient ce que l'enfant sait.
   moteur se corrige tout seul ; le Potager d'abord.
 
 Itérations (maquettes au format tablette validées avant chacune) :
-1. ✅ `core/facts.ts` (testé) + **Potager** : Découvre, Récolte, Tableau,
-   divisions (23/09).
+1. ✅ `core/facts.ts` (testé) + **Potager** : Découvre, Récolte, divisions
+   (23/09 ; le Tableau est sorti le 25/09).
 2. **Partage** (÷ avec les lapins, le reste que le chien vole) — à décider
    après les retours des filles sur le Potager.
 3. **Poulailler** jusqu'à 10 et 20.
@@ -656,6 +656,27 @@ Itérations (maquettes au format tablette validées avant chacune) :
   place), une main qui montre le geste jusqu'au premier fruit, étoiles à la
   part des fruits tranchés. Bot : la partie complète jusqu'à l'écran de fin
   sans perdre un cœur.
+
+## Retours du 25/09 — le Potager
+
+- Découvre : « parfait ». Récolte : « parfait », sauf deux choses, corrigées :
+- ✅ **La réponse apparaissait avant le choix** : à l'aide la plus forte
+  (« découverte », celle d'un calcul raté la fois d'avant), le comptage des
+  rangées allait jusqu'au résultat, et la voix le disait. Maintenant les
+  rangées se comptent en chantant jusqu'à l'avant-dernière, la dernière garde
+  son « ? », et la voix ne dit que la question. En division, la même aide
+  est la rangée des nombres (7, 14… 70), sans rien surligner.
+- ✅ **Une erreur ne se refait plus sur-le-champ** : son « presque » se
+  dessine (sa réponse barrée à sa place dans la table), la bonne réponse
+  s'écrit en vert (dans la table, dans la question, sur le bon bouton, et la
+  voix la dit), puis on passe au calcul suivant. Le calcul raté revient
+  trois questions plus loin, comme avant.
+- ✅ **Le mode Tableau est sorti** : « c'est quoi cette merde, pourquoi
+  QUELQUES plantes ». Les plantes éparses étaient les calculs que la mémoire
+  jugeait sus — une logique que rien ne montrait. Le Potager garde deux
+  modes, Découvre et Récolte.
+- ✅ Les nombres de la rangée d'une division s'écrivent à l'encre (ils étaient
+  blancs sur crème, illisibles).
 
 ---
 
