@@ -69,6 +69,19 @@ planche des plantes en référence et ce texte de commande :
 > completely empty. All items the same size. No text, no labels, no numbers,
 > no shadows on the background.
 
+## La Chenille (`chenille/`)
+
+La tête (souriante et qui croque), les anneaux, la queue, le buisson de la
+haie, la chrysalide, le papillon (ailes ouvertes et mi-fermées), les
+marguerites, le caillou et la coccinelle de la Chenille sont des
+**illustrations générées avec Canva** le 25/09/2026, avec la planche des
+plantes en référence de style (médias Canva `MAHWHkcGCRY` puis, fond retiré,
+`MAHWHrMMtek`, copie dans le Drive du père). Planche de 6 × 2, vue de dessus,
+découpée en carrés WebP de 256 px. Texte de commande : le même gabarit que les
+fruits (« A sprite sheet for a children's caterpillar tablet game where
+everything is seen from directly ABOVE (top-down view), in exactly the same
+art style as the reference image… »), avec la liste des douze sujets.
+
 ## Voix des animaux (`sounds/animals/`)
 
 Dix cris d'animaux enregistrés, pris sur **Wikimedia Commons** (licences
