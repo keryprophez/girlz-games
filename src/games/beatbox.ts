@@ -1,6 +1,7 @@
 import type { GameContext, GameDef } from '../core/types'
 import { sMoo, tone } from '../core/audio'
 import { ICON } from '../core/icons'
+import { cry, preloadCries, CRY } from '../core/sfx'
 import { isPaused, onPause } from '../core/session'
 import { critterPortraits, portraitImg } from '../core/portraits'
 import type { CritterKind } from '../core/critters'
@@ -13,14 +14,17 @@ import type { CritterKind } from '../core/critters'
    ferme (`core/portraits.ts`, plus les dessins ni les pastilles Kenney) et
    ils SAUTENT quand ils chantent ; une barre de lecture parcourt la grille ;
    les outils sont une colonne d'icônes avec leur mot dessous. Créer : aucune
-   note, l'écran de fin ne juge pas. La lecture s'arrête avec la pause. */
+   note, l'écran de fin ne juge pas. La lecture s'arrête avec la pause.
+   Depuis le 25/09, les animaux chantent avec leur VRAIE voix (les cris
+   choisis par le père pour le Chœur, `cry()` de core/sfx.ts), coupée à la
+   longueur d'un temps ; l'ancienne voix synthétique reste en secours. */
 
 const STEPS = 8
-const ROWS: { animal: CritterKind; color: string; play(): void }[] = [
-  { animal: 'cow', color: '#B197FC', play() { sMoo() } },
-  { animal: 'pig', color: '#F58FB8', play() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) } },
-  { animal: 'duck', color: '#4FB8E7', play() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) } },
-  { animal: 'hen', color: '#FFA94D', play() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } }
+const ROWS: { animal: CritterKind; color: string; synth(): void }[] = [
+  { animal: 'cow', color: '#B197FC', synth() { sMoo() } },
+  { animal: 'pig', color: '#F58FB8', synth() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) } },
+  { animal: 'duck', color: '#4FB8E7', synth() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) } },
+  { animal: 'hen', color: '#FFA94D', synth() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } }
 ]
 
 const TEMPOS = [{ ms: 500, cap: 'Lent', dots: 1 }, { ms: 340, cap: 'Moyen', dots: 2 }, { ms: 230, cap: 'Vite', dots: 3 }]
@@ -63,7 +67,9 @@ function render(me: State) {
 
 /** Un animal chante : il saute, sa case s'illumine. */
 function sing(me: State, r: number) {
-  ROWS[r].play()
+  // La vraie voix, le temps d'un pas et demi (les voix se chevauchent un peu)
+  const voice = CRY[ROWS[r].animal]
+  if (!voice || !cry(voice, { max: Math.min(0.9, me.tempo / 1000 * 1.5), vol: 0.85 })) ROWS[r].synth()
   const a = me.animals[r]
   a.classList.remove('sing'); void a.offsetWidth; a.classList.add('sing')
 }
@@ -123,6 +129,7 @@ export const beatbox: GameDef = {
   subtitle: 'Allume des cases, appuie sur Joue : la ferme fait de la musique !',
   mount(c) {
     ctx = c
+    preloadCries(ROWS.map(r => CRY[r.animal]!).filter(Boolean))
     c.root.innerHTML = `
       <div class="arena bb-arena">
         <div class="tq-tools bb-tools">

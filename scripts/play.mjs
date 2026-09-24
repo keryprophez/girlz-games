@@ -368,20 +368,35 @@ await scenario('memory-toutes-les-paires', async () => {
   await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('paires trouvées'), null, { timeout: 12000 })
 })
 
-/* 🎵 Simon : le bot lit la mélodie sur le crochet et la rejoue, cinq tours. */
-await scenario('simon-cinq-tours', async () => {
-  await openGame('Simon')
+/* 🎵 Le Chœur (l'ancien Simon, 25/09) : le bot lit la mélodie sur le crochet
+   et la rejoue jusqu'à la chanson complète (8 notes en douce), avec UNE
+   fausse note exprès au troisième tour : elle coûte un cœur, et la MÊME
+   mélodie doit revenir. La fin est le concert, puis l'écran de fin. */
+await scenario('choeur-chanson-complete', async () => {
+  await openGame('Le Chœur')
   await page.waitForFunction(() => window.__simon, null, { timeout: 15000 })
-  for (let tour = 0; tour < 5; tour++) {
-    await page.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 20000 })
-    const seq = await page.evaluate(() => window.__simon.seq)
-    for (const v of seq) { await page.evaluate(i => window.__simon.press(i), v); await page.waitForTimeout(120) }
-    await page.waitForTimeout(300)
-    const st = await page.evaluate(() => ({ best: window.__simon.best, over: window.__simon.over }))
-    if (st.over) throw new Error('fausse note du bot au tour ' + (tour + 1))
+  const info = await page.evaluate(() => ({ pads: window.__simon.pads, goal: window.__simon.goal, lives: window.__simon.lives }))
+  if (info.pads !== 4 || info.goal !== 8) throw new Error(`en douce : ${info.pads} animaux, chanson de ${info.goal}`)
+  let fausse = false
+  for (let tour = 0; tour < 30; tour++) {
+    await page.waitForFunction(() => window.__simon.playerTurn || window.__simon.over, null, { timeout: 30000 })
+    const st = await page.evaluate(() => ({ seq: window.__simon.seq, over: window.__simon.over, lives: window.__simon.lives }))
+    if (st.over) break
+    if (!fausse && st.seq.length === 3) {
+      fausse = true
+      await page.evaluate(v => window.__simon.press((v + 1) % 4), st.seq[0])
+      await page.waitForFunction(() => window.__simon.playerTurn || window.__simon.over, null, { timeout: 30000 })
+      const apres = await page.evaluate(() => ({ seq: window.__simon.seq, lives: window.__simon.lives, over: window.__simon.over }))
+      if (apres.over || apres.lives !== info.lives - 1) throw new Error(`fausse note : ${apres.lives} cœurs, partie finie ${apres.over}`)
+      if (apres.seq.join() !== st.seq.join()) throw new Error('après une fausse note, la mélodie a changé')
+      continue
+    }
+    for (const v of st.seq) { await page.evaluate(i => window.__simon.press(i), v); await page.waitForTimeout(120) }
   }
-  const best = await page.evaluate(() => window.__simon.best)
-  if (best < 5) throw new Error('mélodie de ' + best + ' notes seulement')
+  if (!fausse) throw new Error('la fausse note exprès n\'a pas été jouée')
+  await page.waitForSelector('.result-score', { timeout: 20000 })
+  const fin = await page.evaluate(() => ({ best: window.__simon.best, txt: document.body.innerText }))
+  if (fin.best < 8 || !fin.txt.includes('Quel concert')) throw new Error(`fin sans la chanson complète (${fin.best} notes)`)
 })
 
 /* 🔴 Puissance 4 : contre la poule, le bot joue avec la même IA (profondeur 4)

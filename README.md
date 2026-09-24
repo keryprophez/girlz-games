@@ -16,8 +16,10 @@ Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
 et un cactus qui pique) ; le Labyrinthe en vraies haies 3D (classique,
 brouillard à la lanterne, glace), où le poussin rejoint sa maman poule en
 ramassant des grains ; et des classiques : Taquin (une photo ou un pré en
-3D), Memory (de vraies cartes qui se retournent), Simon et Puissance 4, avec les
-personnages 3D de la ferme (vache, poule, cochon, canard, mouton…) en pions.
+3D), Memory (de vraies cartes qui se retournent), le Chœur de la ferme (les
+animaux chantent avec leurs vraies voix, à toi de rejouer la chanson) et
+Puissance 4, avec les personnages 3D de la ferme (vache, poule, cochon,
+canard, mouton…) en pions.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
 le Potager (les tables de multiplication : on trace au doigt un rectangle de

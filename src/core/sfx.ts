@@ -93,3 +93,75 @@ export function setFxVolume(v: number) {
   if (!ac) return
   fxBus(ac).gain.setTargetAtTime(v, ac.currentTime, 0.05)
 }
+
+/* ---------- Les voix des animaux (25/09) ----------
+   De vrais cris enregistrés (Wikimedia Commons, licences libres, crédités
+   dans public/assets/CREDITS.md), choisis À L'OREILLE par le père sur une
+   page d'écoute : une voix par animal de la ferme. Les six premières ont
+   leur personnage 3D (`core/critters.ts`, table `CRY`) ; le coq, la chèvre,
+   le cheval et le chat attendent le leur. */
+
+export type AnimalVoice = 'vache' | 'poule' | 'canard' | 'mouton' | 'cochon' | 'chien' | 'coq' | 'chevre' | 'cheval' | 'chat'
+
+/** La voix de chaque personnage de la ferme qui en a une. */
+export const CRY: Partial<Record<import('./critters').CritterKind, AnimalVoice>> = {
+  cow: 'vache', hen: 'poule', duck: 'canard', sheep: 'mouton', pig: 'cochon', dog: 'chien'
+}
+
+function loadCry(v: AnimalVoice) {
+  const key = 'animals/' + v
+  if (buffers.has(key)) return
+  buffers.set(key, null)
+  const ac = getCtx()
+  if (!ac) return
+  fetch(`${import.meta.env.BASE_URL}assets/sounds/animals/${v}.mp3`)
+    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer() })
+    .then(b => ac.decodeAudioData(b))
+    .then(buf => buffers.set(key, buf))
+    .catch(() => { /* reste muet : le jeu garde son secours */ })
+}
+
+/** Précharge des voix (au montage d'un jeu). */
+export function preloadCries(vs: AnimalVoice[]) {
+  for (const v of vs) loadCry(v)
+}
+
+/** La voix qui chante en ce moment, pour la couper en mode `solo`. */
+let singing: { g: GainNode; src: AudioBufferSourceNode } | null = null
+
+/** Un animal chante. `max` (s) : la voix s'éteint en douceur au-delà (une
+    note de Simon, un temps de la Boîte à rythme) ; `solo` : la voix
+    précédente se tait d'abord, une note à la fois. Renvoie false tant que
+    le son n'est pas décodé (le jeu joue alors son secours). */
+export function cry(v: AnimalVoice, o: { vol?: number; rate?: number; max?: number; solo?: boolean; delay?: number } = {}): boolean {
+  const ac = getCtx()
+  if (!ac) return false
+  const buf = buffers.get('animals/' + v)
+  if (buf === undefined) { loadCry(v); return false }
+  if (!buf) return false
+  if (!isSoundOn()) return true
+  const t0 = ac.currentTime + (o.delay ?? 0)
+  if (o.solo && singing) {
+    const prev = singing
+    prev.g.gain.setTargetAtTime(0, t0, 0.02)
+    try { prev.src.stop(t0 + 0.12) } catch { /* déjà fini */ }
+  }
+  const src = ac.createBufferSource()
+  src.buffer = buf
+  src.playbackRate.value = o.rate ?? 1
+  const g = ac.createGain()
+  const vol = o.vol ?? 1
+  g.gain.setValueAtTime(vol, t0)
+  src.connect(g); g.connect(fxBus(ac))
+  src.start(t0)
+  const len = buf.duration / (o.rate ?? 1)
+  if (o.max && o.max < len) {
+    g.gain.setValueAtTime(vol, t0 + Math.max(0, o.max - 0.08))
+    g.gain.linearRampToValueAtTime(0, t0 + o.max)
+    src.stop(t0 + o.max + 0.02)
+  }
+  const me = { g, src }
+  if (o.solo) singing = me
+  src.onended = () => { if (singing === me) singing = null }
+  return true
+}

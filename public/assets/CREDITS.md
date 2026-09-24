@@ -69,6 +69,26 @@ planche des plantes en référence et ce texte de commande :
 > completely empty. All items the same size. No text, no labels, no numbers,
 > no shadows on the background.
 
+## Voix des animaux (`sounds/animals/`)
+
+Dix cris d'animaux enregistrés, pris sur **Wikimedia Commons** (licences
+libres), choisis à l'oreille par le père sur une page d'écoute le 25/09 pour
+le Chœur de la ferme et la Boîte à rythme. Chaque fichier est un court
+extrait de l'enregistrement (secondes indiquées), ramené à un volume commun
+(normalisation -16 LUFS), en MP3 mono. Les extraits des fichiers CC BY-SA
+sont partagés sous la même licence.
+
+- **vache** : « Mudchute cow 1.ogg », Secretlondon, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Mudchute_cow_1.ogg> (0,62–2,27 s)
+- **poule** : « Chickens demanding food.ogg », alys, domaine public — <https://commons.wikimedia.org/wiki/File:Chickens_demanding_food.ogg> (8,72–10,22 s)
+- **canard** : « Anas platyrhynchos - Mallard - XC62258.ogg », Jonathon Jongsma, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Anas_platyrhynchos_-_Mallard_-_XC62258.ogg> (1,07–2,77 s)
+- **mouton** : « Sheep bleating.ogg », earthcalling, domaine public — <https://commons.wikimedia.org/wiki/File:Sheep_bleating.ogg> (0,42–1,82 s)
+- **cochon** : « Mudchute pig 2.ogg », Secretlondon, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Mudchute_pig_2.ogg> (0–0,51 s)
+- **chien** : « Barking of a dog 2.ogg », Amada44, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Barking_of_a_dog_2.ogg> (1,37–2,17 s)
+- **coq** : « Rooster crowing.oga », Georgethewriter, CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Rooster_crowing.oga> (1,62–3,47 s)
+- **chèvre** : « Herd of goats bleating.ogg », stephan, domaine public — <https://commons.wikimedia.org/wiki/File:Herd_of_goats_bleating.ogg> (13,37–14,67 s)
+- **cheval** : « Mares-Prefer-the-Voices-of-Highly-Fertile-Stallions-pone.0118468.s002.oga », Lemasson A., Remeuf K., Trabalon M., Cuir F., Hausberger M., CC BY 4.0 — <https://commons.wikimedia.org/wiki/File:Mares-Prefer-the-Voices-of-Highly-Fertile-Stallions-pone.0118468.s002.oga> (0,67–2,82 s)
+- **chat** : « Meow.ogg », Dan Crosby (Dcrosby, Wikipédia en anglais), CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Meow.ogg> (0–0,96 s)
+
 ## Espace et géographie
 
 - **La Terre** (`space/earth.jpg`, `geo/earth.jpg`) : NASA Blue Marble, *Visible Earth*

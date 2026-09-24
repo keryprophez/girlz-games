@@ -677,6 +677,29 @@ Itérations (maquettes au format tablette validées avant chacune) :
   modes, Découvre et Récolte.
 - ✅ Les nombres de la rangée d'une division s'écrivent à l'encre (ils étaient
   blancs sur crème, illisibles).
+- ✅ **« Ça crashe à la première ouverture du Potager, ensuite ça marche »** :
+  ce n'était pas le Potager, c'était la mise à jour de la PWA, qui rechargeait
+  la page en pleine partie (`autoUpdate`). Elle attend maintenant l'accueil
+  (piège consigné dans CLAUDE.md).
+
+## « Améliore encore 3 jeux » (25/09, plan validé)
+
+Dans l'ordre validé : la Chenille, Poussin Volant, puis le Chœur — le Chœur
+est passé devant parce que les deux autres attendent leur planche Canva.
+
+- ✅ **Le Chœur de la ferme** (l'ancien Simon) : de VRAIES voix d'animaux
+  (dix cris de Wikimedia Commons, choisis à l'oreille par le père sur une page
+  d'écoute), l'animal saute quand il chante ; la chorale grandit avec le
+  niveau (4, 5, 6 animaux) ; la chanson à atteindre se voit sur le côté (8,
+  10, 12 notes) ; une fausse note coûte un cœur (3, 2, 1) et la même mélodie
+  revient ; le « presque » sur la dernière note se voit ; la fin est un
+  concert. Les mêmes voix chantent dans la Boîte à rythme.
+- **La Chenille en 2D illustrée** : planche Canva générée (tête, anneaux,
+  chrysalide, papillon, buisson, décor) — en attente du dépôt dans le Drive,
+  puis maquette.
+- **Poussin Volant en 2D illustré**, moins punitif : planche à commander.
+- Reste : le coq, la chèvre, le cheval et le chat ont leur voix mais pas
+  encore de personnage 3D.
 
 ---
 

@@ -178,7 +178,13 @@ rampe par performance, timers simulés `game.after`, HUD en icônes dans
 l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs` ; le
 combo pilote `setMusicIntensity()` de `core/music.ts` : à 3, 6 et 10
 d'affilée la musique gagne un shaker, un arpège, une contre-voix) et de
-`core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
+`core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`)
+— et, depuis le 25/09, pour les **vraies voix des animaux** (`cry('vache', {max,
+solo})`, `CRY[critter]`, `preloadCries`) : dix cris enregistrés de Wikimedia
+Commons choisis à l'oreille par le père, dans `public/assets/sounds/animals/`
+(crédits dans CREDITS.md). Un animal de la ferme qui « parle » prend sa voix
+là, jamais un `tone()` — le coq, la chèvre, le cheval et le chat attendent
+encore leur personnage 3D.
 Modèles : `icetower.ts`, `mole.ts` (personnages de
 `critters.ts`, raycast sur des zones de tape invisibles) et, en 2D,
 `ninja.ts` (un canvas, les fruits Canva, ombres et lueurs précalculées une
