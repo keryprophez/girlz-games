@@ -1460,9 +1460,44 @@ body.playing .po-card{max-width:880px;}
 .g3-wave.show{animation:g3Wave 1.1s ease-out;}
 @keyframes g3Wave{0%{opacity:0;transform:scale(.6);}25%{opacity:1;transform:scale(1.1);}
   70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.15);}}
-.nj3-arena{background:#1A2E24;}
 .mo-arena{background:#8FCDEB;}
-#njBlade{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;}
+/* 🥷 Ninja du Verger en 2D (24/09) : le ciel du verger (maquette « B » du
+   père), trois nuages qui dérivent, les fruits Canva dans un canvas. */
+.nj-arena{touch-action:none;overflow:hidden;background:
+  radial-gradient(ellipse 60% 22% at 50% 108%,#9BD37A 0 60%,transparent 61%),
+  linear-gradient(180deg,#5FB4E8,#A8DCF6 70%,#D6F0FB);background-origin:border-box;}
+.nj-arena canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:2;}
+.nj-cloud{position:absolute;left:-30%;top:14%;width:34%;height:15%;border-radius:50%;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.8),rgba(255,255,255,0) 70%);
+  animation:njCloud 95s linear infinite;}
+.nj-cloud.b{top:30%;width:28%;height:12%;animation-duration:130s;animation-delay:-60s;opacity:.8;}
+.nj-cloud.c{top:6%;width:22%;height:10%;animation-duration:160s;animation-delay:-120s;opacity:.65;}
+@keyframes njCloud{to{transform:translateX(420%);}}
+.nj-waves{position:absolute;top:clamp(62px,11vmin,84px);left:50%;transform:translateX(-50%);display:flex;gap:12px;
+  align-items:center;z-index:6;pointer-events:none;}
+.nj-waves i{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.6);transition:all .3s var(--spring);}
+.nj-waves i.done{background:var(--mango);box-shadow:0 0 0 2px rgba(255,249,240,.85);}
+.nj-waves i.now{width:22px;height:22px;background:#fff;box-shadow:0 0 0 4px var(--mango),0 0 14px rgba(255,184,77,.9);}
+.nj-waves i.rain{width:24px;height:24px;opacity:.55;
+  background:conic-gradient(#E8574C 0 25%,#FF9A1F 0 50%,#7BC96F 0 75%,#FFD34D 0);}
+.nj-waves i.rain.now{opacity:1;box-shadow:0 0 0 4px #fff,0 0 16px rgba(255,184,77,.95);animation:njRain .9s ease-in-out infinite;}
+@keyframes njRain{50%{transform:scale(1.2) rotate(45deg);}}
+.nj-x{position:absolute;z-index:5;pointer-events:none;font-family:'Baloo 2';font-weight:800;font-size:clamp(46px,10vmin,76px);
+  color:#FFD34D;text-shadow:0 4px 0 #C98A12,0 8px 20px rgba(0,0,0,.3);animation:njX .9s ease-out forwards;}
+@keyframes njX{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(-8deg);}
+  20%{opacity:1;transform:translate(-50%,-50%) scale(1.2) rotate(-8deg);}
+  35%{transform:translate(-50%,-50%) scale(1) rotate(-8deg);}75%{opacity:1;}
+  100%{opacity:0;transform:translate(-50%,-110%) scale(1) rotate(-8deg);}}
+.nj-rainflash{display:inline-flex;gap:.1em;}
+.nj-rainflash img{width:1.3em;height:1.3em;}
+/* Le geste montré sans un mot : une main qui balaie en diagonale, et son trait */
+.nj-hint{position:absolute;left:30%;top:62%;width:40%;height:0;z-index:4;pointer-events:none;transform:rotate(-24deg);}
+.nj-hint i{position:absolute;left:0;top:-4px;height:8px;width:100%;border-radius:99px;transform-origin:left;background:#fff;
+  box-shadow:0 0 4px #FF9A1F,0 0 16px rgba(255,170,40,.95);animation:njHintLine 1.8s ease-in-out infinite;}
+.nj-hint .ico{position:absolute;left:0;top:6px;font-size:84px;color:#fff;transform:rotate(24deg);
+  filter:drop-shadow(0 2px 0 rgba(69,54,42,.4)) drop-shadow(0 5px 10px rgba(0,0,0,.3));animation:njHintHand 1.8s ease-in-out infinite;}
+@keyframes njHintLine{0%{transform:scaleX(0);opacity:1;}60%{transform:scaleX(1);opacity:1;}85%{opacity:1;}100%{transform:scaleX(1);opacity:0;}}
+@keyframes njHintHand{0%{left:0;opacity:0;}8%{opacity:1;}60%{left:100%;}85%{opacity:1;}100%{left:100%;opacity:0;}}
 .fh-arena{background:#152A42;}
 
 /* ============================================================

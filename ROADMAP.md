@@ -643,15 +643,25 @@ Itérations (maquettes au format tablette validées avant chacune) :
   réponse apparaît en ROUGE ». Le vert dit maintenant « juste » (pastille du
   résultat, réponse ajoutée à la question) et le rouge « faux » (sa réponse,
   rouge pleine, barrée, qui tremble, à sa place dans la table).
-- **Ninja Verger** : « c'est confus » — en attente de précisions du père
-  (quoi trancher et quoi éviter ? trop de choses à l'écran ? le chrono ? le
-  mode à deux ?).
+- ✅ **Ninja Verger refait en 2D** : « pas trop jouable, les fruits sont trop
+  grossiers, c'est confus ». Les fruits sont une planche Canva du style des
+  plantes (pomme, orange, pastèque, fraise, kiwi, leurs moitiés, et un cactus
+  à fleur rose), sur le ciel du verger (maquette « B » choisie par le père
+  contre une planche de bois). Règles simplifiées : **seul le cactus coûte un
+  cœur** (il cogne, l'écran tremble, il luit en rouge pour qu'on le voie sans
+  lire) ; un fruit raté casse seulement la série. La partie a une forme :
+  **cinq vagues** de plus en plus denses (pastilles sous le score), puis
+  **la pluie de fruits** qui tombent du ciel, sans cactus — une minute en
+  douce. Fruits en grappe pour apprendre la multi-coupe (« ×2 » doré sur
+  place), une main qui montre le geste jusqu'au premier fruit, étoiles à la
+  part des fruits tranchés. Bot : la partie complète jusqu'à l'écran de fin
+  sans perdre un cœur.
 
 ---
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅
 
-- Vraie 3D + physique sur `core/three3d.ts` pour 14 jeux ; kits glTF `food`,
+- Vraie 3D + physique sur `core/three3d.ts` pour une dizaine de jeux ; kits glTF `food`,
   `holiday`, `space`, `nature` + icônes food, importés par
   `scripts/import-assets.mjs` ; personnages 3D de la ferme (`core/critters.ts`)
   rendus en images pour les jeux en DOM (`core/portraits.ts`).

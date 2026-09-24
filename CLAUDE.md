@@ -120,9 +120,12 @@ carrés WebP — voir `core/plants.ts` et la section des plantes de
 `public/assets/CREDITS.md` (texte de commande à réutiliser). Canva refuse le
 téléchargement depuis la session : le père dépose le PNG dans son Google Drive
 et on le récupère par le connecteur Drive (un sous-agent, le fichier arrive en
-base64). Et avant toute nouvelle direction visuelle : **des maquettes au
+base64). Une nouvelle planche se commande **avec la planche des plantes en
+image de référence** (`generate-image` de Canva l'accepte) : c'est ainsi que
+les fruits du Ninja (24/09, `public/assets/fruits/`) sont du même style.
+Et avant toute nouvelle direction visuelle : **des maquettes au
 format de la tablette, montrées AVANT de coder** (c'est ainsi que le rendu du
-Potager a été choisi).
+Potager et le ciel du Ninja ont été choisis).
 
 **Contrat d'un jeu** — volontairement minimal, c'est la force du projet :
 
@@ -176,8 +179,10 @@ l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs` ; le
 combo pilote `setMusicIntensity()` de `core/music.ts` : à 3, 6 et 10
 d'affilée la musique gagne un shaker, un arpège, une contre-voix) et de
 `core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`).
-Modèles : `icetower.ts`, `ninja.ts`, `mole.ts` (personnages de
-`critters.ts`, raycast sur des zones de tape invisibles). **Un jeu qui défile**
+Modèles : `icetower.ts`, `mole.ts` (personnages de
+`critters.ts`, raycast sur des zones de tape invisibles) et, en 2D,
+`ninja.ts` (un canvas, les fruits Canva, ombres et lueurs précalculées une
+fois par image, vagues puis pluie finale). **Un jeu qui défile**
 (la joueuse reste à x = 0, le monde avance vers −x) part en plus de
 `core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
 obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
@@ -200,9 +205,10 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
-`ninja` · `caterpillar` · `flappy` · `mole` · `dressup` ·
+`caterpillar` · `flappy` · `mole` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
-le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève »). Pour
+le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
+(« les fruits trop grossiers, c'est confus »). Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 `mass = 0`.

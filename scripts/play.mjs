@@ -504,22 +504,60 @@ await scenario('intrus-six-manches', async () => {
   if (!fini) throw new Error('l\'écran de fin de l\'Intrus n\'est pas apparu')
 })
 
-/* 🥷 Ninja Verger : balayer l'écran pendant 8 s, au moins 2 fruits tranchés. */
-await scenario('ninja-tranche', async () => {
-  await openGame('Ninja Verger')
-  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
-  const box = await page.locator('#njArena').boundingBox()
-  const cx = box.x + box.width / 2, cy = box.y + box.height * 0.55
-  for (let k = 0; k < 24; k++) {
-    await page.mouse.move(cx - box.width * 0.35, cy + 60)
-    await page.mouse.down()
-    for (let i = 1; i <= 8; i++) { await page.mouse.move(cx - box.width * 0.35 + i * box.width * 0.09, cy + 60 - i * 22); await page.waitForTimeout(12) }
-    await page.mouse.up()
-    await page.waitForTimeout(220)
-    const score = parseInt(await page.locator('.hud-score b').textContent())
-    if (score >= 2) return
+/* 🥷 Ninja Verger (2D, 24/09) : la partie ENTIÈRE — cinq vagues puis la
+   pluie — jusqu'à l'écran de fin. Le bot tranche chaque fruit d'un trait
+   court (événements pointeur synthétiques, une lame par trait) et ne passe
+   jamais près d'un cactus : il doit finir sans perdre un cœur, en ayant
+   tranché presque tout, pluie comprise. */
+await scenario('ninja-partie-complete', async () => {
+  await openGame('Ninja Verger', '__nj')
+  const t0 = Date.now()
+  await page.evaluate(() => {
+    const segDist = (px, py, ax, ay, bx, by) => {
+      const dx = bx - ax, dy = by - ay
+      const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1)))
+      return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+    }
+    const cv = document.querySelector('#njCanvas')
+    const ev = (type, id, x, y, target) => target.dispatchEvent(new PointerEvent(type, {
+      pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true
+    }))
+    let id = 100
+    ;(async () => {
+      while (window.__nj && !window.__nj.over()) {
+        await new Promise(r => requestAnimationFrame(r))
+        const r = cv.getBoundingClientRect()
+        const fs = window.__nj.fruits(), bads = fs.filter(f => f.bad)
+        for (const f of fs) {
+          if (f.bad || f.y < r.top + r.height * 0.12 || f.y > r.top + r.height * 0.9) continue
+          for (const [ux, uy] of [[1, 0], [0, 1], [0.7, 0.7], [0.7, -0.7]]) {
+            const ax = f.x - ux * f.r, ay = f.y - uy * f.r, bx = f.x + ux * f.r, by = f.y + uy * f.r
+            if (!bads.every(c => segDist(c.x, c.y, ax, ay, bx, by) > c.r + 45)) continue
+            const pid = ++id
+            ev('pointerdown', pid, ax, ay, cv)
+            for (let k = 1; k <= 4; k++) ev('pointermove', pid, ax + (bx - ax) * k / 4, ay + (by - ay) * k / 4, window)
+            ev('pointerup', pid, bx, by, window)
+            break
+          }
+        }
+      }
+    })()
+  })
+  let pluie = false
+  for (let k = 0; k < 400; k++) {
+    const s = await page.evaluate(() => ({ wave: window.__nj.wave(), over: window.__nj.over() }))
+    if (s.wave === 5) pluie = true
+    if (s.over) break
+    await page.waitForTimeout(500)
   }
-  throw new Error('moins de 2 fruits tranchés en 8 s')
+  const n = await page.evaluate(() => ({ ...window.__nj.counts(), lives: window.__nj.lives(), over: window.__nj.over() }))
+  if (!n.over) throw new Error('la partie n\'a pas fini en 200 s')
+  if (!pluie) throw new Error('la pluie de fruits n\'est jamais venue')
+  if (n.lives !== 5) throw new Error(`un cœur perdu sans toucher de cactus (${n.lives}/5)`)
+  if (n.sliced < n.launched * 0.9) throw new Error(`seulement ${n.sliced} fruits tranchés sur ${n.launched}`)
+  if (n.rain < 5) throw new Error(`pluie : ${n.rain} fruits tranchés seulement`)
+  await page.waitForSelector('.result-score', { timeout: 15000 })
+  console.log(`  (partie en ${Math.round((Date.now() - t0) / 1000)} s : ${n.sliced}/${n.launched} fruits, ${n.rain} dans la pluie)`)
 })
 
 /* 🥷 À deux (23/09) : deux doigts en même temps, chacun sa lame, un seul
@@ -538,7 +576,7 @@ await scenario('ninja-a-deux', async () => {
   let deux = false
   for (let k = 0; k < 24; k++) {
     const vu = await page.evaluate(async ({ b, k }) => {
-      const cv = document.querySelector('#njArena canvas:not(#njBlade)') // le canvas 3D, pas la lame
+      const cv = document.querySelector('#njCanvas')
       const ev = (type, id, x, y, target) => target.dispatchEvent(new PointerEvent(type, {
         pointerId: id, pointerType: 'touch', isPrimary: id === 11, clientX: x, clientY: y, bubbles: true
       }))
