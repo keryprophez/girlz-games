@@ -8,7 +8,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // `prompt` : la nouvelle version ATTEND, et main.tsx l'applique sur
+      // l'accueil — jamais en pleine partie (25/09, voir main.tsx)
+      registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'La Ferme Magique',
