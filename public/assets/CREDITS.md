@@ -41,6 +41,34 @@ une plante seule, sinon deux styles), avec ce texte de commande :
 > from the top left, all plants the same scale. No text, no labels, no
 > numbers, no shadows on the background.
 
+## Fruits du Ninja (`fruits/`)
+
+Les cinq fruits (pomme, orange, pastèque, fraise, kiwi), leurs moitiés et le
+cactus du Ninja du Verger sont des **illustrations générées avec Canva** le
+24/09/2026, avec la planche des plantes en référence de style (médias Canva
+`MAHWFsYiho8`, fond retiré, copie dans le Drive du père). Planche de 6 × 2
+découpée en WebP : les fruits entiers dans des carrés de 256 px, les moitiés
+à la même échelle (`<fruit>-g`, `<fruit>-d`). La planche n'a qu'une face
+coupée pour la pomme et l'orange : elle est rétrécie en largeur (vue de trois
+quarts) et retournée pour la seconde moitié.
+
+Même règle que pour les plantes : on regénère **toute la planche**, avec la
+planche des plantes en référence et ce texte de commande :
+
+> A sprite sheet for a children's fruit-slicing tablet game, in exactly the
+> same art style as the reference image (same clean thin dark brown outlines,
+> same soft painterly shading with gentle gradients and highlights, same warm
+> saturated colors, same lighting from the top left), on a plain flat pure
+> white background, arranged in a clean grid of 6 columns and 2 rows with
+> generous empty space between items, no soil mounds, no plants. Top row,
+> left to right, whole items: [les cinq fruits], and a round green cactus
+> with sharp spines and a small pink flower (the item to avoid). Bottom row,
+> left to right: the same fruits each cut cleanly in two halves, the two
+> halves shown side by side with a clear gap between them, showing the juicy
+> colorful inside flesh and seeds; the last cell of the bottom row is left
+> completely empty. All items the same size. No text, no labels, no numbers,
+> no shadows on the background.
+
 ## Espace et géographie
 
 - **La Terre** (`space/earth.jpg`, `geo/earth.jpg`) : NASA Blue Marble, *Visible Earth*
