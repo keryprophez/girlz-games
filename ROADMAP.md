@@ -694,15 +694,11 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   10, 12 notes) ; une fausse note coûte un cœur (3, 2, 1) et la même mélodie
   revient ; le « presque » sur la dernière note se voit ; la fin est un
   concert. Les mêmes voix chantent dans la Boîte à rythme.
-- ✅ **La Chenille qui fait des trous** : la première maquette (un snake
-  rhabillé, damier et haie) a eu un « mouais » ; le père a choisi l'histoire
-  que les filles connaissent. Une grande feuille illustrée est le terrain (son
-  bord est le mur), et une semaine de repas : 1 pomme, 2 poires, 3 prunes, 4
-  fraises, 5 oranges, le festin de 6 fruits, la feuille du dimanche. Chaque
-  bouchée est comptée à voix haute et laisse un trou dans la feuille ; le
-  coq et le jour dit par la voix au matin, la lune le soir ; la semaine en
-  bas, en images et en chiffres ; la chrysalide puis le papillon. Bot : la
-  semaine entière, 22 repas, 22 trous, jusqu'au papillon.
+- ↩️ **La Chenille qui fait des trous** (2D illustrée : une semaine de repas
+  sur une grande feuille, jusqu'au papillon) : publiée puis **retirée le soir
+  même** — « mille fois moins bien que la version isométrique hyper mignonne,
+  de la 2D saccadée et pixelisée sur une surface minuscule ». La Chenille 3D
+  du 23/09 est revenue telle quelle, avec son bot.
 - ✅ **Poussin Volant en 2D illustré**, moins punitif : le poussin rentre au
   poulailler entre les poteaux de la clôture (planche Canva : poussin ailes
   hautes / basses / étourdi, poteaux, grain, nuages, panorama de la ferme,

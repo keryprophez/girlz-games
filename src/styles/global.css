@@ -1192,41 +1192,7 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 /* ============================================================
    LA CHENILLE / FEU D'ARTIFICE
    ============================================================ */
-/* 🐛 La Chenille qui fait des trous (25/09) : une page de livre crème, la grande
-   feuille au milieu, la semaine en bas ; la nuit tombe entre deux jours. */
-.ch-arena{touch-action:none;overflow:hidden;cursor:pointer;
-  background:radial-gradient(ellipse at 50% 42%,#FFFBF1,#FBEFD8 70%,#F4E2C2);background-origin:border-box;}
-.ch-arena canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;}
-.ch-arena .hud-score{display:none;}
-.ch-arena::after{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity 1s ease;
-  background:radial-gradient(ellipse at 25% 18%,rgba(40,50,110,.3),rgba(20,24,70,.58));}
-.ch-arena.night::after{opacity:1;}
-.ch-sky{position:absolute;left:18px;top:64px;width:clamp(80px,12vmin,118px);z-index:4;pointer-events:none;
-  filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));}
-.ch-sky.rise{animation:chRise 1.1s var(--spring);}
-@keyframes chRise{0%{transform:translateY(40px) scale(.5);opacity:0;}100%{transform:none;opacity:1;}}
-.ch-week{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:clamp(6px,1.2vmin,10px);z-index:5;pointer-events:none;}
-.ch-day{position:relative;width:clamp(56px,9vmin,74px);height:clamp(56px,9vmin,74px);border-radius:20px;background:rgba(255,255,255,.82);
-  box-shadow:var(--e1);display:grid;place-items:center;border:3px solid transparent;transition:transform .3s var(--spring),opacity .3s;}
-.ch-day>img{width:60%;height:60%;object-fit:contain;}
-.ch-day b{position:absolute;right:6px;bottom:0;font-family:'Baloo 2';font-weight:800;font-size:clamp(18px,3vmin,24px);color:var(--ink);
-  text-shadow:0 0 4px #fff,0 0 8px #fff;}
-.ch-day .feast{position:relative;width:70%;height:62%;}
-.ch-day .feast img{position:absolute;width:58%;height:auto;}
-.ch-day .feast img:nth-child(1){left:0;top:26%;} .ch-day .feast img:nth-child(2){left:21%;top:0;} .ch-day .feast img:nth-child(3){left:42%;top:28%;}
-.ch-day .ok{position:absolute;left:-6px;top:-6px;width:26px;height:26px;border-radius:50%;background:#5EC97B;color:#fff;
-  display:none;place-items:center;font-size:16px;}
-.ch-day.done{opacity:.55;}
-.ch-day.done .ok{display:grid;}
-.ch-day.now{border-color:#FFB84D;transform:translateY(-6px) scale(1.12);background:#fff;box-shadow:0 8px 20px rgba(255,169,77,.45);}
-.ch-day .pips{position:absolute;left:50%;top:-15px;transform:translateX(-50%);display:flex;gap:3px;}
-.ch-day .pips i{width:10px;height:10px;border-radius:50%;background:rgba(69,54,42,.18);}
-.ch-day .pips i.on{background:#7B4BB5;}
-/* La bouchée comptée, en grand, qui monte et s'efface */
-.ch-count{position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-50%);font-family:'Baloo 2';font-weight:800;
-  font-size:clamp(46px,9vmin,72px);color:#fff;text-shadow:0 3px 0 #7B5CD6,0 8px 18px rgba(0,0,0,.25);animation:chCount 1.1s ease-out forwards;}
-@keyframes chCount{0%{opacity:0;transform:translate(-50%,-50%) scale(.4);}20%{opacity:1;transform:translate(-50%,-50%) scale(1.2);}
-  35%{transform:translate(-50%,-50%) scale(1);}75%{opacity:1;}100%{opacity:0;transform:translate(-50%,-120%);}}
+.cp3-arena{background:#1E3524;cursor:pointer;}
 .fw-arena{background:linear-gradient(180deg,#0E0A22,#241A4A 70%,#3A2C66);cursor:pointer;}
 .fw-arena canvas{position:absolute;inset:0;}
 .fw-final{animation:rbob 1s ease-in-out infinite;}

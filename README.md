@@ -10,11 +10,10 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 ## ✨ Ce qu'il y a dedans
 
 **Jouer** — des jeux d'adresse en vraie 3D (Three.js + cannon-es) : la Tour de
-Glace ; en 2D illustrée, Ninja Verger (on tranche des fruits d'un trait de
-doigt, vague après vague, sans toucher le cactus), la Chenille qui fait des
-trous (une semaine de repas sur une grande feuille, comptés à voix haute,
-jusqu'au papillon) et Poussin Volant (entre les poteaux de la clôture, en
-picorant les grains, jusqu'au poulailler de maman poule) ;
+Glace, la Chenille ; en 2D illustrée, Ninja Verger (on tranche des fruits d'un
+trait de doigt, vague après vague, sans toucher le cactus) et Poussin Volant
+(entre les poteaux de la clôture, en picorant les grains, jusqu'au poulailler
+de maman poule) ;
 Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
 et un cactus qui pique) ; le Labyrinthe en vraies haies 3D (classique,
 brouillard à la lanterne, glace), où le poussin rejoint sa maman poule en

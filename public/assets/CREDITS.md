@@ -69,33 +69,16 @@ planche des plantes en référence et ce texte de commande :
 > completely empty. All items the same size. No text, no labels, no numbers,
 > no shadows on the background.
 
-## La Chenille (`chenille/`)
+## Poussin Volant (`poussin/`, 25/09)
 
-Deux planches **générées avec Canva** le 25/09/2026, avec la planche des
-plantes en référence de style, fonds retirés dans Canva, déposées par le père
-dans son Drive et découpées en carrés WebP de 256 px (vue de dessus) :
-
-- la première (médias `MAHWHkcGCRY` puis `MAHWHrMMtek`) : on en garde la
-  chrysalide et le papillon (ailes ouvertes et mi-fermées) ;
-- la seconde, décrite ci-dessous, pour tout le reste.
-
-Texte de commande : le même gabarit que les fruits (« A sprite sheet for a
-children's tablet game about a hungry caterpillar crawling on a leaf,
-everything seen from DIRECTLY ABOVE… »), avec la liste des douze sujets.
-
-## La Chenille qui fait des trous et Poussin Volant (25/09)
-
-Deuxième planche de la Chenille (tête vue de dessus, normale et qui croque,
-anneaux, queue, petite feuille, soleil, lune — et la poire et la prune rangées avec les fruits, `fruits/poire.webp`,
-`fruits/prune.webp`), la grande feuille qui sert de terrain
-(`chenille/grande-feuille.webp`), la planche de Poussin Volant (le poussin
-ailes hautes, ailes basses et étourdi, la plume, la maman poule, le
-poulailler, le poteau, les bottes de foin, le grain, le nuage, l'arbre —
-`poussin/`) et son panorama de ferme (`poussin/panorama.webp`) : quatre
-**illustrations générées avec Canva** le 25/09/2026, avec la planche des
-plantes en référence de style (médias Canva `MAHWJbLstl8`, `MAHWJUzb2fQ`,
-`MAHWJetaNbc`, `MAHWJRg3kx0`, fonds retirés), déposées par le père dans son
-Drive puis découpées en WebP.
+La planche de Poussin Volant (le poussin ailes hautes, ailes basses et
+étourdi, la plume, la maman poule, le poulailler, le poteau, les bottes de
+foin, le grain, le nuage, l'arbre) et son panorama de ferme
+(`poussin/panorama.webp`) : **illustrations générées avec Canva** le
+25/09/2026, avec la planche des plantes en référence de style (commandées
+avec les planches de la Chenille 2D, retirée le soir même — médias Canva
+`MAHWJbLstl8`, `MAHWJUzb2fQ`, `MAHWJetaNbc`, `MAHWJRg3kx0`, fonds retirés),
+déposées par le père dans son Drive puis découpées en WebP.
 
 ## Voix des animaux (`sounds/animals/`)
 

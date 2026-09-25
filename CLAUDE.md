@@ -187,10 +187,7 @@ encore leur personnage 3D.
 Modèles : `icetower.ts`, `mole.ts` (personnages de
 `critters.ts`, raycast sur des zones de tape invisibles) et, en 2D,
 `ninja.ts` (un canvas, les fruits Canva, ombres et lueurs précalculées une
-fois par image, vagues puis pluie finale) et `caterpillar.ts` (la Chenille
-qui fait des trous : une grille posée sur une grande feuille illustrée, les
-cases jouables lues dans l'ALPHA de l'image, la feuille dessinée une fois
-dans un canvas à part et PERCÉE à chaque repas — `destination-out`). **Un jeu qui défile**
+fois par image, vagues puis pluie finale). **Un jeu qui défile**
 (le poussin reste en place, le monde avance vers la gauche) est en 2D depuis
 le 25/09 : les distances en hauteurs d'arène (H), le décor en
 couches décalées selon `scroll` (nuages, panorama — une copie sur deux en
@@ -217,12 +214,15 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
-`mole` · `dressup` ·
+`caterpillar` · `mole` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
-(« les fruits trop grossiers, c'est confus »), la Chenille le 25/09 (« mouais »
-pour le snake rhabillé : c'est devenu la Chenille qui fait des trous), Poussin
-Volant le même jour (« le plus punitif pour Jade »). Pour
+(« les fruits trop grossiers, c'est confus »), Poussin Volant le 25/09 (« le
+plus punitif pour Jade »). La Chenille a fait l'aller-retour le 25/09 : sa
+version 2D illustrée (« la Chenille qui fait des trous ») a été retirée le soir
+même — « mille fois moins bien que la version isométrique hyper mignonne »,
+« de la 2D saccadée et pixelisée sur une surface minuscule » ; la 3D du 23/09
+est revenue telle quelle. Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 `mass = 0`.
@@ -275,6 +275,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Secteur de disque retourné** | Un `CircleGeometry(r, n, a0, da)` tourné de −π/2 sur X couvre les angles monde a0…a0+da ; tourné de **+π/2** (pour faire un dessous), il couvre −a0−da…−a0 : le dessous d'une part de pizza se retrouvait SOUS LA PART VOISINE, et la recouvrait dès qu'on la soulevait. Prendre `thetaStart = −a0 − da` pour la face retournée. |
 | **Répondre pendant une animation** | Dans le Potager, la rangée des nombres s'écrit case par case (`ctx.after`) : une réponse donnée avant la fin laissait des nombres apparaître APRÈS la bonne réponse. Tout ce qui répond (`success`, `showMiss`) change d'abord le jeton de question (`me.gen++`), et chaque rappel vérifie ce jeton. |
 | **Bot qui gagne par chance** | Le premier bot du Poussin 2D (seuil fixe : taper si `y + vy·0,08 < cible − 0,07`) est passé trois fois dans la session, puis a bloqué le déploiement (« arrivé avec 3 cœurs sur 5 »). Simulé hors navigateur sur 3 000 parties : il perdait 2 cœurs ou plus une fois sur trois — les passages sont tirés au hasard. Un pilote de jeu à hasard se valide par une **simulation de la même physique en Node, sur des milliers de parties et plusieurs cadences** (60 i/s, 20 i/s, saccadé), pas par un passage réussi. `THROTTLE=4 npm run test:play` ralentit le processeur comme sur le serveur d'intégration. |
+| **Maquette validée ≠ jeu validé** | La Chenille 2D avait eu un « go » sur ses maquettes (images fixes), puis a été retirée le soir même, jouée : le pas de case en case paraît SACCADÉ quand la 3D glissait en continu, des illustrations de 256 px agrandies plein écran sont PIXELISÉES, et une feuille entourée de marges (HUD en haut, semaine en bas) laisse une surface de jeu MINUSCULE. Avant de remplacer le rendu d'un jeu qui plaît, comparer les deux EN MOUVEMENT, à la taille de la tablette, côte à côte — et dire au père ce qu'on perd. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
