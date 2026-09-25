@@ -46,6 +46,12 @@ const ctx = await browser.newContext({
 })
 await ctx.addInitScript(() => { window.__BOT = true })
 const page = await ctx.newPage()
+// THROTTLE=4 npm run test:play → processeur ralenti ×4, pour jouer comme sur
+// le serveur d'intégration (plus lent que la session : pilotes à éprouver)
+if (process.env.THROTTLE) {
+  const cdp = await ctx.newCDPSession(page)
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.THROTTLE) })
+}
 const errors = []
 page.on('pageerror', e => errors.push(String(e)))
 
@@ -214,16 +220,24 @@ await scenario('chenille-semaine-complete', async () => {
    plus d'un cœur, avec des grains dans le bec. */
 await scenario('poussin-jusqu-au-poulailler', async () => {
   await openGame('Poussin Volant', '__fl')
+  // Comme une joueuse : vise le milieu du prochain passage et tape au bas de
+  // chaque rebond (hop = hauteur d'un coup d'aile). La chute d'une image est
+  // anticipée avec la VRAIE durée d'image : sur le serveur d'intégration, plus
+  // lent, un seuil fixe tapait trop tard et le poussin se cognait (25/09).
   await page.evaluate(() => {
     const f = window.__fl
     const tap = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }))
+    const hop = f.flap * f.flap / (2 * f.grav)
     ;(async () => {
       tap()
+      let last = performance.now()
       while (window.__fl === f && f.running && !f.landed) {
         await new Promise(r => requestAnimationFrame(r))
+        const now = performance.now(), lag = Math.min(0.05, (now - last) / 1000)
+        last = now
         const next = f.pipes.find(p => p.dx > -0.1)
         const target = next ? (next.lo + next.hi) / 2 : 0.4
-        if (f.vy < 0.2 && f.y + f.vy * 0.08 < target - 0.07) tap()
+        if (f.vy < 0 && f.y + f.vy * lag < target - hop * 0.5) tap()
       }
     })()
   })
