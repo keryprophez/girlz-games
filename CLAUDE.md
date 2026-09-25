@@ -70,6 +70,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
                            lapin, cactus (Tape-Trous) + vache, poule, chien,
                            canard, mouton (`FARM`, les pions des jeux en DOM)
+             runner.ts   ← socle des jeux qui défilent (Poussin Volant)
              doll3d.ts   ← LEUR personnage en 3D (le look d'Habille-toi) :
                            `makeDoll(T, look)`, `poseDoll(d, 'cheer'|'wave'|'sit'…)`
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
@@ -188,16 +189,12 @@ Modèles : `icetower.ts`, `mole.ts` (personnages de
 `critters.ts`, raycast sur des zones de tape invisibles) et, en 2D,
 `ninja.ts` (un canvas, les fruits Canva, ombres et lueurs précalculées une
 fois par image, vagues puis pluie finale). **Un jeu qui défile**
-(le poussin reste en place, le monde avance vers la gauche) est en 2D depuis
-le 25/09 : les distances en hauteurs d'arène (H), le décor en
-couches décalées selon `scroll` (nuages, panorama — une copie sur deux en
-miroir, le raccord ne se voit plus), les poteaux étirés par le milieu (la
-pointe et le pied gardent leur forme), un choc qui coûte un cœur et rend
-invulnérable un moment au lieu de tuer. Le coup d'aile fait monter d'environ
-la MOITIÉ du couloir libre à tous les niveaux : c'est le couloir qui
-rétrécit en expert, pas la finesse du contrôle (avec un saut aux deux tiers
-du couloir, même un pilote parfait se cognait). `core/runner.ts` (le socle
-3D des jeux qui défilent) est sorti avec lui. Modèle : `flappy.ts`. Pour un jeu Apprendre
+(la joueuse reste à x = 0, le monde avance vers −x) part en plus de
+`core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
+obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
+derrière la caméra), les couches de décor en parallaxe (`layer`), et le
+clignotement d'invulnérabilité (`hurt`/`blink`) ; `scrollTex` fait une
+texture de sol qui défile. Modèle : `flappy.ts`. Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 `public/assets/geo/`, voix = noms de lieux uniquement).
 
@@ -214,15 +211,15 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
-`caterpillar` · `mole` · `dressup` ·
+`caterpillar` · `flappy` · `mole` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
-(« les fruits trop grossiers, c'est confus »), Poussin Volant le 25/09 (« le
-plus punitif pour Jade »). La Chenille a fait l'aller-retour le 25/09 : sa
-version 2D illustrée (« la Chenille qui fait des trous ») a été retirée le soir
-même — « mille fois moins bien que la version isométrique hyper mignonne »,
-« de la 2D saccadée et pixelisée sur une surface minuscule » ; la 3D du 23/09
-est revenue telle quelle. Pour
+(« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
+ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
+retirées le soir même — « mille fois moins bien que la version isométrique
+hyper mignonne », « de la 2D saccadée et pixelisée sur une surface
+minuscule » ; les 3D du 23/09 sont revenues telles quelles. **Un jeu en vraie
+3D ne redescend pas en 2D.** Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 `mass = 0`.
@@ -274,8 +271,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Chalet Kenney en pièces** | Les pièces `cabin-*` du kit Holiday tiennent dans une case de 1 : un mur est posé sur le bord +z de sa case (on le tourne pour les autres bords), le coin est au coin (−x, +z), le toit et le pignon sont des DEMI-pièces dont le faîtage est en x = −0,5 — le côté gauche est la même pièce tournée de π (toit) ou en miroir `scale.x = −1` (pignon). Voir `cabin()` dans `core/winter.ts`. |
 | **Secteur de disque retourné** | Un `CircleGeometry(r, n, a0, da)` tourné de −π/2 sur X couvre les angles monde a0…a0+da ; tourné de **+π/2** (pour faire un dessous), il couvre −a0−da…−a0 : le dessous d'une part de pizza se retrouvait SOUS LA PART VOISINE, et la recouvrait dès qu'on la soulevait. Prendre `thetaStart = −a0 − da` pour la face retournée. |
 | **Répondre pendant une animation** | Dans le Potager, la rangée des nombres s'écrit case par case (`ctx.after`) : une réponse donnée avant la fin laissait des nombres apparaître APRÈS la bonne réponse. Tout ce qui répond (`success`, `showMiss`) change d'abord le jeton de question (`me.gen++`), et chaque rappel vérifie ce jeton. |
-| **Bot qui gagne par chance** | Le premier bot du Poussin 2D (seuil fixe : taper si `y + vy·0,08 < cible − 0,07`) est passé trois fois dans la session, puis a bloqué le déploiement (« arrivé avec 3 cœurs sur 5 »). Simulé hors navigateur sur 3 000 parties : il perdait 2 cœurs ou plus une fois sur trois — les passages sont tirés au hasard. Un pilote de jeu à hasard se valide par une **simulation de la même physique en Node, sur des milliers de parties et plusieurs cadences** (60 i/s, 20 i/s, saccadé), pas par un passage réussi. `THROTTLE=4 npm run test:play` ralentit le processeur comme sur le serveur d'intégration. |
-| **Maquette validée ≠ jeu validé** | La Chenille 2D avait eu un « go » sur ses maquettes (images fixes), puis a été retirée le soir même, jouée : le pas de case en case paraît SACCADÉ quand la 3D glissait en continu, des illustrations de 256 px agrandies plein écran sont PIXELISÉES, et une feuille entourée de marges (HUD en haut, semaine en bas) laisse une surface de jeu MINUSCULE. Avant de remplacer le rendu d'un jeu qui plaît, comparer les deux EN MOUVEMENT, à la taille de la tablette, côte à côte — et dire au père ce qu'on perd. |
+| **Bot qui gagne par chance** | Le premier bot du Poussin 2D (retiré depuis) (seuil fixe : taper si `y + vy·0,08 < cible − 0,07`) est passé trois fois dans la session, puis a bloqué le déploiement (« arrivé avec 3 cœurs sur 5 »). Simulé hors navigateur sur 3 000 parties : il perdait 2 cœurs ou plus une fois sur trois — les passages sont tirés au hasard. Un pilote de jeu à hasard se valide par une **simulation de la même physique en Node, sur des milliers de parties et plusieurs cadences** (60 i/s, 20 i/s, saccadé), pas par un passage réussi. `THROTTLE=4 npm run test:play` ralentit le processeur comme sur le serveur d'intégration. |
+| **Maquette validée ≠ jeu validé** | La Chenille et le Poussin 2D avaient eu un « go » sur leurs maquettes (images fixes), puis ont été retirés le soir même, joués : le pas de case en case paraît SACCADÉ quand la 3D glissait en continu, des illustrations de 256 px agrandies plein écran sont PIXELISÉES, et une feuille entourée de marges (HUD en haut, semaine en bas) laisse une surface de jeu MINUSCULE. Avant de remplacer le rendu d'un jeu qui plaît, comparer les deux EN MOUVEMENT, à la taille de la tablette, côte à côte — et dire au père ce qu'on perd. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---

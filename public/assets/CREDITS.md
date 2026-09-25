@@ -69,17 +69,6 @@ planche des plantes en référence et ce texte de commande :
 > completely empty. All items the same size. No text, no labels, no numbers,
 > no shadows on the background.
 
-## Poussin Volant (`poussin/`, 25/09)
-
-La planche de Poussin Volant (le poussin ailes hautes, ailes basses et
-étourdi, la plume, la maman poule, le poulailler, le poteau, les bottes de
-foin, le grain, le nuage, l'arbre) et son panorama de ferme
-(`poussin/panorama.webp`) : **illustrations générées avec Canva** le
-25/09/2026, avec la planche des plantes en référence de style (commandées
-avec les planches de la Chenille 2D, retirée le soir même — médias Canva
-`MAHWJbLstl8`, `MAHWJUzb2fQ`, `MAHWJetaNbc`, `MAHWJRg3kx0`, fonds retirés),
-déposées par le père dans son Drive puis découpées en WebP.
-
 ## Voix des animaux (`sounds/animals/`)
 
 Dix cris d'animaux enregistrés, pris sur **Wikimedia Commons** (licences

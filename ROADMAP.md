@@ -699,16 +699,12 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   même** — « mille fois moins bien que la version isométrique hyper mignonne,
   de la 2D saccadée et pixelisée sur une surface minuscule ». La Chenille 3D
   du 23/09 est revenue telle quelle, avec son bot.
-- ✅ **Poussin Volant en 2D illustré**, moins punitif : le poussin rentre au
-  poulailler entre les poteaux de la clôture (planche Canva : poussin ailes
-  hautes / basses / étourdi, poteaux, grain, nuages, panorama de la ferme,
-  maman poule et son poulailler). Un choc ne tue plus : il coûte un cœur (5
-  en douce, 3 sinon), le poussin est étourdi et clignote sans rien risquer.
-  Un enjeu visible (la barre de chemin jusqu'au poulailler : 12, 16 ou 20
-  poteaux), les grains qui brillent au milieu des passages, le « ouf » quand
-  on frôle un poteau, la cadence qui monte avec les poteaux passés ; à
-  l'arrivée, maman poule glousse (sa vraie voix) et le poussin se pose à côté
-  d'elle. Bot : jusqu'au poulailler en douce, sans perdre plus d'un cœur.
+- ↩️ **Poussin Volant en 2D illustré** (entre les poteaux de la clôture,
+  jusqu'au poulailler de maman poule, un choc = un cœur) : publié puis
+  **retiré le soir même**, comme la Chenille. Le Poussin 3D du 23/09 est
+  revenu tel quel, avec son bot. Reste à lui apporter ce que la 2D avait de
+  mieux (un choc qui coûte un cœur au lieu de tuer, une arrivée chez maman
+  poule) — en 3D, et seulement si le père le demande.
 - Reste : le coq, la chèvre, le cheval et le chat ont leur voix mais pas
   encore de personnage 3D.
 

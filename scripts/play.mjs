@@ -190,41 +190,26 @@ await scenario('chenille-croque-des-fruits', async () => {
   throw new Error('moins de 2 fruits croqués en 22 s')
 })
 
-/* 🐤 Poussin Volant (2D, 25/09) : tout le chemin jusqu'au poulailler. Le
-   pilote tourne dans la page, à chaque image : il vise le milieu du
-   prochain passage et bat des ailes quand il passe dessous (un coup d'aile
-   monte d'environ 0,19 H). Il doit arriver chez maman poule sans perdre
-   plus d'un cœur, avec des grains dans le bec. */
-await scenario('poussin-jusqu-au-poulailler', async () => {
+/* 🐤 Poussin Volant : viser le milieu du passage, franchir 2 barrières. */
+await scenario('poussin-deux-barrieres', async () => {
   await openGame('Poussin Volant', '__fl')
-  // Comme une joueuse : vise le milieu du prochain passage et tape au bas de
-  // chaque rebond (hop = hauteur d'un coup d'aile). La chute d'une image est
-  // anticipée avec la VRAIE durée d'image : sur le serveur d'intégration, plus
-  // lent, un seuil fixe tapait trop tard et le poussin se cognait (25/09).
-  await page.evaluate(() => {
-    const f = window.__fl
-    const tap = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }))
-    const hop = f.flap * f.flap / (2 * f.grav)
-    ;(async () => {
-      tap()
-      let last = performance.now()
-      while (window.__fl === f && f.running && !f.landed) {
-        await new Promise(r => requestAnimationFrame(r))
-        const now = performance.now(), lag = Math.min(0.05, (now - last) / 1000)
-        last = now
-        const next = f.pipes.find(p => p.dx > -0.1)
-        const target = next ? (next.lo + next.hi) / 2 : 0.4
-        if (f.vy < 0 && f.y + f.vy * lag < target - hop * 0.5) tap()
-      }
-    })()
-  })
-  await page.waitForFunction(() => !window.__fl.running, null, { timeout: 180000, polling: 500 })
-  const n = await page.evaluate(() => ({ won: window.__fl.won, lives: window.__fl.lives, passed: window.__fl.passed, goal: window.__fl.goal, score: window.__fl.score }))
-  if (!n.won) throw new Error(`pas arrivé au poulailler : ${n.passed}/${n.goal} poteaux, ${n.lives} cœurs`)
-  if (n.lives < 4) throw new Error(`arrivé avec ${n.lives} cœurs sur 5 : le pilote se cogne`)
-  if (n.score < 3) throw new Error(`seulement ${n.score} grains`)
-  await page.waitForSelector('.result-score', { timeout: 20000 })
-  if (!(await page.evaluate(() => document.body.innerText.includes('Maman poule')))) throw new Error('l\'écran de fin n\'est pas celui de l\'arrivée')
+  await page.keyboard.press('Space')
+  for (let i = 0; i < 300; i++) {
+    const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
+      const f = window.__fl
+      if (!f || !f.running) return res(null)
+      const next = f.pipes.find(p => p.x + p.hw > f.x - f.r)
+      const target = next ? (next.lo + next.hi) / 2 : 0.3
+      res({ y: f.y, vy: f.vy, target, score: f.score })
+    })))
+    if (!st) break
+    if (st.score >= 2) return
+    // Battre des ailes en bas du passage (un coup d'aile monte de 0,46 m),
+    // jamais en pleine montée : l'entrée arrive avec une frame de retard
+    const yNext = st.y + st.vy * 0.1
+    if (st.vy < 0.5 && yNext < st.target - 0.2) await page.keyboard.press('Space')
+  }
+  throw new Error('moins de 2 barrières passées')
 })
 
 /* 🍕 Pizzeria : la sauce doit apparaître SOUS le doigt (régression UV). */

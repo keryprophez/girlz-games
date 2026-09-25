@@ -1,438 +1,343 @@
-import type { GameDef } from '../core/types'
-import { $ } from '../core/utils'
+import type { GameContext, GameDef } from '../core/types'
 import { impact } from '../core/impact'
-import { loader } from '../core/three3d'
-import { arcade, type Arcade } from '../core/arcade'
+import { $ } from '../core/utils'
 import { ICON } from '../core/icons'
-import { sfx, preloadSfx, cry, preloadCries } from '../core/sfx'
-import { isPaused } from '../core/session'
+import { sfx, preloadSfx } from '../core/sfx'
+import { arcade, type Arcade } from '../core/arcade'
+import { runner, type Runner } from '../core/runner'
+import { ground, decor, particles, camShake, type Particles, type CamShake } from '../core/scene3d'
+import {
+  createStage, loadThree, loader, woodTex, avatarMedallion,
+  type Stage, type T3
+} from '../core/three3d'
 
-/* 🐤 Poussin Volant — refait en 2D illustrée le 25/09 (maquette validée).
+/* 🐤 Poussin Volant — un poussin en volume qui bat des ailes et se faufile
+   entre des palissades de bois, dans une prairie de fin d'après-midi.
 
-   Le poussin rentre au poulailler : on tape pour battre des ailes, on passe
-   entre les poteaux de la clôture, on attrape les grains de maïs qui brillent
-   au milieu des passages ; au bout de la barre de chemin, maman poule
-   l'attend devant le poulailler (elle glousse : la vraie voix de la poule).
+   Refonte sur core/runner.ts + core/arcade.ts :
+   - en mètres, y vers le haut, une seule boucle ;
+   - une RAMPE : tous les 4 passages, ça va un peu plus vite et le passage
+     se resserre un peu (borné) — avant, la difficulté ne bougeait pas ;
+   - le sol : on rebondit, mais ça coûte un cœur ; le plafond retient ;
+   - le near-miss : passer à un cheveu d'un chapeau de palissade, ça fait
+     un « Ouf ! » et une petite plume ;
+   - au dernier cœur, le poussin dégringole au ralenti dans un nuage de
+     plumes, et le titre de fin ne fête plus une chute. */
 
-   « Le plus punitif pour Jade » (audit du 2/09) : un choc ne tue plus. Il
-   coûte un cœur, le poussin est étourdi et clignote un moment sans rien
-   risquer ; en douce le passage est plus large et le vol plus lent. Frôler un
-   poteau sans le toucher fait « ouf ». La cadence monte avec les poteaux
-   passés (tous les quatre), jamais avec le temps.
+const CHICK_X = -1.7
+const SPAWN_X = 4.2
+const DESPAWN_X = -3.8
+const GROUND_Y = -0.95
+const CEIL_Y = 1.62
+const R = 0.145            // rayon du poussin (m)
+const PW = 0.42            // largeur d'une palissade
+const GRAVITY = 11.2
+const FLAP_V = 3.2
 
-   Rendu : un canvas 2D, le décor en couches qui défilent (nuages, panorama
-   de la ferme), les illustrations Canva de `public/assets/poussin/`. Les
-   distances sont en hauteurs d'arène (H) : le jeu est le même sur toute
-   taille d'écran. */
-
-const base = import.meta.env.BASE_URL
-const SRC: Record<string, string> = Object.fromEntries(
-  ['vole-haut', 'vole-bas', 'etourdi', 'plume', 'poule', 'poulailler', 'poteau-haut', 'grain', 'nuage', 'panorama']
-    .map(n => [n, `${base}assets/poussin/${n}.webp`])
-)
-
-/** Réglages par niveau (en hauteurs d'arène). Le coup d'aile fait monter le
-    poussin de flap²/2·grav : environ la moitié du couloir libre (passage moins
-    le poussin), à tous les niveaux — plus serré, il deviendrait impossible à
-    doser ; c'est le couloir qui rétrécit, pas la finesse du contrôle. */
-const CFG = {
-  easy: { speed: 0.42, gap: 0.5, space: 1.75, grav: 3.7, flap: 1.18, goal: 12, lives: 5 },
-  med: { speed: 0.5, gap: 0.42, space: 1.55, grav: 4.3, flap: 1.14, goal: 16, lives: 3 },
-  exp: { speed: 0.58, gap: 0.36, space: 1.4, grav: 4.6, flap: 1.08, goal: 20, lives: 3 }
-}
-const R = 0.05          // rayon du poussin (H)
-const PW = 0.1          // largeur d'un poteau (H)
-const CHICK_X = 0.27    // position du poussin (fraction de la largeur)
-
-interface Pair { x: number; lo: number; hi: number; grain: boolean; passed: boolean; minClear: number }
-interface Feather { x: number; y: number; vx: number; vy: number; a: number; va: number; life: number }
+interface PipeData { lo: number; hi: number; minClear: number }
+interface Cfg { speed: number; inc: number; gap: number; gapDec: number; space: number }
 
 interface State {
-  arena: HTMLElement
-  cv: HTMLCanvasElement
-  g: CanvasRenderingContext2D
-  img: Record<string, HTMLImageElement>
-  cfg: typeof CFG.easy
-  W: number; H: number; dpr: number
-  /** Abscisse du poussin (px) : fixe en vol, il rejoint maman poule à l'arrivée. */
-  cx: number
-  /** Hauteur du poussin au-dessus du sol et vitesse verticale (H, vers le haut). */
+  stage: Stage
+  game: Arcade
+  run: Runner<PipeData>
+  fx: Particles
+  shake: CamShake
+  cfg: Cfg
   y: number
   vy: number
   started: boolean
   flapT: number
-  dizzy: number
-  invuln: number
-  pairs: Pair[]
-  feathers: Feather[]
-  sparks: { x: number; y: number; life: number }[]
-  /** Défilement : décalages des couches (px) et vitesse courante (H/s). */
-  scroll: number
-  speed: number
-  passed: number
-  home: number | null
-  landed: number
   over: boolean
-  won: boolean
   spin: number
-  game: Arcade
-  raf: number
-  last: number
-  hint: HTMLElement | null
+  tapHint: HTMLElement
+  chick: import('three').Group
 }
 
 let fl: State | null = null
-
-/** Le sol : le bas de l'arène moins la bande d'herbe du panorama. */
-const groundPx = (me: State) => me.H * 0.955
-/** Une hauteur au-dessus du sol (H) → une ordonnée à l'écran (px). */
-const toY = (me: State, h: number) => groundPx(me) - h * me.H
-const ceil = (me: State) => groundPx(me) / me.H - R
+let ctx: GameContext
 
 function flap(me: State) {
-  if (me.over || me.home !== null && me.landed > 0) return
-  if (!me.started) { me.started = true; if (me.hint) { me.hint.remove(); me.hint = null } }
-  me.vy = me.cfg.flap
+  if (me.over) return
+  if (!me.started) { me.started = true; me.tapHint.classList.add('off') }
+  me.vy = FLAP_V
   me.flapT = 1
   sfx('cloth', { vol: 0.45, rate: 1.6, spread: 0.1 })
 }
 
-function puff(me: State, n: number) {
-  const x = me.cx, y = toY(me, me.y)
-  for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 160
-    me.feathers.push({ x, y, vx: Math.cos(a) * sp - 40, vy: Math.sin(a) * sp - 60, a: Math.random() * 6, va: (Math.random() - 0.5) * 8, life: 0.9 + Math.random() * 0.5 })
-  }
+function feathers(me: State, n: number) {
+  me.fx.burst({ x: CHICK_X, y: me.y, z: 0 }, { count: n, color: [0xE8B93C, 0xF5EED8], speed: 1.6, life: 0.9, size: 0.07, gravity: 2.5, spread: 1 })
 }
 
 function hurt(me: State, what: 'sol' | 'bois') {
-  if (me.over || me.invuln > 0) return
+  if (me.over || me.run.invuln > 0) return
   impact(0.8, { matter: what === 'sol' ? 'sourd' : 'bois', noShake: true })
-  puff(me, 8)
+  me.shake.hit(0.7)
+  feathers(me, 14)
   me.game.flash(ICON.heartEmpty, 'bad')
-  if (me.game.hurt()) { finish(me, false); return }
-  me.invuln = 1.6
-  me.dizzy = 0.9
+  if (me.game.hurt()) { finish(me); return }
+  me.run.hurt(1.2)
 }
 
-function finish(me: State, won: boolean) {
+function finish(me: State) {
   if (me.over) return
   me.over = true
-  me.won = won
-  const s = me.game.s
+  me.stage.timeScale = 0.35
+  me.vy = Math.min(me.vy, 0.5)
+  feathers(me, 24)
+  const n = me.game.s.score
+  const th = ctx.byTier([10, 6], [14, 8], [18, 11])
   me.game.end({
-    title: won ? 'Maman poule est là !' : 'Le poussin est tombé !',
-    msg: `Tu as attrapé ${s.score} grain${s.score > 1 ? 's' : ''}`,
-    outroMs: won ? 1800 : 1300
+    title: n >= th[0] ? 'Grand envol !' : n >= th[1] ? 'Bel envol !' : 'Le poussin est tombé !',
+    msg: `Tu as passé ${n} barrière${n > 1 ? 's' : ''}`,
+    outroMs: 1300
   })
 }
 
-function spawnPair(me: State) {
-  const gap = Math.max(me.cfg.gap - 0.08, me.cfg.gap - 0.01 * me.game.s.level)
-  const top = ceil(me) - 0.06
-  const lo = 0.12 + Math.random() * Math.max(0.05, top - gap - 0.12)
-  me.pairs.push({ x: me.W + PW * me.H, lo, hi: lo + gap, grain: Math.random() < 0.7, passed: false, minClear: 9 })
+/** Le poussin : corps rond, ailes articulées, bec, yeux, houppette. */
+function makeChick(T: T3) {
+  const g = new T.Group()
+  const yellow = new T.MeshStandardMaterial({ color: 0xE8B93C, roughness: 0.65 })
+  const orange = new T.MeshStandardMaterial({ color: 0xD97B2E, roughness: 0.6 })
+  const white = new T.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.3 })
+  const dark = new T.MeshStandardMaterial({ color: 0x2A2A2A, roughness: 0.4 })
+  const body = new T.Mesh(new T.SphereGeometry(0.15, 20, 16), yellow)
+  body.scale.set(1.05, 1, 0.95)
+  body.castShadow = true
+  const beak = new T.Mesh(new T.ConeGeometry(0.045, 0.09, 8), orange)
+  beak.rotation.z = -Math.PI / 2
+  beak.position.set(0.16, 0.01, 0)
+  const crest = new T.Mesh(new T.SphereGeometry(0.045, 8, 6), yellow)
+  crest.position.set(-0.02, 0.15, 0)
+  g.add(body, beak, crest)
+  for (const s of [-1, 1]) {
+    const eye = new T.Mesh(new T.SphereGeometry(0.035, 10, 8), white)
+    eye.position.set(0.1, 0.05, s * 0.075)
+    const pupil = new T.Mesh(new T.SphereGeometry(0.018, 8, 6), dark)
+    pupil.position.set(0.125, 0.05, s * 0.085)
+    g.add(eye, pupil)
+  }
+  // Les ailes : pivot à l'épaule pour battre
+  const wings: { pivot: import('three').Group; side: number }[] = []
+  for (const s of [-1, 1]) {
+    const pivot = new T.Group()
+    const wing = new T.Mesh(new T.SphereGeometry(0.1, 12, 10), yellow)
+    wing.scale.set(1.15, 0.35, 0.7)
+    wing.position.set(-0.03, 0, s * 0.06)
+    wing.castShadow = true
+    pivot.add(wing)
+    pivot.position.set(-0.04, 0.03, s * 0.12)
+    g.add(pivot)
+    wings.push({ pivot, side: s })
+  }
+  for (const s of [-1, 1]) {
+    const leg = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.07, 6), orange)
+    leg.position.set(0.02, -0.16, s * 0.05)
+    g.add(leg)
+  }
+  return { g, wings }
 }
-
-/* ---------- La boucle ---------- */
-
-function update(me: State, dt: number) {
-  const { H, W } = me
-  // Le monde défile ; à l'arrivée, il ralentit jusqu'à s'arrêter devant le poulailler
-  if (me.home !== null && me.home <= W * 0.72) me.speed = Math.max(0, me.speed - dt * 0.6)
-  const dx = me.started && !me.over ? me.speed * H * dt : (me.over ? me.speed * H * dt * 0.4 : 0)
-  me.scroll += dx
-  if (me.home !== null) me.home -= dx
-
-  if (me.landed > 0 && me.home !== null) me.cx += (me.home - H * 0.34 * 0.4 - H * 0.16 - me.cx) * Math.min(1, dt * 2)
-  else me.cx = W * CHICK_X
-  if (me.started) {
-    if (me.landed > 0) {
-      // L'atterrissage : le poussin plane doucement vers maman poule
-      me.landed += dt
-      me.y += (0.07 - me.y) * Math.min(1, dt * 2.5)
-      me.vy = 0
-    } else {
-      me.vy -= me.cfg.grav * dt
-      me.y += me.vy * dt
-    }
-  } else me.y = 0.45 + Math.sin(performance.now() * 0.004) * 0.02
-
-  if (me.over && !me.won) { me.spin += dt * 9 }
-  if (me.y > ceil(me)) { me.y = ceil(me); me.vy = Math.min(me.vy, 0) }
-  if (me.y < R) {
-    me.y = R
-    if (me.started && !me.over && me.landed === 0) { hurt(me, 'sol'); me.vy = me.cfg.flap }
-    else me.vy = 0
-  }
-  me.invuln = Math.max(0, me.invuln - dt)
-  me.dizzy = Math.max(0, me.dizzy - dt)
-  me.flapT = Math.max(0, me.flapT - dt * 4)
-
-  // Les poteaux : apparition, passage, collision, grains
-  if (me.started && !me.over && me.home === null) {
-    const lastPair = me.pairs[me.pairs.length - 1]
-    const spawned = me.passed + me.pairs.filter(p => !p.passed).length
-    if (spawned < me.cfg.goal && (!lastPair || lastPair.x < W + PW * H - me.cfg.space * H)) spawnPair(me)
-    // Plus de poteaux : le poulailler arrive
-    if (spawned >= me.cfg.goal && me.pairs.every(p => p.passed)) me.home = W + H * 0.3
-  }
-  const cxp = me.cx
-  for (let i = me.pairs.length - 1; i >= 0; i--) {
-    const p = me.pairs[i]
-    p.x -= dx
-    const half = PW * H / 2
-    const inX = p.x + half * 0.8 > cxp - R * H && p.x - half * 0.8 < cxp + R * H
-    if (inX && !me.over) {
-      p.minClear = Math.min(p.minClear, me.y - R - p.lo, p.hi - (me.y + R))
-      if (me.y - R < p.lo || me.y + R > p.hi) { hurt(me, 'bois'); if (fl !== me) return; me.vy = Math.max(me.vy, 0.4) }
-    }
-    // Le grain, au milieu du passage
-    if (p.grain && !me.over && Math.abs(p.x - cxp) < (R + 0.035) * H && Math.abs(me.y - (p.lo + p.hi) / 2) < R + 0.05) {
-      p.grain = false
-      me.game.hit(1, { silent: true })
-      sfx('pluck', { vol: 0.6, rate: 1.3 })
-      me.sparks.push({ x: p.x, y: toY(me, (p.lo + p.hi) / 2), life: 0.5 })
-    }
-    if (!p.passed && p.x + half < cxp - R * H) {
-      p.passed = true
-      me.passed++
-      if (!me.over) {
-        impact(0.2, { matter: 'neige', noShake: true })
-        // Le « ouf » : passé à un cheveu
-        if (p.minClear < 0.03) { sfx('whoosh', { vol: 0.45, rate: 1.2 }); me.game.flash(ICON.bolt); puff(me, 3) }
-        // La cadence monte avec les poteaux passés
-        if (me.passed % 4 === 0) me.speed = Math.min(me.cfg.speed * 1.35, me.speed * 1.06)
-      }
-    }
-    if (p.x < -PW * H) me.pairs.splice(i, 1)
-  }
-  me.game.s.level = Math.floor(me.passed / 4)
-
-  // L'arrivée : le poulailler devant, maman poule glousse, le poussin se pose
-  if (me.home !== null && me.home <= W * 0.74 && me.landed === 0 && !me.over) {
-    me.landed = 0.001
-    cry('poule', { vol: 0.8 })
-    sfx('confirm', { vol: 0.7, rate: 1.1 })
-    me.game.after(1600, () => { if (fl === me) finish(me, true) })
-  }
-
-  for (let i = me.feathers.length - 1; i >= 0; i--) {
-    const f = me.feathers[i]
-    f.vy += 140 * dt; f.vx *= 0.97
-    f.x += f.vx * dt; f.y += f.vy * dt; f.a += f.va * dt; f.life -= dt
-    if (f.life <= 0) me.feathers.splice(i, 1)
-  }
-  for (let i = me.sparks.length - 1; i >= 0; i--) { me.sparks[i].life -= dt; if (me.sparks[i].life <= 0) me.sparks.splice(i, 1) }
-}
-
-function drawImg(g: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h = w, rot = 0, alpha = 1) {
-  g.save()
-  g.globalAlpha = alpha
-  g.translate(x, y); g.rotate(rot)
-  g.drawImage(im, -w / 2, -h / 2, w, h)
-  g.restore()
-}
-
-/** Un poteau étiré par le milieu : la pointe et le pied gardent leur forme. */
-function drawPost(g: CanvasRenderingContext2D, im: HTMLImageElement, x: number, top: number, bottom: number, w: number, flip: boolean) {
-  const sw = im.naturalWidth, sh = im.naturalHeight
-  const capS = sh * 0.14, footS = sh * 0.035
-  const k = w / sw, cap = capS * k, foot = footS * k
-  const h = bottom - top
-  g.save()
-  if (flip) { g.translate(0, top + bottom); g.scale(1, -1) }
-  g.drawImage(im, 0, 0, sw, capS, x - w / 2, top, w, cap)
-  g.drawImage(im, 0, capS, sw, sh - capS - footS, x - w / 2, top + cap - 0.5, w, Math.max(0, h - cap - foot) + 1)
-  g.drawImage(im, 0, sh - footS, sw, footS, x - w / 2, bottom - foot, w, foot)
-  g.restore()
-}
-
-function draw(me: State, now: number) {
-  const { g, dpr, W, H, img } = me
-  g.setTransform(dpr, 0, 0, dpr, 0, 0)
-  g.clearRect(0, 0, W, H)
-
-  // Les nuages, très loin ; le panorama de la ferme, loin
-  const nw = H * 0.22
-  for (let k = 0; k < 4; k++) {
-    const span = W + nw * 2
-    const x = ((k * span / 4 + W * 0.1 - me.scroll * 0.12) % span + span) % span - nw
-    drawImg(g, img.nuage, x, H * (0.2 + (k % 3) * 0.1), nw * (0.8 + (k % 2) * 0.3), nw * 0.7 * (0.8 + (k % 2) * 0.3))
-  }
-  // Le panorama ne se raccorde pas à lui-même : une copie sur deux en miroir,
-  // les bords se touchent alors toujours à l'identique
-  const ph = H * 0.38, pw = img.panorama.naturalWidth * ph / img.panorama.naturalHeight
-  const pan = me.scroll * 0.35
-  for (let k = Math.floor(pan / pw); k * pw - pan < W; k++) {
-    const x = k * pw - pan
-    if (k % 2 === 0) g.drawImage(img.panorama, x, H - ph, pw + 1, ph)
-    else {
-      g.save(); g.translate(x + pw, 0); g.scale(-1, 1)
-      g.drawImage(img.panorama, -1, H - ph, pw + 1, ph)
-      g.restore()
-    }
-  }
-
-  // Les poteaux, le grain qui brille au milieu du passage
-  const gy = groundPx(me)
-  for (const p of me.pairs) {
-    const w = PW * H
-    drawPost(g, img['poteau-haut'], p.x, -w * 0.4, toY(me, p.hi), w, true)
-    drawPost(g, img['poteau-haut'], p.x, toY(me, p.lo), gy + w * 0.15, w, false)
-    if (p.grain) {
-      const y = toY(me, (p.lo + p.hi) / 2)
-      const glow = g.createRadialGradient(p.x, y, 0, p.x, y, H * 0.06)
-      glow.addColorStop(0, 'rgba(255,226,122,.75)'); glow.addColorStop(1, 'rgba(255,226,122,0)')
-      g.fillStyle = glow
-      g.beginPath(); g.arc(p.x, y, H * 0.06, 0, Math.PI * 2); g.fill()
-      drawImg(g, img.grain, p.x, y + Math.sin(now / 250 + p.x) * 3, H * 0.055)
-    }
-  }
-  for (const s of me.sparks) {
-    g.fillStyle = `rgba(255,211,77,${s.life * 2})`
-    for (let k = 0; k < 6; k++) {
-      const a = k / 6 * Math.PI * 2, d = (0.5 - s.life) * H * 0.2
-      g.beginPath(); g.arc(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 4, 0, Math.PI * 2); g.fill()
-    }
-  }
-
-  // Le poulailler et maman poule, à l'arrivée
-  if (me.home !== null) {
-    const hs = H * 0.34
-    drawImg(g, img.poulailler, me.home + hs * 0.35, gy - hs * 0.46, hs)
-    drawImg(g, img.poule, me.home - hs * 0.4, gy - H * 0.1, H * 0.22)
-    if (me.landed > 0) {
-      for (let k = 0; k < 6; k++) {
-        const t = (me.landed * 0.6 + k / 6) % 1
-        g.globalAlpha = 1 - t
-        g.fillStyle = '#FF5A6E'
-        const x = me.home - hs * 0.3 + Math.sin(k * 2 + t * 6) * 30, y = gy - H * 0.2 - t * H * 0.25
-        g.beginPath()
-        const s = H * 0.014
-        g.moveTo(x, y + s); g.bezierCurveTo(x - s * 2.2, y - s * 0.6, x - s, y - s * 2, x, y - s * 0.8)
-        g.bezierCurveTo(x + s, y - s * 2, x + s * 2.2, y - s * 0.6, x, y + s); g.fill()
-      }
-      g.globalAlpha = 1
-    }
-  }
-
-  // Les plumes
-  for (const f of me.feathers) drawImg(g, img.plume, f.x, f.y, H * 0.035, H * 0.035, f.a, Math.min(1, f.life))
-
-  // Le poussin : ailes hautes / basses, étourdi après un choc, clignotant tant qu'il est protégé
-  const x = me.cx, y = toY(me, me.y)
-  const blinkOff = me.invuln > 0 && Math.floor(now / 90) % 2 === 0
-  if (!blinkOff) {
-    const sprite = me.dizzy > 0 ? img.etourdi : (me.flapT > 0.5 || (!me.started && Math.floor(now / 200) % 2 === 0) ? img['vole-haut'] : img['vole-bas'])
-    const tilt = me.over && !me.won ? me.spin : me.landed > 0 ? 0 : Math.max(-0.5, Math.min(0.35, -me.vy * 0.28))
-    drawImg(g, sprite, x, y, H * 0.17, H * 0.17, tilt)
-  }
-}
-
-/* ---------- Le jeu ---------- */
 
 export const flappy: GameDef = {
   id: 'flappy', name: 'Poussin Volant', icon: '🐤', sq: 'sq-lilac', cat: 'action',
-  subtitle: 'Tape pour battre des ailes… jusqu\'au poulailler !',
+  subtitle: 'Tape pour battre des ailes !',
   mount(c) {
+    ctx = c
     let dead = false
-    const cleanups: (() => void)[] = []
-    c.root.innerHTML = `
-      <div id="flArea" class="arena fl2-arena">
-        <canvas id="flCanvas"></canvas>
-        <div class="fl2-track"><i id="flFill"></i><img id="flMe" src="${SRC['vole-haut']}" alt=""><img class="home" src="${SRC.poulailler}" alt=""></div>
-      </div>`
+    c.root.innerHTML = `<div id="flArea" class="arena g3-arena fl-arena"></div>`
     const area = $('flArea')
-    const cv = $('flCanvas') as unknown as HTMLCanvasElement
     const hideLoader = loader(area, 'flappy')
-    cleanups.push(hideLoader)
-    preloadSfx(['cloth', 'whoosh', 'confirm', 'pluck', 'error'])
-    preloadCries(['poule'])
-    const cfg = CFG[c.tier]
+    preloadSfx(['cloth', 'whoosh', 'confirm', 'pluck'])
+    const cfg: Cfg = c.byTier(
+      { speed: 1.2, inc: 0.07, gap: 1.25, gapDec: 0.03, space: 4.4 },
+      { speed: 1.5, inc: 0.09, gap: 1.05, gapDec: 0.03, space: 3.9 },
+      { speed: 1.85, inc: 0.1, gap: 0.9, gapDec: 0.03, space: 3.4 }
+    )
 
-    const names = Object.keys(SRC)
-    Promise.all(names.map(n => { const im = new Image(); im.src = SRC[n]; return im.decode().then(() => im) })).then(imgs => {
+    ;(async () => {
+      const T = await loadThree()
       if (dead) return
+      const stage: Stage = await createStage(area, {
+        sky: '#7FB8E0',
+        fog: [6, 14], fogColor: '#BFD9EE',
+        cam: [0, 0.45, 4.6], target: [0, 0.1, 0], fov: 44,
+        hemi: ['#EAF4FF', '#4E7A3C', 0.9],
+        sun: { pos: [2.5, 5, 3.5], color: '#FFEBC8', intensity: 1.9, area: 7, far: 18 },
+        fill: 0.35, exposure: 1.0, iblIntensity: 0.55
+      })
+      if (dead) { stage.dispose(); return }
+      const scene = stage.scene
+
+      /* La prairie : un sol, et des fleurs, buissons, herbes du kit nature qui défilent */
+      const g = ground(stage, { radius: 26, color: 0x4F8F3A, roughness: 0.98 })
+      g.position.set(0, GROUND_Y, 2)
+      const span = 16
+      const front = Array.from({ length: 12 }, (_, i) => ({ model: `nature/${['flower_redA', 'flower_yellowA', 'flower_purpleA', 'grass_large', 'plant_bush', 'mushroom_red'][i % 6]}`, x: -7 + i * (span / 12) + Math.random() * 0.6, z: 0.4 + Math.random() * 0.7, size: 0.13 + Math.random() * 0.1, tint: 0xFFFFFF }))
+      const trees = Array.from({ length: 7 }, (_, i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat', 'tree_detailed'][i % 4]}`, x: -7 + i * (span / 7) + Math.random(), z: -3 - Math.random() * 1.6, size: 2 + Math.random() * 1.1, tint: 0x6EAE48 }))
+      const bushes = Array.from({ length: 6 }, (_, i) => ({ model: `nature/${['plant_bushLarge', 'rock_smallA', 'stump_round'][i % 3]}`, x: -7 + i * (span / 6) + Math.random(), z: -1.6 - Math.random() * 0.8, size: 0.4 + Math.random() * 0.3, tint: 0x8FB56A }))
+
+      // Nuages moelleux : grappes de sphères, parallaxe lente
+      const cloudMat = new T.MeshStandardMaterial({ color: 0xF4F6FA, roughness: 1 })
+      const cloudGeo = new T.SphereGeometry(1, 10, 8)
+      const clouds: import('three').Group[] = []
+      for (let i = 0; i < 5; i++) {
+        const cl = new T.Group()
+        for (let j = 0; j < 5; j++) {
+          const b = new T.Mesh(cloudGeo, cloudMat)
+          const r = 0.16 + Math.random() * 0.14
+          b.scale.setScalar(r)
+          b.position.set(j * 0.22 - 0.44, (j % 2) * 0.09 + Math.random() * 0.05, (Math.random() - 0.5) * 0.2)
+          cl.add(b)
+        }
+        cl.position.set(-6 + i * 3, 1.1 + (i % 3) * 0.35, -4)
+        cl.scale.setScalar(1.1 + (i % 3) * 0.4)
+        scene.add(cl)
+        clouds.push(cl)
+      }
+
+      /* Les palissades : tours de bois avec chapeau, depuis le plafond et depuis le sol */
+      const wood = stage.keep(woodTex(T, '#A87848'))
+      const woodMat = new T.MeshStandardMaterial({ map: wood, roughness: 0.8 })
+      const capMat = new T.MeshStandardMaterial({ color: 0x6B4A32, roughness: 0.75 })
+      const EXTRA = 1.6 // le fût déborde du cadre : une palissade sort de l'écran, elle ne flotte pas
+      const makePair = (lo: number, hi: number) => {
+        const grp = new T.Group()
+        const hTop = CEIL_Y + 0.3 - hi
+        const top = new T.Mesh(new T.BoxGeometry(PW, hTop + EXTRA, 0.5), woodMat)
+        top.position.y = hi + (hTop + EXTRA) / 2
+        const capT = new T.Mesh(new T.BoxGeometry(PW * 1.35, 0.12, 0.58), capMat)
+        capT.position.y = hi + 0.06
+        const hBot = lo - GROUND_Y
+        const bot = new T.Mesh(new T.BoxGeometry(PW, hBot + 0.3, 0.5), woodMat)
+        bot.position.y = lo - (hBot + 0.3) / 2
+        const capB = new T.Mesh(new T.BoxGeometry(PW * 1.35, 0.12, 0.58), capMat)
+        capB.position.y = lo - 0.06
+        for (const m of [top, capT, bot, capB]) m.castShadow = true
+        grp.add(top, capT, bot, capB)
+        return grp
+      }
+
+      /* Le poussin, et c'est ELLE */
+      const { g: chick, wings } = makeChick(T)
+      chick.scale.setScalar(1.15) // un peu plus gros que sa hitbox : plus lisible, plus indulgent
+      chick.position.x = CHICK_X
+      scene.add(chick)
+      avatarMedallion(T, c.avatar, 0.14).then(med => { if (med && fl) { med.position.set(0, 0.34, 0); chick.add(med) } })
+
       hideLoader()
-      const img: Record<string, HTMLImageElement> = {}
-      names.forEach((n, i) => { img[n] = imgs[i] })
+      const tapHint = document.createElement('div')
+      tapHint.className = 'tap-hint'
+      tapHint.innerHTML = ICON.tap
+      area.appendChild(tapHint)
 
       const game = arcade(c, {
         host: area,
-        lives: cfg.lives,
-        scoreIcon: `<img src="${SRC.grain}" alt="" style="width:1em;height:1em">`,
+        lives: c.byTier(5, 3, 3),
+        scoreIcon: ICON.check,
         plainScore: true,
-        // Arriver chez maman poule, c'est déjà réussir : les étoiles comptent les cœurs gardés
-        stars: s => !me.won ? 1 : s.lives >= s.maxLives ? 3 : 2
+        ramp: { every: 4, max: 6 },
+        onLevel: lv => { me.run.speed = cfg.speed + cfg.inc * lv; sfx('confirm', { vol: 0.5, rate: 1.2 }) },
+        stars: s => { const th = c.byTier([10, 6], [14, 8], [18, 11]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
       })
+      const run = runner<PipeData>(stage, { speed: cfg.speed, spawnX: SPAWN_X, despawnX: DESPAWN_X, playerX: CHICK_X })
       const me: State = {
-        arena: area, cv, g: cv.getContext('2d')!, img, cfg,
-        W: 0, H: 0, dpr: Math.min(2, window.devicePixelRatio || 1),
-        cx: 0, y: 0.45, vy: 0, started: false, flapT: 0, dizzy: 0, invuln: 0,
-        pairs: [], feathers: [], sparks: [], scroll: 0, speed: cfg.speed, passed: 0,
-        home: null, landed: 0, over: false, won: false, spin: 0, game,
-        raf: 0, last: performance.now(), hint: null
+        stage, game, run, fx: particles(stage, 400), shake: camShake(stage), cfg,
+        y: 0.3, vy: 0, started: false, flapT: 0, over: false, spin: 0, tapHint, chick
       }
       fl = me
-      const size = () => {
-        const W = area.clientWidth, H = area.clientHeight
-        if (!W || !H || (W === me.W && H === me.H)) return
-        me.W = W; me.H = H
-        cv.width = Math.round(W * me.dpr); cv.height = Math.round(H * me.dpr)
+      run.layer(clouds, 0.2, 15, -8)
+      decor(stage, [...front, ...trees, ...bushes]).then(grp => {
+        if (fl !== me) return
+        grp.position.y = GROUND_Y
+        const kids = grp.children
+        run.layer(kids.slice(0, front.length), 1, span, -8)
+        run.layer(kids.slice(front.length, front.length + trees.length), 0.5, span, -9)
+        run.layer(kids.slice(front.length + trees.length), 0.8, span, -8.5)
+      }).catch(() => { /* sans décor, le jeu tourne */ })
+
+      const spawn = () => {
+        const gap = Math.max(cfg.gap - 0.35, cfg.gap - cfg.gapDec * game.s.level)
+        // Le passage peut être n'importe où entre le ciel et le sol
+        const lo = GROUND_Y + 0.35 + Math.random() * (CEIL_Y - GROUND_Y - gap - 0.7)
+        const hi = lo + gap
+        run.spawn(makePair(lo, hi), PW / 2, { lo, hi, minClear: 9 })
       }
-      size()
-      const ro = new ResizeObserver(size)
-      ro.observe(area)
-      cleanups.push(() => ro.disconnect())
 
-      const hint = document.createElement('div')
-      hint.className = 'tap-hint'
-      hint.innerHTML = ICON.tap
-      area.appendChild(hint)
-      me.hint = hint
-
-      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod.
-      // Hauteurs en H au-dessus du sol, vers le haut.
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
       if ((window as unknown as { __BOT?: boolean }).__BOT) {
         ;(window as unknown as { __fl: unknown }).__fl = {
           get running() { return !me.over }, get started() { return me.started }, get y() { return me.y }, get vy() { return me.vy },
-          get score() { return game.s.score }, get lives() { return game.s.lives }, get passed() { return me.passed },
-          get goal() { return cfg.goal }, get landed() { return me.landed > 0 }, get won() { return me.won }, r: R,
-          get speed() { return me.speed }, grav: cfg.grav, flap: cfg.flap,
-          get pipes() { return me.pairs.filter(p => !p.passed).map(p => ({ dx: (p.x - me.W * CHICK_X) / me.H, lo: p.lo, hi: p.hi })) }
+          get score() { return game.s.score }, get lives() { return game.s.lives }, x: CHICK_X, r: R,
+          get pipes() { return run.obstacles.map(o => ({ x: o.x, hw: o.hw, lo: o.data.lo, hi: o.data.hi })) }
         }
       }
 
-      const fill = $('flFill'), meIcon = $('flMe')
+      /* --- Boucle --- */
+      stage.start((dt, now) => {
+        if (fl !== me) return
+        game.tick(dt)
+        if (me.started) {
+          me.vy -= GRAVITY * dt
+          me.y += me.vy * dt
+        } else me.y = 0.3 + Math.sin(now * 0.004) * 0.06
+        if (me.y > CEIL_Y - R) { me.y = CEIL_Y - R; me.vy = Math.min(me.vy, 0) }
+        if (me.y < GROUND_Y + R) {
+          me.y = GROUND_Y + R
+          if (me.started && !me.over) { hurt(me, 'sol'); me.vy = FLAP_V } // le sol coûte un cœur, et relance comme un coup d'aile
+          else me.vy = 0
+        }
+        if (me.started && !me.over) {
+          const last = run.last()
+          const space = Math.max(2.6, cfg.space - game.s.level * 0.15)
+          if (!last || last.x < SPAWN_X - space) spawn()
+        }
+        run.update(dt, {
+          onPass: ob => {
+            if (me.over) return
+            const close = ob.data.minClear < 0.09
+            game.hit(1, { perfect: close })
+            if (close) { sfx('whoosh', { vol: 0.45, rate: 1.2 }); game.flash(ICON.bolt, 'good'); feathers(me, 3) }
+            impact(0.2, { matter: 'neige', noShake: true })
+          }
+        })
+        // Collision : le disque du poussin contre les deux fûts
+        if (!me.over) for (const ob of run.obstacles) {
+          const inX = ob.x + ob.hw > CHICK_X - R && ob.x - ob.hw < CHICK_X + R
+          if (!inX) continue
+          ob.data.minClear = Math.min(ob.data.minClear, me.y - R - ob.data.lo, ob.data.hi - (me.y + R))
+          if (me.y - R < ob.data.lo || me.y + R > ob.data.hi) { hurt(me, 'bois'); if (fl !== me) return; me.vy = Math.max(me.vy, 1.4); break }
+        }
+        // Le poussin : hauteur, piqué, battement, culbute d'outro
+        chick.position.y = me.y
+        if (me.over) { me.spin += dt * 9; chick.rotation.z = me.spin; chick.rotation.x = Math.sin(me.spin) * 0.4 }
+        else chick.rotation.z = Math.max(-0.9, Math.min(0.5, me.vy * 0.28))
+        me.flapT = Math.max(0, me.flapT - dt * 4)
+        const beat = me.flapT > 0 ? Math.sin(me.flapT * Math.PI * 3) : Math.sin(now * 0.01) * 0.25
+        for (const w of wings) w.pivot.rotation.x = w.side * beat * 0.9
+        run.blink(chick, now)
+        stage.camera.position.set(0, 0.45, 4.6)
+        stage.camera.lookAt(0, 0.1, 0)
+        me.shake.apply(dt)
+        me.fx.update(dt)
+      })
+
       const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.key === 'ArrowUp') { e.preventDefault(); flap(me) } }
       const onTap = (e: Event) => { e.preventDefault(); flap(me) }
       area.addEventListener('pointerdown', onTap)
       window.addEventListener('keydown', onKey)
-      cleanups.push(() => { area.removeEventListener('pointerdown', onTap); window.removeEventListener('keydown', onKey) })
 
-      const loop = (now: number) => {
-        if (fl !== me) return
-        me.raf = requestAnimationFrame(loop)
-        const dt = Math.min(0.05, (now - me.last) / 1000)
-        me.last = now
-        if (isPaused()) return
-        size()
-        game.tick(dt)
-        update(me, dt)
-        draw(me, now)
-        const prog = Math.min(1, me.passed / cfg.goal)
-        fill.style.width = prog * 100 + '%'
-        meIcon.style.left = prog * 100 + '%'
-      }
-      me.raf = requestAnimationFrame(loop)
-    }).catch(err => { if (!dead) throw err })
+      stage.keep({ dispose() {
+        area.removeEventListener('pointerdown', onTap)
+        window.removeEventListener('keydown', onKey)
+        cloudGeo.dispose(); cloudMat.dispose(); woodMat.dispose(); capMat.dispose()
+        me.fx.dispose()
+        me.game.dispose()
+      } })
+    })().catch(err => { if (!dead) throw err })
 
     return () => {
-      if (dead) return
       dead = true
-      cleanups.forEach(fn => fn())
-      if (fl) { cancelAnimationFrame(fl.raf); fl.game.dispose(); fl = null }
+      if (fl) { fl.stage.dispose(); fl = null }
     }
   }
 }
