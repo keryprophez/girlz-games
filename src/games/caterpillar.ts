@@ -1,438 +1,613 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick, rnd } from '../core/utils'
+import { $, pick } from '../core/utils'
 import { impact } from '../core/impact'
-import { createStage, loadThree, loader, loadModel, fitModel, type Stage, type T3 } from '../core/three3d'
+import { loader } from '../core/three3d'
 import { arcade, type Arcade } from '../core/arcade'
-import { ground, decor, particles, camShake, type Particles, type CamShake } from '../core/scene3d'
 import { ICON } from '../core/icons'
-import { sfx, preloadSfx } from '../core/sfx'
+import { sfx, preloadSfx, cry, preloadCries } from '../core/sfx'
+import { isPaused } from '../core/session'
 
-/* 🐛 La Chenille, refaite le 2/09 — un snake incarné pour de bon.
+/* 🐛 La Chenille qui fait des trous — refaite en 2D le 25/09.
 
-   La logique de grille ne change pas (c'est elle qui fait le jeu), mais :
-   - le corps est CONTINU : une courbe passe par les maillons interpolés et
-     les anneaux sont posés à espacement constant dessus — ça serpente, ça ne
-     saute plus de case en case ;
-   - la clôture est une VRAIE clôture : la toucher coûte un cœur, comme se
-     mordre. Plus de bords qui téléportent à travers un mur dessiné ;
-   - un « tic » à chaque pas, qui accélère avec la chenille : la tension
-     s'entend ;
-   - une fraise bonus apparaît de temps en temps 5 secondes : elle vaut trois
-     fruits, la seule décision « je tente ou pas » du jeu ;
-   - le pas vit sur l'horloge simulée : plus de saut de phase à chaque fruit.
+   « Mouais » pour le snake rhabillé : c'est maintenant l'histoire que les
+   filles connaissent. Une chenille sur une GRANDE FEUILLE (le bord de la
+   feuille est le mur, on joue dans une vraie forme de feuille), et une
+   semaine de repas : lundi 1 pomme, mardi 2 poires, mercredi 3 prunes,
+   jeudi 4 fraises, vendredi 5 oranges, samedi le festin (6 fruits), dimanche
+   une belle feuille verte. Puis la chrysalide, et le papillon s'envole.
 
-   Cinquième jeu sur core/arcade.ts + core/scene3d.ts. */
+   - Chaque bouchée est COMPTÉE par la voix (« un, deux, trois… ») et laisse
+     un trou grignoté dans la feuille, là où était le repas : à la fin de la
+     semaine, la feuille est pleine de trous. La voix dit aussi le jour au
+     lever du soleil (le coq chante) — du contenu, jamais une consigne ;
+   - le soir, la lune passe et la chenille dort ; le matin, le jour suivant ;
+   - sortir de la feuille ou se mordre coûte un cœur (la chenille raccourcit
+     et repart) ; frôler sa queue sans la toucher fait « ouf » ;
+   - la chenille grandit en mangeant (un anneau par fruit, un pour deux en
+     douce) et va un peu plus vite chaque jour.
+
+   Rendu : un canvas 2D ; la feuille est dessinée une fois dans un canvas à
+   part, les trous y sont PERCÉS (on voit le fond au travers). Illustrations
+   Canva (`public/assets/chenille/`, `fruits/`), comme le Ninja et le Potager. */
 
 const COLS = 13
 const ROWS = 11
-const CELL = 0.3
-const FRUITS = ['apple', 'orange', 'banana', 'lemon']
-const BONUS = 'strawberry'
-const BONUS_S = 5
-
-const gx = (x: number) => (x - (COLS - 1) / 2) * CELL
-const gz = (y: number) => (y - (ROWS - 1) / 2) * CELL
+const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+const COUNT = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six']
+/** Les repas de la semaine ; le samedi est un festin de fruits différents. */
+const WEEK: string[][] = [
+  ['pomme'], ['poire', 'poire'], ['prune', 'prune', 'prune'], ['fraise', 'fraise', 'fraise', 'fraise'],
+  ['orange', 'orange', 'orange', 'orange', 'orange'],
+  ['pomme', 'poire', 'prune', 'fraise', 'orange', 'kiwi'],
+  ['feuille']
+]
+const base = import.meta.env.BASE_URL
+const SRC: Record<string, string> = {
+  pomme: `${base}assets/fruits/pomme.webp`, poire: `${base}assets/fruits/poire.webp`, prune: `${base}assets/fruits/prune.webp`,
+  fraise: `${base}assets/fruits/fraise.webp`, orange: `${base}assets/fruits/orange.webp`, kiwi: `${base}assets/fruits/kiwi.webp`,
+  feuille: `${base}assets/chenille/feuille.webp`,
+  leaf: `${base}assets/chenille/grande-feuille.webp`,
+  tete: `${base}assets/chenille/tete.webp`, croque: `${base}assets/chenille/tete-croque.webp`,
+  anneau: `${base}assets/chenille/anneau.webp`, clair: `${base}assets/chenille/anneau-clair.webp`,
+  queue: `${base}assets/chenille/queue.webp`,
+  chrysalide: `${base}assets/chenille/chrysalide.webp`, papillon: `${base}assets/chenille/papillon.webp`,
+  ferme: `${base}assets/chenille/papillon-ferme.webp`,
+  soleil: `${base}assets/chenille/soleil.webp`, lune: `${base}assets/chenille/lune.webp`
+}
 
 type Cell = { x: number; y: number }
-type Obj = import('three').Object3D
+interface Item extends Cell { kind: string; born: number }
+interface Crumb { x: number; y: number; vx: number; vy: number; life: number; col: string }
 
 interface State {
-  stage: Stage
-  T: T3
-  game: Arcade
-  fx: Particles
-  shake: CamShake
+  arena: HTMLElement
+  cv: HTMLCanvasElement
+  g: CanvasRenderingContext2D
+  img: Record<string, HTMLImageElement>
+  /** Cases jouables : sur la feuille (calculé sur l'alpha de l'image). */
+  onLeaf: boolean[][]
+  /** Mise en page (px CSS) : la feuille, et une case. */
+  W: number; H: number; LX: number; LY: number; LW: number; LH: number; cw: number; ch: number; dpr: number
+  /** La feuille, dessinée une fois, et percée à chaque repas. */
+  leafCv: HTMLCanvasElement
+  holes: { x: number; y: number; s: number }[]
   snake: Cell[]
-  /** Case que chaque maillon vient de quitter (pour interpoler). */
   prev: Cell[]
   dir: Cell
   nextDir: Cell
+  items: Item[]
+  day: number
+  /** Repas croqués aujourd'hui. */
+  bites: number
   eaten: number
+  grow: number
   speed: number
-  floor: number
   acc: number
-  fruit: Cell & { kind: string }
-  bonus: (Cell & { left: number }) | null
-  fruitGroup: import('three').Group
-  bonusGroup: import('three').Group
-  fruitModels: Record<string, Obj>
-  head: import('three').Group
-  rings: import('three').Mesh[]
-  ringGeo: import('three').SphereGeometry
-  curve: import('three').CatmullRomCurve3
+  /** La chenille avance (faux la nuit, et pendant la métamorphose). */
+  moving: boolean
   over: boolean
-  tapHint: HTMLElement
+  game: Arcade
+  crumbs: Crumb[]
+  lastOuf: number
+  simT: number
+  shakeT: number
+  /** La métamorphose : 0 rien, puis le temps écoulé depuis la chrysalide. */
+  meta: number
+  metaAt: Cell | null
+  raf: number
+  last: number
+  hint: HTMLElement | null
 }
 
 let cp: State | null = null
 let ctx: GameContext
 
-function freeCell(me: State): Cell {
-  let x = 0, y = 0, tries = 0
-  do { x = rnd(0, COLS - 1); y = rnd(0, ROWS - 1); tries++ }
-  while (tries < 80 && (me.snake.some(s => s.x === x && s.y === y) || (me.fruit && me.fruit.x === x && me.fruit.y === y)))
-  return { x, y }
+const cx = (me: State, c: number) => me.LX + (c + 0.5) * me.cw
+const cy = (me: State, r: number) => me.LY + (r + 0.5) * me.ch
+const playable = (me: State, c: Cell) => c.x >= 0 && c.x < COLS && c.y >= 0 && c.y < ROWS && me.onLeaf[c.y][c.x]
+
+/* ---------- La feuille ---------- */
+
+/** Les cases de la grille qui tombent sur la feuille : centre et quatre
+    presque-coins opaques dans l'image. */
+function leafMask(im: HTMLImageElement): boolean[][] {
+  const c = document.createElement('canvas')
+  c.width = im.naturalWidth; c.height = im.naturalHeight
+  const g = c.getContext('2d', { willReadFrequently: true })!
+  g.drawImage(im, 0, 0)
+  const data = g.getImageData(0, 0, c.width, c.height).data
+  const a = (x: number, y: number) => data[(Math.min(c.height - 1, Math.floor(y)) * c.width + Math.min(c.width - 1, Math.floor(x))) * 4 + 3]
+  const cw = c.width / COLS, ch = c.height / ROWS
+  return Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, k) =>
+    [[0.5, 0.5], [0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85]].every(([u, v]) => a((k + u) * cw, (r + v) * ch) > 200)))
 }
 
-function placeFruit(me: State) {
-  const c = freeCell(me)
-  me.fruit = { ...c, kind: pick(FRUITS) }
-  for (const k of FRUITS) me.fruitModels[k].visible = k === me.fruit.kind
-  me.fruitGroup.position.set(gx(c.x), 0, gz(c.y))
+/** Un trou grignoté : une forme molle et irrégulière, percée dans la feuille,
+    avec un liseré de feuille un peu brunie. */
+function holePath(g: CanvasRenderingContext2D, x: number, y: number, R: number, seed: number) {
+  g.beginPath()
+  for (let k = 0; k <= 22; k++) {
+    const a = k / 22 * Math.PI * 2
+    const bite = 1 + 0.16 * Math.sin(a * 3 + seed) + 0.08 * Math.sin(a * 7 + seed * 2)
+    const px = x + Math.cos(a) * R * bite, py = y + Math.sin(a) * R * bite * 0.9
+    if (k) g.lineTo(px, py); else g.moveTo(px, py)
+  }
+  g.closePath()
 }
 
-function placeBonus(me: State) {
-  const c = freeCell(me)
-  me.bonus = { ...c, left: BONUS_S }
-  me.bonusGroup.position.set(gx(c.x), 0, gz(c.y))
-  me.bonusGroup.visible = true
-  sfx('pluck', { vol: 0.5, rate: 1.3 })
+function punch(me: State, h: { x: number; y: number; s: number }) {
+  const g = me.leafCv.getContext('2d')!
+  const x = (h.x + 0.5) * me.cw, y = (h.y + 0.5) * me.ch, R = me.cw * 0.3 * h.s, seed = h.x * 7 + h.y * 13
+  g.save()
+  g.scale(me.dpr, me.dpr)
+  g.lineJoin = 'round'
+  holePath(g, x, y, R, seed)
+  g.strokeStyle = '#D5E89A'; g.lineWidth = 7; g.stroke()
+  g.globalCompositeOperation = 'destination-out'
+  holePath(g, x, y, R, seed)
+  g.fill()
+  g.globalCompositeOperation = 'source-over'
+  holePath(g, x, y, R, seed)
+  g.strokeStyle = '#6F8F32'; g.lineWidth = 2.4; g.stroke()
+  g.restore()
 }
+
+function layout(me: State) {
+  const W = me.arena.clientWidth, H = me.arena.clientHeight
+  if (!W || !H || (W === me.W && H === me.H)) return
+  me.W = W; me.H = H
+  me.cv.width = Math.round(W * me.dpr); me.cv.height = Math.round(H * me.dpr)
+  // La feuille prend toute la hauteur libre entre la barre du haut et la semaine
+  const ratio = me.img.leaf.naturalWidth / me.img.leaf.naturalHeight
+  // (en haut, les cœurs et la barre de jeu ; en bas, la semaine : rien ne doit tomber dessous)
+  const top = 66, bottom = 112
+  const availH = H - top - bottom, availW = W - 300
+  let LH = availH, LW = LH * ratio
+  if (LW > availW) { LW = availW; LH = LW / ratio }
+  me.LW = LW; me.LH = LH
+  me.LX = (W - LW) / 2 + 20; me.LY = top + (availH - LH) / 2
+  me.cw = LW / COLS; me.ch = LH / ROWS
+  me.leafCv.width = Math.round(LW * me.dpr); me.leafCv.height = Math.round(LH * me.dpr)
+  me.leafCv.getContext('2d')!.drawImage(me.img.leaf, 0, 0, me.leafCv.width, me.leafCv.height)
+  for (const h of me.holes) punch(me, h)
+}
+
+/* ---------- La semaine ---------- */
+
+function paintWeek(me: State) {
+  const el = me.arena.querySelector('.ch-week')
+  if (!el) return
+  el.querySelectorAll<HTMLElement>('.ch-day').forEach((d, k) => {
+    d.classList.toggle('done', k < me.day)
+    d.classList.toggle('now', k === me.day)
+    const pips = d.querySelector('.pips')
+    if (pips) pips.innerHTML = k === me.day ? WEEK[k].map((_, i) => `<i class="${i < me.bites ? 'on' : ''}"></i>`).join('') : ''
+  })
+}
+
+function freeCell(me: State, avoid: Cell[]): Cell | null {
+  const head = me.snake[0]
+  const free: Cell[] = []
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const c = { x, y }
+    if (!playable(me, c)) continue
+    if (me.snake.some(s => s.x === x && s.y === y)) continue
+    if (avoid.some(a => Math.abs(a.x - x) + Math.abs(a.y - y) < 2)) continue
+    if (Math.abs(head.x - x) + Math.abs(head.y - y) < 3) continue
+    free.push(c)
+  }
+  return free.length ? pick(free) : null
+}
+
+/** Le matin : le coq, le jour dit par la voix, le soleil, les repas du jour. */
+function dawn(me: State) {
+  if (cp !== me || me.over) return
+  me.bites = 0
+  me.arena.classList.remove('night')
+  const sky = $('chSky') as unknown as HTMLImageElement
+  sky.src = SRC.soleil; sky.classList.remove('rise'); void sky.offsetWidth; sky.classList.add('rise')
+  cry('coq', { vol: 0.55, max: 1.4 })
+  me.game.after(900, () => { if (cp === me) ctx.say(DAY_NAMES[me.day]) })
+  paintWeek(me)
+  const placed: Cell[] = []
+  WEEK[me.day].forEach((kind, i) => {
+    me.game.after(700 + i * 220, () => {
+      if (cp !== me || me.over) return
+      const c = freeCell(me, placed)
+      if (!c) return
+      placed.push(c)
+      me.items.push({ ...c, kind, born: me.simT })
+      sfx('pluck', { vol: 0.45, rate: 1 + i * 0.06 })
+    })
+  })
+  me.speed = ctx.byTier(340, 280, 230) - me.day * ctx.byTier(12, 13, 14)
+  me.game.after(700 + WEEK[me.day].length * 220, () => { if (cp === me && !me.over) me.moving = true })
+}
+
+/** Le soir : la lune passe, la chenille dort, puis le jour suivant. */
+function dusk(me: State) {
+  me.moving = false
+  sfx('confirm', { vol: 0.6 })
+  me.arena.classList.add('night')
+  const sky = $('chSky') as unknown as HTMLImageElement
+  sky.src = SRC.lune; sky.classList.remove('rise'); void sky.offsetWidth; sky.classList.add('rise')
+  me.day++
+  paintWeek(me)
+  me.game.after(2200, () => dawn(me))
+}
+
+/* ---------- La chenille ---------- */
 
 function setDir(x: number, y: number) {
   const me = cp
   if (!me || me.over) return
   if (x === -me.dir.x && y === -me.dir.y) return // pas de demi-tour sur place
   me.nextDir = { x, y }
-  me.tapHint.classList.add('off')
+  if (me.hint) { me.hint.remove(); me.hint = null }
 }
 
-function bite(me: State, at: Cell, wall: boolean) {
-  const p = { x: gx(at.x), y: CELL * 0.4, z: gz(at.y) }
+function bump(me: State, wall: boolean): boolean {
   impact(0.7, { matter: wall ? 'bois' : 'pate', noShake: true })
-  me.shake.hit(0.6)
-  me.fx.burst(p, { count: 18, color: wall ? [0xC9A874, 0x8A6238] : [0x9ED26A, 0xFFFFFF], speed: 2.2, life: 0.6, size: 0.05 })
+  me.shakeT = 0.3
   me.game.flash(ICON.heartEmpty, 'bad')
-  if (me.game.hurt()) { finish(me); return true }
+  if (me.game.hurt()) { finish(me, false); return true }
   // Il reste une vie : on raccourcit et on repart, sans temps mort
-  const keep = Math.max(4, Math.floor(me.snake.length / 2))
+  const keep = Math.max(3, Math.floor(me.snake.length / 2))
   me.snake = me.snake.slice(0, keep)
   me.prev = me.prev.slice(0, keep)
   return false
 }
 
+function crumbs(me: State, x: number, y: number, col: string) {
+  for (let i = 0; i < 12; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 120
+    me.crumbs.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.3, col })
+  }
+}
+
+const JUICE: Record<string, string> = { pomme: '#E8404A', poire: '#B9C93F', prune: '#7B4BB5', fraise: '#E0303C', orange: '#FF9A1F', kiwi: '#8CC63F', feuille: '#5E9E3A' }
+
+function eat(me: State, it: Item) {
+  me.items.splice(me.items.indexOf(it), 1)
+  me.bites++
+  me.eaten++
+  sfx('chop', { vol: 0.75, rate: 1.05 + me.bites * 0.05 })
+  const x = cx(me, it.x), y = cy(me, it.y)
+  crumbs(me, x, y, JUICE[it.kind] ?? '#7B4BB5')
+  // La bouchée est comptée, à voix haute et en grand
+  ctx.say(COUNT[me.bites - 1] ?? String(me.bites))
+  const n = document.createElement('div')
+  n.className = 'ch-count'
+  n.textContent = String(me.bites)
+  n.style.left = x + 'px'; n.style.top = (y - me.ch * 0.9) + 'px'
+  n.addEventListener('animationend', () => n.remove())
+  me.arena.appendChild(n)
+  // Le trou reste dans la feuille, là où était le repas
+  const h = { x: it.x, y: it.y, s: it.kind === 'feuille' ? 1.3 : 0.8 + Math.random() * 0.25 }
+  me.holes.push(h)
+  punch(me, h)
+  me.game.hit(1, { silent: true })
+  me.grow += ctx.byTier(0.5, 1, 1)
+  paintWeek(me)
+  if (me.bites >= WEEK[me.day].length) {
+    me.moving = false
+    if (me.day === WEEK.length - 1) metamorphosis(me)
+    else me.game.after(500, () => { if (cp === me && !me.over) dusk(me) })
+  }
+}
+
 function step(me: State) {
-  if (me.over) return
+  if (me.over || !me.moving) return
   me.dir = me.nextDir
   const head = me.snake[0]
-  const nx = head.x + me.dir.x, ny = head.y + me.dir.y
-  // La clôture : un vrai mur. On cogne, on perd un cœur, on repart ailleurs.
-  if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
-    if (bite(me, head, true)) return
+  const nxt = { x: head.x + me.dir.x, y: head.y + me.dir.y }
+  // Le bord de la feuille : on cogne, on perd un cœur, on repart ailleurs
+  if (!playable(me, nxt)) {
+    if (bump(me, true)) return
     const turns: Cell[] = me.dir.x ? [{ x: 0, y: -1 }, { x: 0, y: 1 }] : [{ x: -1, y: 0 }, { x: 1, y: 0 }]
     const ok = turns.filter(d => {
-      const tx = head.x + d.x, ty = head.y + d.y
-      return tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS && !me.snake.some(s => s.x === tx && s.y === ty)
+      const t = { x: head.x + d.x, y: head.y + d.y }
+      return playable(me, t) && !me.snake.some(s => s.x === t.x && s.y === t.y)
     })
     me.dir = me.nextDir = ok.length ? pick(ok) : { x: -me.dir.x, y: -me.dir.y }
     return
   }
-  // Se mordre : ça coûte un cœur. À zéro, la partie s'arrête.
-  const hitIdx = me.snake.findIndex(s => s.x === nx && s.y === ny)
+  // Se mordre : un cœur
+  const hitIdx = me.snake.findIndex(s => s.x === nxt.x && s.y === nxt.y)
   if (hitIdx > 0 && hitIdx < me.snake.length - 1) {
-    if (bite(me, { x: nx, y: ny }, false)) return
+    if (bump(me, false)) return
   }
   me.prev = me.snake.map(s => ({ ...s }))
-  me.snake.unshift({ x: nx, y: ny })
+  me.snake.unshift(nxt)
   me.prev.unshift({ ...head })
-  sfx('tick', { vol: 0.16, rate: 0.9 + (300 - me.speed) / 300 * 0.6, spread: 0.02 })
+  if (me.grow >= 1) { me.grow -= 1; me.prev.pop(); me.prev.push({ ...me.snake[me.snake.length - 1] }) }
+  else { me.snake.pop(); me.prev.pop() }
+  sfx('tick', { vol: 0.12, rate: 0.9 + me.day * 0.05, spread: 0.02 })
 
-  const ateBonus = me.bonus && nx === me.bonus.x && ny === me.bonus.y
-  if (nx === me.fruit.x && ny === me.fruit.y || ateBonus) {
-    const pts = ateBonus ? 3 : 1
-    me.eaten += pts
-    sfx('chop', { vol: 0.7, rate: 1.1 + Math.min(20, me.eaten) * 0.015 })
-    impact(0.35, { matter: 'pate', noShake: true })
-    me.fx.burst({ x: gx(nx), y: CELL * 0.5, z: gz(ny) }, { count: ateBonus ? 26 : 14, color: ateBonus ? [0xFF5A6E, 0xFFFFFF, 0xFFC533] : [0xFFE08A, 0xFFFFFF, 0x9ED26A], speed: 2, life: 0.6, size: 0.05, gravity: 4 })
-    me.game.hit(pts, { silent: true, perfect: !!ateBonus })
-    if (ateBonus) { me.game.flash('×3'); me.bonus = null; me.bonusGroup.visible = false }
-    else placeFruit(me)
-    // La chenille accélère : c'est ça qui finit par avoir raison de la joueuse
-    me.speed = Math.max(me.floor, me.speed - 8 * pts)
-    // Une fraise bonus, parfois, quand il n'y en a pas déjà une
-    if (!me.bonus && Math.random() < 0.22) placeBonus(me)
-    if (!ateBonus) me.prev.pop() // on grandit : la queue reste, mais il faut un prev pour elle
-    else me.snake.pop()
-    if (!ateBonus) me.prev.push({ ...me.snake[me.snake.length - 1] })
-    else me.prev.pop()
-  } else {
-    me.snake.pop()
-    me.prev.pop()
+  const it = me.items.find(i => i.x === nxt.x && i.y === nxt.y)
+  if (it) { eat(me, it); return }
+  // Le « ouf » : frôler sa queue (pas le cou) sans la toucher
+  const close = me.snake.some((s, i) => i >= 4 && Math.abs(s.x - nxt.x) + Math.abs(s.y - nxt.y) === 1)
+  if (close && me.simT - me.lastOuf > 3) {
+    me.lastOuf = me.simT
+    sfx('whoosh', { vol: 0.4, rate: 0.85 })
+    me.game.flash(ICON.bolt)
   }
 }
 
-function finish(me: State) {
+/** Dimanche soir : la chenille devient chrysalide, puis le papillon s'envole. */
+function metamorphosis(me: State) {
+  me.moving = false
+  me.over = true
+  me.metaAt = { ...me.snake[0] }
+  me.meta = 0.0001
+  sfx('confirm', { vol: 0.8, rate: 1.1 })
+  me.arena.classList.add('night')
+  const sky = $('chSky') as unknown as HTMLImageElement
+  sky.src = SRC.lune; sky.classList.remove('rise'); void sky.offsetWidth; sky.classList.add('rise')
+  me.day = WEEK.length
+  paintWeek(me)
+  me.game.end({ title: 'Un beau papillon !', msg: `Tu as croqué ${me.eaten} repas en une semaine`, outroMs: 5200 })
+}
+
+function finish(me: State, won: boolean) {
   if (me.over) return
   me.over = true
-  me.stage.timeScale = 0.4
-  const th = ctx.byTier([14, 7], [18, 9], [24, 12])
-  const n = me.eaten
+  me.moving = false
   me.game.end({
-    title: n >= th[0] ? 'Chenille GÉANTE !' : n >= th[1] ? 'Belle chenille !' : 'Elle s\'est cognée !',
-    msg: `Tu as croqué ${n} fruit${n > 1 ? 's' : ''}`,
+    title: won ? 'Un beau papillon !' : 'La chenille est fatiguée…',
+    msg: `Tu as croqué ${me.eaten} repas`,
     outroMs: 1200
   })
 }
 
-/** La tête : sphère + yeux + antennes, orientée selon la direction. */
-function makeHead(T: T3) {
-  const g = new T.Group()
-  const mat = new T.MeshStandardMaterial({ color: 0x4E8C3E, roughness: 0.55 })
-  const skull = new T.Mesh(new T.SphereGeometry(CELL * 0.48, 20, 16), mat)
-  skull.castShadow = true
-  g.add(skull)
-  const white = new T.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.3 })
-  const dark = new T.MeshStandardMaterial({ color: 0x2A2A2A, roughness: 0.4 })
-  for (const s of [-1, 1]) {
-    const eye = new T.Mesh(new T.SphereGeometry(CELL * 0.14, 10, 8), white)
-    eye.position.set(s * CELL * 0.2, CELL * 0.2, CELL * 0.36)
-    const pupil = new T.Mesh(new T.SphereGeometry(CELL * 0.065, 8, 6), dark)
-    pupil.position.set(s * CELL * 0.2, CELL * 0.2, CELL * 0.47)
-    g.add(eye, pupil)
-    const stem = new T.Mesh(new T.CylinderGeometry(CELL * 0.025, 0.025 * CELL, CELL * 0.4, 6),
-      new T.MeshStandardMaterial({ color: 0x5B8F4A, roughness: 0.7 }))
-    stem.position.set(s * CELL * 0.2, CELL * 0.6, 0)
-    stem.rotation.z = -s * 0.5
-    const tip = new T.Mesh(new T.SphereGeometry(CELL * 0.07, 8, 6),
-      new T.MeshStandardMaterial({ color: 0xE85D75, roughness: 0.5 }))
-    tip.position.set(s * CELL * 0.3, CELL * 0.78, 0)
-    stem.castShadow = tip.castShadow = true
-    g.add(stem, tip)
+/* ---------- La boucle ---------- */
+
+function update(me: State, dt: number) {
+  if (me.moving && !me.over) {
+    me.acc += dt * 1000
+    while (me.acc >= me.speed && me.moving && !me.over) { me.acc -= me.speed; step(me) }
   }
-  return g
+  for (let i = me.crumbs.length - 1; i >= 0; i--) {
+    const c = me.crumbs[i]
+    c.x += c.vx * dt; c.y += c.vy * dt; c.vx *= 0.92; c.vy *= 0.92
+    c.life -= dt
+    if (c.life <= 0) me.crumbs.splice(i, 1)
+  }
+  if (me.shakeT > 0) me.shakeT = Math.max(0, me.shakeT - dt)
+  if (me.meta) {
+    me.meta += dt
+    if (me.meta > 2.2 && !me.arena.classList.contains('dawnlast')) {
+      me.arena.classList.add('dawnlast')
+      me.arena.classList.remove('night')
+      const sky = $('chSky') as unknown as HTMLImageElement
+      sky.src = SRC.soleil; sky.classList.remove('rise'); void sky.offsetWidth; sky.classList.add('rise')
+      sfx('confirm', { vol: 0.7, rate: 1.3 })
+    }
+  }
 }
+
+function drawImg(g: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, sz: number, rot = 0, alpha = 1) {
+  g.save()
+  g.globalAlpha = alpha
+  g.translate(x, y); g.rotate(rot)
+  g.drawImage(im, -sz / 2, -sz / 2, sz, sz)
+  g.restore()
+}
+
+function draw(me: State, now: number) {
+  const { g, dpr, W, H } = me
+  g.setTransform(dpr, 0, 0, dpr, 0, 0)
+  g.clearRect(0, 0, W, H)
+  if (me.shakeT > 0) { const k = me.shakeT / 0.3 * 7; g.translate((Math.random() * 2 - 1) * k, (Math.random() * 2 - 1) * k) }
+  // La feuille (percée), avec son ombre douce
+  g.save()
+  g.shadowColor = 'rgba(90,70,30,.28)'; g.shadowBlur = 18; g.shadowOffsetY = 12
+  g.drawImage(me.leafCv, me.LX, me.LY, me.LW, me.LH)
+  g.restore()
+
+  // Les repas du jour : ils apparaissent d'un bond, puis respirent
+  for (const it of me.items) {
+    const age = me.simT - it.born
+    const pop = Math.min(1, age / 0.25)
+    const s = me.cw * 1.15 * (pop < 1 ? 0.4 + pop * 0.75 : 1 + Math.sin(now / 320 + it.x) * 0.04)
+    const x = cx(me, it.x), y = cy(me, it.y)
+    g.fillStyle = 'rgba(40,70,20,.22)'
+    g.beginPath(); g.ellipse(x + 3, y + s * 0.36, s * 0.34, s * 0.12, 0, 0, Math.PI * 2); g.fill()
+    drawImg(g, me.img[it.kind], x, y, s)
+  }
+
+  // La chenille : chaque anneau glisse de la case qu'il quitte vers la suivante
+  const p = me.moving ? Math.min(1, me.acc / me.speed) : 1
+  const pos = me.snake.map((b, i) => {
+    const a = me.prev[i] ?? b
+    return { x: cx(me, a.x + (b.x - a.x) * p), y: cy(me, a.y + (b.y - a.y) * p) }
+  })
+  const metaK = me.meta ? Math.min(1, me.meta / 1.2) : 0
+  const bodyAlpha = 1 - metaK
+  if (bodyAlpha > 0.01) {
+    for (let i = pos.length - 1; i >= 0; i--) {
+      const q = pos[i], nx = pos[Math.max(0, i - 1)]
+      const dx = i === 0 ? me.dir.x : nx.x - q.x, dy = i === 0 ? me.dir.y : nx.y - q.y
+      const rot = Math.atan2(dy, dx) + Math.PI / 2
+      const wob = 1 + Math.sin(now / 160 - i * 0.8) * 0.04
+      g.globalAlpha = bodyAlpha
+      g.fillStyle = 'rgba(40,70,20,.22)'
+      g.beginPath(); g.ellipse(q.x + 3, q.y + me.cw * 0.42, me.cw * 0.42, me.cw * 0.14, 0, 0, Math.PI * 2); g.fill()
+      if (i === 0) {
+        const hungry = me.items.some(it => Math.abs(it.x - me.snake[0].x) + Math.abs(it.y - me.snake[0].y) <= 1)
+        drawImg(g, hungry ? me.img.croque : me.img.tete, q.x, q.y, me.cw * 1.35, rot, bodyAlpha)
+      } else {
+        const im = i === pos.length - 1 && pos.length > 2 ? me.img.queue : i % 2 ? me.img.anneau : me.img.clair
+        drawImg(g, im, q.x, q.y, me.cw * (i === pos.length - 1 ? 0.95 : 1.12) * wob, rot, bodyAlpha)
+      }
+    }
+    g.globalAlpha = 1
+  }
+
+  // Les miettes
+  for (const c of me.crumbs) {
+    g.globalAlpha = Math.min(1, c.life * 2)
+    g.fillStyle = c.col
+    g.beginPath(); g.arc(c.x, c.y, 4.5, 0, Math.PI * 2); g.fill()
+  }
+  g.globalAlpha = 1
+
+  // La métamorphose : la chrysalide qui brille, puis le papillon qui s'envole
+  if (me.meta && me.metaAt) {
+    const x = cx(me, me.metaAt.x), y = cy(me, me.metaAt.y)
+    const t = me.meta
+    if (t < 3) {
+      g.save()
+      g.shadowColor = 'rgba(255,210,60,.95)'; g.shadowBlur = 24 * Math.min(1, t)
+      drawImg(g, me.img.chrysalide, x, y, me.cw * 2.2 * Math.min(1, 0.3 + t), Math.sin(t * 3) * 0.08, Math.min(1, t * 1.5) * (t > 2.6 ? (3 - t) / 0.4 : 1))
+      g.restore()
+    }
+    if (t > 2.6) {
+      const f = t - 2.6
+      const bx = x + f * me.W * 0.16 + Math.sin(f * 4) * 30, by = y - f * me.H * 0.22
+      const flap = Math.sin(f * 14) > 0
+      g.save()
+      g.shadowColor = 'rgba(255,210,60,.9)'; g.shadowBlur = 18
+      drawImg(g, flap ? me.img.papillon : me.img.ferme, bx, by, me.cw * 2.6 * Math.min(1, 0.4 + f), 0.25)
+      g.restore()
+    }
+  }
+}
+
+/* ---------- Le jeu ---------- */
 
 export const caterpillar: GameDef = {
   id: 'caterpillar', name: 'La Chenille', icon: '🐛', sq: 'sq-mint', cat: 'action', music: 'meadow',
-  subtitle: 'Glisse ton doigt pour guider la chenille vers les fruits !',
+  subtitle: 'Une semaine de repas… puis le papillon !',
   mount(c) {
     ctx = c
     let dead = false
-    c.root.innerHTML = `<div class="arena g3-arena cp3-arena" id="cpArena"></div>`
+    const cleanups: (() => void)[] = []
+    c.root.innerHTML = `
+      <div class="arena ch-arena" id="cpArena">
+        <canvas id="chCanvas"></canvas>
+        <img class="ch-sky rise" id="chSky" src="${SRC.soleil}" alt="">
+        <div class="ch-week">${WEEK.map((foods, k) => `
+          <div class="ch-day">
+            ${k === 5 ? `<span class="feast"><img src="${SRC.pomme}" alt=""><img src="${SRC.fraise}" alt=""><img src="${SRC.kiwi}" alt=""></span>` : `<img src="${SRC[foods[0]]}" alt="">`}
+            <b>${foods.length}</b><span class="ok">${ICON.check}</span><span class="pips"></span>
+          </div>`).join('')}</div>
+      </div>`
     const arena = $('cpArena')
+    const cv = $('chCanvas') as unknown as HTMLCanvasElement
     const hideLoader = loader(arena, 'caterpillar')
-    preloadSfx(['tick', 'chop', 'pluck', 'error'])
+    cleanups.push(hideLoader)
+    preloadSfx(['tick', 'chop', 'pluck', 'error', 'confirm', 'whoosh'])
+    preloadCries(['coq'])
 
-    ;(async () => {
-      const T = await loadThree()
+    const names = Object.keys(SRC)
+    Promise.all(names.map(n => { const im = new Image(); im.src = SRC[n]; return im.decode().then(() => im) })).then(imgs => {
       if (dead) return
-      const stage: Stage = await createStage(arena, {
-        sky: '#2A4A32', fog: [7, 16], fogColor: '#2A4A32',
-        cam: [0, 3.9, 2.9], target: [0, 0, -0.1], fov: 48,
-        hemi: ['#FFE9C4', '#1C3020', 0.8],
-        sun: { pos: [2.6, 5, 2.8], color: '#FFD9A0', intensity: 1.9, area: 4.5, far: 13 },
-        fill: 0.35, exposure: 0.95, iblIntensity: 0.55
-      })
-      if (dead) { stage.dispose(); return }
-      const scene = stage.scene
-
-      /* Le plateau : pré en damier, entouré d'une vraie clôture */
-      const W = COLS * CELL, H = ROWS * CELL
-      const Y0 = -CELL * 0.3
-      const base = new T.Mesh(new T.BoxGeometry(W + 0.1, 0.12, H + 0.1), new T.MeshStandardMaterial({ color: 0x3E7A42, roughness: 0.9 }))
-      base.position.y = Y0 - 0.06
-      base.receiveShadow = true
-      scene.add(base)
-      const cellGeo = new T.PlaneGeometry(CELL, CELL)
-      const cellMat = new T.MeshStandardMaterial({ color: 0x4E9152, roughness: 0.9 })
-      for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-        if ((x + y) % 2 !== 0) continue
-        const m = new T.Mesh(cellGeo, cellMat)
-        m.rotation.x = -Math.PI / 2
-        m.position.set(gx(x), Y0 + 0.001, gz(y))
-        m.receiveShadow = true
-        scene.add(m)
-      }
-      const far = ground(stage, { radius: 14, color: 0x25402A, roughness: 1 })
-      far.position.y = Y0 - 0.14
-      // La clôture : des barrières du kit nature tout autour, et des arbres derrière
-      const fences: { model: string; x: number; z: number; size: number; rot: number; tint: number }[] = []
-      const fs = 0.23
-      for (let x = -W / 2 + fs / 2; x < W / 2; x += fs) {
-        fences.push({ model: 'nature/fence_simple', x, z: -H / 2 - 0.1, size: 0.22, rot: 0, tint: 0xC9A874 })
-        fences.push({ model: 'nature/fence_simple', x, z: H / 2 + 0.1, size: 0.22, rot: 0, tint: 0xC9A874 })
-      }
-      for (let z = -H / 2 + fs / 2; z < H / 2; z += fs) {
-        fences.push({ model: 'nature/fence_simple', x: -W / 2 - 0.1, z, size: 0.22, rot: Math.PI / 2, tint: 0xC9A874 })
-        fences.push({ model: 'nature/fence_simple', x: W / 2 + 0.1, z, size: 0.22, rot: Math.PI / 2, tint: 0xC9A874 })
-      }
-      const trees = [[-2.9, -2.6, 1.3], [2.8, -2.8, 1.5], [-3.2, -0.4, 1.1], [3.3, 0.2, 1.2], [0.4, -3.1, 1.4], [-1.6, -3, 1.0]]
-        .map(([x, z, size], i) => ({ model: `nature/${['tree_default', 'tree_oak', 'tree_fat'][i % 3]}`, x, z, size, rot: Math.random() * 6, tint: 0x5E9A3C }))
-      decor(stage, [...fences, ...trees]).then(g => g.position.y = Y0).catch(() => { /* sans décor, le jeu tourne */ })
-
-      /* Les vrais fruits : modèles chargés une fois, un seul visible ; et la fraise bonus */
-      const fruitGroup = new T.Group()
-      const fruitModels: Record<string, Obj> = {}
-      for (const k of FRUITS) {
-        const m = await loadModel('food', k)
-        fitModel(T, m, 0.3)
-        m.visible = false
-        fruitModels[k] = m
-        fruitGroup.add(m)
-      }
-      const bonusGroup = new T.Group()
-      const bm = await loadModel('food', BONUS)
-      fitModel(T, bm, 0.32)
-      bonusGroup.add(bm)
-      bonusGroup.visible = false
-      if (dead) { stage.dispose(); return }
-      scene.add(fruitGroup, bonusGroup)
       hideLoader()
-
-      const tapHint = document.createElement('div')
-      tapHint.className = 'tap-hint'
-      tapHint.innerHTML = ICON.tap
-      arena.appendChild(tapHint)
-
-      /* La chenille : la tête + des anneaux posés sur une courbe continue */
-      const head = makeHead(T)
-      scene.add(head)
-      const ringGeo = new T.SphereGeometry(CELL * 0.46, 16, 12)
-      const rings: import('three').Mesh[] = []
-      const ensureRings = (n: number) => {
-        while (rings.length < n) {
-          const m = new T.Mesh(ringGeo, new T.MeshStandardMaterial({ color: 0x5E9C4A, roughness: 0.6 }))
-          m.castShadow = true
-          scene.add(m)
-          rings.push(m)
-        }
-        while (rings.length > n) {
-          const m = rings.pop()!
-          scene.remove(m); (m.material as import('three').Material).dispose()
-        }
-        // Dégradé du vert vif (cou) au vert tendre (queue), queue plus fine.
-        // setHSL travaille en LINÉAIRE par défaut : SRGBColorSpace, sinon pastel.
-        for (let i = 0; i < rings.length; i++) {
-          const t = i / Math.max(1, rings.length - 1)
-          ;(rings[i].material as import('three').MeshStandardMaterial).color.setHSL((95 - t * 25) / 360, 0.55, 0.45 + t * 0.12, T.SRGBColorSpace)
-          rings[i].scale.setScalar(1 - t * 0.2)
-        }
-      }
+      const img: Record<string, HTMLImageElement> = {}
+      names.forEach((n, i) => { img[n] = imgs[i] })
+      const onLeaf = leafMask(img.leaf)
 
       const game = arcade(c, {
         host: arena,
         lives: c.byTier(5, 3, 3),
         scoreIcon: ICON.apple,
-        plainScore: true, // le compteur, c'est le nombre de fruits, pas un score à combo
-        stars: s => { const th = c.byTier([14, 7], [18, 9], [24, 12]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
+        plainScore: true,
+        // Le papillon, c'est déjà une victoire : les étoiles comptent les cœurs gardés
+        stars: s => {
+          if (me.day < WEEK.length) return me.day >= 4 ? 2 : 1
+          return s.lives >= s.maxLives ? 3 : s.lives >= s.maxLives - 2 ? 2 : 1
+        }
       })
-      const midY = Math.floor(ROWS / 2)
-      const snake = Array.from({ length: 6 }, (_, i) => ({ x: 6 - i, y: midY }))
+      // Le départ : au milieu de la feuille, trois anneaux vers la gauche
+      const start: Cell = { x: 6, y: 5 }
+      const snake = [start, { x: 5, y: 5 }, { x: 4, y: 5 }].filter(s => onLeaf[s.y][s.x])
       const me: State = {
-        stage, T, game, fx: particles(stage, 400), shake: camShake(stage),
+        arena, cv, g: cv.getContext('2d')!, img, onLeaf,
+        W: 0, H: 0, LX: 0, LY: 0, LW: 0, LH: 0, cw: 0, ch: 0, dpr: Math.min(2, window.devicePixelRatio || 1),
+        leafCv: document.createElement('canvas'), holes: [],
         snake, prev: snake.map(s => ({ x: s.x - 1, y: s.y })),
         dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 },
-        eaten: 0, speed: c.byTier(300, 250, 200), floor: c.byTier(150, 125, 100), acc: 0,
-        fruit: { x: 0, y: 0, kind: 'apple' }, bonus: null,
-        fruitGroup, bonusGroup, fruitModels, head, rings, ringGeo,
-        curve: new T.CatmullRomCurve3([new T.Vector3(), new T.Vector3()], false, 'centripetal', 0.5),
-        over: false, tapHint
+        items: [], day: 0, bites: 0, eaten: 0, grow: 0, speed: 340, acc: 0,
+        moving: false, over: false, game, crumbs: [], lastOuf: -9, simT: 0, shakeT: 0,
+        meta: 0, metaAt: null, raf: 0, last: performance.now(), hint: null
       }
       cp = me
-      placeFruit(me)
+      layout(me)
+      const ro = new ResizeObserver(() => { if (cp === me) layout(me) })
+      ro.observe(arena)
+      cleanups.push(() => ro.disconnect())
+
+      const hint = document.createElement('div')
+      hint.className = 'tap-hint'
+      hint.innerHTML = ICON.tap
+      arena.appendChild(hint)
+      me.hint = hint
+
       // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
       if ((window as unknown as { __BOT?: boolean }).__BOT) {
         ;(window as unknown as { __cp: unknown }).__cp = {
-          get running() { return !me.over }, get snake() { return me.snake }, get fruit() { return me.fruit },
-          get dir() { return me.dir }, get eaten() { return me.eaten }
+          get running() { return !me.over }, get moving() { return me.moving }, get snake() { return me.snake },
+          get items() { return me.items.map(i => ({ x: i.x, y: i.y, kind: i.kind })) },
+          get dir() { return me.dir }, get next() { return me.nextDir }, get eaten() { return me.eaten }, get day() { return me.day },
+          get lives() { return game.s.lives }, get holes() { return me.holes.length },
+          cols: COLS, rows: ROWS, onLeaf: (x: number, y: number) => playable(me, { x, y })
         }
       }
 
-      /* --- Boucle : pas sur l'horloge simulée, corps interpolé sur une courbe --- */
-      const pts: import('three').Vector3[] = []
-      stage.start((dt, now) => {
-        if (cp !== me) return
-        game.tick(dt)
-        if (!me.over) {
-          me.acc += dt * 1000
-          while (me.acc >= me.speed && !me.over) { me.acc -= me.speed; step(me) }
-        }
-        if (me.bonus) {
-          me.bonus.left -= dt
-          bonusGroup.visible = me.bonus.left > 1.2 || Math.floor(now / 120) % 2 === 0
-          if (me.bonus.left <= 0) { me.bonus = null; bonusGroup.visible = false }
-        }
-        // Chaque maillon est entre la case qu'il quitte et celle où il va
-        const p = me.over ? 1 : Math.min(1, me.acc / me.speed)
-        pts.length = 0
-        for (let i = 0; i < me.snake.length; i++) {
-          const a = me.prev[i] ?? me.snake[i], b = me.snake[i]
-          const x = gx(a.x) + (gx(b.x) - gx(a.x)) * p, z = gz(a.y) + (gz(b.y) - gz(a.y)) * p
-          pts.push(new T.Vector3(x, 0, z))
-        }
-        if (pts.length >= 2) {
-          me.curve.points = pts
-          me.curve.updateArcLengths()
-          const len = me.curve.getLength()
-          const n = Math.max(1, Math.round(len / (CELL * 0.55)))
-          ensureRings(n)
-          for (let i = 0; i < n; i++) {
-            const u = Math.min(1, (i + 1) / (n + 0.5))
-            const q = me.curve.getPointAt(u)
-            rings[i].position.set(q.x, CELL * 0.05 + Math.abs(Math.sin(now / 150 + i * 0.7)) * 0.025, q.z)
-          }
-          const h = pts[0]
-          head.position.set(h.x, CELL * 0.08 + Math.abs(Math.sin(now / 150)) * 0.03, h.z)
-        }
-        // La tête regarde déjà vers le prochain virage
-        const look = me.nextDir
-        const want = Math.atan2(look.x, look.y)
-        let d = want - head.rotation.y
-        while (d > Math.PI) d -= Math.PI * 2
-        while (d < -Math.PI) d += Math.PI * 2
-        head.rotation.y += d * Math.min(1, dt * 12)
-
-        // Le fruit frétille pour attirer l'œil ; la fraise aussi
-        fruitGroup.rotation.y = now / 900
-        fruitGroup.position.y = 0.02 + Math.sin(now / 300) * 0.02
-        bonusGroup.rotation.y = -now / 500
-        bonusGroup.position.y = 0.06 + Math.sin(now / 200) * 0.04
-
-        // La caméra recule un peu avec la longueur
-        const back = Math.min(0.9, (me.snake.length - 6) * 0.04)
-        stage.camera.position.set(0, 3.9 + back * 0.8, 2.9 + back)
-        stage.camera.lookAt(0, 0, -0.1)
-        me.shake.apply(dt)
-        me.fx.update(dt)
-      })
-
-      /* Glisser dans une direction (n'importe où sur l'arène) */
-      let start: { x: number; y: number } | null = null
-      const onDown = (e: PointerEvent) => { start = { x: e.clientX, y: e.clientY } }
+      /* Glisser dans une direction (n'importe où sur l'arène), ou les flèches */
+      let from: { x: number; y: number; id: number } | null = null
+      const onDown = (e: PointerEvent) => { from = { x: e.clientX, y: e.clientY, id: e.pointerId } }
       const onMove = (e: PointerEvent) => {
-        if (!start) return
-        const dx = e.clientX - start.x, dy = e.clientY - start.y
+        if (!from || from.id !== e.pointerId) return
+        const dx = e.clientX - from.x, dy = e.clientY - from.y
         if (Math.hypot(dx, dy) < 22) return
         if (Math.abs(dx) > Math.abs(dy)) setDir(Math.sign(dx), 0)
         else setDir(0, Math.sign(dy))
-        start = { x: e.clientX, y: e.clientY }
+        from = { x: e.clientX, y: e.clientY, id: e.pointerId }
       }
-      const onUp = () => { start = null }
-      arena.addEventListener('pointerdown', onDown)
-      arena.addEventListener('pointermove', onMove)
-      window.addEventListener('pointerup', onUp)
+      const onUp = (e: PointerEvent) => { if (from?.id === e.pointerId) from = null }
       const onKey = (e: KeyboardEvent) => {
         if (e.key === 'ArrowUp') setDir(0, -1)
         else if (e.key === 'ArrowDown') setDir(0, 1)
         else if (e.key === 'ArrowLeft') setDir(-1, 0)
         else if (e.key === 'ArrowRight') setDir(1, 0)
       }
+      arena.addEventListener('pointerdown', onDown)
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
       window.addEventListener('keydown', onKey)
-
-      stage.keep({ dispose() {
+      cleanups.push(() => {
         arena.removeEventListener('pointerdown', onDown)
-        arena.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
         window.removeEventListener('keydown', onKey)
-        cellGeo.dispose(); cellMat.dispose(); ringGeo.dispose()
-        me.fx.dispose()
-        me.game.dispose()
-      } })
-    })().catch(err => { if (!dead) throw err })
+      })
+
+      const loop = (now: number) => {
+        if (cp !== me) return
+        me.raf = requestAnimationFrame(loop)
+        const dt = Math.min(0.05, (now - me.last) / 1000)
+        me.last = now
+        if (isPaused()) return
+        layout(me)
+        me.simT += dt
+        game.tick(dt)
+        update(me, dt)
+        draw(me, now)
+      }
+      me.raf = requestAnimationFrame(loop)
+      game.after(600, () => dawn(me))
+    }).catch(err => { if (!dead) throw err })
 
     return () => {
+      if (dead) return
       dead = true
-      if (cp) { cp.stage.dispose(); cp = null }
+      cleanups.forEach(fn => fn())
+      if (cp) { cancelAnimationFrame(cp.raf); cp.game.dispose(); cp = null }
     }
   }
 }

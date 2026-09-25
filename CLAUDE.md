@@ -188,7 +188,10 @@ encore leur personnage 3D.
 Modèles : `icetower.ts`, `mole.ts` (personnages de
 `critters.ts`, raycast sur des zones de tape invisibles) et, en 2D,
 `ninja.ts` (un canvas, les fruits Canva, ombres et lueurs précalculées une
-fois par image, vagues puis pluie finale). **Un jeu qui défile**
+fois par image, vagues puis pluie finale) et `caterpillar.ts` (la Chenille
+qui fait des trous : une grille posée sur une grande feuille illustrée, les
+cases jouables lues dans l'ALPHA de l'image, la feuille dessinée une fois
+dans un canvas à part et PERCÉE à chaque repas — `destination-out`). **Un jeu qui défile**
 (la joueuse reste à x = 0, le monde avance vers −x) part en plus de
 `core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
 obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
@@ -211,10 +214,11 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
-`caterpillar` · `flappy` · `mole` · `dressup` ·
+`flappy` · `mole` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
-(« les fruits trop grossiers, c'est confus »). Pour
+(« les fruits trop grossiers, c'est confus »), la Chenille le 25/09 (« mouais »
+pour le snake rhabillé : c'est devenu la Chenille qui fait des trous). Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 `mass = 0`.

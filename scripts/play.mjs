@@ -155,33 +155,56 @@ await scenario('bonhomme-parcours-complet', async () => {
   if (typeof best !== 'number') throw new Error('meilleure note non enregistrée après la partie')
 })
 
-/* 🐛 La Chenille : piloter la tête vers les fruits, en croquer au moins 2. */
-await scenario('chenille-croque-des-fruits', async () => {
+/* 🐛 La Chenille qui fait des trous (25/09) : la semaine ENTIÈRE, du lundi
+   (1 pomme) au dimanche (la feuille), jusqu'au papillon. Le pilote tourne
+   dans la page : à chaque image, le plus court chemin vers un repas sur la
+   feuille, sans se mordre ni sortir du bord (le bord de la feuille est le
+   mur). Chaque repas doit laisser son trou. */
+await scenario('chenille-semaine-complete', async () => {
   await openGame('La Chenille', '__cp')
-  for (let i = 0; i < 110; i++) {
-    const st = await page.evaluate(() => {
-      const cp = window.__cp
-      if (!cp || !cp.running) return null
-      return { hx: cp.snake[0].x, hy: cp.snake[0].y, fx: cp.fruit.x, fy: cp.fruit.y, d: cp.dir, eaten: cp.eaten }
-    })
-    if (!st) break
-    if (st.eaten >= 2) return
-    // Cap voulu ; la clôture est un vrai mur et le demi-tour est interdit,
-    // donc si le fruit est derrière on tourne d'abord de côté.
-    const wx = Math.sign(st.fx - st.hx), wy = Math.sign(st.fy - st.hy)
-    let want = null
-    if (wx && st.d.x === 0) want = { x: wx, y: 0 }
-    else if (wy && st.d.y === 0) want = { x: 0, y: wy }
-    else if (wx && wx !== st.d.x) want = { x: 0, y: wy || (st.hy > 5 ? -1 : 1) }
-    else if (wy && wy !== st.d.y) want = { x: wx || (st.hx > 6 ? -1 : 1), y: 0 }
-    if (want) {
-      const key = want.x ? (want.x > 0 ? 'ArrowRight' : 'ArrowLeft') : (want.y > 0 ? 'ArrowDown' : 'ArrowUp')
-      await page.keyboard.press(key)
-    }
-    await page.mouse.move(300 + (i % 5) * 40, 300)
-    await page.waitForTimeout(200)
-  }
-  throw new Error('moins de 2 fruits croqués en 22 s')
+  await page.evaluate(() => {
+    const cp = window.__cp
+    const K = { '1,0': 'ArrowRight', '-1,0': 'ArrowLeft', '0,1': 'ArrowDown', '0,-1': 'ArrowUp' }
+    const D = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    ;(async () => {
+      while (window.__cp === cp && cp.running) {
+        await new Promise(r => requestAnimationFrame(r))
+        if (!cp.moving || !cp.items.length) continue
+        const s = cp.snake, head = s[0], cur = cp.dir
+        const block = new Set(s.slice(0, s.length - 1).map(c => c.x + ',' + c.y))
+        const goal = new Set(cp.items.map(i => i.x + ',' + i.y))
+        const seen = new Map([[head.x + ',' + head.y, null]])
+        const q = [[head.x, head.y]]
+        let found = null
+        while (q.length && !found) {
+          const [x, y] = q.shift()
+          for (const [dx, dy] of D) {
+            const nx = x + dx, ny = y + dy, k = nx + ',' + ny
+            if (seen.has(k) || !cp.onLeaf(nx, ny) || block.has(k)) continue
+            if (x === head.x && y === head.y && dx === -cur.x && dy === -cur.y) continue
+            seen.set(k, [x, y]); q.push([nx, ny])
+            if (goal.has(k)) { found = [nx, ny]; break }
+          }
+        }
+        let step = null
+        if (found) {
+          let c = found
+          for (;;) { const pr = seen.get(c[0] + ',' + c[1]); if (pr[0] === head.x && pr[1] === head.y) break; c = pr }
+          step = [c[0] - head.x, c[1] - head.y]
+        } else {
+          const ok = D.filter(([dx, dy]) => !(dx === -cur.x && dy === -cur.y) && cp.onLeaf(head.x + dx, head.y + dy) && !block.has((head.x + dx) + ',' + (head.y + dy)))
+          if (ok.length) step = ok[0]
+        }
+        if (step && (step[0] !== cp.next.x || step[1] !== cp.next.y)) window.dispatchEvent(new KeyboardEvent('keydown', { key: K[step.join(',')] }))
+      }
+    })()
+  })
+  await page.waitForFunction(() => !window.__cp.running, null, { timeout: 240000, polling: 500 })
+  const n = await page.evaluate(() => ({ day: window.__cp.day, eaten: window.__cp.eaten, holes: window.__cp.holes, lives: window.__cp.lives }))
+  if (n.day !== 7 || n.eaten !== 22) throw new Error(`semaine inachevée : jour ${n.day}, ${n.eaten} repas`)
+  if (n.holes !== 22) throw new Error(`${n.holes} trous pour 22 repas`)
+  await page.waitForSelector('.result-score', { timeout: 20000 })
+  if (!(await page.evaluate(() => document.body.innerText.includes('papillon')))) throw new Error('l\'écran de fin n\'est pas celui du papillon')
 })
 
 /* 🐤 Poussin Volant : viser le milieu du passage, franchir 2 barrières. */

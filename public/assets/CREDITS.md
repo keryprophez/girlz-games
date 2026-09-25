@@ -71,22 +71,22 @@ planche des plantes en référence et ce texte de commande :
 
 ## La Chenille (`chenille/`)
 
-La tête (souriante et qui croque), les anneaux, la queue, le buisson de la
-haie, la chrysalide, le papillon (ailes ouvertes et mi-fermées), les
-marguerites, le caillou et la coccinelle de la Chenille sont des
-**illustrations générées avec Canva** le 25/09/2026, avec la planche des
-plantes en référence de style (médias Canva `MAHWHkcGCRY` puis, fond retiré,
-`MAHWHrMMtek`, copie dans le Drive du père). Planche de 6 × 2, vue de dessus,
-découpée en carrés WebP de 256 px. Texte de commande : le même gabarit que les
-fruits (« A sprite sheet for a children's caterpillar tablet game where
-everything is seen from directly ABOVE (top-down view), in exactly the same
-art style as the reference image… »), avec la liste des douze sujets.
+Deux planches **générées avec Canva** le 25/09/2026, avec la planche des
+plantes en référence de style, fonds retirés dans Canva, déposées par le père
+dans son Drive et découpées en carrés WebP de 256 px (vue de dessus) :
+
+- la première (médias `MAHWHkcGCRY` puis `MAHWHrMMtek`) : on en garde la
+  chrysalide et le papillon (ailes ouvertes et mi-fermées) ;
+- la seconde, décrite ci-dessous, pour tout le reste.
+
+Texte de commande : le même gabarit que les fruits (« A sprite sheet for a
+children's tablet game about a hungry caterpillar crawling on a leaf,
+everything seen from DIRECTLY ABOVE… »), avec la liste des douze sujets.
 
 ## La Chenille qui fait des trous et Poussin Volant (25/09)
 
 Deuxième planche de la Chenille (tête vue de dessus, normale et qui croque,
-anneaux, queue, petite feuille, feuille trouée, soleil, lune, pomme trouée —
-et la poire et la prune rangées avec les fruits, `fruits/poire.webp`,
+anneaux, queue, petite feuille, soleil, lune — et la poire et la prune rangées avec les fruits, `fruits/poire.webp`,
 `fruits/prune.webp`), la grande feuille qui sert de terrain
 (`chenille/grande-feuille.webp`), la planche de Poussin Volant (le poussin
 ailes hautes, ailes basses et étourdi, la plume, la maman poule, le
@@ -95,9 +95,7 @@ poulailler, le poteau, les bottes de foin, le grain, le nuage, l'arbre —
 **illustrations générées avec Canva** le 25/09/2026, avec la planche des
 plantes en référence de style (médias Canva `MAHWJbLstl8`, `MAHWJUzb2fQ`,
 `MAHWJetaNbc`, `MAHWJRg3kx0`, fonds retirés), déposées par le père dans son
-Drive puis découpées en WebP. Les éléments de la première planche de la
-Chenille gardés : chrysalide, papillon, buisson, marguerites, caillou,
-coccinelle.
+Drive puis découpées en WebP.
 
 ## Voix des animaux (`sounds/animals/`)
 

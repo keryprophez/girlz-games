@@ -694,9 +694,15 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   10, 12 notes) ; une fausse note coûte un cœur (3, 2, 1) et la même mélodie
   revient ; le « presque » sur la dernière note se voit ; la fin est un
   concert. Les mêmes voix chantent dans la Boîte à rythme.
-- **La Chenille en 2D illustrée** : planche Canva générée (tête, anneaux,
-  chrysalide, papillon, buisson, décor) — en attente du dépôt dans le Drive,
-  puis maquette.
+- ✅ **La Chenille qui fait des trous** : la première maquette (un snake
+  rhabillé, damier et haie) a eu un « mouais » ; le père a choisi l'histoire
+  que les filles connaissent. Une grande feuille illustrée est le terrain (son
+  bord est le mur), et une semaine de repas : 1 pomme, 2 poires, 3 prunes, 4
+  fraises, 5 oranges, le festin de 6 fruits, la feuille du dimanche. Chaque
+  bouchée est comptée à voix haute et laisse un trou dans la feuille ; le
+  coq et le jour dit par la voix au matin, la lune le soir ; la semaine en
+  bas, en images et en chiffres ; la chrysalide puis le papillon. Bot : la
+  semaine entière, 22 repas, 22 trous, jusqu'au papillon.
 - **Poussin Volant en 2D illustré**, moins punitif : planche à commander.
 - Reste : le coq, la chèvre, le cheval et le chat ont leur voix mais pas
   encore de personnage 3D.
