@@ -31,11 +31,14 @@ const SRC: Record<string, string> = Object.fromEntries(
     .map(n => [n, `${base}assets/poussin/${n}.webp`])
 )
 
-/** Réglages par niveau (en hauteurs d'arène). */
+/** Réglages par niveau (en hauteurs d'arène). Le coup d'aile fait monter le
+    poussin de flap²/2·grav : environ la moitié du couloir libre (passage moins
+    le poussin), à tous les niveaux — plus serré, il deviendrait impossible à
+    doser ; c'est le couloir qui rétrécit, pas la finesse du contrôle. */
 const CFG = {
   easy: { speed: 0.42, gap: 0.5, space: 1.75, grav: 3.7, flap: 1.18, goal: 12, lives: 5 },
-  med: { speed: 0.5, gap: 0.42, space: 1.55, grav: 4.3, flap: 1.25, goal: 16, lives: 3 },
-  exp: { speed: 0.58, gap: 0.36, space: 1.4, grav: 4.6, flap: 1.3, goal: 20, lives: 3 }
+  med: { speed: 0.5, gap: 0.42, space: 1.55, grav: 4.3, flap: 1.14, goal: 16, lives: 3 },
+  exp: { speed: 0.58, gap: 0.36, space: 1.4, grav: 4.6, flap: 1.08, goal: 20, lives: 3 }
 }
 const R = 0.05          // rayon du poussin (H)
 const PW = 0.1          // largeur d'un poteau (H)
@@ -257,9 +260,19 @@ function draw(me: State, now: number) {
     const x = ((k * span / 4 + W * 0.1 - me.scroll * 0.12) % span + span) % span - nw
     drawImg(g, img.nuage, x, H * (0.2 + (k % 3) * 0.1), nw * (0.8 + (k % 2) * 0.3), nw * 0.7 * (0.8 + (k % 2) * 0.3))
   }
+  // Le panorama ne se raccorde pas à lui-même : une copie sur deux en miroir,
+  // les bords se touchent alors toujours à l'identique
   const ph = H * 0.38, pw = img.panorama.naturalWidth * ph / img.panorama.naturalHeight
-  const off = (me.scroll * 0.35) % pw
-  for (let x = -off; x < W; x += pw) g.drawImage(img.panorama, x, H - ph, pw + 1, ph)
+  const pan = me.scroll * 0.35
+  for (let k = Math.floor(pan / pw); k * pw - pan < W; k++) {
+    const x = k * pw - pan
+    if (k % 2 === 0) g.drawImage(img.panorama, x, H - ph, pw + 1, ph)
+    else {
+      g.save(); g.translate(x + pw, 0); g.scale(-1, 1)
+      g.drawImage(img.panorama, -1, H - ph, pw + 1, ph)
+      g.restore()
+    }
+  }
 
   // Les poteaux, le grain qui brille au milieu du passage
   const gy = groundPx(me)
@@ -386,6 +399,7 @@ export const flappy: GameDef = {
           get running() { return !me.over }, get started() { return me.started }, get y() { return me.y }, get vy() { return me.vy },
           get score() { return game.s.score }, get lives() { return game.s.lives }, get passed() { return me.passed },
           get goal() { return cfg.goal }, get landed() { return me.landed > 0 }, get won() { return me.won }, r: R,
+          get speed() { return me.speed }, grav: cfg.grav, flap: cfg.flap,
           get pipes() { return me.pairs.filter(p => !p.passed).map(p => ({ dx: (p.x - me.W * CHICK_X) / me.H, lo: p.lo, hi: p.hi })) }
         }
       }

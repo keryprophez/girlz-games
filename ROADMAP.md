@@ -703,7 +703,16 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   coq et le jour dit par la voix au matin, la lune le soir ; la semaine en
   bas, en images et en chiffres ; la chrysalide puis le papillon. Bot : la
   semaine entière, 22 repas, 22 trous, jusqu'au papillon.
-- **Poussin Volant en 2D illustré**, moins punitif : planche à commander.
+- ✅ **Poussin Volant en 2D illustré**, moins punitif : le poussin rentre au
+  poulailler entre les poteaux de la clôture (planche Canva : poussin ailes
+  hautes / basses / étourdi, poteaux, grain, nuages, panorama de la ferme,
+  maman poule et son poulailler). Un choc ne tue plus : il coûte un cœur (5
+  en douce, 3 sinon), le poussin est étourdi et clignote sans rien risquer.
+  Un enjeu visible (la barre de chemin jusqu'au poulailler : 12, 16 ou 20
+  poteaux), les grains qui brillent au milieu des passages, le « ouf » quand
+  on frôle un poteau, la cadence qui monte avec les poteaux passés ; à
+  l'arrivée, maman poule glousse (sa vraie voix) et le poussin se pose à côté
+  d'elle. Bot : jusqu'au poulailler en douce, sans perdre plus d'un cœur.
 - Reste : le coq, la chèvre, le cheval et le chat ont leur voix mais pas
   encore de personnage 3D.
 

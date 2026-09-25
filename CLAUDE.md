@@ -70,7 +70,6 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
                            lapin, cactus (Tape-Trous) + vache, poule, chien,
                            canard, mouton (`FARM`, les pions des jeux en DOM)
-             runner.ts   ← socle des jeux qui défilent (Poussin Volant)
              doll3d.ts   ← LEUR personnage en 3D (le look d'Habille-toi) :
                            `makeDoll(T, look)`, `poseDoll(d, 'cheer'|'wave'|'sit'…)`
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
@@ -192,12 +191,16 @@ fois par image, vagues puis pluie finale) et `caterpillar.ts` (la Chenille
 qui fait des trous : une grille posée sur une grande feuille illustrée, les
 cases jouables lues dans l'ALPHA de l'image, la feuille dessinée une fois
 dans un canvas à part et PERCÉE à chaque repas — `destination-out`). **Un jeu qui défile**
-(la joueuse reste à x = 0, le monde avance vers −x) part en plus de
-`core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
-obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
-derrière la caméra), les couches de décor en parallaxe (`layer`), et le
-clignotement d'invulnérabilité (`hurt`/`blink`) ; `scrollTex` fait une
-texture de sol qui défile. Modèle : `flappy.ts`. Pour un jeu Apprendre
+(le poussin reste en place, le monde avance vers la gauche) est en 2D depuis
+le 25/09 : les distances en hauteurs d'arène (H), le décor en
+couches décalées selon `scroll` (nuages, panorama — une copie sur deux en
+miroir, le raccord ne se voit plus), les poteaux étirés par le milieu (la
+pointe et le pied gardent leur forme), un choc qui coûte un cœur et rend
+invulnérable un moment au lieu de tuer. Le coup d'aile fait monter d'environ
+la MOITIÉ du couloir libre à tous les niveaux : c'est le couloir qui
+rétrécit en expert, pas la finesse du contrôle (avec un saut aux deux tiers
+du couloir, même un pilote parfait se cognait). `core/runner.ts` (le socle
+3D des jeux qui défilent) est sorti avec lui. Modèle : `flappy.ts`. Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 `public/assets/geo/`, voix = noms de lieux uniquement).
 
@@ -214,11 +217,12 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
-`flappy` · `mole` · `dressup` ·
+`mole` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »), la Chenille le 25/09 (« mouais »
-pour le snake rhabillé : c'est devenu la Chenille qui fait des trous). Pour
+pour le snake rhabillé : c'est devenu la Chenille qui fait des trous), Poussin
+Volant le même jour (« le plus punitif pour Jade »). Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 `mass = 0`.
