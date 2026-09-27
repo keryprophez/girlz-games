@@ -1,5 +1,8 @@
 export type Tier = 'easy' | 'med' | 'exp'
 
+/** Les quatre opérations (le Potager, 27/09) : `add` +, `sub` −, `mul` ×, `div` ÷. */
+export type Op = 'add' | 'sub' | 'mul' | 'div'
+
 export interface FinishPayload {
   title: string
   msg: string
@@ -31,6 +34,9 @@ export interface GameContext {
       fois, un seul score commun, aucune comparaison (règle 1). Toujours
       false pour un jeu qui ne déclare pas `duo`. */
   duo: boolean
+  /** Les opérations choisies à l'ouverture (étiquettes + − × ÷, au moins
+      une). Vide pour un jeu qui ne déclare pas `ops`. */
+  ops: Op[]
   finish(p: FinishPayload): void
   toast(msg: string): void
   /** Lit un texte à voix haute. UNIQUEMENT du contenu pédagogique (une
@@ -62,6 +68,10 @@ export interface GameDef {
   /** Le jeu se joue aussi à deux en équipe : l'écran de niveau propose
       « seule / à deux » (deux silhouettes, zéro mot) et `ctx.duo` suit. */
   duo?: boolean
+  /** Le jeu pose des calculs : avant la difficulté, une première étape
+      propose les étiquettes + − × ÷ (plusieurs à la fois, + par défaut,
+      le dernier choix retenu) et `ctx.ops` suit (27/09). */
+  ops?: boolean
   /** Monte le jeu dans root et renvoie une fonction de nettoyage idempotente. */
   mount(ctx: GameContext): () => void
 }

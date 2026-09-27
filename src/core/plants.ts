@@ -1,5 +1,5 @@
 /* Les dix plantes du potager — une par rangée de la table : la table de 3,
-   c'est la rangée des violettes (Potager et Grand Tableau +).
+   c'est la rangée des violettes (le Potager, pour + − × ÷).
 
    Des illustrations, pas des modèles 3D : les plantes Kenney rendues en
    image (puis en 3D) ont été jugées « immondes » par le père le 23/09. Elles

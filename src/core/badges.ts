@@ -153,11 +153,6 @@ export const BADGE: Record<string, string> = {
     <rect x="23" y="23" width="13" height="13" rx="4" fill="${C.coralDark}"/>
     <rect x="23" y="23" width="13" height="10.5" rx="4" fill="${C.coral}"/>`),
 
-  addboard: svg(`
-    <rect x="6" y="8" width="36" height="32" rx="5" fill="${C.meadowDark}"/>
-    <rect x="10" y="12" width="28" height="24" rx="3" fill="${C.cream}"/>
-    <path d="M24 17v14M17 24h14" stroke="${C.sky}" stroke-width="4.4" stroke-linecap="round"/>`),
-
   market: svg(`
     <ellipse cx="17" cy="34" rx="12" ry="5" fill="${C.mangoDark}"/>
     <rect x="5" y="26" width="24" height="8" fill="${C.mangoDark}"/>

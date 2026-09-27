@@ -61,6 +61,10 @@ for (let i = 0; i < games.length; i++) {
   await page.goto(URL)
   await page.locator(`${TAB}[data-w="${games[i].w}"]`).click()
   await page.locator(TILE, { hasText: games[i].name }).first().click()
+  // Un jeu à calculs (le Potager) demande d'abord ses opérations : on garde
+  // celles par défaut et on passe (27/09)
+  await page.locator('.opsgo, .tierbtn.tier-easy').first().waitFor()
+  if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
   // La difficulté se choisit dans le jeu : on prend la douce (comme Jade)
   await page.locator('.tierbtn.tier-easy').click()
   // Laisse le temps au jeu de se monter (la 3D charge three.js à la demande)

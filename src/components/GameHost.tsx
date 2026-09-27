@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { SHOW_PROFILES, useFerme } from '../core/store'
 import { gameById } from '../games'
-import type { FinishPayload, GameContext, Tier } from '../core/types'
+import type { FinishPayload, GameContext, Op, Tier } from '../core/types'
 import { toast } from '../core/utils'
 import { confetti, FX } from '../core/fx'
 import { say, shutUp } from '../core/voice'
@@ -37,6 +37,23 @@ function lastTier(gameId: string): Tier | null {
 const duoKey = (gameId: string) => `ferme:duo:${gameId}`
 function lastDuo(gameId: string): boolean {
   try { return localStorage.getItem(duoKey(gameId)) === '1' } catch { return false }
+}
+
+/* Les opérations (jeux `ops`, le Potager, 27/09) : une première étape avant
+   la difficulté — quatre étiquettes + − × ÷, plusieurs à la fois, le + par
+   défaut, la dernière allumée ne s'éteint pas. Retenues par jeu. */
+const OPS: Op[] = ['add', 'sub', 'mul', 'div']
+const OP_SYM: Record<Op, string> = { add: '+', sub: '−', mul: '×', div: '÷' }
+const opsKey = (gameId: string) => `ferme:ops:${gameId}`
+function lastOps(gameId: string): Op[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(opsKey(gameId)) || 'null') as unknown
+    if (Array.isArray(v)) {
+      const ok = OPS.filter(o => v.includes(o))
+      if (ok.length) return ok
+    }
+  } catch { /* stockage refusé ou illisible : le + par défaut */ }
+  return ['add']
 }
 
 const Svg = ({ html, className }: { html: string; className?: string }) =>
@@ -97,6 +114,10 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   // Lu au montage du jeu (l'effet ne dépend pas de `duo` : changer se fait
   // dans le choix du niveau, qui relance de toute façon la partie)
   const duoRef = useRef(duo)
+  // Les opérations (jeux `ops`) : l'étape 1 de l'ouverture, avant la difficulté
+  const [ops, setOps] = useState<Op[]>(() => lastOps(gameId))
+  const opsRef = useRef(ops)
+  const [step, setStep] = useState<1 | 2>(1)
   const [card, setCard] = useState(true)
   const [paused, setPausedState] = useState(isPaused())
   const [outro, setOutro] = useState(false)
@@ -201,6 +222,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       look: p.look || null,
       byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
       duo: !!game.duo && duoRef.current,
+      ops: game.ops ? opsRef.current : [],
       toast,
       say,
       after: (ms, fn) => session.after(ms, fn),
@@ -271,7 +293,17 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     setTier(t)
     setRunId(r => r + 1)
   }
-  const askTier = () => { setPaused(false); setResult(null); setTier(null) }
+  const askTier = () => { setPaused(false); setResult(null); setTier(null); setStep(1) }
+  /** Allume ou éteint une étiquette ; la dernière allumée reste allumée. */
+  const toggleOp = (o: Op) => {
+    const on = ops.includes(o)
+    if (on && ops.length === 1) { tone(220, 0.12, 'sine', 0.08); return }
+    const next = OPS.filter(x => x === o ? !on : ops.includes(x))
+    try { localStorage.setItem(opsKey(gameId), JSON.stringify(next)) } catch { /* stockage refusé */ }
+    opsRef.current = next
+    setOps(next)
+    tone(on ? 440 : 660, 0.1, 'sine', 0.09)
+  }
   const pickDuo = (v: boolean) => {
     try { localStorage.setItem(duoKey(gameId), v ? '1' : '0') } catch { /* stockage refusé */ }
     duoRef.current = v
@@ -306,13 +338,30 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
         <div className="tierpick">
           <span className={'titlecard-sq ' + game.sq}>{BADGE[game.id] ? <Svg html={BADGE[game.id]} /> : game.icon}</span>
           <span className="titlecard-name">{game.name}</span>
+          {game.ops && step === 1 && (<>
+            <div className="opsrow">
+              {OPS.map(o => (
+                <button key={o} className={'opsbtn' + (ops.includes(o) ? ' sel' : '')} data-op={o}
+                  onClick={() => toggleOp(o)} aria-label={OP_SYM[o]}>
+                  {OP_SYM[o]}<Svg className="ok" html={ICON.check} />
+                </button>
+              ))}
+            </div>
+            <button className="opsgo" onClick={() => { tone(520, 0.1, 'sine', 0.1); setStep(2) }} aria-label="Suivant"><Svg html={ICON.play} /></button>
+            <div className="opssteps"><i className="on" /><i /></div>
+          </>)}
+          {game.ops && step === 2 && (
+            <button className="opsrecap" onClick={() => setStep(1)} aria-label="Opérations">
+              {ops.map(o => <b key={o}>{OP_SYM[o]}</b>)}
+            </button>
+          )}
           {game.duo && (
             <div className="duorow">
               <button className={'duobtn' + (!duo ? ' sel' : '')} onClick={() => pickDuo(false)} aria-label="Seule"><Svg html={ICON.solo} /></button>
               <button className={'duobtn' + (duo ? ' sel' : '')} onClick={() => pickDuo(true)} aria-label="À deux"><Svg html={ICON.duo} /></button>
             </div>
           )}
-          <div className="tierrow">
+          {(!game.ops || step === 2) && <div className="tierrow">
             {TIERS.map(t => (
               <button key={t} className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
                 onClick={() => pickTier(t)} aria-label={t}>
@@ -320,7 +369,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
                 <span className="tierdots">{TIERS.slice(0, TIERS.indexOf(t) + 1).map((_, i) => <i key={i} />)}</span>
               </button>
             ))}
-          </div>
+          </div>}
+          {game.ops && step === 2 && <div className="opssteps"><i /><i className="on" /></div>}
         </div>
       )}
 

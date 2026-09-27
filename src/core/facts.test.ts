@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addChoices, addEase, addKey, addPool, nearMissAdd, subChoices, subFact, subPool,
   beginGame, divChoices, divFact, divPool, emptyMemory, factEase, HARVEST, isFast, LV, mulChoices, mulEase, mulKey, mulPool,
   nearMiss, orient, planHarvest, record, recOf, requeue, viewLevel, WORK_MAX, type Fact, type Item, type Memory
 } from './facts'
@@ -244,5 +245,60 @@ describe('les divisions : la table lue à l\'envers', () => {
     record(m, { fact: divFact(7, 8), kind: 'probe' }, { ok: true, fast: true })
     expect(recOf(m, '56:7').lv).toBe(LV.numbers)
     expect(recOf(m, mulKey(7, 8)).seen).toBe(0)
+  })
+})
+
+describe('les additions et les soustractions (27/09)', () => {
+  it('7 + 4 et 4 + 7 sont un seul calcul ; les rangées demandées, sans doublon', () => {
+    expect(addKey(7, 4)).toBe(addKey(4, 7))
+    expect(addPool([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).length).toBe(55)
+    const fleur = addPool([1, 2, 3, 4, 5])
+    expect(fleur.every(f => f.a <= 5 || f.b <= 5)).toBe(true)
+    expect(new Set(fleur.map(f => f.key)).size).toBe(fleur.length)
+  })
+  it('11 − 7 = 4 : clé orientée, jamais retournée, les deux sens pour 7 + 4', () => {
+    const s = subFact(7, 4)
+    expect(s.key).toBe('11-7')
+    expect(orient(s, () => 0.9)).toEqual([7, 4])
+    const subs = subPool([{ key: addKey(4, 7), a: 4, b: 7, op: 'add' }])
+    expect(subs.map(f => f.key).sort()).toEqual(['11-4', '11-7'])
+    expect(subPool([{ key: addKey(5, 5), a: 5, b: 5, op: 'add' }]).length).toBe(1)
+  })
+  it('facilité : + 1 et + 10, puis les doubles, puis sans passer la dizaine', () => {
+    const f = (a: number, b: number, op: Fact['op'] = 'add'): Fact => ({ key: '', a, b, op })
+    expect(addEase(f(1, 7))).toBe(0)
+    expect(addEase(f(6, 6))).toBe(1)
+    expect(addEase(f(3, 4))).toBe(2)
+    expect(addEase(f(7, 8))).toBe(3)
+    expect(factEase(f(7, 4, 'sub'))).toBe(factEase(f(4, 7)))
+  })
+  it('les réponses d\'une addition : la bonne, des voisines, entre 2 et 20', () => {
+    const r = seeded(3)
+    for (let i = 0; i < 40; i++) {
+      const c = addChoices(7, 4, 4, r)
+      expect(c).toContain(11)
+      expect(new Set(c).size).toBe(4)
+      expect(c.every(v => v >= 2 && v <= 20)).toBe(true)
+    }
+    expect(addChoices(1, 1, 4, r)).toContain(2)
+  })
+  it('les réponses d\'une soustraction : le reste et ses voisins, dans le tableau', () => {
+    const r = seeded(4)
+    for (let i = 0; i < 40; i++) {
+      const c = subChoices(7, 4, 4, r)
+      expect(c).toContain(4)
+      expect(new Set(c).size).toBe(4)
+      expect(c.every(v => v >= 1 && v <= 10)).toBe(true)
+    }
+  })
+  it('le presque d\'une addition : la bande de SA réponse dans la même rangée', () => {
+    expect(nearMissAdd(7, 4, 10)).toEqual({ r: 7, c: 3 })
+    expect(nearMissAdd(7, 4, 12)).toEqual({ r: 7, c: 5 })
+    expect(nearMissAdd(7, 4, 11)).toBeNull()
+    expect(nearMissAdd(7, 4, 30)).toBeNull()
+  })
+  it('les divisions choisies à l\'ouverture : toutes, sans attendre la multiplication', () => {
+    expect(divPool(mulPool([7])).length).toBeGreaterThan(0)
+    expect(divPool(mulPool([7]), emptyMemory()).length).toBe(0)
   })
 })

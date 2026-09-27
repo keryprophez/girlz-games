@@ -11,7 +11,6 @@ import { dressup } from './dressup'
 import { piano } from './piano'
 import { patterns } from './patterns'
 import { clock } from './clock'
-import { additions } from './tables'
 import { potager } from './potager'
 import { mirror } from './mirror'
 import { market } from './market'
@@ -31,7 +30,7 @@ import { sentences } from './sentences'
 export const GAMES: GameDef[] = [
   icetower, ninja, moleGame, caterpillar, flappy, maze, taquin, memory, simonGame,
   connect4,
-  clock, potager, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
+  clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
 ]
 
@@ -43,7 +42,7 @@ export const GAMES: GameDef[] = [
    La coupe du 2 septembre (voir AUDIT.md) a retiré balloon, popcorn, fish,
    battleship, quiz, socks et puzzle du catalogue. Leurs bonnes idées sont
    à greffer : fenêtre « prêt/brûlé » de popcorn → mole, mode « Compte » de
-   quiz → additions, paires visibles contre la montre de socks → memory,
+   quiz → le Potager (+ − × ÷ depuis le 27/09), paires visibles contre la montre de socks → memory,
    pièces libres de puzzle → taquin. La Loupe Magique (geo) est sortie le
    2/09 : des pays inventés n'apprennent rien, on refera une géographie
    VRAIE ou rien. */
@@ -57,7 +56,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, potager, additions, market, intrus, geoGame, space, patterns, mirror, letters, sentences]
+    games: [clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',

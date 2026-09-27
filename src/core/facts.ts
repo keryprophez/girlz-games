@@ -1,7 +1,7 @@
 /* La mémoire des calculs — phase 4, « la Ferme des calculs » (23/09).
 
-   Le Potager (× et ÷) et le Poulailler (+ et −) posent des calculs ; ce
-   module retient, calcul par calcul, ce que l'enfant sait déjà, et compose
+   Le Potager pose des calculs des quatre opérations (+ − × ÷, choisies à
+   l'ouverture, 27/09) ; ce module retient, calcul par calcul, ce que l'enfant sait déjà, et compose
    chaque récolte en conséquence. Logique pure : aucun DOM, aucune 3D, un
    hasard injectable — tout est testé dans `facts.test.ts`.
 
@@ -28,15 +28,20 @@
 export type Level = 0 | 1 | 2 | 3 | 4
 export const LV = { discover: 0, plants: 1, outline: 2, numbers: 3, heart: 4 } as const
 
-/** Un calcul. Pour ×, 7 × 8 et 8 × 7 sont UN SEUL calcul (a ≤ b). Pour ÷,
-    le calcul est orienté : (a × b) ÷ a = b — 56 ÷ 7 et 56 ÷ 8 sont deux
-    calculs, qui ne s'ouvrent que quand 7 × 8 est su (on lit la table à
-    l'envers : dans la rangée du 7, où est 56 ?). */
+/** Les quatre opérations. − et ÷ se lisent dans le tableau de + et de × :
+    ce sont les mêmes tableaux, lus à l'envers. */
+export type Op = 'add' | 'sub' | 'mul' | 'div'
+
+/** Un calcul. Pour × et +, 7 × 8 et 8 × 7 sont UN SEUL calcul (a ≤ b). Pour
+    ÷ et −, le calcul est orienté : (a × b) ÷ a = b — 56 ÷ 7 et 56 ÷ 8 sont
+    deux calculs (on lit la table à l'envers : dans la rangée du 7, où est
+    56 ?) ; de même (a + b) − a = b : 11 − 7, c'est chercher 11 dans la
+    rangée du 7. */
 export interface Fact {
   key: string
   a: number
   b: number
-  op: 'mul' | 'div'
+  op: Op
 }
 
 export interface FactRec {
@@ -111,10 +116,53 @@ export function mulEase(f: Fact): number {
 }
 
 /** Pose le calcul dans un sens ou dans l'autre : 7 × 8 ou 8 × 7. Une
-    division, elle, ne se retourne pas. */
+    division ou une soustraction, elle, ne se retourne pas. */
 export function orient(f: Fact, rng: Rng = Math.random): [number, number] {
-  if (f.op === 'div') return [f.a, f.b]
+  if (f.op === 'div' || f.op === 'sub') return [f.a, f.b]
   return rng() < 0.5 ? [f.a, f.b] : [f.b, f.a]
+}
+
+/* ---------- Les calculs de l'addition ---------- */
+
+export function addKey(a: number, b: number): string {
+  return a <= b ? `${a}+${b}` : `${b}+${a}`
+}
+
+/** Les additions des rangées demandées : une rangée r = r + 1 … r + 10. */
+export function addPool(rows: number[]): Fact[] {
+  const out: Fact[] = []
+  for (let a = 1; a <= 10; a++) {
+    for (let b = a; b <= 10; b++) {
+      if (rows.includes(a) || rows.includes(b)) out.push({ key: addKey(a, b), a, b, op: 'add' })
+    }
+  }
+  return out
+}
+
+/** Facilité d'une addition jamais vue : + 1 et + 10, puis les doubles, puis
+    les sommes qui ne passent pas la dizaine, puis celles qui la passent. */
+export function addEase(f: Fact): number {
+  const has = (n: number) => f.a === n || f.b === n
+  if (has(1) || has(10)) return 0
+  if (f.a === f.b) return 1
+  if (f.a + f.b <= 10) return 2
+  return 3
+}
+
+/** (a + b) − a = b. Clé « 11-7 ». */
+export function subFact(a: number, b: number): Fact {
+  return { key: `${a + b}-${a}`, a, b, op: 'sub' }
+}
+
+/** Les soustractions des additions du lot : 11 − 7 et 11 − 4 pour 7 + 4. */
+export function subPool(addFacts: Fact[]): Fact[] {
+  const out: Fact[] = []
+  for (const f of addFacts) {
+    if (f.op !== 'add') continue
+    out.push(subFact(f.a, f.b))
+    if (f.b !== f.a) out.push(subFact(f.b, f.a))
+  }
+  return out
 }
 
 /* ---------- Les divisions : la table lue à l'envers ---------- */
@@ -124,21 +172,26 @@ export function divFact(a: number, b: number): Fact {
   return { key: `${a * b}:${a}`, a, b, op: 'div' }
 }
 
-/** Les divisions des multiplications SUES (niveau 3 ou plus) du lot :
-    56 ÷ 7 et 56 ÷ 8 pour 7 × 8. Pas de ÷ 1, qui n'apprend rien. */
-export function divPool(mulFacts: Fact[], mem: Memory): Fact[] {
+/** Les divisions des multiplications du lot : 56 ÷ 7 et 56 ÷ 8 pour 7 × 8.
+    Pas de ÷ 1, qui n'apprend rien. Avec une mémoire, seulement celles des
+    multiplications SUES (niveau 3 ou plus) ; sans (l'étiquette ÷ choisie à
+    l'ouverture du Potager), toutes. */
+export function divPool(mulFacts: Fact[], mem?: Memory): Fact[] {
   const out: Fact[] = []
   for (const f of mulFacts) {
-    if (f.op !== 'mul' || recOf(mem, f.key).lv < 3) continue
+    if (f.op !== 'mul' || (mem && recOf(mem, f.key).lv < 3)) continue
     if (f.a > 1) out.push(divFact(f.a, f.b))
     if (f.b > 1 && f.b !== f.a) out.push(divFact(f.b, f.a))
   }
   return out
 }
 
-/** Facilité d'une division : celle de sa multiplication. */
+/** Facilité d'un calcul : une division a celle de sa multiplication, une
+    soustraction celle de son addition. */
 export function factEase(f: Fact): number {
-  return mulEase(f.op === 'div' ? { key: '', a: Math.min(f.a, f.b), b: Math.max(f.a, f.b), op: 'mul' } : f)
+  const lo = Math.min(f.a, f.b), hi = Math.max(f.a, f.b)
+  if (f.op === 'add' || f.op === 'sub') return addEase({ key: '', a: lo, b: hi, op: 'add' })
+  return mulEase({ key: '', a: lo, b: hi, op: 'mul' })
 }
 
 /* ---------- Composer une récolte ---------- */
@@ -338,6 +391,43 @@ export function divChoices(a: number, b: number, count: number, rng: Rng = Math.
     }
   }
   return shuffled([b, ...out], rng)
+}
+
+/** Les réponses d'une addition : des sommes voisines (± 1, ± 2 : une case
+    de trop ou de moins en comptant), et la dizaine confondue (± 10). */
+export function addChoices(a: number, b: number, count: number, rng: Rng = Math.random, exclude: number[] = []): number[] {
+  const ans = a + b
+  const ok = (v: number) => v >= 2 && v <= 20 && v !== ans && !exclude.includes(v)
+  const out: number[] = []
+  for (const group of [[ans - 1, ans + 1], [ans - 2, ans + 2, ans + 10, ans - 10], [ans - 3, ans + 3, ans - 4, ans + 4]]) {
+    for (const v of shuffled(group, rng)) {
+      if (out.length >= count - 1) break
+      if (ok(v) && !out.includes(v)) out.push(v)
+    }
+  }
+  return shuffled([ans, ...out], rng)
+}
+
+/** Les réponses d'une soustraction (a + b) − a = b : des restes voisins
+    (b ± 1, b ± 2) et l'autre nombre du calcul (a), jamais hors du tableau. */
+export function subChoices(a: number, b: number, count: number, rng: Rng = Math.random, exclude: number[] = []): number[] {
+  const ok = (v: number) => v >= 1 && v <= 10 && v !== b && !exclude.includes(v)
+  const out: number[] = []
+  for (const group of [[b - 1, b + 1], [b - 2, b + 2, a === b ? b + 3 : a], [b - 3, b + 3, b - 4, b + 4]]) {
+    for (const v of shuffled(group, rng)) {
+      if (out.length >= count - 1) break
+      if (ok(v) && !out.includes(v)) out.push(v)
+    }
+  }
+  return shuffled([b, ...out], rng)
+}
+
+/** Le « presque » d'une addition : la bande de SA réponse dans la même
+    rangée (10 pour 7 + 4 : la rangée du 7 jusqu'à la case 3). Sinon null. */
+export function nearMissAdd(r: number, c: number, v: number): { r: number; c: number } | null {
+  const k = v - r
+  if (v === r + c || k < 1 || k > 10) return null
+  return { r, c: k }
 }
 
 /** Le « presque » : si la réponse est le produit d'un rectangle voisin
