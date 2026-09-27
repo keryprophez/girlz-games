@@ -161,16 +161,30 @@ function doughBase(): HTMLCanvasElement {
     disque dont les UV sont planaires : x → colonnes, z → lignes). */
 const toTex = (x: number, z: number) => ({ px: (x / PR_IN + 1) / 2 * TEX, py: (z / PR_IN + 1) / 2 * TEX })
 
-function paintSauce(me: State, x: number, z: number, sauce: Sauce) {
+const SAUCE_R = 64
+
+/** Une louche, pas un tampon : quelques ronds qui se chevauchent. */
+function sauceBlob(g: CanvasRenderingContext2D, px: number, py: number, n: number) {
+  for (let k = 0; k < n; k++) {
+    const a = Math.random() * 7, d = Math.random() * SAUCE_R * 0.35
+    g.beginPath(); g.arc(px + Math.cos(a) * d, py + Math.sin(a) * d, SAUCE_R * (0.55 + Math.random() * 0.3), 0, 7); g.fill()
+  }
+}
+
+/** La sauce suit le doigt comme un stylet : du point précédent (`from`) au
+    point touché, des louches serrées tout le long du chemin. Sans ça, sur la
+    tablette (moins d'images par seconde, mouvements du doigt regroupés), un
+    geste vif laissait des taches espacées et il fallait repasser dix fois. */
+function paintSauce(me: State, x: number, z: number, sauce: Sauce, from?: { x: number; z: number }) {
   const g = me.layers.sauce
   const { px, py } = toTex(x, z)
-  const r = 64
   g.fillStyle = SAUCE_COL[sauce]
-  // Une louche, pas un tampon : quelques ronds qui se chevauchent
-  for (let k = 0; k < 5; k++) {
-    const a = Math.random() * 7, d = Math.random() * r * 0.35
-    g.beginPath(); g.arc(px + Math.cos(a) * d, py + Math.sin(a) * d, r * (0.55 + Math.random() * 0.3), 0, 7); g.fill()
+  if (from) {
+    const a = toTex(from.x, from.z)
+    const steps = Math.ceil(Math.hypot(px - a.px, py - a.py) / (SAUCE_R * 0.4))
+    for (let i = 1; i < steps; i++) sauceBlob(g, a.px + (px - a.px) * i / steps, a.py + (py - a.py) * i / steps, 3)
   }
+  sauceBlob(g, px, py, 5)
   me.layers.dirty = true
 }
 /** La nappe de mozzarella que dépose une pincée de fromage (visible en fondant). */
@@ -750,7 +764,9 @@ export const pizza: GameDef = {
 
       /* --- Toucher --- */
       const pick = picker(stage)
-      let down = false
+      // Les doigts posés, chacun avec le dernier point de sauce qu'il a laissé
+      // (null hors de la pizza) : un trait par doigt (piège « deux doigts »)
+      const fingers = new Map<number, { x: number; z: number } | null>()
       const local = (e: PointerEvent) => {
         // Seules les parts encore posées : une part en l'air ne cache pas sa voisine
         const hits = pick(e, tops.filter((_, i) => !wedges[i].eaten && wedges[i].lift === 0), false)
@@ -766,10 +782,11 @@ export const pizza: GameDef = {
         }
         if (me.phase !== 'garnir') return
         const p = local(e)
-        if (!p) return
+        if (!p) { fingers.set(e.pointerId, null); return }
         const now = performance.now()
         if (me.tool === 'tomato' || me.tool === 'cream') {
-          paintSauce(me, p.x, p.z, me.tool)
+          paintSauce(me, p.x, p.z, me.tool, first ? undefined : fingers.get(e.pointerId) ?? undefined)
+          fingers.set(e.pointerId, { x: p.x, z: p.z })
           if (now - me.lastSquish > 180) { me.lastSquish = now; sfx('cloth', { vol: 0.16, rate: 1.4 + Math.random() * 0.3 }) }
           return
         }
@@ -779,9 +796,9 @@ export const pizza: GameDef = {
         const n = me.tool === 'cheese' ? 2 : 1
         for (let i = 0; i < n; i++) drop(me, me.tool, p.x + (Math.random() - 0.5) * 0.06, p.z + (Math.random() - 0.5) * 0.06)
       }
-      const onDown = (e: PointerEvent) => { down = true; act(e, true) }
-      const onMove = (e: PointerEvent) => { if (down) act(e, false) }
-      const onUp = () => { down = false }
+      const onDown = (e: PointerEvent) => { fingers.set(e.pointerId, null); act(e, true) }
+      const onMove = (e: PointerEvent) => { if (fingers.has(e.pointerId)) act(e, false) }
+      const onUp = (e: PointerEvent) => { fingers.delete(e.pointerId) }
       stage.renderer.domElement.addEventListener('pointerdown', onDown)
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
