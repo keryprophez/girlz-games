@@ -626,9 +626,9 @@ Itérations (maquettes au format tablette validées avant chacune) :
    (23/09 ; le Tableau est sorti le 25/09).
 2. **Partage** (÷ avec les lapins, le reste que le chien vole) — à décider
    après les retours des filles sur le Potager.
-3. **Poulailler** jusqu'à 10 et 20.
-4. **Poulailler jusqu'à 100** (la retenue) ; le Grand Tableau + sort alors du
-   catalogue avec son bot.
+3. ~~Poulailler jusqu'à 10 et 20~~, ~~jusqu'à 100~~ : mis de côté le 27/09 —
+   le père veut UN seul jeu de calcul, c'est le Potager qui fait le + et le −
+   (et le Grand Tableau + est sorti du catalogue avec son bot).
 
 ## Retours tablette du 24/09
 
@@ -707,6 +707,30 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   poule) — en 3D, et seulement si le père le demande.
 - Reste : le coq, la chèvre, le cheval et le chat ont leur voix mais pas
   encore de personnage 3D.
+
+## Retours du 27/09
+
+- ✅ **Le Potager unique** (« je veux plus de jeux uniques, un seul jeu qui
+  mène au potager ») : à l'ouverture, les étiquettes + − × ÷ (plusieurs à la
+  fois, + par défaut — maquette validée), puis la difficulté. La grille
+  montre le tableau des + ou des × (le coin le dit, et se touche pour
+  changer) ; 7 + 4 est une bande qui compte 8, 9, 10, 11 dans la rangée du
+  7 ; − et ÷ se lisent à l'envers dans la rangée. Le Grand Tableau + est
+  sorti.
+- ✅ **Le Parcours** (le mode d'ouverture) : 10 cases découvertes au choix
+  dans les tables du niveau, puis ces 10 cases reviennent trois fois — 4
+  choix, le pavé, « trouve la case » ; étoiles sur les 30 réponses.
+- ✅ **Découvre, retour de Joyce** : « trop dommage que la case disparaisse » —
+  le résultat reste écrit en gros, sans plante dessous ; toute la grille
+  allumée, le potager fleurit.
+- ✅ **Pizzeria** : la sauce suit le doigt comme un stylet (elle laissait des
+  taches espacées sur la tablette, il fallait repasser dix fois).
+- ✅ **Poussin Volant et Tape-Trous sortis** (« vire-les »), avec leurs bots
+  et `core/runner.ts`.
+- ✅ **Labyrinthe** : « beaucoup trop simple » — plus grand (7 à 9 cases de
+  côté en douce, 18 en expert), des graines au fond des impasses ; et « le
+  poussin suit le doigt et fait tout seul les virages » : il n'avance plus
+  qu'en ligne droite vers le doigt, c'est au doigt de tourner.
 
 ---
 

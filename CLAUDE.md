@@ -61,16 +61,15 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              plants.ts   ← les 10 plantes illustrées du potager (une par rangée)
              facts.ts    ← LA MÉMOIRE DES CALCULS (phase 4) : niveaux d'aide,
                            récolte composée, révisions espacées, pièges voisins,
-                           « presque », divisions — logique pure, testée
+                           « presque », + − × ÷ — logique pure, testée
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
              badges.ts   ← une vignette SVG dessinée par jeu (accueil, carton titre)
              arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
              critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
-                           lapin, cactus (Tape-Trous) + vache, poule, chien,
-                           canard, mouton (`FARM`, les pions des jeux en DOM)
-             runner.ts   ← socle des jeux qui défilent (Poussin Volant)
+                           lapin, cactus, vache, poule, chien, canard, mouton
+                           (`FARM`, les pions des jeux en DOM)
              doll3d.ts   ← LEUR personnage en 3D (le look d'Habille-toi) :
                            `makeDoll(T, look)`, `poseDoll(d, 'cheer'|'wave'|'sit'…)`
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
@@ -153,7 +152,11 @@ affiche trois boutons sans un mot — fleur (douce), éclair (normale), flamme
 (expert) — et ne monte le jeu qu'après le choix, qui alimente `ctx.tier` et
 `ctx.byTier`. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
 et signalé d'un liseré ; un bouton de la barre en jeu rouvre le choix et
-relance la partie. Un jeu qui déclare `duo: true` (Ninja, Tape-Trous) ajoute
+relance la partie. Un jeu qui déclare `ops: true` (le Potager, 27/09) ouvre
+d'abord sur une étape « opérations » : quatre étiquettes + − × ÷ sans un mot,
+plusieurs à la fois, le + par défaut, la dernière allumée ne s'éteint pas, le
+choix retenu (`ferme:ops:<id>`) ; une flèche mène à la difficulté, dont le
+rappel des opérations ramène à l'étape 1 ; `ctx.ops` suit. Un jeu qui déclare `duo: true` (Ninja) ajoute
 au-dessus un choix « seule / à deux » (deux silhouettes) : `ctx.duo` = deux
 sœurs sur la même tablette, EN ÉQUIPE — plusieurs doigts à la fois, un seul
 score, les messages de fin disent « vous », jamais qui a fait quoi.
@@ -185,16 +188,10 @@ Commons choisis à l'oreille par le père, dans `public/assets/sounds/animals/`
 (crédits dans CREDITS.md). Un animal de la ferme qui « parle » prend sa voix
 là, jamais un `tone()` — le coq, la chèvre, le cheval et le chat attendent
 encore leur personnage 3D.
-Modèles : `icetower.ts`, `mole.ts` (personnages de
-`critters.ts`, raycast sur des zones de tape invisibles) et, en 2D,
-`ninja.ts` (un canvas, les fruits Canva, ombres et lueurs précalculées une
-fois par image, vagues puis pluie finale). **Un jeu qui défile**
-(la joueuse reste à x = 0, le monde avance vers −x) part en plus de
-`core/runner.ts` : `runner(stage, {speed, spawnX, despawnX})` gère les
-obstacles (`spawn`, `onPass` quand l'arrière dépasse la joueuse, retrait
-derrière la caméra), les couches de décor en parallaxe (`layer`), et le
-clignotement d'invulnérabilité (`hurt`/`blink`) ; `scrollTex` fait une
-texture de sol qui défile. Modèle : `flappy.ts`. Pour un jeu Apprendre
+Modèles : `icetower.ts` et, en 2D, `ninja.ts` (un canvas, les fruits Canva,
+ombres et lueurs précalculées une fois par image, vagues puis pluie finale).
+Poussin Volant et Tape-Trous sont sortis le 27/09 (« vire-les »), avec
+`core/runner.ts` (le socle des jeux qui défilent). Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 `public/assets/geo/`, voix = noms de lieux uniquement).
 
@@ -211,7 +208,7 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 `stage.timeScale` fait les ralentis d'outro.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
-`caterpillar` · `flappy` · `mole` · `dressup` ·
+`caterpillar` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
@@ -257,7 +254,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
-| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` touchent l'onglet de l'univers (`.hm-tab[data-w]`, un univers affiché à la fois depuis le 23/09), puis la tuile `.gc` (nom dans `.nm`), puis le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
+| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` touchent l'onglet de l'univers (`.hm-tab[data-w]`, un univers affiché à la fois depuis le 23/09), puis la tuile `.gc` (nom dans `.nm`), puis — jeu `ops` — la flèche des opérations (`.opsgo`, étiquettes `.opsbtn[data-op]`), puis le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
 | **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
 | **Bot sur une valeur périmée** | Un crochet de test (`__towerX`) qui n'est écrit que quand l'objet existe garde sa dernière valeur : le bot de la Tour cliquait « au centre » pendant la chute du bloc précédent, un bloc sur trois manquait, trois déploiements ont échoué sans qu'on le voie. Écrire `NaN` quand il n'y a rien à piloter, et faire attendre le bot sur le score plutôt que sur une durée murale. |
 | **Bot qui sonde avant l'accroche** | `openGame` attendait 3,2 s à plat, puis le bot de la Course lisait `window.__run` : un jeu 3D n'installe son accroche qu'APRÈS ses modèles, et sur le serveur d'intégration (plus lent que la session) elle n'était pas là — première sonde à `null`, « partie terminée avant 60 m », déploiement bloqué alors que tout passait ici. Un bot attend son accroche (`openGame(nom, '__run')` → `waitForFunction`) ou la disparition de `.nj-loading`, jamais une durée murale. |
@@ -273,6 +270,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Répondre pendant une animation** | Dans le Potager, la rangée des nombres s'écrit case par case (`ctx.after`) : une réponse donnée avant la fin laissait des nombres apparaître APRÈS la bonne réponse. Tout ce qui répond (`success`, `showMiss`) change d'abord le jeton de question (`me.gen++`), et chaque rappel vérifie ce jeton. |
 | **Bot qui gagne par chance** | Le premier bot du Poussin 2D (retiré depuis) (seuil fixe : taper si `y + vy·0,08 < cible − 0,07`) est passé trois fois dans la session, puis a bloqué le déploiement (« arrivé avec 3 cœurs sur 5 »). Simulé hors navigateur sur 3 000 parties : il perdait 2 cœurs ou plus une fois sur trois — les passages sont tirés au hasard. Un pilote de jeu à hasard se valide par une **simulation de la même physique en Node, sur des milliers de parties et plusieurs cadences** (60 i/s, 20 i/s, saccadé), pas par un passage réussi. `THROTTLE=4 npm run test:play` ralentit le processeur comme sur le serveur d'intégration. |
 | **Maquette validée ≠ jeu validé** | La Chenille et le Poussin 2D avaient eu un « go » sur leurs maquettes (images fixes), puis ont été retirés le soir même, joués : le pas de case en case paraît SACCADÉ quand la 3D glissait en continu, des illustrations de 256 px agrandies plein écran sont PIXELISÉES, et une feuille entourée de marges (HUD en haut, semaine en bas) laisse une surface de jeu MINUSCULE. Avant de remplacer le rendu d'un jeu qui plaît, comparer les deux EN MOUVEMENT, à la taille de la tablette, côte à côte — et dire au père ce qu'on perd. |
+| **Le doigt qui pilote tout seul** | Le Labyrinthe rejoignait la case sous le doigt par une recherche de chemin jusqu'à six cases (15/09, pour qu'un doigt rapide « ne décroche plus ») : le poussin prenait les virages tout seul, et le labyrinthe se jouait sans réfléchir (« il fait tout seul les virages », 27/09). Une aide qui fait le geste à la place de l'enfant retire le jeu : le poussin avance en ligne droite vers le doigt et cogne ; c'est au doigt de tourner. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -287,7 +285,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (25/09 : 30 scénarios, le Potager en a deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (27/09 : 29 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

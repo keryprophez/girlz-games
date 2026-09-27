@@ -70,16 +70,6 @@ export const BADGE: Record<string, string> = {
     </g>
     <path d="M4 30 44 15l1.6 4.2L5.6 34.2z" fill="${C.white}" opacity=".95"/>`),
 
-  mole: svg(`
-    <ellipse cx="24" cy="37" rx="17" ry="7" fill="${C.wood}"/>
-    <ellipse cx="24" cy="36" rx="12" ry="4.6" fill="${C.ink}"/>
-    <g transform="rotate(22 24 22)">
-      <rect x="21" y="16" width="6" height="20" rx="3" fill="${C.wood}"/>
-      <rect x="12" y="7" width="24" height="12" rx="4" fill="${C.coral}"/>
-      <rect x="12" y="7" width="24" height="5" rx="2.5" fill="${C.white}" opacity=".35"/>
-    </g>`),
-
-
   caterpillar: svg(`
     <circle cx="12" cy="30" r="7" fill="${C.meadowDark}"/>
     <circle cx="22" cy="27" r="8" fill="${C.meadow}"/>
@@ -87,14 +77,6 @@ export const BADGE: Record<string, string> = {
     <circle cx="30" cy="19" r="1.9" fill="${C.ink}"/>
     <circle cx="37" cy="18" r="1.9" fill="${C.ink}"/>
     <path d="M31 12c-1-3 0-5 2-6M38 12c0-3 1-4 3-5" stroke="${C.meadowDark}" stroke-width="2" fill="none" stroke-linecap="round"/>`),
-
-
-  flappy: svg(`
-    <circle cx="26" cy="24" r="13" fill="${C.sun}"/>
-    <circle cx="30" cy="20" r="2.3" fill="${C.ink}"/>
-    <path d="M37 24l7 3-7 3z" fill="${C.mango}"/>
-    <path d="M10 18c6-4 12-1 13 5-6 4-12 2-13-5z" fill="${C.mango}"/>
-    <path d="M20 36c1 3 4 5 7 5" stroke="${C.mangoDark}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`),
 
   maze: svg(`
     <rect x="5" y="5" width="38" height="38" rx="8" fill="${C.woodDark}"/>

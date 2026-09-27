@@ -15,8 +15,6 @@ import type { T3 } from './three3d'
 
 export type CritterKind = 'mole' | 'chick' | 'pig' | 'rabbit' | 'cactus'
   | 'cow' | 'hen' | 'dog' | 'duck' | 'sheep'
-/** Les habitants du pré de Tape-Trous — le cactus n'en est pas un, c'est le piège. */
-export const CRITTERS: CritterKind[] = ['mole', 'chick', 'pig', 'rabbit']
 /** Toute la ferme (22/09) : les pions de Simon, Puissance 4, la Boîte à
     rythme et l'image du Taquin, rendus en portrait par `core/portraits.ts`. */
 export const FARM: CritterKind[] = ['cow', 'pig', 'hen', 'chick', 'duck', 'sheep', 'dog', 'rabbit']

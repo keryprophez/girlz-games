@@ -10,23 +10,23 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 ## ✨ Ce qu'il y a dedans
 
 **Jouer** — des jeux d'adresse en vraie 3D (Three.js + cannon-es) : la Tour de
-Glace, la Chenille, Poussin Volant ; Ninja Verger, en 2D, où l'on tranche des
-fruits illustrés d'un trait de doigt, vague après vague, sans toucher le cactus ;
-Tape-Trous et ses habitants construits en 3D (taupe, poussin, cochon, lapin…
-et un cactus qui pique) ; le Labyrinthe en vraies haies 3D (classique,
-brouillard à la lanterne, glace), où le poussin rejoint sa maman poule en
-ramassant des grains ; et des classiques : Taquin (une photo ou un pré en
+Glace, la Chenille ; Ninja Verger, en 2D, où l'on tranche des fruits illustrés
+d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe
+en vraies haies 3D (classique, brouillard à la lanterne, glace), où le poussin
+rejoint sa maman poule — c'est au doigt de prendre chaque virage — en
+ramassant les graines cachées au fond des impasses ; et des classiques : Taquin (une photo ou un pré en
 3D), Memory (de vraies cartes qui se retournent), le Chœur de la ferme (les
 animaux chantent avec leurs vraies voix, à toi de rejouer la chanson) et
 Puissance 4, avec les personnages 3D de la ferme (vache, poule, cochon,
 canard, mouton…) en pions.
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
-le Potager (les tables de multiplication : on trace au doigt un rectangle de
-plantes, on le compte par rangées sur une petite mélodie, et une récolte de
-douze questions retient ce qui est déjà su ; les divisions en expert), le
-Grand Tableau + (un potager : chaque case trouvée fait pousser sa plante), le
-Marché (vrais euros), l'Intrus, le Tour du Monde
+le Potager (LE jeu des calculs : on choisit ses opérations, + − × ÷, puis la
+difficulté ; 7 × 8 pousse en rectangle de plantes compté par rangées, 7 + 4
+en bande qui compte 8, 9, 10, 11 ; un Parcours de dix cases découvertes puis
+redemandées trois fois, de plus en plus dur ; Découvre, où chaque résultat
+reste écrit jusqu'à allumer toute la grille ; une récolte de douze questions
+qui retient ce qui est déjà su), le Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
 Voyage dans l'Espace (vraies planètes, une fusée, un mode « Trouve »),
 Suites logiques, le Miroir (on peint en glissant, le reflet se replie), Chasse

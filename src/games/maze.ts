@@ -130,9 +130,13 @@ function generate(n: number): Cell[][] {
   return g
 }
 
+/* Les tailles (27/09 : « beaucoup trop simple ») : en douce, 7 à 9 cases de
+   côté (5 à 7 avant) ; la nuit un cran au-dessus ; la glace, qui glisse
+   jusqu'au mur, reste plus petite. */
 function sizesFor(mode: Mode): number[] {
-  if (mode === 'fog') return ctx.byTier([6, 7, 8], [9, 11, 13], [13, 15, 17])
-  return ctx.byTier([5, 6, 7], [8, 10, 12], [12, 14, 16])
+  if (mode === 'fog') return ctx.byTier([8, 9, 10], [11, 13, 15], [15, 17, 19])
+  if (mode === 'ice') return ctx.byTier([6, 7, 8], [8, 10, 12], [12, 13, 14])
+  return ctx.byTier([7, 8, 9], [10, 12, 14], [14, 16, 18])
 }
 
 /* La glace ne permet pas de s'arrêter en plein couloir : certaines grilles
@@ -351,7 +355,8 @@ function bump(me: State, d: number) {
     { count: 8, color: [0x4B8A3A, 0x7CC25C, 0xB97F3F], speed: 0.8, spread: 1, life: 0.5, size: 0.07, gravity: 2 })
 }
 
-/** Les graines de la manche : quatre sur le chemin de la poule, une à l'écart. */
+/** Les graines de la manche : trois sur le chemin de la poule, et le reste
+    AU FOND DES CULS-DE-SAC (27/09) — toutes les étoiles, c'est explorer. */
 function sowGrains(me: State) {
   const n = me.n
   const key = (x: number, y: number) => y * n + x
@@ -369,10 +374,13 @@ function sowGrains(me: State) {
   for (let k = key(n - 1, n - 1); k > 0; k = prev.get(k)!) path.unshift(k)
   path.pop()   // pas sur la poule
   me.grains = new Set()
-  const onPath = shuffle(path).slice(0, Math.min(4, path.length))
+  const onPath = shuffle(path).slice(0, Math.min(3, path.length))
   for (const k of onPath) me.grains.add(`${k % n}:${Math.floor(k / n)}`)
+  // Hors du chemin : les impasses d'abord (une case à trois haies)
+  const deadEnd = (k: number) => me.grid[Math.floor(k / n)][k % n].walls.filter(Boolean).length === 3
   const off = shuffle([...prev.keys()].filter(k => k > 0 && !path.includes(k) && k !== key(n - 1, n - 1)))
-  if (off.length) me.grains.add(`${off[0] % n}:${Math.floor(off[0] / n)}`)
+    .sort((a, b) => Number(deadEnd(b)) - Number(deadEnd(a)))
+  for (const k of off.slice(0, ctx.byTier(2, 3, 4))) me.grains.add(`${k % n}:${Math.floor(k / n)}`)
   me.grainsTotal += me.grains.size
 }
 
@@ -387,45 +395,26 @@ function step(me: State, dx: number, dy: number): boolean {
   return false
 }
 
-/** Le doigt : on rejoint la case visée en suivant le couloir, mais seulement
-    si elle est à moins de six pas (une recherche courte, jamais un résolveur :
-    le doigt doit rester près du poussin). Un doigt rapide qui saute un coin
-    ne décroche plus. Si la case est hors de portée, on avance vers elle et on
-    cogne le mur qui bloque. */
-const REACH = 6
+/** Le doigt : le poussin avance en LIGNE DROITE vers la case visée, sur sa
+    rangée ou sa colonne, tant que le couloir est ouvert — et cogne la haie
+    qui l'arrête. Il ne prend JAMAIS un virage tout seul (27/09 : « il suit
+    le doigt et fait tout seul les virages » ; avant, une recherche de
+    chemin le menait jusqu'à six cases plus loin, coins compris) : c'est au
+    doigt de tourner. Une case en diagonale : un pas vers elle, sur l'axe
+    où le doigt s'est le plus éloigné, et rien d'autre. */
 function walkTo(me: State, tx: number, ty: number) {
   const { x, y } = me.pos
   if (tx === x && ty === y) return
-  // Recherche en largeur bornée depuis le poussin
-  const key = (cx: number, cy: number) => cy * me.n + cx
-  const prev = new Map<number, number>([[key(x, y), -1]])
-  const queue: [number, number, number][] = [[x, y, 0]]
-  let found = false
-  while (queue.length && !found) {
-    const [cx, cy, depth] = queue.shift()!
-    if (depth >= REACH) continue
-    for (let d = 0; d < 4; d++) {
-      if (!open(me, cx, cy, d)) continue
-      const nx = cx + D[d][0], ny = cy + D[d][1]
-      const k = key(nx, ny)
-      if (prev.has(k)) continue
-      prev.set(k, key(cx, cy))
-      if (nx === tx && ny === ty) { found = true; break }
-      queue.push([nx, ny, depth + 1])
-    }
-  }
-  if (found) {
-    const path: number[] = []
-    for (let k = key(tx, ty); k !== key(x, y); k = prev.get(k)!) path.unshift(k)
-    for (const k of path) { moveTo(me, k % me.n, Math.floor(k / me.n)); if (me.won) return }
+  const dx = tx - x, dy = ty - y
+  if (dx && dy) {
+    if (Math.abs(dx) >= Math.abs(dy)) step(me, Math.sign(dx), 0)
+    else step(me, 0, Math.sign(dy))
     return
   }
-  // Hors de portée : un pas vers la cible, et on cogne ce qui bloque
-  const dx = tx - x, dy = ty - y
-  const first: [number, number] = Math.abs(dx) >= Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]
-  const second: [number, number] = first[0] ? [0, Math.sign(dy)] : [Math.sign(dx), 0]
-  if (step(me, first[0], first[1])) return
-  if (second[0] || second[1]) step(me, second[0], second[1])
+  const sx = Math.sign(dx), sy = Math.sign(dy)
+  for (let i = Math.abs(dx) + Math.abs(dy); i > 0; i--) {
+    if (!step(me, sx, sy) || me.won) return
+  }
 }
 
 function slide(me: State, d: number) {

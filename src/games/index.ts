@@ -1,10 +1,8 @@
 import type { GameDef } from '../core/types'
 import { memory } from './memory'
 import { intrus } from './intrus'
-import { moleGame } from './mole'
 import { simonGame } from './simon'
 import { ninja } from './ninja'
-import { flappy } from './flappy'
 import { letters } from './letters'
 import { coloring } from './coloring'
 import { dressup } from './dressup'
@@ -28,7 +26,7 @@ import { icetower } from './icetower'
 import { sentences } from './sentences'
 
 export const GAMES: GameDef[] = [
-  icetower, ninja, moleGame, caterpillar, flappy, maze, taquin, memory, simonGame,
+  icetower, ninja, caterpillar, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   snowman, dressup, beatbox, piano, fireworks, coloring, pizza
@@ -41,7 +39,7 @@ export const GAMES: GameDef[] = [
    - Créer     = pas de score du tout
    La coupe du 2 septembre (voir AUDIT.md) a retiré balloon, popcorn, fish,
    battleship, quiz, socks et puzzle du catalogue. Leurs bonnes idées sont
-   à greffer : fenêtre « prêt/brûlé » de popcorn → mole, mode « Compte » de
+   à greffer : mode « Compte » de
    quiz → le Potager (+ − × ÷ depuis le 27/09), paires visibles contre la montre de socks → memory,
    pièces libres de puzzle → taquin. La Loupe Magique (geo) est sortie le
    2/09 : des pays inventés n'apprennent rien, on refera une géographie
@@ -50,7 +48,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
-      icetower, ninja, moleGame, caterpillar, flappy,
+      icetower, ninja, caterpillar,
       maze, taquin, memory, simonGame, connect4
     ]
   },

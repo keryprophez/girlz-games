@@ -201,28 +201,6 @@ await scenario('chenille-croque-des-fruits', async () => {
   throw new Error('moins de 2 fruits croqués en 22 s')
 })
 
-/* 🐤 Poussin Volant : viser le milieu du passage, franchir 2 barrières. */
-await scenario('poussin-deux-barrieres', async () => {
-  await openGame('Poussin Volant', '__fl')
-  await page.keyboard.press('Space')
-  for (let i = 0; i < 300; i++) {
-    const st = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
-      const f = window.__fl
-      if (!f || !f.running) return res(null)
-      const next = f.pipes.find(p => p.x + p.hw > f.x - f.r)
-      const target = next ? (next.lo + next.hi) / 2 : 0.3
-      res({ y: f.y, vy: f.vy, target, score: f.score })
-    })))
-    if (!st) break
-    if (st.score >= 2) return
-    // Battre des ailes en bas du passage (un coup d'aile monte de 0,46 m),
-    // jamais en pleine montée : l'entrée arrive avec une frame de retard
-    const yNext = st.y + st.vy * 0.1
-    if (st.vy < 0.5 && yNext < st.target - 0.2) await page.keyboard.press('Space')
-  }
-  throw new Error('moins de 2 barrières passées')
-})
-
 /* 🍕 Pizzeria : la sauce doit apparaître SOUS le doigt (régression UV). */
 await scenario('pizza-sauce-sous-le-doigt', async () => {
   await openGame('La Pizzeria')
@@ -287,40 +265,62 @@ await scenario('tour-trois-blocs', async () => {
   if (errors.length) throw new Error('erreurs JS')
 })
 
-/* 🌀 Labyrinthe : le chemin le plus court (BFS), tracé au doigt en peu de
-   points — c'est le suivi de trait (Bresenham) qu'on vérifie, pas la patience. */
-await scenario('labyrinthe-doigt-rapide', async () => {
+/* 🌀 Labyrinthe : le poussin ne prend JAMAIS un virage tout seul (27/09 :
+   « il suit le doigt et fait tout seul les virages ») — un doigt qui saute
+   un coin le laisse sur sa ligne (au plus un pas) ; puis le doigt passe par
+   chaque coin du chemin, et le poussin rejoint la poule. */
+await scenario('labyrinthe-virages-au-doigt', async () => {
   await openGame('Labyrinthe')
   await page.waitForFunction(() => window.__mz && window.__mz.n > 0, null, { timeout: 15000 })
   await page.waitForTimeout(600)
-  const st = await page.evaluate(() => ({ grid: window.__mz.grid, n: window.__mz.n }))
-  const n = st.n
   const D = [[0, -1], [1, 0], [0, 1], [-1, 0]]
-  const prev = new Map([['0:0', null]])
-  const queue = [[0, 0]]
-  while (queue.length) {
-    const [x, y] = queue.shift()
-    if (x === n - 1 && y === n - 1) break
-    for (let d = 0; d < 4; d++) {
-      if (st.grid[y][x][d]) continue
-      const k = (x + D[d][0]) + ':' + (y + D[d][1])
-      if (!prev.has(k)) { prev.set(k, x + ':' + y); queue.push([x + D[d][0], y + D[d][1]]) }
+  const route = async () => {
+    const st = await page.evaluate(() => ({ grid: window.__mz.grid, n: window.__mz.n, pos: window.__mz.pos }))
+    const n = st.n, start = st.pos.x + ':' + st.pos.y
+    const prev = new Map([[start, null]])
+    const queue = [[st.pos.x, st.pos.y]]
+    while (queue.length) {
+      const [x, y] = queue.shift()
+      if (x === n - 1 && y === n - 1) break
+      for (let d = 0; d < 4; d++) {
+        if (st.grid[y][x][d]) continue
+        const k = (x + D[d][0]) + ':' + (y + D[d][1])
+        if (!prev.has(k)) { prev.set(k, x + ':' + y); queue.push([x + D[d][0], y + D[d][1]]) }
+      }
     }
+    const path = []
+    for (let k = (n - 1) + ':' + (n - 1); k; k = prev.get(k)) path.unshift(k.split(':').map(Number))
+    // Les coins : là où le chemin change de direction
+    const corners = [path[0]]
+    for (let i = 1; i < path.length - 1; i++) {
+      const a = [path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]], b = [path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1]]
+      if (a[0] !== b[0] || a[1] !== b[1]) corners.push(path[i])
+    }
+    corners.push(path[path.length - 1])
+    return corners
   }
-  const path = []
-  for (let k = (n - 1) + ':' + (n - 1); k; k = prev.get(k)) path.unshift(k.split(':').map(Number))
-  if (path.length < 2) throw new Error('pas de chemin trouvé')
-  // On ne passe le doigt que sur un point sur trois : les cases sautées
-  // doivent être rattrapées par le suivi de trait
-  const pts = await page.evaluate(p => p.map(([x, y]) => window.__mz.cellCenter(x, y)), path)
-  await page.mouse.move(pts[0].x, pts[0].y)
+  const center = ([x, y]) => page.evaluate(([x, y]) => window.__mz.cellCenter(x, y), [x, y])
+  let corners = await route()
+  if (corners.length < 3) throw new Error(`labyrinthe sans virage (${corners.length} points)`)
+  // 1) Sauter un coin : du poussin, le doigt file droit sur le 2e coin
+  let p = await center(corners[0])
+  await page.mouse.move(p.x, p.y)
   await page.mouse.down()
-  for (let i = 1; i < pts.length; i += 3) { await page.mouse.move(pts[i].x, pts[i].y); await page.waitForTimeout(12) }
-  await page.mouse.move(pts[pts.length - 1].x, pts[pts.length - 1].y)
+  p = await center(corners[2])
+  await page.mouse.move(p.x, p.y)
+  await page.waitForTimeout(500)
+  await page.mouse.up()
+  const pos = await page.evaluate(() => window.__mz.pos)
+  if (Math.abs(pos.x - corners[0][0]) + Math.abs(pos.y - corners[0][1]) > 1) throw new Error(`le poussin a pris un virage tout seul : (${pos.x}, ${pos.y})`)
+  // 2) Le vrai tracé : le doigt tourne à chaque coin
+  corners = await route()
+  p = await center(corners[0])
+  await page.mouse.move(p.x, p.y)
+  await page.mouse.down()
+  for (const c of corners.slice(1)) { p = await center(c); await page.mouse.move(p.x, p.y); await page.waitForTimeout(40) }
   await page.mouse.up()
   // Le poussin MARCHE jusqu'à la poule (13 cases/s) : on lui laisse le temps d'arriver
-  await page.waitForFunction(() => window.__mz.round >= 1, null, { timeout: 8000 })
-    .catch(() => { throw new Error('la poule n\'a pas été retrouvée avec un doigt rapide') })
+  await page.waitForFunction(() => window.__mz.round >= 1, null, { timeout: 12000 })
 })
 
 /* 🖼 Taquin : résoudre par recherche en largeur (grille 3×3, mélange court
@@ -719,23 +719,6 @@ await scenario('ninja-a-deux', async () => {
   }
   if ((await page.evaluate(() => window.__nj.blades())) !== 0) throw new Error('une lame reste accrochée après les doigts levés')
   await page.evaluate(() => localStorage.removeItem('ferme:duo:ninja'))
-})
-
-/* 🔨 Tape-Trous : taper 8 animaux sortis (accroche window.__mole), aucun raté. */
-await scenario('taupe-huit-animaux', async () => {
-  await openGame('Tape-Trous')
-  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 20000 })
-  await page.waitForTimeout(600)
-  let taps = 0
-  for (let i = 0; i < 300 && taps < 8; i++) {
-    const ready = await page.evaluate(() => window.__mole ? window.__mole.ready() : [])
-    if (ready.length) { await page.mouse.click(ready[0].x, ready[0].y); taps++ }
-    await page.waitForTimeout(60)
-  }
-  const score = parseInt(await page.locator('.hud-score b').textContent())
-  if (taps < 8) throw new Error('seulement ' + taps + ' animaux sortis en 18 s')
-  if (score < 8) throw new Error('score ' + score + ' pour 8 taps sur des animaux sortis')
-  if (errors.length) throw new Error('erreurs JS')
 })
 
 /* 🌍 Le Tour du Monde : les vrais pays répondent à la bonne longitude/latitude,
