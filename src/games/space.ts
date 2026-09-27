@@ -60,6 +60,8 @@ const RATES = [0, 1 / 24, 1, 7, 30.44, 365.25]
 const RATE0 = 3
 
 const SYSTEM = 'systeme'
+/** `?hq` dans l'adresse : la qualité ne baisse jamais (captures, mesures). */
+const HQ = typeof location !== 'undefined' && new URLSearchParams(location.search).has('hq')
 type Mode = 'explore' | 'trouve'
 type V3 = import('three').Vector3
 type Group = import('three').Group
@@ -212,15 +214,23 @@ function makeRocket(T: T3, stage: Stage) {
 const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
 const radiusOf = (me: State, id: string) => id === SYSTEM ? SUN_R : me.cosmos.radius(id)
 const targetPos = (me: State, id: string, out: V3) => id === SYSTEM ? out.set(0, 0, 0) : me.cosmos.worldPos(id, out)
+/** Là où regarde la caméra : un peu SOUS l'astre, pour qu'il se tienne en
+    haut de l'écran, au-dessus de la carte de sa merveille. */
+const lookPos = (me: State, id: string, out: V3) => {
+  targetPos(me, id, out)
+  if (id !== SYSTEM) out.y -= radiusOf(me, id) * 0.42
+  return out
+}
 
 function arrivalView(me: State, id: string): View {
   if (id === SYSTEM) return { yaw: -0.6, pitch: 0.75, distR: 55 }
-  if (id === 'soleil') return { yaw: 0.5, pitch: 0.18, distR: 5 }
+  if (id === 'soleil') return { yaw: 0.5, pitch: 0.18, distR: 5.6 }
   const p = me.cosmos.worldPos(id, me.tmp)
-  // Vue de trois quarts : la planète éclairée de côté, le Soleil derrière l'épaule
-  const yaw = Math.atan2(-p.x, -p.z) + 0.75
+  // Vue de trois quarts : la planète éclairée de côté, le Soleil derrière
+  // l'épaule ; la Terre, à moitié dans la nuit (ses villes s'allument)
+  const yaw = Math.atan2(-p.x, -p.z) + (id === 'terre' ? 1.35 : 0.75)
   const b = me.cosmos.byId[id]
-  return { yaw, pitch: b.rings ? 0.32 : 0.18, distR: b.rings ? 5.2 : b.parent ? 3.4 : 3.2 }
+  return { yaw, pitch: b.rings ? 0.32 : 0.18, distR: b.rings ? 6.0 : b.parent ? 4.3 : 3.9 }
 }
 function distLimits(me: State, id: string): [number, number] {
   if (id === SYSTEM) return [6, 120]
@@ -251,7 +261,8 @@ function travelTo(me: State, id: string): number {
     const cam = orbitCamPos(me, id, arr, new T.Vector3())
     const toCam = cam.sub(p).normalize()
     const right = new T.Vector3().crossVectors(toCam.clone().negate(), new T.Vector3(0, 1, 0)).normalize()
-    me.rocketOff.copy(right.multiplyScalar(R * 1.45)).addScaledVector(new T.Vector3(0, 1, 0), R * 0.45).addScaledVector(toCam, R * 0.7)
+    // À GAUCHE (la colonne des billes est à droite), un peu devant l'astre
+    me.rocketOff.copy(right.multiplyScalar(-R * 1.4)).addScaledVector(new T.Vector3(0, 1, 0), R * 0.1).addScaledVector(toCam, R * 1.1)
   }
   return dur
 }
@@ -268,7 +279,7 @@ function updateCamera(me: State, dt: number) {
     const a = tr.from.clone().lerp(mid, s), b = mid.clone().lerp(end, s)
     cam.position.copy(a.lerp(b, s))
     const lt = ease(Math.min(1, tr.t / 0.55))
-    me.lookTarget.copy(tr.lookFrom).lerp(targetPos(me, tr.id, me.tmp2), lt)
+    me.lookTarget.copy(tr.lookFrom).lerp(lookPos(me, tr.id, me.tmp2), lt)
     cam.lookAt(me.lookTarget)
     cam.fov = me.baseFov + 10 * Math.sin(Math.PI * s)
     cam.updateProjectionMatrix()
@@ -292,10 +303,11 @@ function updateCamera(me: State, dt: number) {
   v.pitch += (g.pitch - v.pitch) * k
   v.distR *= Math.pow(g.distR / v.distR, Math.min(1, k * 0.8))
   orbitCamPos(me, me.target, v, cam.position)
-  me.lookTarget.copy(targetPos(me, me.target, me.tmp))
+  lookPos(me, me.target, me.lookTarget)
   cam.lookAt(me.lookTarget)
 }
 
+const rocketScale = (R: number) => Math.min(0.9, Math.max(0.08, R * 0.2))
 /** La fusée : devant la caméra pendant le vol, puis posée à côté de l'astre. */
 function updateRocket(me: State, dt: number, now: number) {
   const T = me.T
@@ -303,7 +315,7 @@ function updateRocket(me: State, dt: number, now: number) {
   const cam = me.stage.camera
   const tr = me.travel
   const parkedR = radiusOf(me, me.rocketAt)
-  const parkScale = Math.min(1.1, Math.max(0.1, parkedR * 0.3))
+  const parkScale = rocketScale(parkedR)
   const parked = targetPos(me, me.rocketAt, me.tmp).add(me.rocketOff)
   parked.y += Math.sin(now / 700) * parkedR * 0.04
   const up = new T.Vector3(0, 1, 0)
@@ -321,7 +333,7 @@ function updateRocket(me: State, dt: number, now: number) {
     g.position.copy(chase.lerp(dest, kk))
     const dir = fwd.clone().lerp(parkedDir, kk).normalize()
     g.quaternion.setFromUnitVectors(up, dir)
-    g.scale.setScalar(T.MathUtils.lerp(0.42, Math.min(1.1, Math.max(0.1, destR * 0.3)), kk))
+    g.scale.setScalar(T.MathUtils.lerp(0.42, rocketScale(destR), kk))
     thrust = 1 - kk * 0.8
   } else {
     g.position.lerp(parked, Math.min(1, dt * 4))
@@ -588,7 +600,7 @@ export const space: GameDef = {
       me.arrived = true
       Object.assign(me.view, arrivalView(me, 'terre')); Object.assign(me.tgtView, me.view)
       orbitCamPos(me, 'terre', me.view, stage.camera.position)
-      me.lookTarget.copy(cosmos.worldPos('terre', me.tmp))
+      lookPos(me, 'terre', me.lookTarget)
       stage.camera.lookAt(me.lookTarget)
       rocket.group.position.copy(cosmos.worldPos('terre', me.tmp)).add(me.rocketOff)
       hideLoader()
@@ -687,6 +699,9 @@ export const space: GameDef = {
         updateCamera(me, dt)
         updateRocket(me, dt, now)
         cosmos.frame(dt)
+        // Le plan proche suit les astres (cosmos) ET la fusée, qu'il ne coupe pas
+        const rd = stage.camera.position.distanceTo(rocket.group.position) - rocket.group.scale.x * 0.6
+        if (rd > 0 && rd * 0.5 < stage.camera.near) { stage.camera.near = Math.max(0.01, rd * 0.5); stage.camera.updateProjectionMatrix() }
         me.camLight.position.copy(stage.camera.position)
         me.camLight.target.position.copy(me.lookTarget)
 
@@ -727,7 +742,7 @@ export const space: GameDef = {
         const pf = me.perf
         const wall = now - pf.last
         pf.last = now
-        if (dt > 0) {
+        if (dt > 0 && !HQ) {
           pf.avg = pf.avg * 0.93 + wall * 0.07
           pf.frames++
           if (now - pf.lastAdapt > 2000 && pf.frames > 60) {

@@ -504,7 +504,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
           float sh = (h > 0.0 && -bq - sqrt(h) > 0.0) ? 0.06 : 1.0;
           vec3 V = normalize(cameraPosition - vW);
           float fwd = pow(max(dot(-V, L), 0.0), 6.0) * 0.6;
-          gl_FragColor = vec4(t.rgb * vec3(1.0, 0.93, 0.82) * (0.62 + fwd) * sh * uSunI, t.a * 0.92);
+          gl_FragColor = vec4(t.rgb * vec3(1.0, 0.93, 0.82) * (0.8 + fwd) * sh * uSunI * 1.25, t.a * 0.92);
         }`
       })
       const ring = new T.Mesh(new T.RingGeometry(inner, outer, 256, 1), rm)
@@ -670,13 +670,17 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
         pmu.uRingN.value.set(0, 1, 0).applyQuaternion(n.tilt.getWorldQuaternion(tmpQ))
       }
     }
+    // Près d'un astre (le Soleil compris), les orbites des autres s'effacent :
+    // vues par la tranche, elles barraient l'écran de lignes
     let closeness = Infinity
-    for (const b of bodies) if (b.id !== 'soleil') closeness = Math.min(closeness, camera.position.distanceTo(worldPos(b.id, tmpV)) / b.R)
+    for (const b of bodies) closeness = Math.min(closeness, camera.position.distanceTo(worldPos(b.id, tmpV)) / b.R)
     const globalFade = 0.12 + 0.88 * T.MathUtils.smoothstep(closeness, 6, 45)
     for (const o of orbitLines) {
       const b = byId[o.id]
       const d = camera.position.distanceTo(worldPos(o.id, tmpV))
-      ;(o.line.material as import('three').LineBasicMaterial).opacity = o.base * T.MathUtils.smoothstep(d, b.R * 6, b.R * 30) * (b.parent ? 1 : globalFade)
+      // L'orbite d'une lune s'efface quand la caméra est dedans (vue par la tranche)
+      const inMoon = b.parent ? T.MathUtils.smoothstep(camera.position.distanceTo(worldPos(b.parent, tmpV2)), b.orbitR * 1.3, b.orbitR * 3) : 1
+      ;(o.line.material as import('three').LineBasicMaterial).opacity = o.base * T.MathUtils.smoothstep(d, b.R * 6, b.R * 30) * (b.parent ? inMoon : globalFade)
     }
     // Le plan proche suit la caméra : on peut frôler une lune sans la couper
     let near = Infinity
