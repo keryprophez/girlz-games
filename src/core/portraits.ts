@@ -153,19 +153,19 @@ async function renderPrincesses(looks: Royal[], poses: Pose[], px: number): Prom
           pr.update(0)
           pr.face.expr(pose === 'cheer' ? 'joy' : pose === 'wave' ? 'wink' : 'neutral', 99)
           pr.face.redraw()
-          pr.obj.position.set(looks.length > 1 ? (i ? 0.3 : -0.3) : 0, 0, 0)
+          pr.obj.position.set(looks.length > 1 ? (i ? 0.36 : -0.36) : 0, 0, 0)
           pr.obj.rotation.y = looks.length > 1 ? (i ? -0.35 : 0.35) : pose === 'walk' || pose === 'stride' ? 0.9 : -0.3
           scene.add(pr.obj)
           const blob = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.3, depthWrite: false }))
           blob.rotation.x = -Math.PI / 2
           blob.position.set(pr.obj.position.x, 0.002, 0)
-          blob.scale.set(0.62, 0.45, 1)
+          blob.scale.set(0.74, 0.54, 1)
           scene.add(blob)
         })
         // Cadrage fixe : tout le corps, le saut compris
         const cam = new T.PerspectiveCamera(30, W / H, 0.05, 50)
-        cam.position.set(0, 0.72, looks.length > 1 ? 2.75 : 2.55)
-        cam.lookAt(0, 0.56, 0)
+        cam.position.set(0, 0.85, looks.length > 1 ? 3.25 : 3.0)
+        cam.lookAt(0, 0.66, 0)
         renderer.render(scene, cam)
         const url = renderer.domElement.toDataURL('image/png')
         cache.set(key(pose), url)

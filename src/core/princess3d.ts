@@ -1,26 +1,29 @@
 import type { T3 } from './three3d'
-import type { Clip, Hair, Paint, Part, Pattern, Royal } from './royal'
+import type { Clip, Paint, Part, Pattern, Royal } from './royal'
 import { cloneRoyal } from './royal'
 
-/* LA PRINCESSE en 3D (27/09) — elle remplace la petite poupée ronde de
-   `doll3d.ts` partout : dans le jeu de la Princesse, sur l'écran de fin, en
-   promenade sur l'accueil, en tampon et en coloriage dans l'Atelier.
+/* LA PRINCESSE en 3D (27/09, refaite le soir même) — la première, construite
+   en formes rondes, faisait « pantin de bois de 1950 » : la tête était une
+   sphère au visage peint. Elle est maintenant un vrai personnage modélisé
+   par des professionnels : la jeune fille de démonstration de pixiv
+   (VRM1_Constraint_Twist_Sample, © 2022 pixiv Inc., licence VRM Public
+   License 1.0 : modification et redistribution autorisées, crédit non
+   exigé — crédité quand même dans CREDITS.md), allégée (textures réduites)
+   dans `public/assets/princess/princesse.vrm`, chargée à la demande par
+   `@pixiv/three-vrm`.
 
-   Proportions de poupée (tête moins grosse, cou, taille, coudes, mollets),
-   tout au tour (LatheGeometry) ou en mèches : pas un seul modèle téléchargé.
-   Origine AUX PIEDS, regard vers +z, hauteur ≈ 1 (l'échelle est sur `obj`).
+   Ce qu'elle apporte : un vrai visage et 18 expressions (joie, surprise,
+   clignements…), des yeux qui suivent le doigt, un squelette pour danser,
+   des cheveux qui ondulent (ressorts). Ce qu'on lui met par-dessus reste à
+   nous : les HABITS sont construits ici, ajustés à son corps mesuré, et le
+   corsage, les manches et les bottes sont LIÉS À SON SQUELETTE (poids
+   recopiés du corps le plus proche) : ils suivent ses gestes. Le reste
+   (jupes, cape, ailes, couronne, bijoux, objet) est accroché à un os.
 
-   Trois choses la rendent vivante :
-   - le TISSU MAGIQUE : chaque pièce a sa couleur et son motif dans un
-     shader ; une teinture part du point touché et se répand en vague, avec
-     un liseré qui brille (`dye`) ;
-   - le VISAGE : les yeux et la bouche sont deux petits canevas redessinés
-     à la volée — elle cligne, suit le doigt du regard, a des cœurs dans les
-     yeux, rit, pouffe, fait un clin d'œil (`face`) ;
-   - les CHEVEUX réglables : coiffure, longueur (jusqu'au sol), boucles,
-     barrettes piquées où l'on veut.
-
-   Couleurs assombries à la source (piège « couleurs vives + ACES »). */
+   Le TISSU MAGIQUE (`dye`) n'a pas changé : couleur + motif dans un shader,
+   la teinture part du doigt. Ses cheveux, ses yeux et sa peau se
+   recolorent sur ses propres matériaux (textures passées en gris, puis
+   teintées). Origine aux pieds, regard vers +z, hauteur HEIGHT. */
 
 type Obj3 = import('three').Object3D
 type Grp = import('three').Group
@@ -30,23 +33,17 @@ type Tex = import('three').Texture
 type V3 = import('three').Vector3
 export type Merge = (g: Geo[], groups?: boolean) => Geo | null
 
-export const HEAD_Y = 0.815
-export const HR = 0.1
-const HS = [1, 1.07, 0.97] as const
+/** Sa taille (unités de la scène) : un peu plus grande que la poupée d'avant. */
+export const HEIGHT = 1.1
 /** Assombrissement des tissus sous hemi + soleil + IBL. */
 const DIM = 0.74
 
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x))
-const smooth = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t) }
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
 function rgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-function shade(hex: string, k: number) {
-  const [r, g, b] = rgb(hex)
-  return `rgb(${clamp(Math.round(r * k), 0, 255)},${clamp(Math.round(g * k), 0, 255)},${clamp(Math.round(b * k), 0, 255)})`
 }
 const luma = (hex: string) => { const [r, g, b] = rgb(hex); return (r * 0.3 + g * 0.59 + b * 0.11) / 255 }
 
@@ -248,33 +245,6 @@ uniform vec3 uWaveO; uniform float uWaveR;
   return f
 }
 
-/** Les mèches des cheveux : une texture grise (claire/sombre) que la couleur
-    multiplie — une seule pour toutes les couleurs. */
-let streakTex: Tex | null = null
-function streaks(T: T3): Tex {
-  if (streakTex) return streakTex
-  const W = 512, H = 256
-  const cv = canvas(W, H)
-  const g = cv.getContext('2d')!
-  g.fillStyle = '#E6E6E6'; g.fillRect(0, 0, W, H)
-  let s = 9
-  const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647 }
-  for (let i = 0; i < 900; i++) {
-    const x = rnd() * W
-    const light = rnd() < 0.45
-    g.strokeStyle = light ? 'rgba(255,255,255,.35)' : 'rgba(40,40,40,.22)'
-    g.lineWidth = 0.6 + rnd() * 2
-    g.beginPath(); g.moveTo(x, 0)
-    g.bezierCurveTo(x + (rnd() - 0.5) * 8, H * 0.3, x + (rnd() - 0.5) * 8, H * 0.6, x + (rnd() - 0.5) * 12, H)
-    g.stroke()
-  }
-  streakTex = new T.CanvasTexture(cv)
-  streakTex.wrapS = streakTex.wrapT = T.RepeatWrapping
-  streakTex.colorSpace = T.SRGBColorSpace
-  streakTex.anisotropy = 4
-  return streakTex
-}
-
 /* =====================================================================
    Géométries
    ===================================================================== */
@@ -336,236 +306,104 @@ export function lockGeo(T: T3, pts: V3[], w0: number, w1: number, flat: number, 
   return geo
 }
 
-/** La tête en œuf : la mâchoire s'affine, le menton avance à peine. Sur une
-    sphère unité, AVANT l'échelle HS. */
-function egg(x: number, y: number, z: number): [number, number, number] {
-  const k = y < 0 ? Math.pow(-y, 1.6) : 0
-  return [x * (1 - 0.2 * k), y, z * (1 - 0.06 * k) + (z > 0 ? 0.04 * k * z : 0)]
+
+/* =====================================================================
+   Le modèle : chargé une fois (octets), une instance par princesse
+   ===================================================================== */
+
+type VRM = import('@pixiv/three-vrm').VRM
+type BoneName = import('@pixiv/three-vrm').VRMHumanBoneName
+type SMesh = import('three').SkinnedMesh
+type M4 = import('three').Matrix4
+
+let bytes: Promise<ArrayBuffer> | null = null
+const vrmUrl = () => `${import.meta.env.BASE_URL}assets/princess/princesse.vrm`
+
+async function loadVrm(): Promise<VRM> {
+  const [{ GLTFLoader }, { VRMLoaderPlugin, VRMUtils }] = await Promise.all([
+    import('three/examples/jsm/loaders/GLTFLoader.js'),
+    import('@pixiv/three-vrm')
+  ])
+  bytes ??= fetch(vrmUrl()).then(r => { if (!r.ok) throw new Error('princesse.vrm ' + r.status); return r.arrayBuffer() })
+  let buf: ArrayBuffer
+  try { buf = await bytes } catch (e) { bytes = null; throw e }
+  const loader = new GLTFLoader()
+  loader.register(p => new VRMLoaderPlugin(p))
+  const gltf = await loader.parseAsync(buf.slice(0), '')
+  const vrm = gltf.userData.vrm as VRM
+  VRMUtils.removeUnnecessaryVertices(gltf.scene)
+  return vrm
 }
 
-/** Un point de la tête (repère de la tête, centre à l'origine) : az autour
-    depuis le nez (+x à droite de l'image), th depuis le sommet. */
-function onHead(T: T3, az: number, th: number, lift = 1) {
-  const [x, y, z] = egg(Math.sin(th) * Math.sin(az), Math.cos(th), Math.sin(th) * Math.cos(az))
-  return new T.Vector3(x * HR * HS[0] * lift, y * HR * HS[1] * lift, z * HR * HS[2] * lift)
+/** Le nom de matériau d'un maillage (ses primitives sont des maillages séparés). */
+const matName = (m: import('three').Mesh) => {
+  const x = Array.isArray(m.material) ? m.material[0] : m.material
+  return x?.name || ''
 }
 
-/** Un morceau de la surface de la tête (pour les yeux et la bouche), UV 0..1. */
-function headPatch(T: T3, az0: number, az1: number, th0: number, th1: number, lift: number, seg = 20) {
-  const geo = new T.SphereGeometry(1, seg, seg, Math.PI / 2 + az0, az1 - az0, th0, th1 - th0)
-  const p = geo.attributes.position as import('three').BufferAttribute
-  for (let i = 0; i < p.count; i++) {
-    const [x, y, z] = egg(p.getX(i), p.getY(i), p.getZ(i))
-    p.setXYZ(i, x * HR * HS[0] * lift, y * HR * HS[1] * lift, z * HR * HS[2] * lift)
+/* ---- Textures recolorables : la texture passe en gris (contrastes gardés),
+   la couleur voulue vient multiplier ---- */
+const grays = new WeakMap<object, Tex>()
+function grayOf(T: T3, src: Tex, lo = 0.5): Tex {
+  const hit = grays.get(src)
+  if (hit) return hit
+  const im = src.image as CanvasImageSource & { width: number; height: number }
+  const cv = canvas(im.width, im.height)
+  const g = cv.getContext('2d')!
+  g.drawImage(im, 0, 0)
+  const d = g.getImageData(0, 0, cv.width, cv.height)
+  let mn = 255, mx = 0
+  for (let i = 0; i < d.data.length; i += 16) {
+    if (d.data[i + 3] < 40) continue
+    const l = d.data[i] * 0.3 + d.data[i + 1] * 0.59 + d.data[i + 2] * 0.11
+    if (l < mn) mn = l
+    if (l > mx) mx = l
   }
-  geo.computeVertexNormals()
-  return geo
+  const span = Math.max(1, mx - mn)
+  for (let i = 0; i < d.data.length; i += 4) {
+    const l = d.data[i] * 0.3 + d.data[i + 1] * 0.59 + d.data[i + 2] * 0.11
+    const v = Math.round(255 * (lo + (1 - lo) * clamp((l - mn) / span, 0, 1)))
+    d.data[i] = d.data[i + 1] = d.data[i + 2] = v
+  }
+  g.putImageData(d, 0, 0)
+  const t = new T.CanvasTexture(cv)
+  t.flipY = src.flipY
+  t.colorSpace = T.SRGBColorSpace
+  t.wrapS = src.wrapS; t.wrapT = src.wrapT
+  t.anisotropy = 4
+  grays.set(src, t)
+  return t
+}
+
+/** Les iris en cœurs roses (quand elle est amoureuse) : même atlas, un cœur
+    peint au centre de chaque iris (trouvés d'après les UV du maillage). */
+function heartIris(T: T3, src: Tex, centers: { u: number; v: number; r: number }[]): Tex {
+  const im = src.image as CanvasImageSource & { width: number; height: number }
+  const cv = canvas(im.width, im.height)
+  const g = cv.getContext('2d')!
+  g.drawImage(im, 0, 0)
+  for (const c of centers) {
+    const x = c.u * cv.width, y = (src.flipY ? 1 - c.v : c.v) * cv.height, r = c.r * cv.width * 0.9
+    g.fillStyle = '#E2457A'
+    g.beginPath()
+    g.moveTo(x, y + r * 0.9)
+    g.bezierCurveTo(x - r * 1.5, y - r * 0.15, x - r * 0.7, y - r * 1.25, x, y - r * 0.45)
+    g.bezierCurveTo(x + r * 0.7, y - r * 1.25, x + r * 1.5, y - r * 0.15, x, y + r * 0.9)
+    g.fill()
+    g.fillStyle = 'rgba(255,255,255,.85)'
+    g.beginPath(); g.arc(x - r * 0.4, y - r * 0.4, r * 0.2, 0, Math.PI * 2); g.fill()
+  }
+  const t = new T.CanvasTexture(cv)
+  t.flipY = src.flipY
+  t.colorSpace = T.SRGBColorSpace
+  return t
 }
 
 /* =====================================================================
-   Le visage vivant
+   Le visage : ses vraies expressions, ses yeux qui suivent le doigt
    ===================================================================== */
 
 export type Expr = 'neutral' | 'joy' | 'love' | 'laugh' | 'wink' | 'kiss' | 'wow' | 'funny' | 'sleepy'
-
-const EYE_AZ = 0.37, EYE_TH = Math.PI / 2 + 0.04
-const PX = 560 // pixels par radian des canevas du visage
-const EP = { l: 0.22, r: 0.22, t: 0.34, b: 0.3 } // étendue du morceau de l'œil autour de son centre
-const MP = { w: 0.27, t: 0.13, b: 0.15 } // étendue du morceau de la bouche
-const MOUTH_TH = Math.PI / 2 + 0.36
-
-interface EyeDraw { iris: string; brow: string; side: number; gx: number; gy: number; lid: number; mode: 'open' | 'happy' | 'heart' | 'wide'; blush: number; browUp: number }
-
-function drawEye(cv: HTMLCanvasElement, o: EyeDraw) {
-  const g = cv.getContext('2d')!
-  const W = cv.width, H = cv.height
-  g.clearRect(0, 0, W, H)
-  const cx = W / 2, cy = EP.t * PX
-  // Le morceau est transparent : le crâne porte la peau (aucune couture).
-  // Rose aux joues en plus quand elle est amoureuse ou qu'elle rit.
-  if (o.blush > 0) {
-    const bx = cx + o.side * 0.1 * PX, by = cy + 0.18 * PX
-    const bg = g.createRadialGradient(bx, by, 0, bx, by, 0.1 * PX)
-    bg.addColorStop(0, `rgba(236,90,115,${0.45 * o.blush})`); bg.addColorStop(1, 'rgba(236,90,115,0)')
-    g.fillStyle = bg; g.fillRect(0, 0, W, H)
-  }
-  // Fard très léger au-dessus de l'œil
-  const eg = g.createRadialGradient(cx, cy - 0.12 * PX, 0, cx, cy - 0.12 * PX, 0.2 * PX)
-  eg.addColorStop(0, 'rgba(214,120,160,.26)'); eg.addColorStop(1, 'rgba(214,120,160,0)')
-  g.fillStyle = eg; g.fillRect(0, 0, W, H)
-  // Sourcil
-  g.strokeStyle = o.brow; g.lineWidth = 0.024 * PX; g.lineCap = 'round'
-  const byy = cy - (0.25 + o.browUp * 0.06) * PX
-  g.beginPath()
-  g.moveTo(cx - o.side * 0.17 * PX, byy + 0.035 * PX)
-  g.quadraticCurveTo(cx + o.side * 0.0 * PX, byy - 0.05 * PX - o.browUp * 0.02 * PX, cx + o.side * 0.16 * PX, byy + 0.02 * PX)
-  g.stroke()
-
-  const rw = 0.16 * PX * (o.mode === 'wide' ? 1.06 : 1)
-  const rh = 0.19 * PX * (o.mode === 'wide' ? 1.14 : 1)
-  const ink = '#2A1A18'
-  if (o.mode === 'happy' || o.lid > 0.92) {
-    // Paupière close : un arc (^ joyeux, ou ‿ endormi) et trois cils
-    g.strokeStyle = ink; g.lineWidth = 0.034 * PX
-    g.beginPath()
-    if (o.mode === 'happy') {
-      g.moveTo(cx - rw, cy + 0.03 * PX); g.quadraticCurveTo(cx, cy - rh * 0.75, cx + rw, cy + 0.03 * PX)
-    } else {
-      g.moveTo(cx - rw, cy + rh * 0.1); g.quadraticCurveTo(cx, cy + rh * 0.62, cx + rw, cy + rh * 0.1)
-    }
-    g.stroke()
-    g.lineWidth = 0.02 * PX
-    for (let k = 0; k < 3; k++) {
-      const t = 0.6 + k * 0.16, lx = cx + o.side * rw * t
-      const ly = o.mode === 'happy' ? cy - rh * 0.35 * (1 - t) : cy + rh * 0.3
-      g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + o.side * rw * 0.22, ly - (o.mode === 'happy' ? 0.05 : -0.02) * PX); g.stroke()
-    }
-  } else {
-    // L'ouverture : une ellipse dont la paupière du haut descend avec `lid`
-    const top = cy - rh + 2 * rh * o.lid
-    g.save()
-    g.beginPath(); g.ellipse(cx, cy, rw, rh, 0, 0, Math.PI * 2); g.clip()
-    g.beginPath(); g.rect(0, top, W, H); g.clip()
-    g.fillStyle = '#FBF8F4'; g.fillRect(0, 0, W, H)
-    const ix = cx + o.gx * PX, iy = cy + rh * 0.08 + o.gy * PX
-    const ir = 0.13 * PX
-    if (o.mode === 'heart') {
-      // Des cœurs dans les yeux
-      g.fillStyle = '#E2457A'
-      const r = ir * 0.95
-      g.beginPath()
-      g.moveTo(ix, iy + r * 0.95)
-      g.bezierCurveTo(ix - r * 1.5, iy - r * 0.15, ix - r * 0.7, iy - r * 1.25, ix, iy - r * 0.45)
-      g.bezierCurveTo(ix + r * 0.7, iy - r * 1.25, ix + r * 1.5, iy - r * 0.15, ix, iy + r * 0.95)
-      g.fill()
-      g.fillStyle = 'rgba(255,255,255,.9)'
-      g.beginPath(); g.arc(ix - r * 0.45, iy - r * 0.45, r * 0.22, 0, Math.PI * 2); g.fill()
-    } else {
-      const gr = g.createRadialGradient(ix, iy + ir * 0.35, ir * 0.1, ix, iy, ir)
-      gr.addColorStop(0, shade(o.iris, 1.9)); gr.addColorStop(0.55, o.iris); gr.addColorStop(1, shade(o.iris, 0.45))
-      g.fillStyle = gr; g.beginPath(); g.ellipse(ix, iy, ir, ir * 1.12, 0, 0, Math.PI * 2); g.fill()
-      g.fillStyle = '#140C0A'; g.beginPath(); g.ellipse(ix, iy, ir * 0.48, ir * 0.55, 0, 0, Math.PI * 2); g.fill()
-      g.fillStyle = '#FFFFFF'
-      g.beginPath(); g.arc(ix - ir * 0.38, iy - ir * 0.42, ir * 0.3, 0, Math.PI * 2); g.fill()
-      g.beginPath(); g.arc(ix + ir * 0.35, iy + ir * 0.4, ir * 0.13, 0, Math.PI * 2); g.fill()
-    }
-    // Ombre de la paupière
-    const lg = g.createLinearGradient(0, top, 0, top + rh * 0.7)
-    lg.addColorStop(0, 'rgba(60,30,30,.42)'); lg.addColorStop(1, 'rgba(60,30,30,0)')
-    g.fillStyle = lg; g.fillRect(0, top, W, rh)
-    g.restore()
-    // Trait de cils sur la paupière du haut, et trois cils vers l'extérieur
-    g.strokeStyle = ink; g.lineWidth = 0.034 * PX
-    g.beginPath()
-    if (o.lid < 0.02) g.ellipse(cx, cy, rw, rh, 0, Math.PI * 1.08, Math.PI * 1.92)
-    else {
-      const hw = rw * Math.sqrt(Math.max(0, 1 - Math.pow((top - cy) / rh, 2)))
-      g.moveTo(cx - hw, top); g.quadraticCurveTo(cx, top - rh * 0.08, cx + hw, top)
-    }
-    g.stroke()
-    g.lineWidth = 0.021 * PX
-    const lashY = o.lid < 0.02 ? 0 : top - (cy - rh)
-    for (let k = 0; k < 3; k++) {
-      const a = o.side > 0 ? Math.PI * (1.72 + k * 0.1) : Math.PI * (1.28 - k * 0.1)
-      const lx = cx + Math.cos(a) * rw, ly = cy + Math.sin(a) * rh + lashY * 0.8
-      g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + o.side * 0.07 * PX, ly - 0.05 * PX + k * 0.025 * PX); g.stroke()
-    }
-    g.lineWidth = 0.01 * PX; g.strokeStyle = 'rgba(42,26,24,.55)'
-    g.beginPath(); g.ellipse(cx, cy, rw, rh, 0, Math.PI * 0.2, Math.PI * 0.8); g.stroke()
-  }
-}
-
-type MouthShape = 'smile' | 'grin' | 'laugh' | 'o' | 'kiss' | 'tongue'
-function drawMouth(cv: HTMLCanvasElement, shape: MouthShape, open: number) {
-  const g = cv.getContext('2d')!
-  const W = cv.width, H = cv.height
-  g.clearRect(0, 0, W, H)
-  const cx = W / 2, cy = MP.t * PX
-  const X = (a: number) => cx + a * PX, Y = (t: number) => cy + t * PX
-  const lip = '#C8505E', dark = '#6E1E2A', line = '#8E2F3E'
-  g.lineCap = 'round'; g.lineJoin = 'round'
-  if (shape === 'smile' || shape === 'tongue') {
-    g.fillStyle = lip
-    g.beginPath()
-    g.moveTo(X(-0.17), Y(-0.04)); g.quadraticCurveTo(X(0), Y(0.1), X(0.17), Y(-0.04))
-    g.quadraticCurveTo(X(0), Y(0.01), X(-0.17), Y(-0.04)); g.fill()
-    g.strokeStyle = line; g.lineWidth = 0.016 * PX
-    g.beginPath(); g.moveTo(X(-0.17), Y(-0.04)); g.quadraticCurveTo(X(0), Y(0.01), X(0.17), Y(-0.04)); g.stroke()
-    if (shape === 'tongue') {
-      g.fillStyle = '#E86F86'
-      g.beginPath(); g.ellipse(X(0.02), Y(0.055), 0.07 * PX, 0.075 * PX, 0.15, 0, Math.PI * 2); g.fill()
-      g.strokeStyle = '#C24A63'; g.lineWidth = 0.008 * PX
-      g.beginPath(); g.moveTo(X(0.02), Y(0.02)); g.lineTo(X(0.03), Y(0.09)); g.stroke()
-    } else {
-      g.fillStyle = 'rgba(255,255,255,.35)'
-      g.beginPath(); g.ellipse(X(0.03), Y(0.045), 0.04 * PX, 0.011 * PX, 0, 0, Math.PI * 2); g.fill()
-    }
-  } else if (shape === 'grin' || shape === 'laugh') {
-    const w = shape === 'laugh' ? 0.19 : 0.17
-    const d = (shape === 'laugh' ? 0.13 : 0.09) * (0.55 + 0.45 * open)
-    g.fillStyle = dark
-    g.beginPath()
-    g.moveTo(X(-w), Y(-0.04)); g.quadraticCurveTo(X(0), Y(-0.01), X(w), Y(-0.04))
-    g.quadraticCurveTo(X(w * 0.8), Y(d + 0.02), X(0), Y(d + 0.04)); g.quadraticCurveTo(X(-w * 0.8), Y(d + 0.02), X(-w), Y(-0.04))
-    g.fill()
-    g.save(); g.clip()
-    g.fillStyle = '#FFFFFF'; g.fillRect(X(-w), Y(-0.05), 2 * w * PX, 0.045 * PX)
-    g.fillStyle = '#E86F86'; g.beginPath(); g.ellipse(X(0), Y(d + 0.04), w * 0.6 * PX, 0.06 * PX, 0, 0, Math.PI * 2); g.fill()
-    g.restore()
-    g.strokeStyle = lip; g.lineWidth = 0.02 * PX
-    g.beginPath()
-    g.moveTo(X(-w), Y(-0.04)); g.quadraticCurveTo(X(w * 0.8 - w * 1.6), Y(d + 0.02), X(0), Y(d + 0.04))
-    g.stroke()
-    g.beginPath(); g.moveTo(X(w), Y(-0.04)); g.quadraticCurveTo(X(w * 0.8), Y(d + 0.02), X(0), Y(d + 0.04)); g.stroke()
-  } else if (shape === 'o') {
-    g.fillStyle = dark
-    g.beginPath(); g.ellipse(X(0), Y(0.02), 0.055 * PX, (0.05 + 0.02 * open) * PX, 0, 0, Math.PI * 2); g.fill()
-    g.strokeStyle = lip; g.lineWidth = 0.022 * PX; g.stroke()
-  } else {
-    // Bisou : les lèvres en cœur, avancées
-    g.fillStyle = lip
-    const r = 0.05 * PX
-    g.beginPath()
-    g.moveTo(X(0), Y(0.06))
-    g.bezierCurveTo(X(-0.1), Y(0.02), X(-0.07), Y(-0.05), X(0), Y(-0.015))
-    g.bezierCurveTo(X(0.07), Y(-0.05), X(0.1), Y(0.02), X(0), Y(0.06))
-    g.fill()
-    g.strokeStyle = line; g.lineWidth = 0.01 * PX
-    g.beginPath(); g.moveTo(X(-0.04), Y(0.018)); g.lineTo(X(0.04), Y(0.018)); g.stroke()
-    g.fillStyle = 'rgba(255,255,255,.4)'
-    g.beginPath(); g.arc(X(0.02), Y(0.035), r * 0.18, 0, Math.PI * 2); g.fill()
-  }
-}
-
-/** Le crâne : la peau, l'ombre du nez, les taches de rousseur. */
-function skullCanvas(skin: string, freckles: boolean) {
-  const W = 1024, H = 512
-  const cv = canvas(W, H)
-  const g = cv.getContext('2d')!
-  g.fillStyle = skin; g.fillRect(0, 0, W, H)
-  const px = W / (Math.PI * 2)
-  const X = (az: number) => W * 0.25 + az * px, Y = (th: number) => (th / Math.PI) * H
-  for (const s of [-1, 1]) {
-    const bg = g.createRadialGradient(X(s * 0.56), Y(EYE_TH + 0.22), 0, X(s * 0.56), Y(EYE_TH + 0.22), 0.2 * px)
-    bg.addColorStop(0, 'rgba(236,110,120,.42)'); bg.addColorStop(1, 'rgba(236,110,120,0)')
-    g.fillStyle = bg; g.fillRect(0, 0, W, H)
-  }
-  const ng = g.createRadialGradient(X(0), Y(MOUTH_TH - 0.16), 0, X(0), Y(MOUTH_TH - 0.16), 0.07 * px)
-  ng.addColorStop(0, 'rgba(150,80,60,.3)'); ng.addColorStop(1, 'rgba(150,80,60,0)')
-  g.fillStyle = ng; g.fillRect(0, 0, W, H)
-  g.strokeStyle = 'rgba(160,90,70,.5)'; g.lineWidth = 0.012 * px; g.lineCap = 'round'
-  g.beginPath(); g.moveTo(X(-0.035), Y(MOUTH_TH - 0.16)); g.quadraticCurveTo(X(0), Y(MOUTH_TH - 0.135), X(0.035), Y(MOUTH_TH - 0.16)); g.stroke()
-  if (freckles) {
-    let s = 3
-    const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647 }
-    g.fillStyle = 'rgba(150,80,50,.45)'
-    for (const side of [-1, 1]) for (let i = 0; i < 9; i++) {
-      const az = side * (0.2 + rnd() * 0.3), th = MOUTH_TH - 0.22 + rnd() * 0.12
-      g.beginPath(); g.arc(X(az), Y(th), 1.2 + rnd() * 1.4, 0, Math.PI * 2); g.fill()
-    }
-  }
-  return cv
-}
 
 export interface Face {
   expr(e: Expr, seconds?: number): void
@@ -577,368 +415,116 @@ export interface Face {
   dispose(): void
 }
 
-function makeFace(T: T3, head: Grp, look: () => Royal, live: boolean): Face {
-  const texs: Tex[] = [], geos: Geo[] = [], mats: Mat[] = []
-  const mk = (cv: HTMLCanvasElement, geo: Geo) => {
-    const t = new T.CanvasTexture(cv)
-    t.colorSpace = T.SRGBColorSpace
-    t.anisotropy = 4
-    texs.push(t)
-    geos.push(geo)
-    const m = new T.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
-    m.color.multiplyScalar(0.86)
-    mats.push(m)
-    const mesh = new T.Mesh(geo, m)
-    mesh.renderOrder = 2
-    mesh.userData.part = 'face'
-    mesh.userData.noShadow = true
-    head.add(mesh)
-    return { cv, t }
-  }
-  const eyes = [-1, 1].map(side => mk(
-    canvas(Math.round((EP.l + EP.r) * PX), Math.round((EP.t + EP.b) * PX)),
-    headPatch(T, side * EYE_AZ - EP.l, side * EYE_AZ + EP.r, EYE_TH - EP.t, EYE_TH + EP.b, 1.004, 22)
-  ))
-  const mouth = mk(canvas(Math.round(MP.w * 2 * PX), Math.round((MP.t + MP.b) * PX)),
-    headPatch(T, -MP.w, MP.w, MOUTH_TH - MP.t, MOUTH_TH + MP.b, 1.004, 18))
+type Weights = Partial<Record<string, number>>
+const EXPR: Record<Expr, Weights> = {
+  neutral: { relaxed: 0.15 },
+  joy: { happy: 0.85, aa: 0.25 },
+  love: { relaxed: 0.55, happy: 0.2 },
+  laugh: { happy: 1, aa: 0.6 },
+  wink: { blinkLeft: 1, happy: 0.3 },
+  kiss: { ou: 0.9, blink: 0.75 },
+  wow: { surprised: 0.9, oh: 0.35 },
+  funny: { blinkRight: 1, ee: 0.55, happy: 0.25 },
+  sleepy: { blink: 0.55, relaxed: 0.5 }
+}
+const CHANNELS = ['relaxed', 'happy', 'aa', 'ee', 'oh', 'ou', 'blink', 'blinkLeft', 'blinkRight', 'surprised']
 
-  let expr: Expr = 'neutral', exprLeft = 0
-  let gx = 0, gy = 0, tgx = 0, tgy = 0
-  let lid = 0, blinkIn = 1.5 + Math.random() * 2, blinkT = -1
-  let glanceIn = 2
-  let t = 0
-  let sig = ''
-  const target = new T.Vector3()
+function makeFace(T: T3, vrm: VRM, iris: { mats: import('@pixiv/three-vrm').MToonMaterial[]; normal: Tex | null; heart: Tex | null; tint: import('three').Color }, live: boolean): Face {
+  const em = vrm.expressionManager
+  let expr: Expr = 'neutral', left = 0, t = 0
+  let blinkIn = 1.5 + Math.random() * 2, blinkT = -1
+  const w: Record<string, number> = {}
+  CHANNELS.forEach(c => { w[c] = 0 })
+  const target = new T.Object3D()
+  const ahead = new T.Object3D()
   let tracking = false
-
-  const draw = (force = false) => {
-    const L = look()
-    const laughOpen = expr === 'laugh' ? 0.5 + 0.5 * Math.sin(t * 22) : expr === 'joy' ? 0.7 : 0.5
-    const modeFor = (side: number): EyeDraw['mode'] =>
-      expr === 'joy' || expr === 'laugh' ? 'happy'
-        : expr === 'love' ? 'heart'
-          : expr === 'wow' ? 'wide'
-            : (expr === 'wink' || expr === 'funny') && side > 0 ? 'happy'
-              : 'open'
-    const lidFor = (side: number) => expr === 'sleepy' ? 0.62 : expr === 'kiss' ? 1 : (modeFor(side) === 'open' || modeFor(side) === 'heart' || modeFor(side) === 'wide') ? lid : 0
-    const mouthShape: MouthShape = expr === 'joy' ? 'grin' : expr === 'laugh' ? 'laugh' : expr === 'wow' ? 'o' : expr === 'kiss' ? 'kiss' : expr === 'funny' ? 'tongue' : 'smile'
-    const s = [L.skin, L.eyes, L.paint.hair.c, expr, gx.toFixed(3), gy.toFixed(3), lidFor(-1).toFixed(2), lidFor(1).toFixed(2), laughOpen.toFixed(1)].join('|')
-    if (!force && s === sig) return
-    const mouthChanged = !sig || force || sig.split('|')[3] !== expr || expr === 'laugh'
-    sig = s
-    eyes.forEach((e, i) => {
-      const side = i === 0 ? -1 : 1
-      drawEye(e.cv, {
-        iris: L.eyes, brow: shade(L.paint.hair.c, 0.7), side,
-        gx, gy, lid: lidFor(side), mode: modeFor(side),
-        blush: expr === 'love' || expr === 'laugh' || expr === 'kiss' ? 1 : 0,
-        browUp: expr === 'wow' ? 1 : expr === 'love' ? 0.4 : 0
-      })
-      e.t.needsUpdate = true
-    })
-    if (mouthChanged) { drawMouth(mouth.cv, mouthShape, laughOpen); mouth.t.needsUpdate = true }
+  const head = vrm.humanoid.getRawBoneNode('head')
+  if (head) { ahead.position.set(0, 0.05, 2); head.add(ahead) }
+  if (vrm.lookAt) { vrm.lookAt.autoUpdate = true; vrm.lookAt.target = ahead }
+  const apply = (snap: boolean, dt: number) => {
+    const goal: Weights = { ...EXPR[expr] }
+    if (expr === 'laugh') goal.aa = 0.35 + 0.35 * Math.abs(Math.sin(t * 11))
+    // Clignement (pas quand les yeux sont déjà fermés de joie)
+    const closed = (goal.happy ?? 0) > 0.6 || (goal.blink ?? 0) > 0.5 || (goal.blinkLeft ?? 0) > 0.5 || (goal.blinkRight ?? 0) > 0.5
+    if (blinkT >= 0 && !closed) {
+      const k = blinkT / 0.15
+      goal.blink = Math.max(goal.blink ?? 0, k < 0.5 ? k * 2 : Math.max(0, 2 - k * 2))
+    }
+    for (const c of CHANNELS) {
+      const g = goal[c] ?? 0
+      w[c] = snap ? g : w[c] + (g - w[c]) * Math.min(1, dt * (c.startsWith('blink') ? 30 : 10))
+      em?.setValue(c, w[c])
+    }
+    // Amoureuse : des cœurs roses à la place des iris (pas teintés de la couleur des yeux)
+    const love = expr === 'love' && !!iris.heart
+    for (const m of iris.mats) {
+      const want = love ? iris.heart : iris.normal
+      if (want && m.map !== want) { m.map = want; m.needsUpdate = true }
+      if (love) m.color.setRGB(1, 1, 1); else m.color.copy(iris.tint)
+    }
   }
-  draw(true)
-
+  apply(true, 0)
   return {
-    expr(e, seconds = 2) { expr = e; exprLeft = e === 'neutral' ? 0 : seconds; if (live) draw() },
-    lookAt(p) { if (p) { target.copy(p); tracking = true } else tracking = false },
+    expr(e, seconds = 2) { expr = e; left = e === 'neutral' ? 0 : seconds; if (!live) apply(true, 0) },
+    lookAt(p) {
+      if (!vrm.lookAt) return
+      if (p) { target.position.copy(p); vrm.lookAt.target = target; tracking = true }
+      else if (tracking) { vrm.lookAt.target = ahead; tracking = false }
+    },
     current: () => expr,
     update(dt) {
-      if (!live) return
       t += dt
-      if (exprLeft > 0) { exprLeft -= dt; if (exprLeft <= 0) expr = 'neutral' }
-      // Le regard : vers le doigt, ou de petits coups d'œil de temps en temps
-      if (tracking) {
-        const loc = head.worldToLocal(target.clone())
-        const az = Math.atan2(loc.x, loc.z), el = Math.atan2(loc.y, Math.hypot(loc.x, loc.z))
-        tgx = clamp(az * 0.12, -0.055, 0.055)
-        tgy = clamp(-el * 0.1, -0.035, 0.045)
-      } else {
-        glanceIn -= dt
-        if (glanceIn < 0) {
-          glanceIn = 1.6 + Math.random() * 2.8
-          const r = Math.random()
-          tgx = r < 0.5 ? 0 : (Math.random() - 0.5) * 0.08
-          tgy = r < 0.5 ? 0 : (Math.random() - 0.5) * 0.04
-        }
-      }
-      gx += (tgx - gx) * Math.min(1, dt * 14)
-      gy += (tgy - gy) * Math.min(1, dt * 14)
-      // Clignement : 140 ms toutes les 2 à 5 secondes
-      if (blinkT < 0) {
-        blinkIn -= dt
-        if (blinkIn < 0) { blinkT = 0; blinkIn = 2 + Math.random() * 3 }
-      } else {
-        blinkT += dt
-        const k = blinkT / 0.14
-        lid = k < 0.5 ? k * 2 : Math.max(0, 2 - k * 2)
-        if (k >= 1) { blinkT = -1; lid = 0 }
-      }
-      draw()
+      if (left > 0) { left -= dt; if (left <= 0) expr = 'neutral' }
+      if (blinkT < 0) { blinkIn -= dt; if (blinkIn < 0 && live) { blinkT = 0; blinkIn = 2 + Math.random() * 3 } }
+      else { blinkT += dt; if (blinkT > 0.15) blinkT = -1 }
+      apply(!live, dt)
     },
-    redraw() { draw(true) },
-    dispose() {
-      texs.forEach(x => x.dispose()); geos.forEach(x => x.dispose()); mats.forEach(x => x.dispose())
-    }
+    redraw() { apply(true, 0) },
+    dispose() { ahead.removeFromParent() }
   }
-}
-
-/* =====================================================================
-   Les cheveux
-   ===================================================================== */
-
-/** La ligne de naissance des cheveux : angle depuis le sommet (θ), selon
-    l'écart au milieu du front (d ∈ [0, π]). */
-function hairlineTheta(d: number, style: Hair['style']) {
-  const front = style === 'bun' || style === 'ponytail' ? 0.28 : 0.31
-  return Math.PI * (front + 0.5 * Math.pow(d / Math.PI, 1.5))
-}
-
-interface HairCtx {
-  /** Rayon de la jupe à la hauteur y (0 au-dessus de la taille) : les
-      cheveux très longs passent PAR-DESSUS la robe. */
-  skirtR(y: number): number
-  cape: boolean
-}
-
-interface HairBuild { geo: Geo; seat: number }
-
-/** Construit tous les cheveux d'une coiffure en UNE géométrie (repère de la tête). */
-function buildHair(T: T3, merge: Merge, hair: Hair, hc: HairCtx): HairBuild {
-  const parts: Geo[] = []
-  const style = hair.style
-  const wave = 0.004 + hair.curl * 0.024
-  const V = (x: number, y: number, z: number) => new T.Vector3(x, y, z)
-  const HC = V(0, HEAD_Y, 0)
-  const axisHead = V(0, 0, 0)
-  const toBody = (v: V3) => v.clone().add(HC)
-  const lockHead = (pts: V3[], w0: number, w1: number, flat = 0.4) => parts.push(lockGeo(T, pts, w0, w1, flat, axisHead, 20, 8))
-  const lockBody = (pts: V3[], w0: number, w1: number, flat = 0.35) =>
-    parts.push(lockGeo(T, pts.map(p => p.clone().sub(HC)), w0, w1, flat, V(0, 0, 0), 34, 9))
-  let seed = 11
-  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
-
-  /* --- La calotte : elle épouse la ligne de naissance --- */
-  const puff = style === 'afro' ? 1.1 + hair.len * 0.12 : 1.02
-  const vol = style === 'loose' ? 0.06 + Math.min(1, hair.len) * 0.03 : style === 'braid' ? 0.08 : 0.02
-  const cap = new T.SphereGeometry(HR * 1.055, 64, 40)
-  {
-    const p = cap.attributes.position as import('three').BufferAttribute
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i)
-      const r = Math.hypot(x, y, z)
-      const th = Math.acos(clamp(y / r, -1, 1))
-      const d = Math.abs(Math.atan2(x, z))
-      const lim = hairlineTheta(d, style)
-      const k = smooth(lim - 0.05, lim + 0.06, th)
-      const f = (1 - k * 0.14) * (1 + (puff - 1) * Math.max(0, Math.cos(th) + (style === 'afro' ? 0.5 : 0)) * (1 - k)) *
-        (1 + vol * Math.pow(Math.sin(th), 2) * (0.45 + 0.55 * smooth(0.4, 2.2, d)) * (1 - k))
-      const [ex, ey, ez] = egg(x / (HR * 1.055), y / (HR * 1.055), z / (HR * 1.055))
-      p.setXYZ(i, ex * HR * 1.055 * f * HS[0], ey * HR * 1.055 * f * HS[1], ez * HR * 1.055 * f * HS[2])
-    }
-    cap.computeVertexNormals()
-  }
-  parts.push(cap)
-  const onCap = (az: number, th: number, lift = 1.05) => onHead(T, az, th, lift)
-
-  /* --- Frange balayée (sauf chignon, queue de cheval, boucles) --- */
-  if (style === 'loose' || style === 'braid' || style === 'pigtails') {
-    for (let i = 0; i < 8; i++) {
-      const a0 = 0.22 - i * 0.045, a1 = -0.05 - i * 0.15
-      const pts: V3[] = []
-      for (let k = 0; k <= 6; k++) {
-        const t = k / 6
-        const th = 0.08 * Math.PI + (0.36 * Math.PI - 0.08 * Math.PI) * Math.pow(t, 0.75) + (i > 4 ? t * 0.12 : 0)
-        pts.push(onCap(a0 + (a1 - a0) * t, th, 1.06 + Math.sin(t * Math.PI) * 0.07 + t * 0.02))
-      }
-      lockHead(pts, 0.04, 0.03, 0.4)
-    }
-    for (let i = 0; i < 3; i++) {
-      const pts: V3[] = []
-      for (let k = 0; k <= 5; k++) {
-        const t = k / 5
-        pts.push(onCap(0.3 + i * 0.13 + t * (0.28 + i * 0.1), 0.08 * Math.PI + t * 0.26 * Math.PI, 1.06 + Math.sin(t * Math.PI) * 0.06 + t * 0.02))
-      }
-      lockHead(pts, 0.038, 0.028, 0.4)
-    }
-  }
-
-  /** Repousse un point hors de la robe (et de la cape) : les cheveux tombent dessus. */
-  const clear = (p: V3, margin = 0.018) => {
-    const need = hc.skirtR(p.y) + margin + (hc.cape && p.y < 0.72 ? 0.035 : 0)
-    const r = Math.hypot(p.x, p.z)
-    if (need > 0 && r < need) {
-      if (r < 1e-4) p.z = -need
-      else { p.x *= need / r; p.z *= need / r }
-    }
-    return p
-  }
-  /** Le bas des cheveux lâchés (y du corps) selon la longueur. */
-  const endY = (len: number) => len <= 1 ? 0.735 - len * 0.28 : 0.455 - (len - 1) * 0.67
-  let seat = style === 'afro' ? 1.2 + hair.len * 0.14 : 1.1
-
-  if (style === 'loose' && hair.len < 0.28) {
-    // Carré : les pointes rentrent sous la mâchoire
-    const k = hair.len / 0.28
-    for (let i = 0; i < 22; i++) {
-      const a = Math.PI * (0.3 + 1.4 * (i / 21))
-      lockHead([onCap(a, 0.26 * Math.PI, 1.04), onCap(a, 0.5 * Math.PI, 1.17), onCap(a, (0.64 + k * 0.06) * Math.PI, 1.16),
-        onCap(a - Math.sign(Math.sin(a)) * 0.05, (0.74 + k * 0.06) * Math.PI, 1.02)], 0.046, 0.04, 0.34)
-    }
-  } else if (style === 'loose') {
-    const yEnd = endY(hair.len)
-    const N = 26
-    for (let i = 0; i < N; i++) {
-      const u = i / (N - 1)
-      const a = Math.PI * (0.56 + 0.88 * u) + (rnd() - 0.5) * 0.04
-      const sa = Math.sin(a), ca = Math.cos(a)
-      const side = Math.abs(sa)
-      const zb = (z: number) => Math.min(z, -0.07 - (1 - side) * 0.025 - (hc.cape ? 0.03 : 0))
-      const ph = rnd() * 6
-      const end = yEnd + rnd() * 0.04
-      const pts = [toBody(onCap(a, 0.3 * Math.PI, 1.05)), toBody(onCap(a, 0.55 * Math.PI, 1.17))]
-      // Des points tous les 8 cm jusqu'au bout, écartés de la robe
-      const y0 = HEAD_Y - 0.04
-      const n = Math.max(3, Math.ceil((y0 - end) / 0.08))
-      for (let k = 1; k <= n; k++) {
-        const t = k / n
-        const y = lerp(0.7, end, (k - 1) / Math.max(1, n - 1))
-        const w = Math.sin(t * 11 + ph) * wave * Math.min(1, t * 2)
-        const spread = 1 + t * 0.15 * Math.min(1, hair.len)
-        pts.push(clear(V(sa * 0.108 * spread + w * Math.abs(ca), y, zb(ca * 0.1 * spread - 0.01 * t) + w * sa * 0.5)))
-      }
-      lockBody(pts, 0.042, 0.034, 0.34)
-    }
-    // Devant : deux mèches de chaque côté, sur la poitrine (pas plus bas que la taille)
-    const frontEnd = Math.max(0.5, yEnd + 0.04)
-    for (const s of [-1, 1]) for (let j = 0; j < 2; j++) {
-      const a = s * Math.PI * (0.3 + j * 0.08)
-      const w = (t: number) => s * Math.sin(t * 11 + j * 2) * wave * t
-      lockBody([
-        toBody(onCap(a, 0.27 * Math.PI, 1.04)),
-        toBody(onCap(a + s * 0.08, 0.5 * Math.PI, 1.12)),
-        V(s * (0.088 + j * 0.008), HEAD_Y - 0.1, 0.045 - j * 0.015),
-        V(s * (0.078 + j * 0.01) + w(0.45), Math.max(frontEnd + 0.1, 0.67), 0.07 - j * 0.008),
-        V(s * (0.07 + j * 0.01) + w(0.7), Math.max(frontEnd + 0.05, 0.59), 0.074),
-        V(s * (0.066 + j * 0.012) + w(0.95), frontEnd + j * 0.025, 0.078)
-      ], 0.034, 0.026, 0.3)
-    }
-  } else if (style === 'braid') {
-    // Une grosse tresse sur l'épaule, plus ou moins longue
-    const bEnd = Math.max(0.12, 0.6 - hair.len * 0.3)
-    const ctrl = [toBody(onCap(Math.PI * 0.62, 0.55 * Math.PI, 1.0)), V(0.1, 0.72, -0.04), V(0.1, 0.66, 0.05), V(0.085, 0.58, 0.08)]
-    for (let y = 0.5; y > bEnd; y -= 0.08) ctrl.push(clear(V(0.074, y, 0.086 + (0.58 - y) * 0.05), 0.03))
-    ctrl.push(clear(V(0.072, bEnd, 0.09 + (0.58 - bEnd) * 0.05), 0.03))
-    const path = new T.CatmullRomCurve3(ctrl)
-    const n = Math.round(10 + path.getLength() * 34)
-    for (let k = 0; k < n; k++) {
-      const t = (k / (n - 1)) * 0.94
-      const p = path.getPointAt(t), tg = path.getTangentAt(t)
-      const s = k % 2 ? 1 : -1
-      const r = 0.03 * (1 - t * 0.4)
-      const q = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), tg.clone().negate())
-      const e = new T.SphereGeometry(1, 14, 10)
-      e.scale(r * 1.05, r * 1.45, r * 0.85)
-      e.rotateZ(s * 0.55)
-      e.applyQuaternion(q)
-      const side = V(1, 0, 0).applyQuaternion(q).multiplyScalar(s * r * 0.35)
-      e.translate(p.x + side.x - HC.x, p.y + side.y - HC.y, p.z + side.z - HC.z)
-      parts.push(e)
-    }
-    const tip = path.getPointAt(0.995).sub(HC)
-    parts.push(lockGeo(T, [tip.clone().add(V(0, 0.03, 0)), tip.clone().add(V(0.004, -0.02, 0.004)), tip.clone().add(V(-0.004, -0.06, 0.01))], 0.022, 0.03, 0.6, axisHead, 12, 8))
-    for (let i = 0; i < 9; i++) {
-      const u = i / 8, a = Math.PI * (0.62 + 0.76 * u), sa = Math.sin(a), ca = Math.cos(a)
-      lockBody([toBody(onCap(a, 0.45 * Math.PI, 1.03)), V(sa * 0.11, HEAD_Y - 0.04, ca * 0.115), V(sa * 0.09, 0.71, Math.min(ca * 0.09, -0.07))], 0.034, 0.024, 0.35)
-    }
-  } else if (style === 'bun') {
-    const bun = new T.SphereGeometry(0.064, 32, 20)
-    bun.scale(1, 0.85, 1); bun.translate(0, 0.1, -0.035)
-    parts.push(bun)
-    const wrap = new T.TorusGeometry(0.05, 0.022, 12, 32)
-    wrap.rotateX(Math.PI / 2 - 0.4); wrap.translate(0, 0.085, -0.03)
-    parts.push(wrap)
-    for (const s of [-1, 1]) {
-      lockHead([onCap(s * 0.95, 0.36 * Math.PI, 1.04), onCap(s * 1.02, 0.5 * Math.PI, 1.1), V(s * 0.093, -0.06, 0.035), V(s * 0.085, -0.1, 0.04)], 0.013, 0.01, 0.6)
-    }
-    seat = 1.08
-  } else if (style === 'ponytail' || style === 'pigtails') {
-    const ties = style === 'ponytail' ? [onCap(Math.PI, 0.28 * Math.PI, 1.02)] : [onCap(Math.PI * 0.7, 0.42 * Math.PI, 1.03), onCap(-Math.PI * 0.7, 0.42 * Math.PI, 1.03)]
-    const L = 0.12 + hair.len * 0.22
-    ties.forEach((P, ti) => {
-      const s = style === 'ponytail' ? 0 : ti === 0 ? 1 : -1
-      const n = style === 'ponytail' ? 9 : 6
-      for (let k = 0; k < n; k++) {
-        const o = (k / (n - 1) - 0.5) * 0.04
-        const w = (t: number) => Math.sin(t * 9 + k) * wave * t
-        const raw = style === 'ponytail'
-          ? [P.clone(), P.clone().add(V(o * 0.5, 0.035, -0.05)), P.clone().add(V(o + w(0.3), -0.03, -0.12)), P.clone().add(V(o * 1.3 + w(0.6), -0.03 - L * 0.5, -0.13)), P.clone().add(V(o * 1.5 + w(1), -0.03 - L, -0.1 - Math.abs(o)))]
-          : [P.clone(), P.clone().add(V(s * 0.04, 0, -0.02 + o * 0.4)), P.clone().add(V(s * 0.065, -0.07, -0.04 + o)), P.clone().add(V(s * 0.06 + o * 0.3 + w(0.6), -0.07 - L * 0.45, -0.06 + o)), P.clone().add(V(s * 0.05 + o * 0.5 + w(1), -0.07 - L, -0.055 + o))]
-        // Les queues très longues passent sur la robe
-        const pts = raw.map((p, i) => i < 2 ? p : clear(p.clone().add(HC), 0.02).sub(HC))
-        lockHead(pts, 0.03, 0.026, 0.55)
-      }
-    })
-    seat = 1.08
-  } else if (style === 'afro') {
-    const R = 1.15 + hair.len * 0.1
-    for (let i = 0; i < 80; i++) {
-      const az = (rnd() * 2 - 1) * Math.PI
-      const d = Math.abs(az)
-      const th = 0.1 * Math.PI + rnd() * (d < 0.9 ? 0.22 * Math.PI : 0.62 * Math.PI)
-      if (d < 0.9 && th > hairlineTheta(d, 'afro') + 0.05) continue
-      const r = (0.026 + rnd() * 0.02) * (0.8 + hair.curl * 0.4)
-      const p = onCap(az, th, R + rnd() * 0.12)
-      if (th > 0.6 * Math.PI) { p.x *= 1.15; p.z *= 1.1 }
-      const e = new T.SphereGeometry(r, 14, 10)
-      e.translate(p.x, p.y, p.z)
-      parts.push(e)
-    }
-  }
-
-  const geo = merge(parts.map(x => {
-    const g = x.index ? x.toNonIndexed() : x
-    if (!g.attributes.uv) g.setAttribute('uv', new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2))
-    return g
-  }), false)!
-  parts.forEach(x => x.dispose())
-  return { geo, seat }
 }
 
 /* =====================================================================
    Le personnage
    ===================================================================== */
 
+export interface PoseState {
+  bounce: number; lean: number; sway: number
+  headX: number; headY: number; headZ: number
+  armL: number; armLf: number; elbowL: number
+  armR: number; armRf: number; elbowR: number
+  legL: number; legR: number; kneeL: number; kneeR: number
+  skirtYaw: number; flare: number; wings: number
+}
+const restPose = (): PoseState => ({
+  bounce: 0, lean: 0, sway: 0, headX: 0, headY: 0, headZ: 0,
+  armL: 0.12, armLf: 0, elbowL: 0.25, armR: 0.12, armRf: 0, elbowR: 0.25,
+  legL: 0, legR: 0, kneeL: 0, kneeR: 0, skirtYaw: 0, flare: 0, wings: 0
+})
+
 export interface Princess {
   obj: Grp
-  /** Le corps entier (sauts, révérence) ; la jupe a son propre pivot. */
+  /** Tout le corps : pirouettes (rotation Y) et petits sauts. */
   rig: Grp
+  /** Le centre de la tête, axes de la scène (barrettes, papillon, regard). */
   head: Grp
-  armL: Grp
-  armR: Grp
-  foreL: Grp
-  foreR: Grp
-  legL: Grp
-  legR: Grp
+  /** Hauteur du centre de la tête, au repos. */
+  headY: number
   /** Pivot de la jupe (à la taille) : elle tourne et s'évase dans les pirouettes. */
   skirt: Grp
   wings: Grp
   face: Face
   look: Royal
+  pose: PoseState
   /** Évasement de la jupe, 0..1 (pirouettes). */
   flare: number
-  /** Met à jour la tenue : ne reconstruit que ce qui a changé. */
   set(r: Royal): void
-  /** La teinture magique sur une pièce, depuis un point du monde. */
   dye(part: Part, paint: Paint, at: V3): void
-  /** La pièce (ou « face », « skin ») sous un objet touché. */
   partOf(o: Obj3): Part | 'face' | 'skin' | 'deco' | null
   update(dt: number): void
   dispose(): void
 }
 
-let mergeFn: Merge | null = null
 export async function merger(): Promise<Merge> {
   if (!mergeFn) {
     const m = await import('three/examples/jsm/utils/BufferGeometryUtils.js')
@@ -946,17 +532,14 @@ export async function merger(): Promise<Merge> {
   }
   return mergeFn
 }
+let mergeFn: Merge | null = null
 
-interface Section {
-  group: Grp
-  geos: Geo[]
-  mats: Mat[]
-}
+interface Section { group: Grp; geos: Geo[]; mats: Mat[] }
 
 /** Les pièces de tissu et leur réglage de rendu. */
 const FABRIC_OPTS: Record<Part, FabricOpts> = {
-  hair: { roughness: 0.42 },
-  bodice: { satin: true, repeat: [6, 2] },
+  hair: {},
+  bodice: { satin: true, repeat: [6, 3] },
   sleeves: { satin: true, repeat: [4, 3] },
   skirt: { satin: true, repeat: [12, 5], side2: true },
   under: { satin: true, repeat: [12, 5], side2: true },
@@ -970,8 +553,12 @@ const FABRIC_OPTS: Record<Part, FabricOpts> = {
 /** Les options du rendu. `live` : visage animé (le jeu) ; sinon figé (portraits). */
 export interface PrincessOpts { live?: boolean; low?: boolean }
 
+/** Sa peau d'origine (texture) : on la teinte par rapport à elle. */
+const BASE_SKIN = [0.98, 0.9, 0.85]
+
 export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): Promise<Princess> {
   const merge = await merger()
+  const vrm = await loadVrm()
   let look = cloneRoyal(look0)
   const live = o.live !== false
   const own: { geos: Geo[]; mats: Mat[]; texs: Tex[] } = { geos: [], mats: [], texs: [] }
@@ -983,110 +570,345 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     return m
   }
   const phys = (p: import('three').MeshPhysicalMaterialParameters) => { const m = new T.MeshPhysicalMaterial(p); own.mats.push(m); return m }
+  const V = (x: number, y: number, z: number) => new T.Vector3(x, y, z)
+
+  /* --- Mise en place : à l'échelle, ses habits d'origine cachés --- */
+  const obj = new T.Group()
+  const rig = new T.Group()
+  obj.add(rig)
+  const root = vrm.scene
+  rig.add(root)
+  root.updateMatrixWorld(true)
+  const box0 = new T.Box3().setFromObject(root)
+  const k = HEIGHT / (box0.max.y - box0.min.y)
+  root.scale.setScalar(k)
+  root.position.y = -box0.min.y * k
+  const meshes: import('three').Mesh[] = []
+  root.traverse(x => { const m = x as import('three').Mesh; if (m.isMesh) meshes.push(m) })
+  const byMat = (re: RegExp) => meshes.filter(m => re.test(matName(m)))
+  const tops = byMat(/Tops/), bottoms = byMat(/Bottoms/), shoesM = byMat(/Shoes/)
+  const hairBack = byMat(/HairBack/), hairFront = byMat(/^Hair_/)
+  const skinBody = byMat(/Body_00_SKIN/), skinFace = byMat(/Face_00_SKIN/)
+  const irisM = byMat(/EyeIris/)
+  for (const m of [...tops, ...bottoms]) m.visible = false
+  meshes.forEach(m => {
+    m.frustumCulled = false
+    m.castShadow = true
+    const n = matName(m)
+    m.userData.part = /HAIR/.test(n) ? 'hair' : /Face|Eye/.test(n) ? 'face' : /Shoes/.test(n) ? 'shoes' : 'skin'
+    // Les traits du visage (yeux, sourcils, bouche) : le coloriage les garde en noir
+    m.userData.feature = /Eye|Mouth|Brow/.test(n)
+  })
+  obj.updateMatrixWorld(true)
+  vrm.springBoneManager?.setInitState()
+
+  const hb = vrm.humanoid
+  const raw = (n: BoneName) => hb.getRawBoneNode(n)!
+  const nb = (n: BoneName) => hb.getNormalizedBoneNode(n)
+  const wpos = (n: BoneName) => raw(n).getWorldPosition(new T.Vector3())
+  /** Les matrices « monde » des os AU REPOS (le monde = le repère de la princesse). */
+  const rest = new Map<string, M4>()
+  for (const n of ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head', 'rightHand', 'leftLowerLeg', 'rightLowerLeg'] as BoneName[]) {
+    const b = hb.getRawBoneNode(n)
+    if (b) rest.set(n, b.matrixWorld.clone())
+  }
+  const P = {
+    hips: wpos('hips'), spine: wpos('spine'), chest: wpos('chest'), neck: wpos('neck'), head: wpos('head'),
+    lua: wpos('leftUpperArm'), rua: wpos('rightUpperArm'), lla: wpos('leftLowerArm'), lh: wpos('leftHand'),
+    lleg: wpos('leftUpperLeg'), lknee: wpos('leftLowerLeg'), lfoot: wpos('leftFoot'),
+    // Le centre de chaque œil, d'après ses iris (ses os d'yeux sont près du nez)
+    leye: V(0, 0, 0), reye: V(0, 0, 0)
+  }
+  for (const [sd, out] of [[1, P.leye], [-1, P.reye]] as [number, V3][]) {
+    const b = new T.Box3(), v = new T.Vector3()
+    for (const m of irisM) {
+      const p = m.geometry.attributes.position as import('three').BufferAttribute
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); if (v.x * sd > 0) b.expandByPoint(v) }
+    }
+    out.copy(b.isEmpty() ? wpos(sd > 0 ? 'leftEye' : 'rightEye') : b.getCenter(v))
+  }
+  /** Le visage : sa boîte donne le centre et le rayon de la tête ; les cheveux, le sommet. */
+  const faceBox = new T.Box3()
+  skinFace.forEach(m => faceBox.expandByObject(m))
+  const hairBox = new T.Box3()
+  hairFront.forEach(m => hairBox.expandByObject(m))
+  const HR = (faceBox.max.x - faceBox.min.x) / 2
+  const HC = V(0, (faceBox.min.y + faceBox.max.y) / 2 + HR * 0.12, (faceBox.min.z + faceBox.max.z) / 2 - HR * 0.15)
+  const hairTop = hairBox.max.y
+
+  /* --- Le profil de son buste (peau, et tee-shirt caché là où la peau manque) --- */
+  const prof = new Map<number, { x: number; zf: number; zb: number }>()
+  const slice = (y: number) => Math.round(y * 100)
+  const sampleInto = (list: import('three').Mesh[], onlyMissing: boolean) => {
+    for (const m of list) {
+      const p = m.geometry.attributes.position as import('three').BufferAttribute
+      const v = new T.Vector3()
+      const add = new Map<number, { x: number; zf: number; zb: number }>()
+      for (let i = 0; i < p.count; i++) {
+        v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld)
+        if (Math.abs(v.x) > 0.13 || v.y < 0.45 || v.y > 0.9) continue
+        const key = slice(v.y)
+        const r = add.get(key) || { x: 0, zf: 0, zb: 0 }
+        r.x = Math.max(r.x, Math.abs(v.x)); if (v.z > 0) r.zf = Math.max(r.zf, v.z); else r.zb = Math.max(r.zb, -v.z)
+        add.set(key, r)
+      }
+      for (const [key, r] of add) if (!onlyMissing || !prof.has(key)) prof.set(key, r)
+    }
+  }
+  sampleInto(skinBody, false)
+  sampleInto(tops, true)
+  /** Le buste à la hauteur y (unités de la scène), lissé sur trois tranches. */
+  const bust = (y: number) => {
+    const out = { x: 0, zf: 0, zb: 0 }
+    let n = 0
+    for (let d = -2; d <= 2; d++) {
+      const r = prof.get(slice(y) + d)
+      if (!r) continue
+      out.x += r.x; out.zf += r.zf; out.zb += r.zb; n++
+    }
+    return n ? { x: out.x / n, zf: out.zf / n, zb: out.zb / n } : { x: 0.08, zf: 0.06, zb: 0.05 }
+  }
+
+  /* --- Les poids du corps, pour lier les habits à son squelette --- */
+  const skinMesh = skinBody[0] as SMesh
+  const srcPos: number[] = [], srcIdx: number[] = [], srcW: number[] = []
+  for (const m of [...skinBody, ...tops] as SMesh[]) {
+    const p = m.geometry.attributes.position as import('three').BufferAttribute
+    const si = m.geometry.attributes.skinIndex as import('three').BufferAttribute
+    const sw = m.geometry.attributes.skinWeight as import('three').BufferAttribute
+    if (!si || !sw) continue
+    const v = new T.Vector3()
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld)
+      srcPos.push(v.x, v.y, v.z)
+      srcIdx.push(si.getX(i), si.getY(i), si.getZ(i), si.getW(i))
+      srcW.push(sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i))
+    }
+  }
+  const CELL = 0.03
+  const grid = new Map<string, number[]>()
+  const ck = (x: number, y: number, z: number) => `${Math.floor(x / CELL)},${Math.floor(y / CELL)},${Math.floor(z / CELL)}`
+  for (let i = 0; i < srcPos.length / 3; i++) {
+    const key = ck(srcPos[i * 3], srcPos[i * 3 + 1], srcPos[i * 3 + 2])
+    let l = grid.get(key)
+    if (!l) { l = []; grid.set(key, l) }
+    l.push(i)
+  }
+  const nearest = (x: number, y: number, z: number) => {
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL), cz = Math.floor(z / CELL)
+    for (let r = 1; r <= 6; r++) {
+      let best = -1, bd = Infinity
+      for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
+        const l = grid.get(`${cx + dx},${cy + dy},${cz + dz}`)
+        if (!l) continue
+        for (const i of l) {
+          const d = (srcPos[i * 3] - x) ** 2 + (srcPos[i * 3 + 1] - y) ** 2 + (srcPos[i * 3 + 2] - z) ** 2
+          if (d < bd) { bd = d; best = i }
+        }
+      }
+      if (best >= 0) return best
+    }
+    return 0
+  }
+  /* Du repère de la princesse (au repos) à celui de la liaison : l'inverse
+     de ce que fait le squelette au repos (os × inverse de liaison × liaison). */
+  const sk = skinMesh.skeleton
+  const bi = Math.max(0, sk.bones.indexOf(raw('hips') as import('three').Bone))
+  const toBody = new T.Matrix4().multiplyMatrices(sk.bones[bi].matrixWorld, sk.boneInverses[bi]).multiply(skinMesh.bindMatrix).invert()
+  /** Un habit (géométrie dans le repère de la princesse) lié à son squelette. */
+  const skinned = (geo: Geo, mat: Mat, part: string) => {
+    const p = geo.attributes.position as import('three').BufferAttribute
+    const si = new Uint16Array(p.count * 4), sw = new Float32Array(p.count * 4)
+    for (let i = 0; i < p.count; i++) {
+      const j = nearest(p.getX(i), p.getY(i), p.getZ(i))
+      for (let c = 0; c < 4; c++) { si[i * 4 + c] = srcIdx[j * 4 + c]; sw[i * 4 + c] = srcW[j * 4 + c] }
+    }
+    geo.setAttribute('skinIndex', new T.Uint16BufferAttribute(si, 4))
+    geo.setAttribute('skinWeight', new T.Float32BufferAttribute(sw, 4))
+    geo.applyMatrix4(toBody)
+    geo.computeVertexNormals()
+    const m = new T.SkinnedMesh(geo, mat)
+    m.frustumCulled = false
+    m.castShadow = true
+    m.userData.part = part
+    m.position.copy(skinMesh.position); m.quaternion.copy(skinMesh.quaternion); m.scale.copy(skinMesh.scale)
+    m.bind(skinMesh.skeleton, skinMesh.bindMatrix)
+    // La sphère englobante sert au toucher : large, pour les bras levés
+    m.computeBoundingSphere()
+    if (m.boundingSphere) m.boundingSphere.radius *= 2.5
+    return m
+  }
+  /** Un groupe accroché à un os, placé en `at` (repère de la princesse, au repos). */
+  const onBone = (n: BoneName, at: V3) => {
+    const grp = new T.Group()
+    const bw = rest.get(n) || raw(n).matrixWorld
+    const local = new T.Matrix4().copy(bw).invert().multiply(new T.Matrix4().makeTranslation(at.x, at.y, at.z))
+    local.decompose(grp.position, grp.quaternion, grp.scale)
+    raw(n).add(grp)
+    return grp
+  }
 
   /* --- Les matériaux de tissu, un par pièce (réutilisés d'une tenue à l'autre) --- */
   const fab = new Map<Part, Fabric[]>()
-  const extra = new Map<Part, Fabric>()
+  const variants = new Set<Fabric>()
   const fabricOf = (part: Part, variant?: FabricOpts) => {
+    let list = fab.get(part) || []
     if (variant) {
-      // Une variante (le tulle transparent du jupon) : une deuxième matière pour la même pièce
-      const key = (part + ':v') as Part
-      let f = extra.get(key)
-      if (!f) {
-        f = fabric(T, look.paint[part], { ...FABRIC_OPTS[part], ...variant, low: o.low })
-        extra.set(key, f)
-        fab.set(part, [...(fab.get(part) || []), f])
-      }
+      let f = list.find(x => variants.has(x))
+      if (!f) { f = fabric(T, look.paint[part], { ...FABRIC_OPTS[part], ...variant, low: o.low }); variants.add(f); list = [...list, f]; fab.set(part, list) }
       return f
     }
-    let list = fab.get(part)
-    let f = list?.find(x => !Array.from(extra.values()).includes(x))
-    if (!f) {
-      f = fabric(T, look.paint[part], { ...FABRIC_OPTS[part], low: o.low, map: part === 'hair' ? streaks(T) : undefined, bump: part === 'hair' ? streaks(T) : undefined })
-      list = [...(list || []), f]
-      fab.set(part, list)
-    }
+    let f = list.find(x => !variants.has(x))
+    if (!f) { f = fabric(T, look.paint[part], { ...FABRIC_OPTS[part], low: o.low }); list = [...list, f]; fab.set(part, list) }
     return f
   }
   const partMat = (part: Part, variant?: FabricOpts) => fabricOf(part, variant).mat
 
-  const skinMat = std({ color: look.skin, roughness: 0.55 }, 0.86)
-  const gold = std({ color: 0xE3B04B, metalness: 1, roughness: 0.28 })
-  const gems = new Map<number, Mat>()
-  const gem = (c: number) => {
-    let m = gems.get(c)
-    if (!m) { m = phys({ color: c, roughness: 0.08, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05 }); gems.set(c, m) }
-    return m
+  /* --- Ses propres matériaux recolorés : cheveux, yeux, peau, chaussures --- */
+  type MToon = import('@pixiv/three-vrm').MToonMaterial
+  const mtoons = (list: import('three').Mesh[]) => list.flatMap(m => (Array.isArray(m.material) ? m.material : [m.material]) as MToon[])
+    .filter(x => x && (x as unknown as { isMToonMaterial?: boolean }).isMToonMaterial)
+  const hairMats = mtoons([...hairBack, ...hairFront])
+  const skinMats = mtoons([...skinBody, ...skinFace])
+  const shoeMats = mtoons(shoesM)
+  const irisMats = mtoons(irisM)
+  const skinBase = skinMats.map(m => ({ m, c: m.color.clone(), s: m.shadeColorFactor.clone() }))
+  const hairClone = hairMats[0] ? hairMats[0].clone() as MToon : null
+  if (hairClone) own.mats.push(hairClone)
+  for (const m of [...hairMats, ...(hairClone ? [hairClone] : []), ...shoeMats]) {
+    if (m.map) { m.map = grayOf(T, m.map); }
+    if (m.shadeMultiplyTexture) m.shadeMultiplyTexture = grayOf(T, m.shadeMultiplyTexture)
+    m.needsUpdate = true
   }
-  const pearl = phys({ color: 0xF4EEE8, roughness: 0.25, iridescence: 0.5, clearcoat: 1 })
-  pearl.color.multiplyScalar(0.85)
-
-  const mesh = (geo: Geo, m: Mat, part?: string) => {
-    const x = new T.Mesh(geo, m)
-    x.castShadow = true
-    if (part) x.userData.part = part
-    return x
-  }
-  const place = <O extends Obj3>(x: O, px: number, py: number, pz: number, sx = 1, sy = sx, sz = sx) => {
-    x.position.set(px, py, pz); x.scale.set(sx, sy, sz); return x
-  }
-  const sphere = g(new T.SphereGeometry(1, 28, 18))
-  const limb = (pts: number[][]) => g(lathe(T, pts, 20))
-
-  const obj = new T.Group()
-  const rig = new T.Group()
-  obj.add(rig)
-
-  /* --- Jambes (pivot à la hanche) --- */
-  const legs = [1, -1].map(s => {
-    const p = new T.Group()
-    p.position.set(s * 0.035, 0.47, 0)
-    p.add(mesh(limb([[0.001, -0.456], [0.014, -0.45], [0.016, -0.42], [0.022, -0.35], [0.025, -0.3], [0.021, -0.245], [0.023, -0.22], [0.03, -0.12], [0.033, -0.03], [0.02, 0.005], [0.001, 0.012]]), skinMat, 'skin'))
-    rig.add(p)
-    return p
-  })
-  const [legL, legR] = legs
-
-  /* --- Buste : épaules, cou --- */
-  rig.add(place(mesh(g(lathe(T, [[0.001, 0.655], [0.058, 0.655], [0.07, 0.668], [0.076, 0.683], [0.06, 0.7], [0.034, 0.712], [0.024, 0.72], [0.024, 0.78]], 40)), skinMat, 'skin'), 0, 0, 0, 1, 1, 0.7))
-
-  /* --- Bras : épaule → coude → poignet --- */
-  const arms = [1, -1].map(s => {
-    const sh = new T.Group()
-    sh.position.set(s * 0.074, 0.672, 0)
-    sh.add(mesh(limb([[0.001, -0.148], [0.014, -0.142], [0.016, -0.1], [0.019, -0.04], [0.02, 0], [0.012, 0.015], [0.001, 0.02]]), skinMat, 'skin'))
-    const fore = new T.Group()
-    fore.position.set(0, -0.14, 0)
-    fore.add(mesh(limb([[0.001, -0.124], [0.0105, -0.118], [0.013, -0.08], [0.0155, -0.03], [0.0145, 0], [0.008, 0.01], [0.001, 0.014]]), skinMat, 'skin'))
-    fore.add(place(mesh(sphere, skinMat, 'skin'), 0, -0.128, 0.004, 0.017, 0.026, 0.011))
-    fore.add(place(mesh(sphere, skinMat, 'skin'), -s * 0.012, -0.12, 0.009, 0.006, 0.012, 0.006))
-    sh.add(fore)
-    rig.add(sh)
-    return { sh, fore }
-  })
-  const [aL, aR] = arms
-
-  /* --- La tête et le visage --- */
-  const head = new T.Group()
-  head.position.set(0, HEAD_Y, 0)
-  rig.add(head)
-  const skullCv = { cv: skullCanvas(look.skin, look.freckles) }
-  const skullTex = new T.CanvasTexture(skullCv.cv)
-  skullTex.colorSpace = T.SRGBColorSpace
-  own.texs.push(skullTex)
-  const faceMat = std({ map: skullTex, roughness: 0.55 }, 0.86)
-  const skullGeo = g(new T.SphereGeometry(1, 64, 40))
-  {
-    const p = skullGeo.attributes.position as import('three').BufferAttribute
-    for (let i = 0; i < p.count; i++) {
-      const [x, y, z] = egg(p.getX(i), p.getY(i), p.getZ(i))
-      p.setXYZ(i, x * HR * HS[0], y * HR * HS[1], z * HR * HS[2])
+  let irisNormal: Tex | null = null, irisHeart: Tex | null = null
+  if (irisMats[0]?.map) {
+    irisNormal = grayOf(T, irisMats[0].map, 0.35)
+    // Les centres des iris, d'après les UV
+    const uv = irisM[0].geometry.attributes.uv as import('three').BufferAttribute
+    const pts: [number, number][] = []
+    for (let i = 0; i < uv.count; i++) pts.push([uv.getX(i), uv.getY(i)])
+    // Un iris par œil — ou un seul dessin partagé par les deux (c'est son cas)
+    const pos = irisM[0].geometry.attributes.position as import('three').BufferAttribute
+    const centers: { u: number; v: number; r: number }[] = []
+    for (const sd of [-1, 1]) {
+      const c = pts.filter((_, i) => pos.getX(i) * sd > 0)
+      if (!c.length) continue
+      const xs = c.map(p => p[0]), ys = c.map(p => p[1])
+      const q = { u: (Math.min(...xs) + Math.max(...xs)) / 2, v: (Math.min(...ys) + Math.max(...ys)) / 2, r: (Math.max(...xs) - Math.min(...xs)) / 2 }
+      if (!centers.some(o => Math.hypot(o.u - q.u, o.v - q.v) < 0.02)) centers.push(q)
     }
-    skullGeo.computeVertexNormals()
+    irisHeart = heartIris(T, irisNormal, centers)
+    own.texs.push(irisNormal, irisHeart)
+    irisMats.forEach(m => { m.map = irisNormal; m.needsUpdate = true })
   }
-  head.add(mesh(skullGeo, faceMat, 'face'))
-  for (const s of [-1, 1]) head.add(place(mesh(sphere, skinMat, 'skin'), s * 0.097, -0.005, -0.008, 0.012, 0.022, 0.014))
-  const face = makeFace(T, head, () => look, live)
+  /* --- Les taches de rousseur : peintes sur une copie de la texture de son
+     visage, là où tombe un rayon tiré vers ses joues --- */
+  const faceMat = mtoons(skinFace)[0] || null
+  const faceMap0 = faceMat?.map ?? null
+  let freckleMap: Tex | null = null
+  if (faceMap0) {
+    own.texs.push(faceMap0)
+    const im = faceMap0.image as CanvasImageSource & { width: number; height: number }
+    const cv = canvas(im.width, im.height)
+    const gc = cv.getContext('2d')!
+    gc.drawImage(im, 0, 0)
+    const rc = new T.Raycaster()
+    const uvAt = (x: number, y: number) => {
+      rc.set(V(x, y, faceBox.max.z + 0.2), V(0, 0, -1))
+      return rc.intersectObjects(skinFace, false)[0]?.uv ?? null
+    }
+    let seed = 7
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
+    gc.fillStyle = 'rgba(160, 88, 56, 0.6)'
+    for (const e of [P.leye, P.reye]) {
+      for (let q = 0; q < 9; q++) {
+        const x = e.x * 1.08 + (rnd() - 0.5) * HR * 0.55, y = e.y - HR * 0.42 + (rnd() - 0.5) * HR * 0.24
+        const a = uvAt(x, y), b = uvAt(x + 0.002, y)
+        if (!a) continue
+        const r = Math.max(1.2, (b ? Math.hypot(b.x - a.x, b.y - a.y) * cv.width : 2) * (0.5 + rnd() * 0.5))
+        gc.beginPath(); gc.arc(a.x * cv.width, (faceMap0.flipY ? 1 - a.y : a.y) * cv.height, r, 0, Math.PI * 2); gc.fill()
+      }
+    }
+    freckleMap = new T.CanvasTexture(cv)
+    freckleMap.flipY = faceMap0.flipY
+    freckleMap.colorSpace = T.SRGBColorSpace
+    freckleMap.anisotropy = 4
+    own.texs.push(freckleMap)
+  }
+  const eyeTint = new T.Color()
+  const recolor = () => {
+    const hc = new T.Color(look.paint.hair.c)
+    for (const m of [...hairMats, ...(hairClone ? [hairClone] : [])]) {
+      m.color.copy(hc)
+      m.shadeColorFactor.copy(hc).multiplyScalar(0.62)
+    }
+    const [r, gg, b] = rgb(look.skin).map(x => x / 255)
+    const f = [clamp(r / BASE_SKIN[0], 0, 1.05), clamp(gg / BASE_SKIN[1], 0, 1.05), clamp(b / BASE_SKIN[2], 0, 1.05)]
+    skinBase.forEach(({ m, c, s }) => {
+      m.color.setRGB(c.r * f[0], c.g * f[1], c.b * f[2])
+      m.shadeColorFactor.setRGB(s.r * f[0], s.g * f[1], s.b * f[2])
+    })
+    eyeTint.set(look.eyes).multiplyScalar(1.6)
+    irisMats.forEach(m => { m.color.copy(eyeTint) })
+    const sc = new T.Color(look.paint.shoes.c)
+    shoeMats.forEach(m => { m.color.copy(sc); m.shadeColorFactor.copy(sc).multiplyScalar(0.7) })
+    const fm = look.freckles && freckleMap ? freckleMap : faceMap0
+    if (faceMat && faceMat.map !== fm) { faceMat.map = fm; faceMat.needsUpdate = true }
+  }
+  recolor()
+
+  /* --- Le visage --- */
+  const face = makeFace(T, vrm, { mats: irisMats, normal: irisNormal, heart: irisHeart, tint: eyeTint }, live)
+
+  /* --- La tête : un repère au centre, axes de la scène --- */
+  const head = onBone('head', HC)
+  const headY = HC.y
+
+  /* --- Les cheveux : longueur et boucles sur les chaînes de ressorts --- */
+  const joints = vrm.springBoneManager ? Array.from(vrm.springBoneManager.joints) : []
+  // Les ressorts calculés dans SON repère : quand on la déplace ou qu'on la
+  // fait tourner au doigt, ses cheveux ne s'envolent pas (ses pirouettes, sur
+  // `rig`, les font toujours voler)
+  joints.forEach(j => { j.center = obj })
+  /* Ses cheveux sont des chaînes d'os (de la racine à la pointe) : la frange
+     (2 os), deux longues mèches devant les épaules, six mèches dans le dos.
+     La LONGUEUR étire les chaînes ; attachés (natte, chignon…), les mèches du
+     dos se replient sur leur racine, cachées sous la coiffure. */
+  const jointOf = new Map<Obj3, (typeof joints)[number]>()
+  joints.forEach(j => jointOf.set(j.bone, j))
+  const sideChains: Obj3[][] = [], backChains: Obj3[][] = []
+  for (const j of joints) {
+    if (!/hair/i.test(j.bone.name) || (j.bone.parent && jointOf.has(j.bone.parent))) continue
+    const l: Obj3[] = []
+    for (let q: (typeof joints)[number] | undefined = j; q;) {
+      l.push(q.bone)
+      const c: Obj3 | null = q.child
+      q = c ? jointOf.get(c) : undefined
+      if (c && !q) l.push(c)
+    }
+    if (l.length <= 3) continue
+    ;(l[0].getWorldPosition(V(0, 0, 0)).z > P.head.z ? sideChains : backChains).push(l)
+  }
+  const restPos = new Map<Obj3, V3>()
+  ;[...sideChains, ...backChains].flat().forEach(b => restPos.set(b, b.position.clone()))
+  const shapeHair = () => {
+    const st = look.hair.style, len = look.hair.len
+    // 0 : au menton · 1 : au milieu du dos (sa longueur à elle) · 1,6 : au sol
+    const s = len <= 1 ? 0.3 + 0.7 * len : 1 + ((len - 1) / 0.6) * 2.9
+    const shape = (l: Obj3[], ci: number, k: number, curl: number) => l.forEach((b, i) => {
+      const p0 = restPos.get(b)!
+      if (i === 0) { b.position.copy(p0); return }
+      b.position.copy(p0).multiplyScalar(k)
+      // Boucles : un zigzag de chaque côté, de plus en plus marqué vers les pointes
+      const side = (i + ci) % 2 ? 1 : -1
+      b.position.x += side * curl * p0.length() * 0.45 * Math.min(1, i / 2)
+    })
+    const curl = look.hair.curl
+    backChains.forEach((l, ci) => shape(l, ci, st === 'loose' ? s : 0.04, st === 'loose' ? curl : 0))
+    sideChains.forEach((l, ci) => shape(l, ci, st === 'afro' ? 0.04 : st === 'loose' ? s : Math.min(s, 0.8), st === 'afro' ? 0 : curl))
+    vrm.springBoneManager?.setInitState()
+    vrm.springBoneManager?.reset()
+  }
 
   /* --- Les sections qu'on reconstruit à la demande --- */
   const sections = new Map<string, Section>()
@@ -1103,9 +925,7 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     return s
   }
   const sg = <G extends Geo>(s: Section, x: G) => { s.geos.push(x); return x }
-
-  /** Fusionne des morceaux déjà placés en une seule géométrie (un seul appel de rendu). */
-  const fuse = (s: Section, pieces: { geo: Geo; m: import('three').Matrix4 }[]) => {
+  const fuse = (s: Section, pieces: { geo: Geo; m: M4 }[]) => {
     const list = pieces.map(p => {
       const x = (p.geo.index ? p.geo.toNonIndexed() : p.geo.clone()).applyMatrix4(p.m)
       if (!x.attributes.uv) x.setAttribute('uv', new T.Float32BufferAttribute(new Float32Array(x.attributes.position.count * 2), 2))
@@ -1116,198 +936,247 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     return sg(s, out)
   }
   const M = (px: number, py: number, pz: number, sx = 1, sy = sx, sz = sx, rx = 0, ry = 0, rz = 0) =>
-    new T.Matrix4().compose(new T.Vector3(px, py, pz), new T.Quaternion().setFromEuler(new T.Euler(rx, ry, rz)), new T.Vector3(sx, sy, sz))
+    new T.Matrix4().compose(V(px, py, pz), new T.Quaternion().setFromEuler(new T.Euler(rx, ry, rz)), V(sx, sy, sz))
+  const mesh = (geo: Geo, m: Mat, part?: string) => {
+    const x = new T.Mesh(geo, m)
+    x.castShadow = true
+    if (part) x.userData.part = part
+    return x
+  }
+  const place = <O extends Obj3>(x: O, px: number, py: number, pz: number, sx = 1, sy = sx, sz = sx) => {
+    x.position.set(px, py, pz); x.scale.set(sx, sy, sz); return x
+  }
+  const sphere = g(new T.SphereGeometry(1, 24, 16))
+  const gold = std({ color: 0xE3B04B, metalness: 1, roughness: 0.28 })
+  const gems = new Map<number, Mat>()
+  const gem = (c: number) => {
+    let m = gems.get(c)
+    if (!m) { m = phys({ color: c, roughness: 0.08, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05 }); gems.set(c, m) }
+    return m
+  }
+  const pearl = phys({ color: 0xF4EEE8, roughness: 0.25, iridescence: 0.5, clearcoat: 1 })
+  pearl.color.multiplyScalar(0.85)
 
-  const skirtPivot = new T.Group()
-  skirtPivot.position.y = 0.535
-  rig.add(skirtPivot)
-  const wingsPivot = new T.Group()
-  wingsPivot.position.set(0, 0.61, -0.065)
-  rig.add(wingsPivot)
-
-  /** Rayon de la jupe à une hauteur donnée (les cheveux et la cape l'évitent). */
+  /** La taille (haut de la jupe) : un peu au-dessus des hanches. */
+  const W = P.spine.y + 0.005
+  const skirtPivot = onBone('hips', V(0, W, 0))
+  const skirtFlare = new T.Group()
+  skirtPivot.add(skirtFlare)
+  const wingsPivot = onBone('upperChest', V(0, P.chest.y + 0.03, -(bust(P.chest.y + 0.03).zb + 0.012)))
   let skirtR: (y: number) => number = () => 0
 
-  /* ---- Le haut ---- */
+  /** Un tube ajusté (corsage, manche) : des anneaux elliptiques, du bas vers le haut. */
+  const tube = (rings: { y: number; x: number; zf: number; zb: number }[], seg = 56) => {
+    const pos: number[] = [], uv: number[] = [], idx: number[] = []
+    rings.forEach((r, i) => {
+      for (let j = 0; j <= seg; j++) {
+        const a = (j / seg) * Math.PI * 2
+        const c = Math.cos(a)
+        pos.push(Math.sin(a) * r.x, r.y, c * (c > 0 ? r.zf : r.zb))
+        uv.push(j / seg, i / (rings.length - 1))
+      }
+    })
+    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < seg; j++) {
+      const a = i * (seg + 1) + j, b = a + seg + 1
+      idx.push(a, a + 1, b, b, a + 1, b + 1)
+    }
+    const geo = new T.BufferGeometry()
+    geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3))
+    geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2))
+    geo.setIndex(idx)
+    geo.computeVertexNormals()
+    return geo
+  }
+
+  /* ---- Le haut : un corsage moulé sur elle, et les manches ---- */
   function buildTop() {
-    const s = section('top', rig)
-    const bodice = mesh(sg(s, lathe(T, [[0.001, 0.5], [0.05, 0.5], [0.047, 0.535], [0.052, 0.57], [0.063, 0.61], [0.066, 0.64], [0.063, 0.662], [0.001, 0.662]], 40)), partMat('bodice'), 'bodice')
-    bodice.scale.set(1, 1, 0.78)
-    s.group.add(bodice)
-    const trim = mesh(sg(s, new T.TorusGeometry(0.064, 0.006, 8, 48)), partMat('belt'), 'belt')
-    trim.rotation.x = Math.PI / 2; trim.position.y = 0.66; trim.scale.set(1, 0.78, 1)
-    s.group.add(trim)
-    // Les manches suivent les bras : elles sont rangées dans les épaules
-    const armBits = [section('sleeveL', aL.sh), section('sleeveR', aR.sh), section('cuffL', aL.fore), section('cuffR', aR.fore)]
+    const s = section('top', root.parent!)
+    const TOP = P.neck.y - 0.045
+    const y0 = W - 0.05
+    const rings: { y: number; x: number; zf: number; zb: number }[] = []
+    const n = 14
+    for (let i = 0; i <= n; i++) {
+      const y = y0 + (TOP - y0) * (i / n)
+      const b = bust(y)
+      const m = 0.009
+      rings.push({ y, x: b.x + m, zf: b.zf + m, zb: b.zb + m })
+    }
+    // Le bord du haut rentre un peu (pas de trou), et le bas s'évase sur la jupe
+    rings[0].x += 0.01; rings[0].zf += 0.01; rings[0].zb += 0.01
+    const bod = tube(rings)
+    s.group.add(skinned(sg(s, bod), partMat('bodice'), 'bodice'))
+    // Liseré de l'encolure et ceinture (liés eux aussi)
+    const edge = (y: number, w: number) => {
+      const b = bust(y)
+      const rr: { y: number; x: number; zf: number; zb: number }[] = []
+      for (let i = 0; i <= 2; i++) {
+        const yy = y - w + i * w
+        const t = i === 1 ? 0.006 : 0.001
+        rr.push({ y: yy, x: b.x + 0.012 + t, zf: b.zf + 0.012 + t, zb: b.zb + 0.012 + t })
+      }
+      return tube(rr, 48)
+    }
+    s.group.add(skinned(sg(s, edge(TOP, 0.006)), partMat('belt'), 'belt'))
+    s.group.add(skinned(sg(s, edge(W, 0.008)), partMat('belt'), 'belt'))
+    // Les manches (au repos, les bras sont à l'horizontale : le long de x)
+    const arms: [number, number][] = [[1, P.lua.x], [-1, -P.lua.x]]
     if (look.top === 'puff') {
-      for (const [i, sd] of [[0, 1], [1, -1]] as [number, number][]) {
-        const b = armBits[i]
-        b.group.add(place(mesh(sphere, partMat('sleeves'), 'sleeves'), sd * 0.006, -0.012, 0, 0.042, 0.036, 0.04))
-        const cuff = mesh(sg(b, new T.TorusGeometry(0.03, 0.006, 6, 24)), partMat('belt'), 'belt')
-        cuff.position.set(sd * 0.006, -0.043, 0); cuff.rotation.x = Math.PI / 2
-        b.group.add(cuff)
+      for (const [sd, x0] of arms) {
+        const c = V(x0 + sd * 0.03, P.lua.y - 0.004, 0)
+        const geo = new T.SphereGeometry(0.048, 28, 18)
+        geo.scale(1.15, 0.9, 0.95)
+        geo.translate(c.x, c.y, c.z)
+        s.group.add(skinned(sg(s, geo), partMat('sleeves'), 'sleeves'))
+        const cuff = new T.TorusGeometry(0.036, 0.006, 8, 28)
+        cuff.rotateY(Math.PI / 2)
+        cuff.translate(c.x + sd * 0.05, c.y, c.z)
+        s.group.add(skinned(sg(s, cuff), partMat('belt'), 'belt'))
       }
     } else if (look.top === 'long') {
-      for (const [i, sd] of [[0, 1], [1, -1]] as [number, number][]) {
-        const up = armBits[i]
-        up.group.add(place(mesh(sphere, partMat('sleeves'), 'sleeves'), sd * 0.004, -0.008, 0, 0.034, 0.03, 0.033))
-        up.group.add(mesh(sg(up, lathe(T, [[0.001, -0.152], [0.0215, -0.15], [0.023, -0.1], [0.025, -0.04], [0.028, 0], [0.018, 0.02], [0.001, 0.024]], 20)), partMat('sleeves'), 'sleeves'))
-        const lo = armBits[i + 2]
-        const bell = sg(lo, folds(lathe(T, [[0.046, -0.118], [0.047, -0.11], [0.03, -0.06], [0.019, -0.01], [0.017, 0.012]], 32), 8, 0.1, 0.0, -0.118))
-        lo.group.add(mesh(bell, partMat('sleeves'), 'sleeves'))
-        const cuff = mesh(sg(lo, new T.TorusGeometry(0.046, 0.005, 6, 32)), partMat('belt'), 'belt')
-        cuff.position.y = -0.117; cuff.rotation.x = Math.PI / 2
-        lo.group.add(cuff)
+      for (const [sd, x0] of arms) {
+        const x1 = sd > 0 ? P.lh.x : -P.lh.x
+        const L = Math.abs(x1 - x0)
+        // Un tube le long du bras, qui s'évase en cloche au poignet
+        const prof2 = [[0.034, 0], [0.032, 0.25], [0.029, 0.5], [0.028, 0.75], [0.036, 0.88], [0.05, 1]]
+        const pts = prof2.map(([r, t]) => new T.Vector2(r, t * L))
+        const geo = new T.LatheGeometry(pts, 32)
+        geo.rotateZ(sd > 0 ? -Math.PI / 2 : Math.PI / 2)
+        geo.translate(x0 - sd * 0.01, P.lua.y, 0)
+        s.group.add(skinned(sg(s, folds(geo, 8, 0.05, 0)), partMat('sleeves'), 'sleeves'))
       }
     }
   }
 
-  /* ---- La jupe (et la traîne, la ceinture, les jambes visibles) ---- */
+  /* ---- La jupe (et la traîne, la ceinture) ---- */
   function buildSkirt() {
-    const s = section('skirt', skirtPivot)
-    const W = 0.535
+    const s = section('skirt', skirtFlare)
+    const hipR = Math.max(bust(P.hips.y).x, bust(P.hips.y).zf, bust(P.hips.y).zb) + 0.015
+    const wR = Math.max(bust(W).x, bust(W).zf) + 0.012
     const add = (geo: Geo, part: Part, variant?: FabricOpts) => { const m = mesh(sg(s, geo), partMat(part, variant), part); m.position.y = -W; s.group.add(m); return m }
     const tulle: FabricOpts = { opacity: 0.82, satin: false }
     const kind = look.skirt
+    const hy = P.hips.y, ky = P.lknee.y
     let prof: number[][]
     if (kind === 'ball') {
-      prof = [[0.27, 0.012], [0.29, 0.02], [0.28, 0.07], [0.25, 0.16], [0.21, 0.26], [0.16, 0.36], [0.105, 0.45], [0.07, 0.5], [0.049, W]]
+      prof = [[0.31, 0.012], [0.33, 0.02], [0.32, 0.09], [0.28, 0.22], [0.22, 0.38], [hipR + 0.04, hy - 0.05], [hipR, hy + 0.02], [wR, W]]
       add(folds(lathe(T, prof, 96), 14, 0.07, W), 'under')
-      add(folds(lathe(T, [[0.3, 0.045], [0.29, 0.08], [0.262, 0.16], [0.225, 0.25], [0.175, 0.35], [0.12, 0.44], [0.08, 0.49], [0.052, 0.53]], 80, 0.55, Math.PI * 2 - 1.1), 12, 0.09, 0.53), 'skirt')
-      const hem = mesh(sg(s, new T.TorusGeometry(0.285, 0.014, 8, 96)), partMat('under'), 'under')
+      add(folds(lathe(T, [[0.34, 0.045], [0.33, 0.09], [0.29, 0.22], [0.23, 0.38], [hipR + 0.05, hy - 0.05], [hipR + 0.008, hy + 0.02], [wR + 0.004, W - 0.004]], 80, 0.55, Math.PI * 2 - 1.1), 12, 0.09, W), 'skirt')
+      const hem = mesh(sg(s, new T.TorusGeometry(0.325, 0.014, 8, 96)), partMat('under'), 'under')
       hem.rotation.x = Math.PI / 2; hem.position.y = 0.02 - W
       s.group.add(hem)
     } else if (kind === 'short') {
-      prof = [[0.19, 0.335], [0.2, 0.345], [0.18, 0.38], [0.13, 0.44], [0.075, 0.5], [0.049, W]]
+      const hem = ky + 0.12
+      prof = [[0.2, hem], [0.21, hem + 0.01], [0.17, hy - 0.02], [hipR + 0.02, hy + 0.01], [wR, W]]
       add(folds(lathe(T, prof, 96), 14, 0.07, W), 'skirt')
-      add(folds(lathe(T, [[0.215, 0.32], [0.2, 0.37], [0.14, 0.43], [0.06, 0.5]], 96), 22, 0.1, 0.5), 'under', tulle)
+      add(folds(lathe(T, [[0.23, hem - 0.015], [0.21, hem + 0.04], [0.15, hy - 0.03], [hipR, hy + 0.01]], 96), 22, 0.1, hy), 'under', tulle)
     } else if (kind === 'mermaid') {
-      prof = [[0.24, 0.015], [0.2, 0.05], [0.12, 0.12], [0.085, 0.2], [0.075, 0.26], [0.082, 0.33], [0.09, 0.42], [0.07, 0.49], [0.049, W]]
-      add(folds(lathe(T, prof, 96), 12, 0.1, 0.2), 'skirt')
-      add(folds(lathe(T, [[0.265, 0.012], [0.22, 0.06], [0.13, 0.15], [0.092, 0.2]], 96), 24, 0.12, 0.2), 'under', tulle)
+      prof = [[0.27, 0.015], [0.22, 0.06], [0.13, 0.15], [0.09, ky - 0.04], [0.085, ky + 0.06], [hipR + 0.005, hy - 0.04], [hipR + 0.01, hy + 0.02], [wR, W]]
+      add(folds(lathe(T, prof, 96), 12, 0.1, ky - 0.04), 'skirt')
+      add(folds(lathe(T, [[0.29, 0.012], [0.24, 0.06], [0.14, 0.16], [0.1, ky - 0.03]], 96), 24, 0.12, ky - 0.03), 'under', tulle)
     } else if (kind === 'layers') {
-      prof = [[0.27, 0.015], [0.22, 0.12], [0.17, 0.21], [0.15, 0.3], [0.12, 0.38], [0.06, 0.51], [0.049, W]]
-      add(lathe(T, [[0.22, 0.015], [0.12, 0.3], [0.05, W]], 48), 'under')
-      add(folds(lathe(T, [[0.28, 0.015], [0.285, 0.025], [0.22, 0.12], [0.17, 0.21]], 96), 26, 0.06, 0.21), 'skirt')
-      add(folds(lathe(T, [[0.205, 0.2], [0.21, 0.21], [0.16, 0.3], [0.12, 0.38]], 96), 24, 0.06, 0.38), 'under')
-      add(folds(lathe(T, [[0.145, 0.38], [0.15, 0.39], [0.1, 0.46], [0.06, 0.51], [0.049, W]], 96), 20, 0.06, W), 'skirt')
+      prof = [[0.3, 0.015], [0.25, 0.14], [0.19, 0.27], [0.16, 0.4], [hipR + 0.03, hy], [wR, W]]
+      add(lathe(T, [[0.24, 0.015], [0.13, 0.35], [wR - 0.002, W]], 48), 'under')
+      add(folds(lathe(T, [[0.31, 0.015], [0.315, 0.025], [0.24, 0.14], [0.19, 0.25]], 96), 26, 0.06, 0.25), 'skirt')
+      add(folds(lathe(T, [[0.23, 0.24], [0.235, 0.25], [0.18, 0.36], [0.15, 0.46]], 96), 24, 0.06, 0.46), 'under')
+      add(folds(lathe(T, [[0.17, 0.45], [0.175, 0.46], [hipR + 0.03, hy], [wR, W]], 96), 20, 0.06, W), 'skirt')
     } else {
-      // Pétales de fée : huit pétales pointus, et un jupon de tulle dessous
-      prof = [[0.2, 0.3], [0.16, 0.4], [0.1, 0.47], [0.05, W]]
-      add(folds(lathe(T, [[0.2, 0.34], [0.19, 0.38], [0.13, 0.44], [0.06, 0.5]], 96), 22, 0.1, 0.5), 'under', tulle)
+      const hem = ky + 0.1
+      prof = [[0.22, hem], [0.17, hy - 0.02], [wR, W]]
+      add(folds(lathe(T, [[0.22, hem + 0.03], [0.2, hem + 0.07], [0.15, hy - 0.03], [hipR, hy + 0.01]], 96), 22, 0.1, hy), 'under', tulle)
       for (let i = 0; i < 8; i++) {
-        const geo = lathe(T, [[0.22, 0.3], [0.2, 0.34], [0.15, 0.41], [0.1, 0.47], [0.052, W]], 12, (i / 8) * Math.PI * 2 - 0.05, (Math.PI * 2) / 8 * 1.25)
+        const geo = lathe(T, [[0.24, hem], [0.22, hem + 0.05], [0.17, hy - 0.04], [hipR + 0.01, hy + 0.01], [wR + 0.003, W]], 12, (i / 8) * Math.PI * 2 - 0.05, (Math.PI * 2) / 8 * 1.25)
         const p = geo.attributes.position as import('three').BufferAttribute
         const uvs = geo.attributes.uv as import('three').BufferAttribute
-        for (let k = 0; k < p.count; k++) {
-          const f = uvs.getX(k)
-          const y = p.getY(k)
-          const up = (1 - Math.sin(Math.PI * f)) * (W - y) * 0.55
+        for (let q = 0; q < p.count; q++) {
+          const f = uvs.getX(q)
+          const y = p.getY(q)
+          const up = (1 - Math.sin(Math.PI * f)) * (W - y) * 0.5
           const rr = 1 + (i % 2) * 0.03
-          p.setXYZ(k, p.getX(k) * rr, y + up, p.getZ(k) * rr)
+          p.setXYZ(q, p.getX(q) * rr, y + up, p.getZ(q) * rr)
         }
         geo.computeVertexNormals()
         add(geo, i % 2 ? 'under' : 'skirt')
       }
     }
-    // Le rayon de la jupe, pour les cheveux et la cape : interpolé sur le profil
     const pr = prof.slice().sort((a, b) => a[1] - b[1])
     skirtR = (y: number) => {
       if (y > W || y < pr[0][1] - 0.01) return 0
       for (let i = 1; i < pr.length; i++) {
         if (y <= pr[i][1]) {
           const t = (y - pr[i - 1][1]) / Math.max(1e-6, pr[i][1] - pr[i - 1][1])
-          return lerp(pr[i - 1][0], pr[i][0], t) * 1.08 + 0.01
+          return lerp(pr[i - 1][0], pr[i][0], t) * 1.06 + 0.01
         }
       }
       return pr[pr.length - 1][0]
     }
-    // La traîne : un pan de robe qui glisse derrière elle sur le sol
     if (look.train && (kind === 'ball' || kind === 'mermaid')) {
       const geo = new T.PlaneGeometry(1, 1, 14, 36)
       const p = geo.attributes.position as import('three').BufferAttribute
-      for (let k = 0; k < p.count; k++) {
-        const u = p.getX(k) + 0.5, v = 0.5 - p.getY(k) // v : 0 à la taille, 1 au bout
-        const width = lerp(0.16, 0.62, Math.pow(v, 0.7))
+      for (let q = 0; q < p.count; q++) {
+        const u = p.getX(q) + 0.5, v = 0.5 - p.getY(q)
+        const width = lerp(0.18, 0.66, Math.pow(v, 0.7))
         let y: number, z: number
-        if (v < 0.45) {
-          const t = v / 0.45
-          y = lerp(0.5, 0.012, t)
-          z = -(skirtR(y) + 0.012)
-        } else {
-          const t = (v - 0.45) / 0.55
-          y = 0.012 + Math.sin(t * Math.PI) * 0.01
-          z = -(skirtR(0.02) + 0.012) - t * 0.62
-        }
-        const x = (u - 0.5) * width
-        p.setXYZ(k, x, y - W + Math.cos((u - 0.5) * Math.PI * 3) * 0.004, z)
+        if (v < 0.45) { const t = v / 0.45; y = lerp(W - 0.06, 0.012, t); z = -(skirtR(y) + 0.012) }
+        else { const t = (v - 0.45) / 0.55; y = 0.012 + Math.sin(t * Math.PI) * 0.01; z = -(skirtR(0.02) + 0.012) - t * 0.66 }
+        p.setXYZ(q, (u - 0.5) * width, y - W + Math.cos((u - 0.5) * Math.PI * 3) * 0.004, z)
       }
       geo.computeVertexNormals()
-      const m = mesh(sg(s, geo), partMat('skirt'), 'skirt')
-      s.group.add(m)
+      s.group.add(mesh(sg(s, geo), partMat('skirt'), 'skirt'))
     }
-    // La ceinture : un ruban, et un gros nœud dans le dos sous les robes longues
-    const sash = mesh(sg(s, new T.TorusGeometry(0.05, 0.009, 8, 40)), partMat('belt'), 'belt')
-    sash.rotation.x = Math.PI / 2; sash.scale.set(1, 0.78, 1)
-    sash.position.y = -0.003
-    s.group.add(sash)
     if (kind === 'ball' || kind === 'mermaid' || kind === 'layers') {
       const bow = new T.Group()
       for (const b of [-1, 1]) {
         const lobe = mesh(sphere, partMat('belt'), 'belt')
-        lobe.scale.set(0.032, 0.02, 0.012); lobe.position.set(b * 0.03, 0.004, 0); lobe.rotation.z = b * 0.35
+        lobe.scale.set(0.034, 0.021, 0.012); lobe.position.set(b * 0.032, 0.004, 0); lobe.rotation.z = b * 0.35
         bow.add(lobe)
         const tail = mesh(sphere, partMat('belt'), 'belt')
-        tail.scale.set(0.012, 0.05, 0.006); tail.position.set(b * 0.014, -0.05, 0.002); tail.rotation.z = b * 0.2
+        tail.scale.set(0.012, 0.055, 0.006); tail.position.set(b * 0.014, -0.055, 0.002); tail.rotation.z = b * 0.2
         bow.add(tail)
       }
-      bow.add(place(mesh(sphere, partMat('belt'), 'belt'), 0, 0, 0.004, 0.012))
-      bow.position.set(0, -0.004, -0.046)
+      bow.add(place(mesh(sphere, partMat('belt'), 'belt'), 0, 0, 0.004, 0.013))
+      bow.position.set(0, -0.004, -(bust(W).zb + 0.018))
       s.group.add(bow)
     }
-    // Chaussures
-    const sh = [section('shoeL', legL), section('shoeR', legR)]
-    for (const b of sh) {
-      if (look.shoes === 'boots') {
-        b.group.add(mesh(sg(b, lathe(T, [[0.001, -0.46], [0.03, -0.458], [0.03, -0.44], [0.026, -0.4], [0.027, -0.33], [0.03, -0.27], [0.001, -0.268]], 24)), partMat('shoes'), 'shoes'))
-        b.group.add(place(mesh(sphere, partMat('shoes'), 'shoes'), 0, -0.448, 0.025, 0.03, 0.018, 0.05))
-      } else {
-        b.group.add(place(mesh(sphere, partMat('shoes'), 'shoes'), 0, -0.448, 0.018, 0.028, 0.018, 0.05))
-        const bw = mesh(sphere, partMat('belt'), 'belt'); bw.scale.set(0.012, 0.007, 0.006); bw.position.set(0, -0.435, 0.05)
-        b.group.add(bw)
+    // Les bottes : une tige autour de chaque mollet (ses chaussures restent dessous)
+    const bs = section('boots', root.parent!)
+    if (look.shoes === 'boots') {
+      for (const sd of [1, -1]) {
+        const x = sd * Math.abs(P.lleg.x)
+        const top = P.lknee.y - 0.02, bot = P.lfoot.y + 0.01
+        const rr = [0.034, 0.036, 0.033, 0.03, 0.028].map((r, i) => ({ y: bot + (top - bot) * (i / 4), x: r, zf: r, zb: r }))
+        const geo = tube(rr, 28)
+        geo.translate(x, 0, 0)
+        bs.group.add(skinned(sg(bs, geo), partMat('shoes'), 'shoes'))
       }
     }
   }
 
   /* ---- Cape ---- */
   function buildCape() {
-    const s = section('cape', rig)
+    const s = section('cape', onBoneOnce('upperChest'))
     if (look.cape === 'none') return
     const royal = look.cape === 'royal'
-    const top = 0.695
-    const prof = royal
-      ? [[0.36, 0.012], [0.34, 0.1], [0.3, 0.25], [0.24, 0.42], [0.16, 0.56], [0.11, 0.65], [0.08, top]]
-      : [[0.17, 0.42], [0.15, 0.5], [0.12, 0.6], [0.09, 0.67], [0.075, top]]
-    // Toujours à l'extérieur de la jupe
-    const safe = prof.map(([r, y]) => [Math.max(r, skirtR(y) + 0.03), y])
+    const top = P.neck.y - 0.03
+    const back = bust(P.chest.y).zb
+    const prof2 = royal
+      ? [[0.4, 0.012], [0.38, 0.1], [0.33, 0.25], [0.26, 0.42], [0.19, W], [0.14, P.chest.y], [0.1, top]]
+      : [[0.19, W - 0.02], [0.17, W + 0.06], [0.14, P.chest.y], [0.1, top]]
+    const safe = prof2.map(([r, y]) => [Math.max(r, skirtR(y) + 0.03, back + 0.03), y])
     const geo = folds(lathe(T, safe, 64, Math.PI / 2 + 0.28, Math.PI - 0.56), 10, 0.05, top)
-    s.group.add(mesh(sg(s, geo), partMat('cape'), 'cape'))
-    // Le col : blanc à mouchetures (hermine) pour la cape royale, un ruban sinon
-    const col = mesh(sg(s, new T.TorusGeometry(0.066, royal ? 0.018 : 0.008, 10, 40)),
-      royal ? std({ color: 0xF4F1EC, roughness: 0.9 }, 0.85) : partMat('belt'), royal ? 'skin' : 'belt')
+    const cm = mesh(sg(s, geo), partMat('cape'), 'cape')
+    s.group.add(cm)
+    const col = mesh(sg(s, new T.TorusGeometry(Math.max(0.06, bust(top).x * 0.75), royal ? 0.02 : 0.008, 10, 40)),
+      royal ? std({ color: 0xF4F1EC, roughness: 0.9 }, 0.85) : partMat('belt'), royal ? 'deco' : 'belt')
     if (royal) s.mats.push(col.material as Mat)
-    col.rotation.x = Math.PI / 2 + 0.15; col.position.set(0, 0.69, -0.01); col.scale.set(1, 0.8, 1)
+    col.rotation.x = Math.PI / 2 + 0.15; col.position.set(0, top, -0.01); col.scale.set(1, 0.8, 1)
     s.group.add(col)
-    if (royal) {
-      for (let i = 0; i < 9; i++) {
-        const a = Math.PI * (0.25 + (i / 8) * 1.5)
-        const d = mesh(sphere, std({ color: 0x1A1A1A, roughness: 0.8 }), 'skin')
-        s.mats.push(d.material as Mat)
-        d.scale.set(0.004, 0.006, 0.003)
-        d.position.set(Math.sin(a) * 0.084, 0.692, Math.cos(a) * 0.066 - 0.01)
-        s.group.add(d)
-      }
-    }
+  }
+  /** Les accroches rigides partagées (un groupe par os, placé à l'origine de la princesse). */
+  const anchors = new Map<string, Grp>()
+  function onBoneOnce(n: BoneName) {
+    let a = anchors.get(n)
+    if (!a) { a = onBone(n, V(0, 0, 0)); anchors.set(n, a) }
+    return a
   }
 
   /* ---- Ailes ---- */
@@ -1317,23 +1186,17 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     const shape = (L: number, Wd: number, round: boolean) => {
       const sh = new T.Shape()
       sh.moveTo(0, 0)
-      if (round) {
-        sh.bezierCurveTo(Wd * 0.1, Wd * 1.3, L * 1.1, Wd * 1.4, L, Wd * 0.2)
-        sh.bezierCurveTo(L * 0.95, -Wd * 0.6, L * 0.4, -Wd * 0.4, 0, 0)
-      } else {
-        sh.bezierCurveTo(Wd * 0.2, Wd * 0.9, L * 0.8, Wd * 1.1, L, Wd * 0.3)
-        sh.bezierCurveTo(L * 1.02, -Wd * 0.2, L * 0.5, -Wd * 0.3, 0, 0)
-      }
+      if (round) { sh.bezierCurveTo(Wd * 0.1, Wd * 1.3, L * 1.1, Wd * 1.4, L, Wd * 0.2); sh.bezierCurveTo(L * 0.95, -Wd * 0.6, L * 0.4, -Wd * 0.4, 0, 0) }
+      else { sh.bezierCurveTo(Wd * 0.2, Wd * 0.9, L * 0.8, Wd * 1.1, L, Wd * 0.3); sh.bezierCurveTo(L * 1.02, -Wd * 0.2, L * 0.5, -Wd * 0.3, 0, 0) }
       const geo = sg(s, new T.ShapeGeometry(sh, 24))
-      // UV : la forme entière dans 0..1
       const p = geo.attributes.position as import('three').BufferAttribute
       const uv = geo.attributes.uv as import('three').BufferAttribute
       for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / L, (p.getY(i) + Wd) / (Wd * 2.5))
       return geo
     }
     const bf = look.wings === 'butterfly'
-    const up = shape(bf ? 0.26 : 0.3, bf ? 0.17 : 0.15, bf)
-    const low = shape(bf ? 0.18 : 0.2, bf ? 0.12 : 0.1, bf)
+    const up = shape(bf ? 0.3 : 0.34, bf ? 0.19 : 0.17, bf)
+    const low = shape(bf ? 0.2 : 0.22, bf ? 0.13 : 0.11, bf)
     for (const sd of [-1, 1]) {
       const side = new T.Group()
       side.userData.side = sd
@@ -1347,116 +1210,128 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
   }
 
   /* ---- Couronne, barrettes, collier, lunettes, objet ---- */
-  let seat = 1.1
+  /** Un point à la surface de ses cheveux (repère de la tête). */
+  const RH = Math.max(HR * 1.15, hairTop - HC.y)
+  const onHair = (az: number, th: number, lift = 1) =>
+    V(Math.sin(th) * Math.sin(az) * HR * 1.18 * lift, Math.cos(th) * RH * lift, Math.sin(th) * Math.cos(az) * HR * 1.12 * lift)
+  /** L'afro : centre et demi-axes du nuage de boucles (repère de la tête). */
+  const afroShape = () => {
+    const k = 0.9 + look.hair.len * 0.2
+    return { c: V(0, HR * 0.4, -HR * 0.47), a: V(HR * 1.7 * k, HR * 1.55 * k, HR * 1.55 * k) }
+  }
+  /** Ce qu'on pose sur la tête (couronne, barrettes) monte sur le nuage d'afro. */
+  const headLift = () => {
+    if (look.hair.style !== 'afro') return 1
+    const { c, a } = afroShape()
+    return (c.y + a.y + HR * 0.3) / RH
+  }
   function buildCrown() {
     const s = section('crown', head)
-    const pieces = (list: { geo: Geo; m: import('three').Matrix4 }[], m: Mat, part = 'deco') => { if (list.length) s.group.add(mesh(fuse(s, list), m, part)) }
+    const pieces = (list: { geo: Geo; m: M4 }[], m: Mat, part = 'deco') => { if (list.length) s.group.add(mesh(fuse(s, list), m, part)) }
+    const lift = headLift()
     if (look.crown === 'tiara') {
-      const TH = 0.19 * Math.PI, LIFT = seat
+      const TH = 0.2 * Math.PI
       const arc: V3[] = []
-      for (let k = 0; k <= 16; k++) { const a = -1.15 + (k / 16) * 2.3; arc.push(onHead(T, a, TH + Math.abs(a) * 0.08, LIFT)) }
-      const golds: { geo: Geo; m: import('three').Matrix4 }[] = [{ geo: new T.TubeGeometry(new T.CatmullRomCurve3(arc), 48, 0.0045, 8), m: new T.Matrix4() }]
-      const pink: { geo: Geo; m: import('three').Matrix4 }[] = [], blue: typeof pink = []
-      const cone = new T.ConeGeometry(0.0055, 1, 8)
+      for (let q = 0; q <= 16; q++) { const a = -1.15 + (q / 16) * 2.3; arc.push(onHair(a, TH + Math.abs(a) * 0.08, lift)) }
+      const golds: { geo: Geo; m: M4 }[] = [{ geo: new T.TubeGeometry(new T.CatmullRomCurve3(arc), 48, 0.005, 8), m: new T.Matrix4() }]
+      const pink: { geo: Geo; m: M4 }[] = [], blue: typeof pink = []
+      const cone = new T.ConeGeometry(0.0065, 1, 8)
       for (let i = -4; i <= 4; i++) {
         const a = i * 0.26
-        const base = onHead(T, a, TH + Math.abs(a) * 0.08, LIFT)
-        const dir = base.clone().normalize().multiplyScalar(0.55).add(new T.Vector3(0, 1, 0)).normalize()
-        const h = 0.036 - Math.abs(i) * 0.0055
-        const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), dir)
-        const at = base.clone().addScaledVector(dir, h / 2)
-        golds.push({ geo: cone, m: new T.Matrix4().compose(at, q, new T.Vector3(1, h, 1)) })
+        const base = onHair(a, TH + Math.abs(a) * 0.08, lift)
+        const dir = base.clone().normalize().multiplyScalar(0.55).add(V(0, 1, 0)).normalize()
+        const h = 0.042 - Math.abs(i) * 0.0062
+        const q = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), dir)
+        golds.push({ geo: cone, m: new T.Matrix4().compose(base.clone().addScaledVector(dir, h / 2), q, V(1, h, 1)) })
         const tip = base.clone().addScaledVector(dir, h + 0.002)
-        ;(i === 0 ? pink : golds).push({ geo: sphere, m: new T.Matrix4().compose(tip, q, new T.Vector3().setScalar(i === 0 ? 0.008 : 0.0045)) })
+        ;(i === 0 ? pink : golds).push({ geo: sphere, m: new T.Matrix4().compose(tip, q, V(1, 1, 1).setScalar(i === 0 ? 0.009 : 0.005)) })
         if (i % 2 === 0) {
-          const gp = base.clone().addScaledVector(dir, 0.006).addScaledVector(base.clone().normalize(), 0.004)
-          ;(i === 0 ? pink : blue).push({ geo: sphere, m: new T.Matrix4().compose(gp, q, new T.Vector3(i === 0 ? 0.012 : 0.006, i === 0 ? 0.015 : 0.006, 0.006)) })
+          const gp = base.clone().addScaledVector(dir, 0.007).addScaledVector(base.clone().normalize(), 0.004)
+          ;(i === 0 ? pink : blue).push({ geo: sphere, m: new T.Matrix4().compose(gp, q, V(i === 0 ? 0.013 : 0.007, i === 0 ? 0.017 : 0.007, 0.007)) })
         }
       }
       pieces(golds, gold); pieces(pink, gem(0xD02860)); pieces(blue, gem(0x7FD6F0))
-      cone.dispose()
-      golds[0].geo.dispose()
+      cone.dispose(); golds[0].geo.dispose()
     } else if (look.crown === 'crown') {
-      const y = HR * HS[1] * (seat - 0.12)
-      const golds: { geo: Geo; m: import('three').Matrix4 }[] = []
-      const ring = new T.CylinderGeometry(0.052, 0.058, 0.035, 32, 1, true)
+      const golds: { geo: Geo; m: M4 }[] = []
+      const R = HR * 0.62
+      const ring = new T.CylinderGeometry(R, R * 1.1, 0.04, 32, 1, true)
       golds.push({ geo: ring, m: M(0, 0, 0) })
-      const cone = new T.ConeGeometry(0.011, 0.035, 8)
+      const cone = new T.ConeGeometry(0.013, 0.04, 8)
       const red: typeof golds = [], blue: typeof golds = []
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2
-        golds.push({ geo: cone, m: M(Math.sin(a) * 0.053, 0.034, Math.cos(a) * 0.053) })
-        golds.push({ geo: sphere, m: M(Math.sin(a) * 0.053, 0.054, Math.cos(a) * 0.053, 0.007) })
-        ;(i % 2 ? blue : red).push({ geo: sphere, m: M(Math.sin(a) * 0.058, 0, Math.cos(a) * 0.058, 0.0075) })
+        golds.push({ geo: cone, m: M(Math.sin(a) * R, 0.038, Math.cos(a) * R) })
+        golds.push({ geo: sphere, m: M(Math.sin(a) * R, 0.061, Math.cos(a) * R, 0.008) })
+        ;(i % 2 ? blue : red).push({ geo: sphere, m: M(Math.sin(a) * R * 1.1, 0, Math.cos(a) * R * 1.1, 0.0085) })
       }
       const c = new T.Group()
       const add = (list: typeof golds, m: Mat) => { if (list.length) c.add(mesh(fuse(s, list), m, 'deco')) }
       add(golds, gold); add(red, gem(0xC02850)); add(blue, gem(0x2F7FD0))
       ring.dispose(); cone.dispose()
-      c.position.set(0, y, -0.015)
+      c.position.set(0, RH * lift * 0.9, -HR * 0.12)
       c.rotation.x = -0.22
       s.group.add(c)
     } else if (look.crown === 'flowers') {
       const cols = [0xE8759A, 0xF2F0F4, 0xF5C75A, 0xB795E8]
-      const by = new Map<number, { geo: Geo; m: import('three').Matrix4 }[]>()
-      const hearts: { geo: Geo; m: import('three').Matrix4 }[] = []
-      for (let i = 0; i < 11; i++) {
-        const a = -Math.PI * 0.55 + (i / 10) * Math.PI * 1.1
-        const p = onHead(T, a, 0.24 * Math.PI, seat + 0.02)
-        const q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().lookAt(p.clone().multiplyScalar(3), p, new T.Vector3(0, 1, 0)))
+      const by = new Map<number, { geo: Geo; m: M4 }[]>()
+      const hearts: { geo: Geo; m: M4 }[] = []
+      for (let i = 0; i < 12; i++) {
+        const a = -Math.PI * 0.55 + (i / 11) * Math.PI * 1.1
+        const p = onHair(a, 0.25 * Math.PI, lift * 1.03)
+        const q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().lookAt(p.clone().multiplyScalar(3), p, V(0, 1, 0)))
         const list = by.get(cols[i % 4]) || []
-        for (let k = 0; k < 5; k++) {
-          const pa = (k / 5) * Math.PI * 2
-          const off = new T.Vector3(Math.cos(pa) * 0.011, Math.sin(pa) * 0.011, 0).applyQuaternion(q)
-          list.push({ geo: sphere, m: new T.Matrix4().compose(p.clone().add(off), q, new T.Vector3(0.012, 0.012, 0.005)) })
+        for (let f = 0; f < 5; f++) {
+          const pa = (f / 5) * Math.PI * 2
+          const off = V(Math.cos(pa) * 0.013, Math.sin(pa) * 0.013, 0).applyQuaternion(q)
+          list.push({ geo: sphere, m: new T.Matrix4().compose(p.clone().add(off), q, V(0.014, 0.014, 0.006)) })
         }
         by.set(cols[i % 4], list)
-        hearts.push({ geo: sphere, m: new T.Matrix4().compose(p.clone().add(new T.Vector3(0, 0, 0.003).applyQuaternion(q)), q, new T.Vector3().setScalar(0.006)) })
+        hearts.push({ geo: sphere, m: new T.Matrix4().compose(p.clone().add(V(0, 0, 0.003).applyQuaternion(q)), q, V(1, 1, 1).setScalar(0.007)) })
       }
       for (const [c, list] of by) { const m = std({ color: c, roughness: 0.6 }, 0.8); s.mats.push(m); pieces(list, m) }
       const cm = std({ color: 0xE0A020, roughness: 0.5 }); s.mats.push(cm); pieces(hearts, cm)
     } else if (look.crown === 'bow') {
-      const p = onHead(T, Math.PI * 0.85, 0.15 * Math.PI, seat + 0.05)
+      const p = onHair(Math.PI * 0.85, 0.18 * Math.PI, lift * 1.02)
       const b = new T.Group()
-      for (const k of [-1, 1]) {
-        const lobe = mesh(sphere, partMat('belt'), 'belt'); lobe.scale.set(0.05, 0.032, 0.016); lobe.position.set(k * 0.045, 0, 0); lobe.rotation.z = k * 0.3
+      for (const q of [-1, 1]) {
+        const lobe = mesh(sphere, partMat('belt'), 'belt'); lobe.scale.set(0.058, 0.036, 0.018); lobe.position.set(q * 0.052, 0, 0); lobe.rotation.z = q * 0.3
         b.add(lobe)
       }
-      b.add(place(mesh(sphere, partMat('belt'), 'belt'), 0, 0, 0, 0.018))
+      b.add(place(mesh(sphere, partMat('belt'), 'belt'), 0, 0, 0, 0.02))
       b.position.copy(p)
       b.lookAt(p.clone().multiplyScalar(3))
       s.group.add(b)
     }
-    // Les barrettes, là où le doigt les a piquées
     buildClips()
   }
   function buildClips() {
     const s = section('clips', head)
-    const lift = look.hair.style === 'afro' ? 1.3 + look.hair.len * 0.1 : 1.13
+    const lift = look.hair.style === 'afro' ? headLift() : 1.02
     look.hair.clips.forEach((c: Clip) => {
-      const p = onHead(T, c.az, c.th, lift)
+      const p = onHair(c.az, c.th, lift)
       const grp = new T.Group()
       const m = std({ color: c.c, roughness: 0.4 }, 0.8)
       s.mats.push(m)
-      const q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().lookAt(p.clone().multiplyScalar(3), p, new T.Vector3(0, 1, 0)))
+      const q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().lookAt(p.clone().multiplyScalar(3), p, V(0, 1, 0)))
       if (c.k === 'flower') {
-        for (let k = 0; k < 5; k++) {
-          const a = (k / 5) * Math.PI * 2
-          grp.add(place(mesh(sphere, m, 'deco'), Math.cos(a) * 0.012, Math.sin(a) * 0.012, 0, 0.012, 0.012, 0.005))
+        for (let f = 0; f < 5; f++) {
+          const a = (f / 5) * Math.PI * 2
+          grp.add(place(mesh(sphere, m, 'deco'), Math.cos(a) * 0.013, Math.sin(a) * 0.013, 0, 0.013, 0.013, 0.005))
         }
-        grp.add(place(mesh(sphere, gold, 'deco'), 0, 0, 0.004, 0.006))
+        grp.add(place(mesh(sphere, gold, 'deco'), 0, 0, 0.004, 0.007))
       } else if (c.k === 'bow') {
-        for (const k of [-1, 1]) { const l = mesh(sphere, m, 'deco'); l.scale.set(0.02, 0.013, 0.007); l.position.x = k * 0.018; l.rotation.z = k * 0.3; grp.add(l) }
-        grp.add(place(mesh(sphere, m, 'deco'), 0, 0, 0.003, 0.008))
+        for (const q2 of [-1, 1]) { const l = mesh(sphere, m, 'deco'); l.scale.set(0.022, 0.014, 0.007); l.position.x = q2 * 0.02; l.rotation.z = q2 * 0.3; grp.add(l) }
+        grp.add(place(mesh(sphere, m, 'deco'), 0, 0, 0.003, 0.009))
       } else {
         const sh = new T.Shape()
         if (c.k === 'star') {
           for (let i = 0; i < 10; i++) {
-            const a = (i / 10) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.009 : 0.022
+            const a = (i / 10) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.01 : 0.024
             if (i === 0) sh.moveTo(Math.cos(a) * r, Math.sin(a) * r); else sh.lineTo(Math.cos(a) * r, Math.sin(a) * r)
           }
         } else {
-          const r = 0.016
+          const r = 0.017
           sh.moveTo(0, -r * 0.9)
           sh.bezierCurveTo(-r * 1.4, r * 0.2, -r * 0.6, r * 1.2, 0, r * 0.4)
           sh.bezierCurveTo(r * 0.6, r * 1.2, r * 1.4, r * 0.2, 0, -r * 0.9)
@@ -1469,26 +1344,28 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     })
   }
   function buildNeck() {
-    const s = section('neck', rig)
+    const s = section('neck', onBoneOnce('upperChest'))
+    const ny = P.neck.y - 0.02
+    const b = bust(ny)
+    const rx = Math.max(0.032, b.x * 0.55), rz = Math.max(0.028, b.zf * 0.9)
     if (look.neck === 'pearls') {
-      const list: { geo: Geo; m: import('three').Matrix4 }[] = []
-      for (let i = 0; i < 22; i++) {
-        const a = (i / 22) * Math.PI * 2
-        const y = 0.705 - Math.max(0, Math.cos(a)) * 0.022
-        list.push({ geo: sphere, m: M(Math.sin(a) * 0.037, y, Math.cos(a) * 0.029 + 0.004, 0.0052) })
+      const list: { geo: Geo; m: M4 }[] = []
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2
+        list.push({ geo: sphere, m: M(Math.sin(a) * rx, ny - Math.max(0, Math.cos(a)) * 0.025, Math.cos(a) * rz, 0.0058) })
       }
       s.group.add(mesh(fuse(s, list), pearl, 'deco'))
     } else if (look.neck === 'heart') {
-      const chain = mesh(sg(s, new T.TorusGeometry(0.036, 0.0022, 6, 40)), gold, 'deco')
-      chain.rotation.x = Math.PI / 2 + 0.5; chain.position.set(0, 0.705, 0.008); chain.scale.set(1, 0.75, 1)
+      const chain = mesh(sg(s, new T.TorusGeometry(1, 0.0025 / rx, 6, 40)), gold, 'deco')
+      chain.rotation.x = Math.PI / 2 + 0.5; chain.position.set(0, ny, 0); chain.scale.set(rx, rz * 0.9, rx)
       s.group.add(chain)
       const sh = new T.Shape()
-      const r = 0.014
+      const r = 0.015
       sh.moveTo(0, -r * 0.9)
       sh.bezierCurveTo(-r * 1.4, r * 0.2, -r * 0.6, r * 1.2, 0, r * 0.4)
       sh.bezierCurveTo(r * 0.6, r * 1.2, r * 1.4, r * 0.2, 0, -r * 0.9)
       const h = mesh(sg(s, new T.ExtrudeGeometry(sh, { depth: 0.005, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.002, bevelSegments: 2 })), gem(0xD02850), 'deco')
-      h.position.set(0, 0.678, 0.044)
+      h.position.set(0, ny - 0.035, rz + 0.012)
       s.group.add(h)
     }
   }
@@ -1513,47 +1390,50 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       return sh
     }
     const heart = look.glasses === 'hearts'
-    for (const sd of [-1, 1]) {
-      const outer = outline(heart, 0.034)
-      const inner = outline(heart, 0.026)
+    const eyes = [P.leye, P.reye]
+    // Un verre par œil, qui touche presque son voisin
+    const R = Math.abs(P.leye.x - P.reye.x) * (heart ? 0.46 : 0.52)
+    for (const e of eyes) {
+      const outer = outline(heart, R)
+      const inner = outline(heart, R * 0.77)
       outer.holes.push(new T.Path(inner.getPoints(24).reverse()))
       const f = mesh(sg(s, new T.ExtrudeGeometry(outer, { depth: 0.004, bevelEnabled: false, curveSegments: 16 })), frame, 'face')
       const l = mesh(sg(s, new T.ShapeGeometry(inner, 16)), lens, 'face')
       l.userData.noShadow = true
-      const at = onHead(T, sd * EYE_AZ, EYE_TH, 1.1)
-      f.position.copy(at); l.position.copy(at).add(new T.Vector3(0, 0, 0.001))
-      f.rotation.y = sd * 0.3; l.rotation.y = sd * 0.3
+      const at = V(e.x, e.y - HC.y, faceBox.max.z - HC.z + 0.012)
+      f.position.copy(at); l.position.copy(at).add(V(0, 0, 0.001))
       s.group.add(f, l)
     }
-    const bridge = mesh(sg(s, new T.CylinderGeometry(0.003, 0.003, 0.03, 6)), frame, 'face')
-    bridge.rotation.z = Math.PI / 2; bridge.position.copy(onHead(T, 0, EYE_TH - 0.05, 1.12))
+    const bridge = mesh(sg(s, new T.CylinderGeometry(0.002, 0.002, Math.abs(P.leye.x - P.reye.x) * 0.3, 6)), frame, 'face')
+    bridge.rotation.z = Math.PI / 2; bridge.position.set(0, P.leye.y - HC.y + 0.01, faceBox.max.z - HC.z + 0.014)
     s.group.add(bridge)
   }
   function buildHeld() {
-    const s = section('held', aR.fore)
+    const s = section('held', onBoneOnce('rightHand'))
+    // Au repos, le bras droit est tendu vers −x : l'objet part de la main, pointé vers l'avant
     const hold = new T.Group()
-    hold.position.set(0, -0.125, 0.012)
-    hold.rotation.x = 0.35
+    const hp = wpos('rightHand')
+    hold.position.set(hp.x - 0.05, hp.y - 0.012, 0.01)
+    hold.rotation.x = Math.PI / 2 - 0.35
     s.group.add(hold)
     if (look.held === 'wand' || look.held === 'scepter') {
       const wand = look.held === 'wand'
-      hold.add(place(mesh(sg(s, new T.CylinderGeometry(wand ? 0.004 : 0.006, wand ? 0.004 : 0.007, wand ? 0.16 : 0.24, 10)), wand ? std({ color: 0xF0E6F0, roughness: 0.3 }) : gold, 'deco'), 0, wand ? 0.06 : 0.07, 0))
+      hold.add(place(mesh(sg(s, new T.CylinderGeometry(wand ? 0.004 : 0.006, wand ? 0.004 : 0.007, wand ? 0.18 : 0.26, 10)), wand ? std({ color: 0xF0E6F0, roughness: 0.3 }) : gold, 'deco'), 0, wand ? 0.06 : 0.07, 0))
       if (wand) {
         const sh = new T.Shape()
         for (let i = 0; i < 10; i++) {
-          const a = (i / 10) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.014 : 0.034
+          const a = (i / 10) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.015 : 0.036
           if (i === 0) sh.moveTo(Math.cos(a) * r, Math.sin(a) * r); else sh.lineTo(Math.cos(a) * r, Math.sin(a) * r)
         }
-        hold.add(place(mesh(sg(s, new T.ExtrudeGeometry(sh, { depth: 0.01, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.003, bevelSegments: 2 })), gold, 'deco'), 0, 0.155, -0.005))
+        hold.add(place(mesh(sg(s, new T.ExtrudeGeometry(sh, { depth: 0.01, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.003, bevelSegments: 2 })), gold, 'deco'), 0, 0.165, -0.005))
       } else {
-        hold.add(place(mesh(sphere, gem(0x8C3CC8), 'deco'), 0, 0.2, 0, 0.026))
+        hold.add(place(mesh(sphere, gem(0x8C3CC8), 'deco'), 0, 0.21, 0, 0.028))
         for (let i = 0; i < 4; i++) {
           const a = (i / 4) * Math.PI * 2
           const c = mesh(sg(s, new T.ConeGeometry(0.006, 0.02, 6)), gold, 'deco')
-          c.position.set(Math.sin(a) * 0.016, 0.228, Math.cos(a) * 0.016)
+          c.position.set(Math.sin(a) * 0.017, 0.24, Math.cos(a) * 0.017)
           hold.add(c)
         }
-        hold.add(place(mesh(sphere, gold, 'deco'), 0, 0.18, 0, 0.012, 0.006, 0.012))
       }
     } else if (look.held === 'bouquet') {
       hold.add(place(mesh(sg(s, new T.ConeGeometry(0.03, 0.09, 16, 1, true)), std({ color: 0xF4F0EA, roughness: 0.7, side: T.DoubleSide }, 0.85), 'deco'), 0, 0.02, 0).rotateX(Math.PI))
@@ -1563,12 +1443,6 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
         const m = std({ color: cols[i % 4], roughness: 0.6 }, 0.85)
         s.mats.push(m)
         hold.add(place(mesh(sphere, m, 'deco'), Math.cos(a) * r, 0.075 + (i ? 0 : 0.008), Math.sin(a) * r, 0.018))
-      }
-      const leaf = std({ color: 0x3E7A4A, roughness: 0.7 })
-      s.mats.push(leaf)
-      for (let i = 0; i < 5; i++) {
-        const a = i * 1.26
-        hold.add(place(mesh(sphere, leaf, 'deco'), Math.cos(a) * 0.03, 0.06, Math.sin(a) * 0.03, 0.016, 0.006, 0.01))
       }
     } else if (look.held === 'fan') {
       const geo = sg(s, new T.CircleGeometry(0.1, 20, 0, Math.PI))
@@ -1581,66 +1455,155 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       const f = mesh(geo, partMat('belt'), 'belt')
       ;(f.material as Mat).side = T.DoubleSide
       f.position.set(0, 0.02, 0.01)
-      f.rotation.z = 0.2
       hold.add(f)
     }
   }
 
-  /* ---- Les cheveux ---- */
-  function buildHairSection() {
-    const s = section('hair', head)
-    const hb = buildHair(T, merge, look.hair, { skirtR: y => skirtR(y), cape: look.cape !== 'none' })
-    seat = hb.seat
-    s.geos.push(hb.geo)
-    s.group.add(mesh(hb.geo, partMat('hair'), 'hair'))
+  /* ---- Les coiffures : ses cheveux, ou des cheveux attachés ---- */
+  function buildHair() {
+    const s = section('hairx', head)
+    const style = look.hair.style
+    // Lâchés : ses propres cheveux ; attachés : on cache le rideau du dos
+    hairBack.forEach(m => { m.visible = style === 'loose' })
+    hairFront.forEach(m => { m.visible = style !== 'afro' })
+    shapeHair()
+    if (style === 'loose' || !hairClone) return
+    const hm = hairClone
+    const parts: Geo[] = []
+    const HS = HR / 0.1 // les anciennes mesures (tête de rayon 0,1) à sa taille
+    const at = (az: number, th: number, lift = 1) => onHair(az, th, 0.92 * lift)
+    const lockH = (pts: V3[], w0: number, w1: number, flat = 0.55) => parts.push(lockGeo(T, pts, w0 * HS, w1 * HS, flat, V(0, 0, 0), 20, 8))
+    const wave = 0.004 + look.hair.curl * 0.02
+    const L = (0.12 + look.hair.len * 0.22) * HS
+    if (style === 'bun') {
+      const bun = new T.SphereGeometry(0.066 * HS, 32, 20)
+      bun.scale(1, 0.85, 1); bun.translate(0, RH * 0.95, -HR * 0.45)
+      parts.push(bun)
+      const wrap = new T.TorusGeometry(0.052 * HS, 0.022 * HS, 12, 32)
+      wrap.rotateX(Math.PI / 2 - 0.4); wrap.translate(0, RH * 0.82, -HR * 0.4)
+      parts.push(wrap)
+    } else if (style === 'ponytail' || style === 'pigtails') {
+      const ties = style === 'ponytail' ? [at(Math.PI, 0.3 * Math.PI)] : [at(Math.PI * 0.72, 0.42 * Math.PI), at(-Math.PI * 0.72, 0.42 * Math.PI)]
+      ties.forEach((Pt, ti) => {
+        const sd = style === 'ponytail' ? 0 : ti === 0 ? 1 : -1
+        const n = style === 'ponytail' ? 10 : 7
+        for (let q = 0; q < n; q++) {
+          const off = (q / (n - 1) - 0.5) * 0.045 * HS
+          const w = (t: number) => Math.sin(t * 9 + q) * wave * t * HS
+          const pts = style === 'ponytail'
+            ? [Pt.clone(), Pt.clone().add(V(off * 0.5, 0.035 * HS, -0.05 * HS)), Pt.clone().add(V(off + w(0.3), -0.03 * HS, -0.12 * HS)), Pt.clone().add(V(off * 1.3 + w(0.6), -0.03 * HS - L * 0.5, -0.13 * HS)), Pt.clone().add(V(off * 1.5 + w(1), -0.03 * HS - L, -0.1 * HS - Math.abs(off)))]
+            : [Pt.clone(), Pt.clone().add(V(sd * 0.04 * HS, 0, -0.02 * HS + off * 0.4)), Pt.clone().add(V(sd * 0.065 * HS, -0.07 * HS, -0.04 * HS + off)), Pt.clone().add(V(sd * 0.06 * HS + off * 0.3 + w(0.6), -0.07 * HS - L * 0.45, -0.06 * HS + off)), Pt.clone().add(V(sd * 0.05 * HS + off * 0.5 + w(1), -0.07 * HS - L, -0.055 * HS + off))]
+          lockH(pts, 0.03, 0.026, 0.55)
+        }
+        const bow = new T.Group()
+        for (const q of [-1, 1]) { const l = mesh(sphere, partMat('belt'), 'belt'); l.scale.set(0.03, 0.019, 0.01); l.position.x = q * 0.026; l.rotation.z = q * 0.3; bow.add(l) }
+        bow.add(place(mesh(sphere, partMat('belt'), 'belt'), 0, 0, 0, 0.011))
+        bow.position.copy(Pt).multiplyScalar(1.08)
+        bow.lookAt(Pt.clone().multiplyScalar(4))
+        s.group.add(bow)
+      })
+    } else if (style === 'braid') {
+      const pts = [at(Math.PI * 0.6, 0.55 * Math.PI), V(0.1 * HS, -0.09 * HS, -0.05 * HS), V(0.1 * HS, -0.16 * HS, 0.05 * HS), V(0.085 * HS, -0.24 * HS, 0.085 * HS)]
+      const end = -0.24 * HS - L * 1.3
+      for (let y = -0.32 * HS; y > end; y -= 0.08 * HS) pts.push(V(0.075 * HS, y, 0.09 * HS))
+      pts.push(V(0.072 * HS, end, 0.092 * HS))
+      const path = new T.CatmullRomCurve3(pts)
+      const n = Math.round(10 + path.getLength() / HS * 34)
+      for (let q = 0; q < n; q++) {
+        const t = (q / (n - 1)) * 0.94
+        const p = path.getPointAt(t), tg = path.getTangentAt(t)
+        const sd = q % 2 ? 1 : -1
+        const r = 0.03 * HS * (1 - t * 0.4)
+        const qq = new T.Quaternion().setFromUnitVectors(V(0, 1, 0), tg.clone().negate())
+        const e = new T.SphereGeometry(1, 14, 10)
+        e.scale(r * 1.05, r * 1.45, r * 0.85)
+        e.rotateZ(sd * 0.55)
+        e.applyQuaternion(qq)
+        const side = V(1, 0, 0).applyQuaternion(qq).multiplyScalar(sd * r * 0.35)
+        e.translate(p.x + side.x, p.y + side.y, p.z + side.z)
+        parts.push(e)
+      }
+    } else if (style === 'afro') {
+      let seed = 11
+      const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
+      // Un nuage de boucles rondes autour de la tête, le visage dégagé
+      const { c, a: A } = afroShape()
+      const top = new T.SphereGeometry(1, 40, 12, 0, Math.PI * 2, 0, 0.35 * Math.PI)
+      const back = new T.SphereGeometry(1, 24, 20, Math.PI, Math.PI, 0.2 * Math.PI, 0.58 * Math.PI)
+      for (const cap of [top, back]) {
+        cap.scale(A.x * 0.84, A.y * 0.84, A.z * 0.84)
+        cap.translate(c.x, c.y, c.z)
+        parts.push(cap)
+      }
+      const puff = (p: V3, r: number) => { const e = new T.SphereGeometry(r, 12, 9); e.translate(p.x, p.y, p.z); parts.push(e) }
+      const N = 150, big = 0.8 + look.hair.curl * 0.4
+      for (let q = 0; q < N; q++) {
+        // Directions réparties sur la sphère (spirale de Fibonacci), un peu bousculées
+        const y = 1 - (2 * (q + 0.5)) / N, rr = Math.sqrt(1 - y * y), ph = q * 2.39996
+        const d = V(Math.cos(ph) * rr + (rnd() - 0.5) * 0.12, y, Math.sin(ph) * rr + (rnd() - 0.5) * 0.12)
+        const p = V(c.x + d.x * A.x, c.y + d.y * A.y, c.z + d.z * A.z)
+        if (p.z > -HR * 0.07 && p.y < HR * 0.47 && Math.abs(p.x) < HR * 1.02) continue
+        // Pas plus bas que la mâchoire (sinon, de face, on dirait une barbe)
+        if (p.y < -HR * 0.55) continue
+        puff(p, HR * (0.3 + rnd() * 0.2) * big)
+      }
+      // La lisière sur le front et les tempes
+      for (let q = 0; q <= 12; q++) {
+        const az = -1.35 + (q / 12) * 2.7
+        puff(onHair(az, (0.35 + Math.abs(az) * 0.09) * Math.PI, 0.97), HR * (0.2 + rnd() * 0.08) * big)
+      }
+    }
+    if (parts.length) {
+      const geo = merge(parts.map(x => {
+        const q = x.index ? x.toNonIndexed() : x
+        if (!q.attributes.uv) q.setAttribute('uv', new T.Float32BufferAttribute(new Float32Array(q.attributes.position.count * 2), 2))
+        return q
+      }), false)!
+      parts.forEach(x => x.dispose())
+      s.group.add(mesh(sg(s, geo), hm, 'hair'))
+    }
   }
 
   /* --- Tout construire, puis ne refaire que ce qui change --- */
   const keys = (r: Royal) => ({
     top: r.top,
     skirt: JSON.stringify([r.skirt, r.train, r.shoes]),
-    cape: r.cape + (r.skirt),
+    cape: r.cape + r.skirt,
     wings: r.wings,
-    hair: JSON.stringify([r.hair.style, r.hair.len.toFixed(3), r.hair.curl.toFixed(3), r.skirt, r.train, r.cape]),
+    hair: JSON.stringify([r.hair.style, r.hair.len.toFixed(3), r.hair.curl.toFixed(3)]),
     crown: JSON.stringify([r.crown, r.hair.style, r.hair.len.toFixed(2), r.hair.clips]),
     neck: r.neck,
     glasses: r.glasses,
     held: r.held,
-    skin: r.skin + r.freckles
+    colors: JSON.stringify([r.skin, r.eyes, r.freckles, r.paint.hair.c, r.paint.shoes.c])
   })
   let built = keys(look)
-  buildTop(); buildSkirt(); buildCape(); buildWings(); buildHairSection(); buildCrown(); buildNeck(); buildGlasses(); buildHeld()
+  buildTop(); buildSkirt(); buildCape(); buildWings(); buildHair(); buildCrown(); buildNeck(); buildGlasses(); buildHeld()
   obj.traverse(x => { x.castShadow = !x.userData.noShadow })
 
+  const state = restPose()
+  const A0 = 1.22 // bras le long du corps : rotation depuis la pose en T
   const princess: Princess = {
-    obj, rig, head, armL: aL.sh, armR: aR.sh, foreL: aL.fore, foreR: aR.fore, legL, legR,
-    skirt: skirtPivot, wings: wingsPivot, face, flare: 0,
+    obj, rig, head, headY, skirt: skirtPivot, wings: wingsPivot, face, flare: 0, pose: state,
     get look() { return look },
     set(r) {
       const next = cloneRoyal(r)
-      const k = keys(next)
-      const prev = look
+      const kk = keys(next)
       look = next
-      if (k.top !== built.top) buildTop()
-      if (k.skirt !== built.skirt) buildSkirt()
-      if (k.cape !== built.cape) buildCape()
-      if (k.wings !== built.wings) buildWings()
-      if (k.hair !== built.hair) buildHairSection()
-      if (k.crown !== built.crown || k.hair !== built.hair) buildCrown()
-      if (k.neck !== built.neck) buildNeck()
-      if (k.glasses !== built.glasses) buildGlasses()
-      if (k.held !== built.held) buildHeld()
-      if (k.skin !== built.skin) {
-        skinMat.color.set(next.skin).multiplyScalar(0.86)
-        const cv = skullCanvas(next.skin, next.freckles)
-        skullCv.cv.getContext('2d')!.drawImage(cv, 0, 0)
-        skullTex.needsUpdate = true
-      }
-      built = k
-      // Les peintures qui ont changé sans teinture : tout de suite
+      if (kk.top !== built.top) buildTop()
+      if (kk.skirt !== built.skirt) buildSkirt()
+      if (kk.cape !== built.cape) buildCape()
+      if (kk.wings !== built.wings) buildWings()
+      if (kk.hair !== built.hair) buildHair()
+      if (kk.crown !== built.crown || kk.hair !== built.hair) buildCrown()
+      if (kk.neck !== built.neck) buildNeck()
+      if (kk.glasses !== built.glasses) buildGlasses()
+      if (kk.held !== built.held) buildHeld()
+      if (kk.colors !== built.colors) recolor()
+      built = kk
       for (const [part, list] of fab) {
         const p = next.paint[part]
-        if (p.c !== prev.paint[part].c || p.p !== prev.paint[part].p) list.forEach(f => { if (f.paint.c !== p.c || f.paint.p !== p.p) f.set(p) })
+        list.forEach(f => { if (f.paint.c !== p.c || f.paint.p !== p.p) f.set(p) })
       }
       face.redraw()
       obj.traverse(x => { x.castShadow = !x.userData.noShadow })
@@ -1649,22 +1612,53 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       look.paint[part] = { ...paint }
       const list = fab.get(part)
       if (list) list.forEach(f => f.dye(paint, at))
-      if (part === 'hair') face.redraw()
+      if (part === 'hair' || part === 'shoes') recolor()
     },
     partOf(x) {
-      for (let o: Obj3 | null = x; o; o = o.parent) {
-        const p = o.userData?.part
+      for (let q: Obj3 | null = x; q; q = q.parent) {
+        const p = q.userData?.part
         if (p) return p as Part | 'face' | 'skin' | 'deco'
-        if (o === obj) break
+        if (q === obj) break
       }
       return null
     },
     update(dt) {
-      face.update(dt)
-      for (const list of fab.values()) list.forEach(f => f.update(dt))
-      // La jupe s'évase dans les pirouettes (le pivot est à la taille)
+      // La pose sur ses os « normalisés » (axes de la pose en T)
+      const st = state
+      const set = (n: BoneName, x: number, y: number, z: number) => { const b = nb(n); if (b) b.rotation.set(x, y, z) }
+      set('leftUpperArm', -st.armLf, 0, -(A0 - st.armL))
+      set('rightUpperArm', -st.armRf, 0, A0 - st.armR)
+      set('leftLowerArm', 0, -st.elbowL, 0)
+      set('rightLowerArm', 0, st.elbowR, 0)
+      set('spine', st.lean * 0.6, 0, st.sway * 0.6)
+      set('chest', st.lean * 0.4, 0, st.sway * 0.4)
+      set('neck', st.headX * 0.3, st.headY * 0.3, st.headZ * 0.3)
+      set('head', st.headX * 0.7, st.headY * 0.7, st.headZ * 0.7)
+      set('leftUpperLeg', -st.legL, 0, 0)
+      set('rightUpperLeg', -st.legR, 0, 0)
+      set('leftLowerLeg', st.kneeL, 0, 0)
+      set('rightLowerLeg', st.kneeR, 0, 0)
+      // Les doigts un peu repliés : des mains détendues, pas des planches
+      for (const sd of ['left', 'right'] as const) {
+        for (const f of ['Index', 'Middle', 'Ring', 'Little'] as const) {
+          for (const j of ['Proximal', 'Intermediate'] as const) {
+            const b = nb(`${sd}${f}${j}` as BoneName)
+            if (b) b.rotation.set(0, 0, (sd === 'left' ? -1 : 1) * 0.35)
+          }
+        }
+      }
+      rig.position.y = st.bounce
+      princess.flare = st.flare
+      skirtFlare.rotation.y = st.skirtYaw
       const fl = princess.flare
-      skirtPivot.scale.set(1 + fl * 0.28, 1 - fl * 0.12, 1 + fl * 0.28)
+      skirtFlare.scale.set(1 + fl * 0.28, 1 - fl * 0.1, 1 + fl * 0.28)
+      wingsPivot.children.forEach(sec => sec.children.forEach(side => {
+        const sd = side.userData.side as number
+        if (sd) side.rotation.y = sd * (-0.5 - st.wings)
+      }))
+      face.update(dt)
+      vrm.update(dt)
+      for (const list of fab.values()) list.forEach(f => f.update(dt))
     },
     dispose() {
       for (const s of sections.values()) { s.geos.forEach(x => x.dispose()); s.mats.forEach(x => x.dispose()) }
@@ -1673,9 +1667,20 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       own.geos.forEach(x => x.dispose())
       own.mats.forEach(x => x.dispose())
       own.texs.forEach(x => x.dispose())
+      root.traverse(x => {
+        const m = x as import('three').Mesh
+        if (!m.isMesh) return
+        m.geometry.dispose()
+        ;(Array.isArray(m.material) ? m.material : [m.material]).forEach(q => {
+          const mm = q as unknown as Record<string, unknown>
+          for (const key of Object.keys(mm)) { const v = mm[key] as { isTexture?: boolean; dispose?: () => void } | null; if (v && v.isTexture) v.dispose?.() }
+          q.dispose()
+        })
+      })
       obj.removeFromParent()
     }
   }
+  princess.update(0)
   return princess
 }
 
@@ -1694,111 +1699,95 @@ const ease = (t: number) => t * t * (3 - 2 * t)
 /** Pose le personnage au temps `t` (secondes depuis le début de la pose).
     Renvoie la rotation (autour de Y) à AJOUTER à son orientation. */
 export function posePrincess(p: Princess, pose: Pose, t: number): number {
-  p.rig.position.set(0, 0, 0)
-  p.rig.rotation.set(0, 0, 0)
-  p.head.rotation.set(0, 0, 0)
-  p.legL.rotation.set(0, 0, 0); p.legR.rotation.set(0, 0, 0)
-  p.armL.rotation.set(0, 0, 0.2); p.armR.rotation.set(0, 0, -0.2)
-  p.foreL.rotation.set(-0.35, 0, -0.1); p.foreR.rotation.set(-0.35, 0, 0.1)
-  p.skirt.rotation.set(0, 0, 0)
-  p.flare = 0
+  const s = p.pose
+  Object.assign(s, restPose())
   let yaw = 0
   const breathe = Math.sin(t * 1.6)
+  s.wings = Math.sin(t * 5) * 0.12
   if (pose === 'idle') {
-    p.head.rotation.z = Math.sin(t * 1.2) * 0.05
-    p.head.rotation.x = -0.04
-    p.armL.rotation.z = 0.2 + breathe * 0.02
-    p.armR.rotation.z = -0.2 - breathe * 0.02
-    p.skirt.rotation.y = Math.sin(t * 1.1) * 0.03
-    p.rig.position.y = breathe * 0.002
+    s.headZ = Math.sin(t * 1.2) * 0.05
+    s.headX = 0.03
+    s.armL = 0.12 + breathe * 0.02; s.armR = 0.12 + breathe * 0.02
+    s.skirtYaw = Math.sin(t * 1.1) * 0.03
+    s.bounce = breathe * 0.002
+    s.sway = Math.sin(t * 0.9) * 0.02
   } else if (pose === 'wave') {
-    p.armR.rotation.set(0, 0, -2.3)
-    p.foreR.rotation.set(0, 0, -0.5 + Math.sin(t * 8) * 0.35)
-    p.head.rotation.z = -0.12
+    s.armR = 2.5; s.elbowR = 0.6 + Math.sin(t * 8) * 0.35
+    s.headZ = -0.12
   } else if (pose === 'cheer') {
-    p.rig.position.y = Math.abs(Math.sin(t * 5)) * 0.05
-    p.armL.rotation.z = 2.6 + Math.sin(t * 10) * 0.12; p.armR.rotation.z = -2.6 - Math.sin(t * 10) * 0.12
-    p.foreL.rotation.set(0, 0, 0.3); p.foreR.rotation.set(0, 0, -0.3)
-    p.head.rotation.z = Math.sin(t * 5) * 0.1
-    p.flare = Math.abs(Math.sin(t * 5)) * 0.2
+    s.bounce = Math.abs(Math.sin(t * 5)) * 0.05
+    s.armL = 2.7 + Math.sin(t * 10) * 0.12; s.armR = 2.7 + Math.sin(t * 10) * 0.12
+    s.elbowL = 0.25; s.elbowR = 0.25
+    s.headZ = Math.sin(t * 5) * 0.1
+    s.flare = Math.abs(Math.sin(t * 5)) * 0.2
   } else if (pose === 'laugh') {
-    p.rig.rotation.x = Math.sin(t * 18) * 0.03
-    p.head.rotation.x = -0.12 + Math.sin(t * 18) * 0.05
-    p.head.rotation.z = Math.sin(t * 9) * 0.08
-    p.armL.rotation.set(-0.6, 0, 0.45); p.armR.rotation.set(-0.6, 0, -0.45)
-    p.foreL.rotation.set(-1.4, 0, -0.3); p.foreR.rotation.set(-1.4, 0, 0.3)
+    s.lean = 0.08 + Math.sin(t * 18) * 0.04
+    s.headX = 0.12 + Math.sin(t * 18) * 0.05
+    s.headZ = Math.sin(t * 9) * 0.08
+    s.armL = 0.35; s.armR = 0.35; s.armLf = 0.6; s.armRf = 0.6; s.elbowL = 1.5; s.elbowR = 1.5
   } else if (pose === 'photo') {
     // Une main sur la hanche, l'autre en coucou, la tête penchée
-    p.armL.rotation.set(0.1, 0, 0.75); p.foreL.rotation.set(-0.3, 0, -1.9)
-    p.armR.rotation.set(-0.2, 0, -2.1); p.foreR.rotation.set(0, 0, -0.4)
-    p.head.rotation.z = 0.14
-    yaw = 0
+    s.armL = 0.55; s.elbowL = 1.9
+    s.armR = 2.2; s.elbowR = 0.5
+    s.headZ = 0.14
+    s.sway = -0.05
   } else if (pose === 'curtsy') {
     const k = Math.sin(clamp(t / MOVES.curtsy, 0, 1) * Math.PI)
-    p.rig.position.y = -0.035 * k
-    p.head.rotation.set(0.28 * k, 0, 0.1 * k)
-    p.armL.rotation.set(0.3 * k, 0, 0.2 + 0.5 * k); p.armR.rotation.set(0.3 * k, 0, -0.2 - 0.5 * k)
-    p.foreL.rotation.set(-0.3, 0, 0.2 * k); p.foreR.rotation.set(-0.3, 0, -0.2 * k)
-    p.flare = 0.12 * k
+    s.bounce = -0.035 * k
+    s.kneeL = 0.5 * k; s.kneeR = 0.5 * k; s.legL = 0.25 * k; s.legR = 0.25 * k
+    s.headX = 0.3 * k; s.headZ = 0.1 * k; s.lean = 0.12 * k
+    s.armL = 0.3 + 0.35 * k; s.armR = 0.3 + 0.35 * k; s.armLf = 0.2 * k; s.armRf = 0.2 * k
+    s.flare = 0.12 * k
   } else if (pose === 'spin' || pose === 'twirl') {
-    // Pirouette : un tour complet (deux pour « twirl »), les bras qui s'ouvrent, la jupe qui s'évase
     const D = MOVES[pose]
     const k = clamp(t / D, 0, 1)
     const turns = pose === 'twirl' ? 2 : 1
     yaw = ease(k) * Math.PI * 2 * turns
     const open = Math.sin(k * Math.PI)
-    p.armL.rotation.z = 0.2 + open * (pose === 'twirl' ? 2.6 : 1.2); p.armR.rotation.z = -0.2 - open * (pose === 'twirl' ? 2.6 : 1.2)
-    p.foreL.rotation.set(0, 0, 0.2 * open); p.foreR.rotation.set(0, 0, -0.2 * open)
-    p.flare = open
-    p.skirt.rotation.y = -open * 0.4
-    p.rig.position.y = open * 0.01
-    p.head.rotation.x = -0.1 * open
+    s.armL = 0.12 + open * (pose === 'twirl' ? 2.6 : 1.1); s.armR = 0.12 + open * (pose === 'twirl' ? 2.6 : 1.1)
+    s.elbowL = 0.2; s.elbowR = 0.2
+    s.flare = open
+    s.skirtYaw = -open * 0.4
+    s.bounce = open * 0.01
+    s.headX = -0.1 * open
   } else if (pose === 'jump') {
     const k = clamp(t / MOVES.jump, 0, 1)
     const h = Math.max(0, Math.sin(k * Math.PI * 2)) * (k < 0.5 ? 1 : 0.6)
-    p.rig.position.y = h * 0.12
-    p.armL.rotation.z = 0.2 + h * 2.4; p.armR.rotation.z = -0.2 - h * 2.4
-    p.legL.rotation.x = -h * 0.5; p.legR.rotation.x = -h * 0.5
-    p.flare = h * 0.5
+    s.bounce = h * 0.12
+    s.armL = 0.12 + h * 2.4; s.armR = 0.12 + h * 2.4
+    s.kneeL = h * 0.7; s.kneeR = h * 0.7; s.legL = h * 0.35; s.legR = h * 0.35
+    s.flare = h * 0.5
   } else if (pose === 'waltz') {
-    // Pas de valse : un-deux-trois, de côté, en tournant doucement
     const beat = t * 2.6
     const sway = Math.sin(beat * Math.PI / 1.5)
-    p.rig.position.x = sway * 0.05
-    p.rig.position.y = Math.abs(Math.sin(beat * Math.PI)) * 0.012
-    p.rig.rotation.z = -sway * 0.05
+    s.bounce = Math.abs(Math.sin(beat * Math.PI)) * 0.012
+    s.sway = -sway * 0.06
     yaw = clamp(t / MOVES.waltz, 0, 1) * Math.PI * 2
-    p.armL.rotation.set(-0.3, 0, 1.3); p.foreL.rotation.set(-0.2, 0, 0.6)
-    p.armR.rotation.set(-0.6, 0, -0.6); p.foreR.rotation.set(-1.0, 0, 0)
-    p.head.rotation.z = sway * 0.1
-    p.flare = 0.25 + Math.abs(sway) * 0.2
-    p.skirt.rotation.y = -sway * 0.15
+    s.armL = 1.3; s.elbowL = 0.6; s.armR = 0.6; s.armRf = 0.6; s.elbowR = 1.0
+    s.headZ = sway * 0.1
+    s.flare = 0.25 + Math.abs(sway) * 0.2
+    s.skirtYaw = -sway * 0.15
   } else if (pose === 'arms') {
-    // Les bras en l'air qui ondulent, comme une vague
     const k = clamp(t / MOVES.arms, 0, 1)
     const up = Math.sin(k * Math.PI)
-    p.armL.rotation.z = 0.2 + up * 2.7 + Math.sin(t * 7) * 0.2 * up
-    p.armR.rotation.z = -0.2 - up * 2.7 + Math.sin(t * 7 + 1) * 0.2 * up
-    p.foreL.rotation.set(0, 0, Math.sin(t * 7) * 0.5 * up); p.foreR.rotation.set(0, 0, Math.sin(t * 7 + 1) * 0.5 * up)
-    p.rig.rotation.z = Math.sin(t * 3.5) * 0.06 * up
-    p.head.rotation.z = Math.sin(t * 3.5) * 0.12 * up
+    s.armL = 0.12 + up * 2.7 + Math.sin(t * 7) * 0.2 * up
+    s.armR = 0.12 + up * 2.7 + Math.sin(t * 7 + 1) * 0.2 * up
+    s.elbowL = Math.abs(Math.sin(t * 7)) * 0.5 * up; s.elbowR = Math.abs(Math.sin(t * 7 + 1)) * 0.5 * up
+    s.sway = Math.sin(t * 3.5) * 0.06 * up
+    s.headZ = Math.sin(t * 3.5) * 0.12 * up
   } else if (pose === 'bow') {
-    p.rig.position.y = -0.02
-    p.head.rotation.x = 0.35
-    p.rig.rotation.x = 0.12
-    p.armL.rotation.set(0.35, 0, 0.55); p.armR.rotation.set(0.35, 0, -0.55)
+    s.bounce = -0.02
+    s.headX = 0.35; s.lean = 0.2
+    s.armL = 0.55; s.armR = 0.55; s.armLf = 0.35; s.armRf = 0.35
+    s.kneeL = 0.3; s.kneeR = 0.3
   } else if (pose === 'walk' || pose === 'stride') {
-    const s = Math.sin(t * 8) * (pose === 'stride' ? -1 : 1)
-    p.legL.rotation.x = s * 0.4; p.legR.rotation.x = -s * 0.4
-    p.armL.rotation.x = -s * 0.35; p.armR.rotation.x = s * 0.35
-    p.rig.position.y = Math.abs(Math.cos(t * 8)) * 0.012
-    p.skirt.rotation.y = s * 0.06
-    p.flare = 0.05
+    const q = Math.sin(t * 8) * (pose === 'stride' ? -1 : 1)
+    s.legL = q * 0.4; s.legR = -q * 0.4
+    s.kneeL = Math.max(0, -q) * 0.4; s.kneeR = Math.max(0, q) * 0.4
+    s.armLf = -q * 0.35; s.armRf = q * 0.35
+    s.bounce = Math.abs(Math.cos(t * 8)) * 0.012
+    s.skirtYaw = q * 0.06
+    s.flare = 0.05
   }
-  // Les ailes battent doucement
-  p.wings.children.forEach(s => s.children.forEach(side => {
-    const sd = side.userData.side as number
-    if (sd) side.rotation.y = sd * (-0.5 - Math.sin(t * 5) * 0.12)
-  }))
   return yaw
 }

@@ -7,7 +7,7 @@ import { ICON } from '../core/icons'
 import { useFerme, soloRoyal, type RoyalSlot } from '../core/store'
 import { createStage, loader, loadThree, type Stage, type T3 } from '../core/three3d'
 import { particles, type Particles } from '../core/scene3d'
-import { makePrincess, posePrincess, MOVES, HEAD_Y, type Princess, type Pose, type Expr } from '../core/princess3d'
+import { makePrincess, posePrincess, MOVES, type Princess, type Pose, type Expr } from '../core/princess3d'
 import { makePet, type Pet } from '../core/pet3d'
 import { makeDecor, type Decor, type DecorId } from '../core/castle3d'
 import { addPrincessPage, idbPut } from '../core/atelierdb'
@@ -191,12 +191,14 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
     const at = (px: number, py: number, pz: number, lx: number, ly: number, lz: number, fov = 30) => {
       cam.fov = fov; cam.updateProjectionMatrix(); cam.position.set(px, py, pz); cam.lookAt(lx, ly, lz)
     }
-    if (f === 'head') at(0, 0.87, 0.66, 0, 0.8, 0)
-    else if (f === 'bust') at(0, 0.74, 1.0, 0, 0.62, 0)
-    else if (f === 'body' || f === 'card') at(0, 0.62, 2.35, 0, 0.5, 0)
-    else if (f === 'back') at(0, 0.66, 2.5, 0, 0.5, 0)
-    else if (f === 'hand') at(-0.12, 0.66, 1.1, -0.1, 0.55, 0)
-    else if (f === 'feet') at(0, 0.26, 1.1, 0, 0.14, 0)
+    // Cadrés sur elle : la hauteur de sa tête donne l'échelle
+    const hy = princess?.headY ?? 0.98
+    if (f === 'head') at(0, hy + 0.06, 0.78, 0, hy - 0.02, 0)
+    else if (f === 'bust') at(0, hy - 0.1, 1.2, 0, hy - 0.24, 0)
+    else if (f === 'body' || f === 'card') at(0, hy * 0.76, 2.8, 0, hy * 0.6, 0)
+    else if (f === 'back') at(0, hy * 0.8, 2.95, 0, hy * 0.6, 0)
+    else if (f === 'hand') at(-0.14, hy * 0.8, 1.3, -0.12, hy * 0.66, 0)
+    else if (f === 'feet') at(0, 0.3, 1.3, 0, 0.16, 0)
     else {
       const big = kind === 'unicorn' || kind === 'pony'
       at(0.2, big ? 0.62 : 0.3, big ? 1.9 : 1.0, 0, big ? 0.45 : 0.17, 0)
@@ -648,7 +650,7 @@ function onTap(me: State, h: Hit) {
   if (h.kind === 'doll') {
     const d = me.dolls[h.i]
     if (me.duo && me.active !== h.i) { me.active = h.i; renderPane(me); sfx('select', { vol: 0.4 }) }
-    if (h.part === 'face' || h.part === 'hair' || (h.point && d.p && h.point.y > (me.decor?.floorY ?? 0) + HEAD_Y - 0.1)) {
+    if (h.part === 'face' || h.part === 'hair' || (h.point && d.p && h.point.y > (me.decor?.floorY ?? 0) + d.p.headY - 0.12)) {
       const e: Expr[] = ['wink', 'kiss', 'love', 'joy']
       react(me, h.i, e[Math.floor(Math.random() * e.length)], 1.6)
       tone(1180, 0.08, 'sine', 0.05); tone(1480, 0.1, 'sine', 0.05, 0.08)
@@ -783,8 +785,8 @@ function lineArt(me: State): HTMLCanvasElement | null {
   const cam = new T.PerspectiveCamera(30, W / H, 0.05, 50)
   const fy = me.decor?.floorY ?? 0
   const petBig = me.dolls.some(d => d.look.pet === 'unicorn' || d.look.pet === 'pony')
-  cam.position.set(me.duo ? 0 : 0.12, fy + 0.66, me.duo || petBig ? 3.3 : 2.5)
-  cam.lookAt(me.duo ? 0 : 0.12, fy + 0.5, 0)
+  cam.position.set(me.duo ? 0 : 0.14, fy + 0.78, me.duo || petBig ? 3.9 : 2.95)
+  cam.lookAt(me.duo ? 0 : 0.14, fy + 0.59, 0)
   const saved: { m: import('three').Mesh; mat: import('three').Material | import('three').Material[]; vis: boolean }[] = []
   const meshes: import('three').Mesh[] = []
   me.dolls.forEach(d => {
@@ -816,7 +818,7 @@ function lineArt(me: State): HTMLCanvasElement | null {
     const ids = new Map<string, number>()
     let n = 1
     meshes.forEach((m, k) => {
-      const face = m.renderOrder === 2
+      const face = !!m.userData.feature
       m.visible = saved[k].vis && !face
       let key = String(m.userData.part || 'x')
       if (key === 'deco' || key === 'x') key += m.id
@@ -827,9 +829,9 @@ function lineArt(me: State): HTMLCanvasElement | null {
     idPx = read()
     // 2. Le visage (yeux, bouche) sur un corps blanc
     meshes.forEach((m, k) => {
-      const face = m.renderOrder === 2
+      const face = !!m.userData.feature
       m.visible = saved[k].vis
-      const src = saved[k].mat as import('three').MeshStandardMaterial
+      const src = (Array.isArray(saved[k].mat) ? saved[k].mat[0] : saved[k].mat) as import('three').MeshStandardMaterial
       m.material = face ? basic(0xffffff, src.map) : basic(0xffffff)
     })
     facePx = read()
@@ -1193,7 +1195,7 @@ export const dressup: GameDef = {
     const hideLoader = loader(holder, 'dressup')
     ;(async () => {
       const stage = await createStage(holder, {
-        sky: '#F3E4EA', fog: [7, 16], cam: duo ? [0, 1.08, 3.2] : [0.15, 1.02, 2.55], target: duo ? [0, 0.6, 0] : [0.05, 0.62, 0], fov: 40,
+        sky: '#F3E4EA', fog: [7, 16], cam: duo ? [0, 1.28, 3.8] : [0.15, 1.2, 3.0], target: duo ? [0, 0.7, 0] : [0.05, 0.72, 0], fov: 40,
         sun: { pos: [1.8, 4.2, 3.2], intensity: 2.1 }, hemi: ['#FFF4FA', '#C9A6B8', 1], exposure: 1.0
       })
       if (!me.running) { stage.dispose(); return }
@@ -1219,7 +1221,7 @@ export const dressup: GameDef = {
         me.ring = ring
       }
       me.camPos = stage.camera.position.clone()
-      me.camTgt = new stage.T.Vector3(...(duo ? [0, 0.6, 0] : [0.05, 0.62, 0]) as [number, number, number])
+      me.camTgt = new stage.T.Vector3(...(duo ? [0, 0.7, 0] : [0.05, 0.72, 0]) as [number, number, number])
       hideLoader()
       me.thumbs = await makeThumbs(await loadThree(), () => me.running && pr === me)
       renderPane(me)
@@ -1263,15 +1265,17 @@ export const dressup: GameDef = {
         let goalP: V3, goalT: V3
         if (me.ball) {
           const a = me.ball.t * 0.18
-          goalP = new T.Vector3(Math.sin(a) * 0.9, fy2 + 1.15, 3.2 + Math.cos(a) * 0.3)
-          goalT = new T.Vector3(0, fy2 + 0.62, 0)
+          goalP = new T.Vector3(Math.sin(a) * 1.05, fy2 + 1.35, 3.8 + Math.cos(a) * 0.35)
+          goalT = new T.Vector3(0, fy2 + 0.72, 0)
         } else if (me.tab === 'hair' || me.tab === 'face') {
-          goalP = new T.Vector3(ad.x + 0.05, fy2 + 0.98, 1.45)
-          goalT = new T.Vector3(ad.x, fy2 + 0.76, 0)
+          // Le visage en grand : sa tête au tiers haut de l'écran
+          const hy = ad.p?.headY ?? 0.98
+          goalP = new T.Vector3(ad.x + 0.05, fy2 + hy + 0.12, 1.6)
+          goalT = new T.Vector3(ad.x, fy2 + hy - 0.13, 0)
         } else if (duo) {
-          goalP = new T.Vector3(0, fy2 + 1.0, 3.2); goalT = new T.Vector3(0, fy2 + 0.55, 0)
+          goalP = new T.Vector3(0, fy2 + 1.18, 3.8); goalT = new T.Vector3(0, fy2 + 0.65, 0)
         } else {
-          goalP = new T.Vector3(0.15, fy2 + 0.93, 2.55); goalT = new T.Vector3(0.05, fy2 + 0.53, 0)
+          goalP = new T.Vector3(0.15, fy2 + 1.1, 3.0); goalT = new T.Vector3(0.05, fy2 + 0.63, 0)
         }
         me.camPos!.lerp(goalP, Math.min(1, dt * 2.5))
         me.camTgt!.lerp(goalT, Math.min(1, dt * 2.5))
@@ -1294,16 +1298,27 @@ export const dressup: GameDef = {
         get pending() { return me.thumbs?.pending() ?? 0 },
         get photos() { return me.photos },
         get ball() { return me.ball ? { moves: me.ball.moves.length, finale: me.ball.finale } : null },
-        /** Un point de l'écran sur une pièce de la princesse n° i. */
+        /** Un point de l'écran sur une pièce de la princesse n° i : on part
+            d'un point probable et on cherche autour, au toucher (les jupes
+            n'ont pas toutes la même forme). */
         screenOf(what: 'skirt' | 'head' | 'hair' | 'bodice', i = 0) {
           const st = me.stage, d = me.dolls[i]
           if (!st || !d.p) return null
           const T = st.T
-          const local = what === 'skirt' ? new T.Vector3(0.03, 0.22, 0.2) : what === 'bodice' ? new T.Vector3(0, 0.6, 0.06) : what === 'hair' ? new T.Vector3(0.06, HEAD_Y + 0.09, 0.02) : new T.Vector3(0, HEAD_Y, 0.1)
-          const w = d.p.obj.localToWorld(local)
-          w.project(st.camera)
+          const hy = d.p.headY
+          const local = what === 'skirt' ? new T.Vector3(0.1, 0.4, 0.15) : what === 'bodice' ? new T.Vector3(0, hy * 0.72, 0.08) : what === 'hair' ? new T.Vector3(0.05, hy + 0.1, 0) : new T.Vector3(0, hy - 0.02, 0.1)
           const rect = st.renderer.domElement.getBoundingClientRect()
-          return { x: rect.left + (w.x + 1) / 2 * rect.width, y: rect.top + (1 - w.y) / 2 * rect.height }
+          const scr = (v: V3) => { const w = d.p!.obj.localToWorld(v.clone()).project(st.camera); return { x: rect.left + (w.x + 1) / 2 * rect.width, y: rect.top + (1 - w.y) / 2 * rect.height } }
+          const c = scr(local)
+          const want = what === 'head' ? ['face', 'skin'] : [what]
+          for (let r = 0; r <= 8; r++) {
+            for (let a = 0; a < Math.max(1, r * 6); a++) {
+              const q = { x: c.x + Math.cos(a / Math.max(1, r * 6) * Math.PI * 2) * r * 9, y: c.y + Math.sin(a / Math.max(1, r * 6) * Math.PI * 2) * r * 9 }
+              const h = pick(me, q.x, q.y)
+              if (h.kind === 'doll' && h.i === i && want.includes(h.part || '')) return q
+            }
+          }
+          return c
         }
       }
     }

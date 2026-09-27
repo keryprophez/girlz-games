@@ -13,6 +13,7 @@
     "test:play": "node scripts/play.mjs"
   },
   "dependencies": {
+    "@pixiv/three-vrm": "^3.5.5",
     "@types/three": "^0.185.1",
     "cannon-es": "^0.20.0",
     "react": "^18.3.1",

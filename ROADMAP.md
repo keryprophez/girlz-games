@@ -763,6 +763,14 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   princesses sont des tampons de l'Atelier. `doll3d.ts` et `character.ts`
   sont sortis. **À mesurer sur la tablette** (`?fps`) : tissus satinés, deux
   princesses et un compagnon ; la résolution baisse d'elle-même sous 30 i/s.
+  Le soir même, la princesse en formes rondes est refusée (« un pantin de bois
+  de 1950 ») : elle devient le personnage VRM professionnel de pixiv — un vrai
+  visage et ses expressions (joie, surprise, clin d'œil, cœurs dans les
+  yeux), des yeux qui suivent le doigt, des cheveux qui ondulent — et les
+  dix mécaniques restent : les habits sont construits à sa mesure et liés à
+  son squelette, ses cheveux, ses yeux et sa peau se recolorent, la longueur
+  étire ses mèches, les coiffures attachées replient ses mèches du dos. Les
+  taches de rousseur sont peintes sur la texture de son visage.
 
 ---
 

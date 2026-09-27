@@ -72,10 +72,13 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            (`FARM`, les pions des jeux en DOM)
              royal.ts    ← LEUR princesse en données (27/09) : pièces, peintures
                            (couleur + motif) par pièce, cheveux, compagnon — testé
-             princess3d.ts ← LA PRINCESSE en 3D : `makePrincess(T, royal)`,
-                           tissu magique (`dye` : la teinture part du doigt),
-                           visage vivant (`face.expr`, `face.lookAt`),
-                           `posePrincess(p, 'cheer'|'spin'|'waltz'…)`
+             princess3d.ts ← LA PRINCESSE en 3D : le personnage VRM de pixiv
+                           (`assets/princess/princesse.vrm`, `@pixiv/three-vrm`)
+                           habillé par nous — `makePrincess(T, royal)`, habits
+                           liés à son squelette, tissu magique (`dye` : la
+                           teinture part du doigt), ses expressions
+                           (`face.expr`, `face.lookAt`), `posePrincess(p,
+                           'cheer'|'spin'|'waltz'…)` sur ses os normalisés
              pet3d.ts    ← son compagnon : licorne, poney, chaton, chiot
              castle3d.ts ← les décors qu'on touche : salle de bal, jardin, jour/nuit
              atelierdb.ts ← l'IndexedDB de l'Atelier (partagée avec la Princesse)
@@ -131,6 +134,13 @@ et on le récupère par le connecteur Drive (un sous-agent, le fichier arrive en
 base64). Une nouvelle planche se commande **avec la planche des plantes en
 image de référence** (`generate-image` de Canva l'accepte) : c'est ainsi que
 les fruits du Ninja (24/09, `public/assets/fruits/`) sont du même style.
+**Un personnage humain ne se construit pas en formes rondes** (27/09) : la
+première princesse, sphères et tubes, a été refusée le soir même (« sa tête
+ronde, on dirait un pantin de bois de 1950 »). Elle est maintenant le modèle
+VRM de démonstration de pixiv (licence VRM Public License 1.0 : modification
+et redistribution permises), allégé à 6 Mo ; ce qu'elle porte reste à nous
+(pièces construites, ajustées à son corps mesuré, liées à son squelette).
+Les animaux ronds de la ferme, eux, restent en formes rondes.
 Et avant toute nouvelle direction visuelle : **des maquettes au
 format de la tablette, montrées AVANT de coder** (c'est ainsi que le rendu du
 Potager et le ciel du Ninja ont été choisis).
@@ -282,6 +292,9 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Le doigt qui pilote tout seul** | Le Labyrinthe rejoignait la case sous le doigt par une recherche de chemin jusqu'à six cases (15/09, pour qu'un doigt rapide « ne décroche plus ») : le poussin prenait les virages tout seul, et le labyrinthe se jouait sans réfléchir (« il fait tout seul les virages », 27/09). Une aide qui fait le geste à la place de l'enfant retire le jeu : le poussin avance en ligne droite vers le doigt et cogne ; c'est au doigt de tourner. |
 | **Un tiroir qui se referme avale le doigt** | Un panneau qu'on cache en fondu (`opacity` + `visibility` retardée) reçoit ENCORE les touchers pendant sa transition : le premier trait après avoir choisi un pinceau tombait sur le tiroir (vécu dans l'Atelier, 27/09). `pointer-events:none` sur l'état fermé, tout de suite. |
 | **Bouton qui bouge, test qui attend** | Playwright attend qu'un élément soit « stable » avant de cliquer : sur un bouton animé en boucle (la poubelle armée qui se dandine), le clic part des secondes plus tard — après le désarmement. Au doigt ça marche ; dans un bot, `click({ force: true })`. |
+| **VRM : cheveux qui s'envolent** | Les ressorts (`springBoneManager`) sont calculés dans le monde : déplacer la princesse d'un coup (placement, duo) ou la tourner au doigt fait voler ses cheveux à l'horizontale. `joint.center = obj` (le groupe de la princesse) : ils ne réagissent plus qu'à ses gestes à elle. Et après avoir changé l'échelle ou la longueur des chaînes : `setInitState()` puis `reset()`. |
+| **VRM : ce que les noms ne disent pas** | Ses os d'yeux sont près du nez (± 1,7 cm) : le centre des yeux se mesure sur le maillage des iris. Les deux iris partagent LE MÊME dessin dans la texture (un seul cœur à peindre). `HairBack` n'est que l'arrière du crâne : les longues mèches sont dans `Hair_00` — pour une coiffure attachée, on replie leurs chaînes d'os sur leur racine. Une texture recopiée dans un canvas garde le `flipY` (false) de la texture glTF, sinon elle s'affiche à l'envers. |
+| **Habit lié à un squelette** | Un habit construit (corsage, manches, bottes) suit les gestes si on lui recopie les poids du sommet du corps le plus proche (`skinned()` dans `princess3d.ts`), la géométrie ramenée dans l'espace de liaison (os × inverse de liaison × `bindMatrix`, inversé). Le toucher (`raycast`) d'un `SkinnedMesh` passe d'abord par une sphère englobante calculée UNE fois : on l'agrandit, sinon une manche levée ne se touche plus. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
