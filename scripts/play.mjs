@@ -1010,13 +1010,20 @@ const prOpen = async (duo) => {
   // La princesse (un personnage VRM de 6 Mo) et ses vignettes : sous
   // swiftshader, une minute ; on sonde chaque seconde (sonder à chaque image
   // étouffe la page pendant la compilation des shaders)
-  await page.waitForFunction(() => window.__pr && window.__pr.ready, null, { timeout: 300000, polling: 1000 })
+  await prWait(() => window.__pr && window.__pr.ready, 'princesse prête')
   await prSettle()
 }
 /* Les vignettes de la garde-robe se calculent en 3D (une princesse hors
    écran) : tant qu'elles tournent, la page est prise et un clic peut rester
    bloqué. On attend qu'elles soient toutes là, et on clique en force. */
-const prSettle = () => page.waitForFunction(() => window.__pr && window.__pr.pending === 0, null, { timeout: 300000, polling: 1000 })
+const prSettle = () => prWait(() => window.__pr && window.__pr.pending === 0, 'vignettes calculées')
+/** Attendre, et dire où l'on en était si ça n'arrive pas. */
+const prWait = async (fn, what, timeout = 300000) => {
+  try { await page.waitForFunction(fn, null, { timeout, polling: 1000 }) } catch {
+    const st = await page.evaluate(() => window.__pr ? { ready: window.__pr.ready, pending: window.__pr.pending, tab: window.__pr.tab, looks: window.__pr.looks.length } : 'pas de __pr').catch(() => 'page perdue')
+    throw new Error(`${what} : délai dépassé (${JSON.stringify(st)})`)
+  }
+}
 await scenario('princesse-habiller-teindre-bal', async () => {
   await prOpen(false)
   // La jupe courte, au toucher
@@ -1069,10 +1076,10 @@ await scenario('princesse-habiller-teindre-bal', async () => {
       g.onerror = () => res(false)
     }
     rq.onerror = () => res(false)
-  }), null, { timeout: 30000, polling: 1000 })
+  }), null, { timeout: 120000, polling: 1000 })
   // Le bal : six pas, puis la révérence et l'écran de fin
   await page.locator('#prBall').click({ force: true, timeout: 120000 })
-  await page.locator('.pr-move').first().waitFor()
+  await page.locator('.pr-move').first().waitFor({ timeout: 120000 })
   for (let k = 0; k < 6; k++) {
     await page.locator('.pr-move').nth(k).click({ force: true, timeout: 120000 })
     await page.waitForFunction(n => window.__pr.ball && window.__pr.ball.moves >= n, k + 1, { timeout: 80000, polling: 250 })
