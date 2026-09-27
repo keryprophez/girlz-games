@@ -54,6 +54,9 @@ if (process.env.THROTTLE) {
 }
 const errors = []
 page.on('pageerror', e => errors.push(String(e)))
+// Les erreurs de console ne font pas échouer un bot, mais disent pourquoi il attend
+const consoleErrs = []
+page.on('console', m => { if (m.type() === 'error') consoleErrs.push(m.text().slice(0, 200)) })
 
 // Sans WebGL utilisable, aucun bot 3D ne peut jouer : on passe (avertissement)
 // plutôt que de bloquer un déploiement pour une lubie du runner.
@@ -1021,7 +1024,8 @@ const prSettle = () => prWait(() => window.__pr && window.__pr.pending === 0, 'v
 const prWait = async (fn, what, timeout = 300000) => {
   try { await page.waitForFunction(fn, null, { timeout, polling: 1000 }) } catch {
     const st = await page.evaluate(() => window.__pr ? { ready: window.__pr.ready, pending: window.__pr.pending, tab: window.__pr.tab, looks: window.__pr.looks.length } : 'pas de __pr').catch(() => 'page perdue')
-    throw new Error(`${what} : délai dépassé (${JSON.stringify(st)})`)
+    const toast = await page.evaluate(() => document.querySelector('.toast')?.textContent || '').catch(() => '')
+    throw new Error(`${what} : délai dépassé (${JSON.stringify(st)}) ${toast} ${[...errors, ...consoleErrs].slice(-5).join(' | ')}`)
   }
 }
 await scenario('princesse-habiller-teindre-bal', async () => {
@@ -1068,7 +1072,7 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   // La photo : rangée dans l'Atelier (dossier et coloriage)
   await page.locator('#prPhoto').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 60000, polling: 250 })
-  await page.waitForFunction(() => new Promise(res => {
+  await prWait(() => new Promise(res => {
     const rq = indexedDB.open('ferme-atelier', 2)
     rq.onsuccess = () => {
       const g = rq.result.transaction('pages').objectStore('pages').get('princesse:liste')
@@ -1076,7 +1080,7 @@ await scenario('princesse-habiller-teindre-bal', async () => {
       g.onerror = () => res(false)
     }
     rq.onerror = () => res(false)
-  }), null, { timeout: 120000, polling: 1000 })
+  }), 'coloriage rangé', 120000)
   // Le bal : six pas, puis la révérence et l'écran de fin
   await page.locator('#prBall').click({ force: true, timeout: 120000 })
   await page.locator('.pr-move').first().waitFor({ timeout: 120000 })
