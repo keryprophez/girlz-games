@@ -4,126 +4,98 @@ import { sGood, sNope, sPop, sWin, tone } from '../core/audio'
 import { confetti, FX } from '../core/fx'
 import { ICON } from '../core/icons'
 import { shake } from '../core/juice'
-import {
-  createStage, loader, orbitCam, dotTex, picker, loadModel, type Stage, type T3, type Orbit
-} from '../core/three3d'
+import { createStage, loader, type Stage, type T3 } from '../core/three3d'
 import { particles, toScreen, type Particles } from '../core/scene3d'
+import { makeCosmos, SUN_R, type Cosmos } from '../core/cosmos'
 
-/* Voyage dans l'Espace, en 3D — un vrai système solaire : des sphères
-   texturées (NASA, Solar System Scope) qui tournent autour d'un Soleil qui
-   éclaire tout le monde, les anneaux de Saturne en géométrie, et une fusée
-   qui s'envole vers la planète touchée pendant que la caméra la suit.
+/* Voyage dans l'Espace — refait le 27/09 au niveau de la maquette du père
+   (« refais le système solaire à ce niveau de qualité ») : le rendu est dans
+   `core/cosmos.ts` (ciel et Voie lactée, Soleil qui bout, Terre de nuit avec
+   ses villes, atmosphères, ombres des anneaux, vraies positions du jour, HDR
+   et halo lumineux). Ici, le JEU, qui garde tout ce qui marchait :
+   - aucune consigne à lire : une colonne de BILLES-PLANÈTES (les vraies
+     textures) sert de passeport et de raccourci, une lueur pulse autour d'une
+     planète pas encore vue, la voix dit le nom et la merveille (contenu,
+     règle 2) ;
+   - deux modes : Explore (jusqu'à la fête des huit planètes) et Trouve (la
+     voix dit une planète, on la cherche ; au deuxième essai la bonne
+     s'illumine — aucune sanction) ;
+   - la FUSÉE des filles : dessinée en 3D, la caméra de cinéma la suit dans
+     son vol en courbe, et elle se pose à côté de l'astre ;
+   - en bonus, les lunes (la Lune, Io, Europe, Ganymède, Callisto, Titan) et
+     Pluton se visitent aussi (la fête reste celle des huit planètes) ;
+   - le temps file : une tortue et un lièvre, sans un mot, règlent sa vitesse
+     (une semaine par seconde au départ, pour que tout bouge) ;
+   - on tourne autour au doigt, on pince pour zoomer, taper le ciel ramène au
+     système. La qualité baisse toute seule si la tablette peine. */
 
-   Repris le 22/09 : c'était le dernier jeu qui faisait LIRE (« Touche une
-   planète : ta fusée s'envole ! », « J'ai mon diplôme ! », compteur en
-   emoji, flèches en texte). Plus un mot de consigne :
-   - une colonne de BILLES-PLANÈTES (les vraies textures, qui tournent) sert
-     à la fois de passeport — elles s'allument une fois visitées — et de
-     raccourci pour les petites planètes dures à viser ;
-   - une lueur pulse autour d'une planète pas encore vue quand on attend :
-     c'est la démonstration du geste ;
-   - on fait tourner le système en glissant le doigt ;
-   - le nom de la planète et sa merveille s'affichent, et la voix les dit
-     (contenu pédagogique, règle 2) ; un haut-parleur les répète.
-   Deux modes, comme le Tour du Monde : Explore (la découverte, jusqu'à la
-   fête des huit planètes) et Trouve (la voix dit une planète, on la cherche ;
-   deuxième essai puis la bonne planète s'illumine — aucune sanction). */
+interface Info { id: string; fact: string; tex: string }
 
-interface Planet {
-  id: string; name: string; tex: string
-  orbit: number; radius: number; speed: number; tilt: number
-  base: string
-  ring?: [number, number, string]
-  clouds?: boolean
-  moons?: number
-  fact: string
-}
-
-const PLANETS: Planet[] = [
-  {
-    id: 'mercure', name: 'Mercure', orbit: 2.4, radius: 0.23, speed: 0.30, tilt: 0.02, tex: 'mercury.jpg',
-    base: '#9B8C79',
-    fact: 'Mercure ! La plus petite planète, et la plus rapide autour du Soleil. Le jour il y fait super chaud, et la nuit super froid.'
-  },
-  {
-    id: 'venus', name: 'Vénus', orbit: 3.1, radius: 0.34, speed: 0.23, tilt: 0.05, tex: 'venus.jpg',
-    base: '#E8C377',
-    fact: 'Vénus ! La planète la plus chaude de toutes, plus chaude qu\'un four, à cause de ses gros nuages tout épais.'
-  },
-  {
-    id: 'terre', name: 'la Terre', orbit: 3.9, radius: 0.38, speed: 0.19, tilt: 0.41, tex: 'earth.jpg',
-    base: '#2E6BA8', clouds: true, moons: 1,
-    fact: 'La Terre, c\'est chez nous ! La seule planète avec de l\'eau bleue, des nuages blancs et plein d\'animaux.'
-  },
-  {
-    id: 'mars', name: 'Mars', orbit: 4.7, radius: 0.29, speed: 0.16, tilt: 0.44, moons: 2, tex: 'mars.jpg',
-    base: '#B4502E',
-    fact: 'Mars, la planète rouge ! Elle est couverte de poussière rouge, et des petits robots s\'y promènent pour l\'explorer.'
-  },
-  {
-    id: 'jupiter', name: 'Jupiter', orbit: 6.0, radius: 0.88, speed: 0.10, tilt: 0.05, tex: 'jupiter.jpg',
-    base: '#D8B98C',
-    moons: 3,
-    fact: 'Jupiter, la plus GROSSE planète ! Si grande qu\'elle pourrait avaler mille Terres. Elle a une tempête géante toute rouge.'
-  },
-  {
-    id: 'saturne', name: 'Saturne', orbit: 7.3, radius: 0.74, speed: 0.075, tilt: 0.47, tex: 'saturn.jpg',
-    base: '#E2CE9C', ring: [1.35, 2.35, '#E4D2A4'],
-    fact: 'Saturne et ses magnifiques anneaux ! Ils sont faits de glace et de cailloux qui brillent dans la lumière du Soleil.'
-  },
-  {
-    id: 'uranus', name: 'Uranus', orbit: 8.5, radius: 0.52, speed: 0.055, tilt: 1.71, tex: 'uranus.jpg',
-    base: '#8FD4DC', ring: [1.5, 1.9, '#BFE6EC'],
-    fact: 'Uranus ! Elle est couchée sur le côté et roule comme une bille. Brrr, c\'est une planète toute bleue et très très froide.'
-  },
-  {
-    id: 'neptune', name: 'Neptune', orbit: 9.5, radius: 0.50, speed: 0.042, tilt: 0.5, tex: 'neptune.jpg',
-    base: '#2A4FA0',
-    fact: 'Neptune, la planète la plus loin du Soleil ! Elle est toute bleue, avec les vents les plus rapides de tout le système solaire.'
-  }
+const PLANETS: Info[] = [
+  { id: 'mercure', tex: 'mercury.jpg', fact: 'Mercure ! La plus petite planète, et la plus rapide autour du Soleil. Le jour il y fait super chaud, et la nuit super froid.' },
+  { id: 'venus', tex: 'venus.jpg', fact: 'Vénus ! La planète la plus chaude de toutes, plus chaude qu\'un four, à cause de ses gros nuages tout épais.' },
+  { id: 'terre', tex: 'earth_day.jpg', fact: 'La Terre, c\'est chez nous ! La seule planète avec de l\'eau bleue, des nuages blancs et plein d\'animaux. Regarde, la nuit, les villes s\'allument !' },
+  { id: 'mars', tex: 'mars.jpg', fact: 'Mars, la planète rouge ! Elle est couverte de poussière rouge, et des petits robots s\'y promènent pour l\'explorer.' },
+  { id: 'jupiter', tex: 'jupiter.jpg', fact: 'Jupiter, la plus GROSSE planète ! Si grande qu\'elle pourrait avaler mille Terres. Elle a une tempête géante toute rouge, et quatre grosses lunes.' },
+  { id: 'saturne', tex: 'saturn.jpg', fact: 'Saturne et ses magnifiques anneaux ! Ils sont faits de glace et de cailloux qui brillent dans la lumière du Soleil.' },
+  { id: 'uranus', tex: 'uranus.jpg', fact: 'Uranus ! Elle est couchée sur le côté et roule comme une bille. Brrr, c\'est une planète toute bleue et très très froide.' },
+  { id: 'neptune', tex: 'neptune.jpg', fact: 'Neptune, la planète la plus loin du Soleil ! Elle est toute bleue, avec les vents les plus rapides de tout le système solaire.' }
 ]
+const BONUS: Info[] = [
+  { id: 'soleil', tex: 'sun.jpg', fact: 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.' },
+  { id: 'pluton', tex: 'moon.jpg', fact: 'Pluton, une planète naine toute petite, si loin du Soleil qu\'il y fait glacial. Elle met deux cent quarante-huit ans à en faire le tour !' },
+  { id: 'lune', tex: 'moon.jpg', fact: 'La Lune ! Elle tourne autour de la Terre, et des astronautes ont marché dessus.' },
+  { id: 'io', tex: 'moon.jpg', fact: 'Io, une lune de Jupiter pleine de volcans qui crachent du soufre jaune !' },
+  { id: 'europe', tex: 'moon.jpg', fact: 'Europe, une lune de Jupiter couverte de glace. Dessous, il y a peut-être un océan !' },
+  { id: 'ganymede', tex: 'moon.jpg', fact: 'Ganymède, la plus grosse lune de tout le système solaire : elle est plus grosse que Mercure !' },
+  { id: 'callisto', tex: 'moon.jpg', fact: 'Callisto, une lune de Jupiter toute couverte de cratères.' },
+  { id: 'titan', tex: 'venus.jpg', fact: 'Titan, la grosse lune de Saturne, cachée sous un épais brouillard orange.' }
+]
+const INFO: Record<string, Info> = Object.fromEntries([...PLANETS, ...BONUS].map(i => [i.id, i]))
+/** Les billes : le Soleil, les huit planètes, Pluton. */
+const BALLS = ['soleil', ...PLANETS.map(p => p.id), 'pluton']
 
-const SUN_FACT = 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.'
+/** La vitesse du temps (jours par seconde) : la tortue et le lièvre. */
+const RATES = [0, 1 / 24, 1, 7, 30.44, 365.25]
+const RATE0 = 3
 
-type Mesh = import('three').Mesh
-type Group = import('three').Group
-type Vec3 = import('three').Vector3
-
-interface PlanetObj {
-  def: Planet
-  grp: Group
-  mesh: Mesh
-  hit: Mesh
-  clouds: Mesh | null
-  moons: { m: Mesh; d: number; s: number; ph: number }[]
-  phase: number
-}
-
+const SYSTEM = 'systeme'
 type Mode = 'explore' | 'trouve'
+type V3 = import('three').Vector3
+type Group = import('three').Group
+type Mesh = import('three').Mesh
+interface View { yaw: number; pitch: number; distR: number }
+interface Travel { id: string; arr: View; from: V3; lookFrom: V3; t: number; dur: number }
 
 interface State {
   stage: Stage
   T: T3
+  cosmos: Cosmos
   fx: Particles
-  planets: PlanetObj[]
-  sun: Mesh
-  sunHit: Mesh
-  glow: import('three').Sprite
+  rocket: { group: Group; flame: Mesh; flameMat: import('three').ShaderMaterial }
   halo: import('three').Sprite
-  fill: import('three').DirectionalLight
-  rocket: { group: Group; flame: Mesh }
-  orbit: Orbit
+  camLight: import('three').DirectionalLight
   mode: Mode
   visited: Set<string>
-  /** La fusée vole vers (ou est posée sur) cette planète. */
-  target: string | null
-  flyT: number
+  /** Là où la caméra regarde (un astre, ou le système entier). */
+  target: string
+  travel: Travel | null
+  view: View
+  tgtView: View
+  vel: { yaw: number; pitch: number }
+  lookTarget: V3
+  baseFov: number
+  /** La fusée est posée à côté de cet astre (décalage dans le monde). */
+  rocketAt: string
+  rocketOff: V3
   arrived: boolean
-  /** Temps simulé du système (les orbites). */
-  t: number
+  jd: number
+  spinJd: number
+  rate: number
   /** Secondes sans geste : la lueur de démonstration apparaît après 3 s. */
   idle: number
   finaled: boolean
+  dragging: boolean
   quiz: { order: string[]; i: number; tries: number; errors: number; wanted: string | null; lock: boolean }
   ui: {
     arena: HTMLElement
@@ -137,73 +109,35 @@ interface State {
     dots: HTMLElement
     hint: HTMLElement
     bar: HTMLElement
+    time: HTMLElement
   }
-  tmp: Vec3
-  tmp2: Vec3
-  goal: Vec3
+  perf: { avg: number; last: number; frames: number; lastAdapt: number; maxPr: number }
+  tmp: V3
+  tmp2: V3
+  tmp3: V3
 }
 
 let ctx: GameContext
 let sp: State | null = null
 
 const base = () => import.meta.env.BASE_URL + 'assets/space/'
-const isSun = (id: string) => id === 'soleil'
-const nameOf = (id: string) => isSun(id) ? 'le Soleil' : PLANETS.find(p => p.id === id)!.name
-const texOf = (id: string) => isSun(id) ? 'sun.jpg' : PLANETS.find(p => p.id === id)!.tex
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+const isPlanet = (id: string) => PLANETS.some(p => p.id === id)
 
 /** Retour au système : un soleil et son orbite (pas de flèche à interpréter). */
 const ICON_SYSTEM = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4.6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.6" fill="currentColor"/><circle cx="20.4" cy="14.3" r="1.9" fill="currentColor"/></svg>`
+/** La tortue (le temps ralentit) et le lièvre (il file), en formes pleines. */
+const ICON_TURTLE = `<svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M8 30c0-9 7-15 16-15s16 6 16 15H8z"/><circle cx="42" cy="27" r="4.5" fill="currentColor"/><rect x="11" y="30" width="6" height="7" rx="3" fill="currentColor"/><rect x="31" y="30" width="6" height="7" rx="3" fill="currentColor"/><path fill="none" stroke="rgba(0,0,0,.28)" stroke-width="2" d="M16 29l4-8h8l4 8M24 15v6"/></svg>`
+const ICON_HARE = `<svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="22" cy="30" rx="13" ry="8.5" fill="currentColor"/><circle cx="36" cy="23" r="6.5" fill="currentColor"/><path fill="currentColor" d="M34 18c-3-8-1-13 2-13s3 7 1 13zM38.5 18c0-8 3-12 5.5-11.5s1 7-3 12z"/><circle cx="9" cy="28" r="3.5" fill="currentColor"/><path fill="currentColor" d="M26 36l8 3v2h-10zM12 35l-4 5h8z"/><path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M2 20h7M4 25h5M2 30h4"/></svg>`
 
 /** Une bille-planète : la vraie texture, qui défile comme une planète qui tourne. */
 function ballHTML(id: string, cls = '') {
-  const ringed = id === 'saturne' || id === 'uranus'
-  return `<span class="sp3-ball ${cls}${ringed ? ' ringed' : ''}${isSun(id) ? ' sun' : ''}" data-id="${id}"
-    style="background-image:url(${base()}${texOf(id)})"></span>`
+  const ringed = id === 'saturne'
+  const info = INFO[id]
+  return `<span class="sp3-ball ${cls}${ringed ? ' ringed' : ''}${id === 'soleil' ? ' sun' : ''}${id === 'pluton' ? ' dwarf' : ''}" data-id="${id}"
+    style="background-image:url(${base()}${info.tex})"></span>`
 }
 
-/* ---------- Textures : de VRAIES images (NASA Blue Marble pour la Terre,
-   Solar System Scope CC BY 4.0 pour les autres, voir CREDITS.md) ---------- */
-function realTex(T: T3, stage: Stage, file: string) {
-  const t = new T.TextureLoader().load(base() + file)
-  t.colorSpace = T.SRGBColorSpace
-  t.anisotropy = 4
-  return stage.keep(t)
-}
-
-/** Anneau : la texture est une bande radiale (transparence incluse) ; on
-    recalcule les UV du RingGeometry pour qu'elle s'enroule du bord intérieur
-    au bord extérieur. */
-function ringUVs(T: T3, geo: import('three').RingGeometry, ri: number, ro: number) {
-  const pos = geo.attributes.position, uv = geo.attributes.uv
-  const v = new T.Vector3()
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i)
-    uv.setXY(i, (v.length() - ri) / (ro - ri), 0.5)
-  }
-  uv.needsUpdate = true
-}
-
-function cloudTex(T: T3) {
-  const c = document.createElement('canvas')
-  c.width = 512; c.height = 256
-  const g = c.getContext('2d')!
-  for (let i = 0; i < 130; i++) {
-    const x = Math.random() * 512, y = 20 + Math.random() * 216
-    const r = 8 + Math.random() * 30
-    const grad = g.createRadialGradient(x, y, 1, x, y, r)
-    grad.addColorStop(0, 'rgba(255,255,255,.85)')
-    grad.addColorStop(1, 'rgba(255,255,255,0)')
-    g.fillStyle = grad
-    g.save(); g.translate(x, y); g.scale(2.1, 1); g.translate(-x, -y)
-    g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore()
-  }
-  const t = new T.CanvasTexture(c)
-  t.colorSpace = T.SRGBColorSpace
-  return t
-}
-
-/** Un anneau lumineux doux : la lueur qui montre « touche-moi ». */
 function haloTex(T: T3) {
   const c = document.createElement('canvas')
   c.width = c.height = 128
@@ -219,69 +153,208 @@ function haloTex(T: T3) {
   return t
 }
 
-async function makeRocket(T: T3) {
-  const stackParts = await Promise.all(
-    ['rocket_baseA', 'rocket_fuelA', 'rocket_topA'].map(n => loadModel('space', n))
-  )
-  const stack = new T.Group()
-  const box = new T.Box3(), v = new T.Vector3()
-  let h = 0
-  for (const p of stackParts) {
-    box.setFromObject(p)
-    p.position.y = h - box.min.y
-    h += box.getSize(v).y
-    stack.add(p)
-  }
-  // ~0.6 unité, origine au CENTRE : la navigation fait lookAt + rotateX(π/2)
-  stack.scale.setScalar(0.62 / h)
-  stack.position.y = -0.31
+/* ---------- La fusée : dessinée en 3D (tour, ailerons, hublot, flamme qui
+   brûle en HDR — le halo lumineux la fait rayonner). Longueur 1, nez en +y,
+   origine au centre. ---------- */
+function makeRocket(T: T3, stage: Stage) {
   const group = new T.Group()
-  const flame = new T.Mesh(
-    new T.ConeGeometry(0.06, 0.22, 12),
-    new T.MeshBasicMaterial({ color: 0xFFB03A, transparent: true, opacity: 0.9 })
-  )
-  flame.position.y = -0.36
+  const white = new T.MeshStandardMaterial({ color: 0xE9EAF0, roughness: 0.32, metalness: 0.15 })
+  const red = new T.MeshStandardMaterial({ color: 0xC8324C, roughness: 0.38, metalness: 0.1 })
+  const metal = new T.MeshStandardMaterial({ color: 0x6E7280, roughness: 0.35, metalness: 0.7 })
+  const V2 = (x: number, y: number) => new T.Vector2(x, y)
+  const body = new T.Mesh(new T.LatheGeometry([V2(0, -0.44), V2(0.13, -0.44), V2(0.165, -0.36), V2(0.185, -0.2), V2(0.185, 0.05), V2(0.165, 0.2), V2(0.14, 0.27)], 40), white)
+  const nose = new T.Mesh(new T.LatheGeometry([V2(0.141, 0.26), V2(0.12, 0.33), V2(0.08, 0.42), V2(0.035, 0.48), V2(0, 0.5)], 40), red)
+  const band = new T.Mesh(new T.TorusGeometry(0.186, 0.014, 10, 40), red)
+  band.rotation.x = Math.PI / 2; band.position.y = -0.3
+  const glass = new T.Mesh(new T.SphereGeometry(0.07, 24, 16), new T.MeshStandardMaterial({ color: 0x3A86C8, roughness: 0.08, metalness: 0.2, emissive: 0x5AAEF0, emissiveIntensity: 0.35 }))
+  glass.scale.set(1, 1, 0.45); glass.position.set(0, 0.08, 0.172)
+  const rim = new T.Mesh(new T.TorusGeometry(0.072, 0.012, 10, 32), new T.MeshStandardMaterial({ color: 0xE3B04B, roughness: 0.3, metalness: 0.8 }))
+  rim.position.set(0, 0.08, 0.168)
+  const nozzle = new T.Mesh(new T.CylinderGeometry(0.09, 0.12, 0.08, 24, 1, true), metal)
+  nozzle.position.y = -0.48
+  group.add(body, nose, band, glass, rim, nozzle)
+  const finShape = new T.Shape()
+  finShape.moveTo(0, 0); finShape.lineTo(0.17, -0.12); finShape.quadraticCurveTo(0.2, -0.2, 0.15, -0.2); finShape.lineTo(0, -0.14)
+  const finGeo = new T.ExtrudeGeometry(finShape, { depth: 0.02, bevelEnabled: true, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2 })
+  for (let k = 0; k < 3; k++) {
+    const f = new T.Mesh(finGeo, red)
+    const holder = new T.Group()
+    f.position.set(0.15, -0.24, -0.01)
+    holder.add(f)
+    holder.rotation.y = (k / 3) * Math.PI * 2 + Math.PI / 6
+    group.add(holder)
+  }
+  // La flamme : un cône additif, un cœur blanc très lumineux qui vacille
+  const flameMat = new T.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uPow: { value: 0.5 } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float uTime; uniform float uPow; varying vec2 vUv;
+    void main(){
+      float y = vUv.y;
+      float flick = 0.8 + 0.2 * sin(uTime * 40.0 + y * 12.0) * sin(uTime * 23.0);
+      float core = pow(y, 1.6) * flick;
+      vec3 col = mix(vec3(1.0, 0.35, 0.08), vec3(1.0, 0.95, 0.8), pow(y, 3.0));
+      float edge = 1.0 - abs(vUv.x - 0.5) * 2.0;
+      gl_FragColor = vec4(col * core * (0.6 + 0.4 * edge) * (2.0 + 6.0 * uPow), 1.0);
+    }`
+  })
+  const flame = new T.Mesh(new T.ConeGeometry(0.085, 0.42, 20, 1, true), flameMat)
   flame.rotation.x = Math.PI
-  group.add(stack, flame)
-  return { group, flame }
+  flame.position.y = -0.72
+  group.add(flame)
+  group.traverse(o => { const m = o as Mesh; if (m.isMesh && m !== flame) m.castShadow = false })
+  ;[white, red, metal].forEach(m => stage.keep(m))
+  return { group, flame, flameMat }
 }
 
-/* ---------- Le système ---------- */
-function planetPos(p: PlanetObj, t: number, out: Vec3) {
-  const a = p.phase + t * p.def.speed
-  return out.set(Math.sin(a) * p.def.orbit, 0, Math.cos(a) * p.def.orbit)
+/* ---------- La caméra : on vise un astre (ou le système), vol en courbe ---------- */
+const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
+const radiusOf = (me: State, id: string) => id === SYSTEM ? SUN_R : me.cosmos.radius(id)
+const targetPos = (me: State, id: string, out: V3) => id === SYSTEM ? out.set(0, 0, 0) : me.cosmos.worldPos(id, out)
+
+function arrivalView(me: State, id: string): View {
+  if (id === SYSTEM) return { yaw: -0.6, pitch: 0.75, distR: 55 }
+  if (id === 'soleil') return { yaw: 0.5, pitch: 0.18, distR: 5 }
+  const p = me.cosmos.worldPos(id, me.tmp)
+  // Vue de trois quarts : la planète éclairée de côté, le Soleil derrière l'épaule
+  const yaw = Math.atan2(-p.x, -p.z) + 0.75
+  const b = me.cosmos.byId[id]
+  return { yaw, pitch: b.rings ? 0.32 : 0.18, distR: b.rings ? 5.2 : b.parent ? 3.4 : 3.2 }
+}
+function distLimits(me: State, id: string): [number, number] {
+  if (id === SYSTEM) return [6, 120]
+  if (id === 'soleil') return [1.6, 40]
+  return me.cosmos.byId[id].rings ? [1.4, 60] : [1.25, 60]
+}
+function orbitCamPos(me: State, id: string, v: View, out: V3) {
+  const p = targetPos(me, id, me.tmp3)
+  const d = radiusOf(me, id) * v.distR
+  const cp = Math.cos(v.pitch)
+  return out.set(p.x + d * cp * Math.sin(v.yaw), p.y + d * Math.sin(v.pitch), p.z + d * cp * Math.cos(v.yaw))
 }
 
-function bodyPos(me: State, id: string, out: Vec3): number {
-  if (isSun(id)) { out.set(0, 0, 0); return 0.92 }
-  const p = me.planets.find(x => x.def.id === id)!
-  out.copy(p.grp.position)
-  return p.def.radius
+/** Part vers `id` : vol en courbe, la fusée devant la caméra. Renvoie sa durée (s). */
+function travelTo(me: State, id: string): number {
+  const T = me.T
+  const arr = arrivalView(me, id)
+  const from = me.stage.camera.position.clone()
+  const dist = from.distanceTo(orbitCamPos(me, id, arr, new T.Vector3()))
+  const dur = Math.min(4, Math.max(1.8, 1.4 + 0.6 * Math.log(1 + dist / 4)))
+  me.travel = { id, arr, from, lookFrom: me.lookTarget.clone(), t: 0, dur }
+  me.target = id
+  me.arrived = false
+  if (id !== SYSTEM) {
+    // La place de la fusée à l'arrivée : à droite de l'astre, un peu au-dessus
+    const R = radiusOf(me, id)
+    const p = targetPos(me, id, new T.Vector3())
+    const cam = orbitCamPos(me, id, arr, new T.Vector3())
+    const toCam = cam.sub(p).normalize()
+    const right = new T.Vector3().crossVectors(toCam.clone().negate(), new T.Vector3(0, 1, 0)).normalize()
+    me.rocketOff.copy(right.multiplyScalar(R * 1.45)).addScaledVector(new T.Vector3(0, 1, 0), R * 0.45).addScaledVector(toCam, R * 0.7)
+  }
+  return dur
+}
+
+function updateCamera(me: State, dt: number) {
+  const cam = me.stage.camera
+  const tr = me.travel
+  if (tr) {
+    tr.t = Math.min(1, tr.t + dt / tr.dur)
+    const s = ease(tr.t)
+    const end = orbitCamPos(me, tr.id, tr.arr, me.tmp)
+    const mid = tr.from.clone().add(end).multiplyScalar(0.5)
+    mid.y += tr.from.distanceTo(end) * 0.18
+    const a = tr.from.clone().lerp(mid, s), b = mid.clone().lerp(end, s)
+    cam.position.copy(a.lerp(b, s))
+    const lt = ease(Math.min(1, tr.t / 0.55))
+    me.lookTarget.copy(tr.lookFrom).lerp(targetPos(me, tr.id, me.tmp2), lt)
+    cam.lookAt(me.lookTarget)
+    cam.fov = me.baseFov + 10 * Math.sin(Math.PI * s)
+    cam.updateProjectionMatrix()
+    if (tr.t >= 1) {
+      Object.assign(me.view, tr.arr); Object.assign(me.tgtView, tr.arr)
+      me.travel = null
+      cam.fov = me.baseFov; cam.updateProjectionMatrix()
+      if (tr.id !== SYSTEM) { me.rocketAt = tr.id; arrive(me) }
+    }
+    return
+  }
+  const v = me.view, g = me.tgtView
+  if (!me.dragging) {
+    g.yaw += me.vel.yaw; g.pitch = Math.max(-1.45, Math.min(1.45, g.pitch + me.vel.pitch))
+    me.vel.yaw *= 0.9; me.vel.pitch *= 0.9
+    // Au repos, la caméra tourne doucement autour (le système, ou l'astre visité)
+    if (me.idle > 2) g.yaw += dt * (me.target === SYSTEM ? 0.025 : 0.06)
+  }
+  const k = 1 - Math.pow(0.0005, dt)
+  v.yaw += (g.yaw - v.yaw) * k
+  v.pitch += (g.pitch - v.pitch) * k
+  v.distR *= Math.pow(g.distR / v.distR, Math.min(1, k * 0.8))
+  orbitCamPos(me, me.target, v, cam.position)
+  me.lookTarget.copy(targetPos(me, me.target, me.tmp))
+  cam.lookAt(me.lookTarget)
+}
+
+/** La fusée : devant la caméra pendant le vol, puis posée à côté de l'astre. */
+function updateRocket(me: State, dt: number, now: number) {
+  const T = me.T
+  const g = me.rocket.group
+  const cam = me.stage.camera
+  const tr = me.travel
+  const parkedR = radiusOf(me, me.rocketAt)
+  const parkScale = Math.min(1.1, Math.max(0.1, parkedR * 0.3))
+  const parked = targetPos(me, me.rocketAt, me.tmp).add(me.rocketOff)
+  parked.y += Math.sin(now / 700) * parkedR * 0.04
+  const up = new T.Vector3(0, 1, 0)
+  const toBody = targetPos(me, me.rocketAt, me.tmp2).sub(parked).normalize()
+  const parkedDir = up.clone().multiplyScalar(0.85).addScaledVector(toBody, 0.5).normalize()
+  let thrust = 0.15
+  if (tr && tr.id !== SYSTEM) {
+    // En route : la fusée file devant la caméra, vue de dos, flamme allumée
+    const fwd = new T.Vector3(0, 0, -1).applyQuaternion(cam.quaternion)
+    const camUp = new T.Vector3(0, 1, 0).applyQuaternion(cam.quaternion)
+    const chase = cam.position.clone().addScaledVector(fwd, 2.2).addScaledVector(camUp, -0.42)
+    const destR = radiusOf(me, tr.id)
+    const dest = targetPos(me, tr.id, new T.Vector3()).add(me.rocketOff)
+    const kk = T.MathUtils.smoothstep(tr.t, 0.72, 1)
+    g.position.copy(chase.lerp(dest, kk))
+    const dir = fwd.clone().lerp(parkedDir, kk).normalize()
+    g.quaternion.setFromUnitVectors(up, dir)
+    g.scale.setScalar(T.MathUtils.lerp(0.42, Math.min(1.1, Math.max(0.1, destR * 0.3)), kk))
+    thrust = 1 - kk * 0.8
+  } else {
+    g.position.lerp(parked, Math.min(1, dt * 4))
+    g.quaternion.slerp(new T.Quaternion().setFromUnitVectors(up, parkedDir), Math.min(1, dt * 3))
+    g.scale.setScalar(parkScale)
+  }
+  me.rocket.flameMat.uniforms.uTime.value = now / 1000
+  me.rocket.flameMat.uniforms.uPow.value = thrust
+  me.rocket.flame.scale.set(1, 0.6 + thrust * 1.1 + Math.sin(now / 45) * 0.08, 1)
 }
 
 /* ---------- Explore ---------- */
 function fly(me: State, id: string) {
-  me.target = id
-  me.flyT = 0
-  me.arrived = false
   me.idle = 0
   me.ui.card.classList.add('off')
   me.ui.hint.classList.add('off')
   tone(300, 0.18, 'sawtooth', 0.06)
   tone(520, 0.16, 'sine', 0.07, 0.12)
+  travelTo(me, id)
   markBalls(me)
 }
 
 function arrive(me: State) {
-  const id = me.target!
+  const id = me.target
   me.arrived = true
-  const r = bodyPos(me, id, me.tmp)
-  me.fx.burst(me.tmp, { count: 26, color: ['#FFE08A', '#FFFFFF', isSun(id) ? '#FFB13A' : me.planets.find(p => p.def.id === id)!.def.base], speed: 1.4 + r, spread: 1, life: 0.9, size: 0.5, gravity: 0 })
+  const R = radiusOf(me, id)
+  const p = targetPos(me, id, me.tmp)
+  me.fx.burst(p, { count: 26, color: ['#FFE08A', '#FFFFFF', me.cosmos.byId[id]?.color || '#FFB13A'], speed: 1.4 * R + 0.6, spread: 1, life: 0.9, size: R * 0.5, gravity: 0 })
   if (me.mode === 'trouve') return
-  const isNew = !isSun(id) && !me.visited.has(id)
+  const isNew = isPlanet(id) && !me.visited.has(id)
   if (isNew) { me.visited.add(id); sGood() } else sPop()
-  const fact = isSun(id) ? SUN_FACT : PLANETS.find(p => p.id === id)!.fact
-  me.ui.cardName.textContent = cap(nameOf(id))
+  const fact = INFO[id]?.fact || ''
+  me.ui.cardName.textContent = cap(me.cosmos.byId[id].name)
   me.ui.cardName.classList.toggle('new', isNew)
   me.ui.cardText.textContent = fact
   me.ui.card.classList.remove('off')
@@ -290,21 +363,21 @@ function arrive(me: State) {
   markBalls(me)
 }
 
+/** Retour au système. Renvoie la durée du vol (s). */
 function home(me: State) {
-  me.target = null
-  me.flyT = 0
-  me.arrived = false
   me.idle = 0
   me.ui.card.classList.add('off')
   sPop()
+  const dur = travelTo(me, SYSTEM)
   markBalls(me)
   if (me.mode === 'explore' && me.visited.size >= PLANETS.length && !me.finaled) finale(me)
+  return dur
 }
 
 function markBalls(me: State) {
   me.ui.balls.querySelectorAll<HTMLElement>('.sp3-ball').forEach(b => {
     const id = b.dataset.id!
-    b.classList.toggle('seen', isSun(id) || me.visited.has(id))
+    b.classList.toggle('seen', !isPlanet(id) || me.visited.has(id))
     b.classList.toggle('here', me.target === id)
   })
 }
@@ -314,9 +387,12 @@ function finale(me: State) {
   me.finaled = true
   sWin(); confetti(); FX.fireworks?.()
   me.ui.balls.classList.add('party')
-  for (const p of me.planets) me.fx.burst(p.grp.position, { count: 18, color: ['#FFE08A', '#FFFFFF', p.def.base], speed: 1.6, life: 1.2, size: 0.45, gravity: 0 })
+  for (const p of PLANETS) {
+    const R = me.cosmos.radius(p.id)
+    me.fx.burst(me.cosmos.worldPos(p.id, me.tmp), { count: 18, color: ['#FFE08A', '#FFFFFF', me.cosmos.byId[p.id].color], speed: 6 + R * 2, life: 1.4, size: 4 + R, gravity: 0 })
+  }
   ctx.say('Bravo ! Tu as visité les huit planètes de la famille du Soleil.')
-  ctx.finish({ title: 'Astronaute diplômée !', msg: 'Tu as visité les huit planètes', stars: 3, outroMs: 3200 })
+  ctx.finish({ title: 'Astronaute diplômée !', msg: 'Tu as visité les huit planètes', stars: 3, outroMs: 3600 })
 }
 
 /* ---------- Trouve ---------- */
@@ -330,10 +406,20 @@ function nextQuestion(me: State) {
   // En douce on MONTRE la planète cherchée (on la reconnaît à son allure) ;
   // ensuite il faut la retrouver d'après son nom
   me.ui.askImg.innerHTML = ctx.tier === 'easy' ? ballHTML(id, 'big') : ''
-  me.ui.askText.textContent = cap(nameOf(id))
+  me.ui.askText.textContent = cap(me.cosmos.byId[id].name)
   me.ui.ask.classList.remove('off')
   me.ui.dots.querySelectorAll('i').forEach((d, k) => d.classList.toggle('cur', k === q.i))
-  ctx.say(cap(nameOf(id)))
+  ctx.say(cap(me.cosmos.byId[id].name))
+}
+
+/** Après une visite de Trouve : on rentre, puis la question suivante. */
+function backAndNext(me: State) {
+  ctx.after(1800, () => {
+    if (sp !== me) return
+    const dur = home(me)
+    me.quiz.i++
+    ctx.after(dur * 1000 + 400, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
+  })
 }
 
 function answer(me: State, id: string) {
@@ -344,23 +430,21 @@ function answer(me: State, id: string) {
     sGood()
     me.ui.dots.querySelectorAll('i')[q.i]?.classList.add('ok')
     fly(me, id)
-    ctx.after(2600, () => { if (sp !== me) return; home(me); q.i++; ctx.after(700, () => sp === me && nextQuestion(me)) })
     return
   }
-  // Mauvaise planète : on dit laquelle on a touchée (c'est du contenu, ça
-  // apprend), la carte tremble ; au deuxième essai la bonne s'illumine
+  // Mauvais astre : on dit lequel on a touché (c'est du contenu, ça apprend),
+  // la carte tremble ; au deuxième essai la bonne planète s'illumine et on y va
   q.tries++
   q.errors++
   sNope()
   shake(me.ui.ask, 6, 300)
-  ctx.say(cap(nameOf(id)))
+  ctx.say(cap(me.cosmos.byId[id]?.name || ''))
   if (q.tries >= 2) {
     q.lock = true
     ctx.after(1100, () => {
       if (sp !== me) return
-      ctx.say(cap(nameOf(q.wanted!)))
+      ctx.say(cap(me.cosmos.byId[q.wanted!].name))
       fly(me, q.wanted!)
-      ctx.after(2800, () => { if (sp !== me) return; home(me); q.i++; ctx.after(700, () => sp === me && nextQuestion(me)) })
     })
   }
 }
@@ -381,21 +465,29 @@ function setMode(me: State, m: Mode) {
     b.classList.toggle('on', on)
     b.parentElement!.classList.toggle('sel', on)
   })
-  me.target = null
-  me.arrived = false
   me.ui.card.classList.add('off')
   me.ui.balls.classList.toggle('off', m === 'trouve') // les billes donneraient la réponse
   sPop()
+  const dur = me.target !== SYSTEM ? travelTo(me, SYSTEM) : 0
   if (m === 'trouve') {
     const n = ctx.byTier(5, 8, 8)
     me.quiz = { order: shuffle(PLANETS.map(p => p.id)).slice(0, n), i: 0, tries: 0, errors: 0, wanted: null, lock: false }
     me.ui.dots.innerHTML = Array.from({ length: n }, () => '<i></i>').join('')
-    ctx.after(500, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
+    ctx.after(dur * 1000 + 500, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
   } else {
     me.quiz.wanted = null
     me.ui.ask.classList.add('off')
   }
   markBalls(me)
+}
+
+function setRate(me: State, i: number) {
+  const next = Math.max(0, Math.min(RATES.length - 1, i))
+  if (next === me.rate) { tone(220, 0.08, 'sine', 0.04); return }
+  me.rate = next
+  tone(next === 0 ? 260 : 330 + next * 90, 0.12, 'triangle', 0.05)
+  me.ui.time.querySelectorAll('.sp3-tick').forEach((d, k) => d.classList.toggle('on', k < me.rate))
+  me.ui.time.classList.toggle('paused', me.rate === 0)
 }
 
 export const space: GameDef = {
@@ -411,131 +503,23 @@ export const space: GameDef = {
 
     ;(async () => {
       const stage: Stage = await createStage(arena, {
-        sky: '#05060F', ibl: false, // le Soleil est la seule lumière (pas de reflets de pièce)
-        cam: [0, 9.5, 19], target: [0, 0, 0], fov: 52,
-        hemi: ['#2A3A6A', '#05060F', 0.35],
-        noSun: true, exposure: 1.0
+        sky: '#000000', ibl: false, noSun: true, fov: 50,
+        cam: [0, 60, 120], target: [0, 0, 0], hemi: ['#000000', '#000000', 0]
       })
       if (dead) { stage.dispose(); return }
       const T = stage.T
-      const scene = stage.scene
-
-      /* --- Champ d'étoiles --- */
-      const N = 1300
-      const sp3 = new Float32Array(N * 3)
-      for (let i = 0; i < N; i++) {
-        const a = Math.random() * Math.PI * 2
-        const b = Math.acos(2 * Math.random() - 1)
-        const r = 60 + Math.random() * 30
-        sp3[i * 3] = Math.sin(b) * Math.cos(a) * r
-        sp3[i * 3 + 1] = Math.cos(b) * r
-        sp3[i * 3 + 2] = Math.sin(b) * Math.sin(a) * r
-      }
-      const starGeo = new T.BufferGeometry()
-      starGeo.setAttribute('position', new T.BufferAttribute(sp3, 3))
-      scene.add(new T.Points(starGeo, new T.PointsMaterial({
-        size: 0.75, map: stage.keep(dotTex(T)), transparent: true, depthWrite: false
-      })))
-
-      /* --- Le Soleil : la seule source de lumière du système --- */
-      const sun = new T.Mesh(
-        new T.SphereGeometry(0.92, 34, 24),
-        new T.MeshBasicMaterial({ map: realTex(T, stage, 'sun.jpg'), color: 0xFFE9B8 })
-      )
-      scene.add(sun)
-      const glow = new T.Sprite(new T.SpriteMaterial({
-        map: stage.keep(dotTex(T, '#FFC24A')), color: 0xFFB13A,
-        transparent: true, blending: T.AdditiveBlending, depthWrite: false
-      }))
-      glow.scale.setScalar(3.6)
-      scene.add(glow)
-      scene.add(new T.PointLight(0xFFF0D0, 260, 46, 2))
-      // Appoint depuis la caméra : sans lui, les planètes du premier plan sont
-      // vues côté nuit — c'est juste physiquement, mais inregardable à 6 ans.
-      const fill = new T.DirectionalLight(0xB8CCFF, 0.75)
-      scene.add(fill)
-
-      /* --- Orbites --- */
-      const orbitMat = new T.MeshBasicMaterial({
-        color: 0x6E86C8, transparent: true, opacity: 0.16, side: T.DoubleSide, depthWrite: false
-      })
-      for (const def of PLANETS) {
-        const ring = new T.Mesh(new T.RingGeometry(def.orbit - 0.012, def.orbit + 0.012, 128), orbitMat)
-        ring.rotation.x = -Math.PI / 2
-        scene.add(ring)
-      }
-
-      /* --- Les planètes --- */
-      const planets: PlanetObj[] = PLANETS.map((def, i) => {
-        const grp = new T.Group()
-        const mesh = new T.Mesh(
-          new T.SphereGeometry(def.radius, 40, 28),
-          new T.MeshStandardMaterial({ map: realTex(T, stage, def.tex), roughness: 0.88, metalness: 0.02 })
-        )
-        mesh.rotation.z = def.tilt
-        grp.add(mesh)
-        let clouds: Mesh | null = null
-        if (def.clouds) {
-          clouds = new T.Mesh(
-            new T.SphereGeometry(def.radius * 1.03, 32, 22),
-            new T.MeshStandardMaterial({
-              map: stage.keep(cloudTex(T)), transparent: true, opacity: 0.45, roughness: 1, depthWrite: false
-            })
-          )
-          clouds.rotation.z = def.tilt
-          grp.add(clouds)
-        }
-        if (def.ring) {
-          const [ri, ro, col] = def.ring
-          const rgeo = new T.RingGeometry(def.radius * ri, def.radius * ro, 96, 1)
-          ringUVs(T, rgeo, def.radius * ri, def.radius * ro)
-          const rg = new T.Mesh(rgeo, new T.MeshBasicMaterial({
-            map: realTex(T, stage, 'saturn_ring.png'), color: col, transparent: true, side: T.DoubleSide, depthWrite: false
-          }))
-          // L'anneau est dans le plan équatorial : une seule inclinaison, portée par le holder
-          rg.rotation.x = -Math.PI / 2 + 0.02
-          const holder = new T.Group()
-          holder.rotation.z = def.tilt
-          holder.add(rg)
-          grp.add(holder)
-        }
-        // Lunes : de simples cailloux gris qui tournent (la Lune a sa vraie texture)
-        const moons: PlanetObj['moons'] = []
-        for (let k = 0; k < (def.moons || 0); k++) {
-          const m = new T.Mesh(
-            new T.SphereGeometry(def.radius * (0.14 + k * 0.03), 14, 12),
-            def.id === 'terre'
-              ? new T.MeshStandardMaterial({ map: realTex(T, stage, 'moon.jpg'), roughness: 0.95 })
-              : new T.MeshStandardMaterial({ color: 0xB8B2A8, roughness: 0.95 })
-          )
-          grp.add(m)
-          moons.push({ m, d: def.radius * (1.9 + k * 0.7), s: 0.8 + k * 0.4, ph: Math.random() * 6 })
-        }
-        // Zone tapable généreuse : les petites planètes sont dures à viser
-        const hit = new T.Mesh(
-          new T.SphereGeometry(Math.max(def.radius * 1.55, 0.5), 12, 10),
-          new T.MeshBasicMaterial({ visible: false })
-        )
-        hit.userData.pid = def.id
-        grp.add(hit)
-        scene.add(grp)
-        return { def, grp, mesh, hit, clouds, moons, phase: (i * 2.1) % (Math.PI * 2) }
-      })
-
-      const sunHit = new T.Mesh(new T.SphereGeometry(1.25, 14, 12), new T.MeshBasicMaterial({ visible: false }))
-      sunHit.userData.pid = 'soleil'
-      scene.add(sunHit)
-
+      const cosmos = await makeCosmos(stage, base())
+      if (dead) { stage.dispose(); return }
+      cleanups.push(() => cosmos.dispose())
+      const rocket = makeRocket(T, stage)
+      stage.scene.add(rocket.group)
+      // Un appoint collé à la caméra : la fusée reste lisible même côté nuit
+      const camLight = new T.DirectionalLight(0xDDE6FF, 0.9)
+      stage.scene.add(camLight, camLight.target)
       const halo = new T.Sprite(new T.SpriteMaterial({
         map: stage.keep(haloTex(T)), transparent: true, blending: T.AdditiveBlending, depthWrite: false, opacity: 0
       }))
-      scene.add(halo)
-
-      const rocket = await makeRocket(T)
-      if (dead) { stage.dispose(); return }
-      rocket.group.position.set(2.9, 3.1, 7.2)
-      scene.add(rocket.group)
-      hideLoader()
+      stage.scene.add(halo)
 
       /* --- L'interface, sans un mot de consigne --- */
       const bar = document.createElement('div')
@@ -547,7 +531,7 @@ export const space: GameDef = {
       bar.innerHTML = modeBtn('explore', ICON.search, 'Explore', true) + modeBtn('trouve', ICON.target, 'Trouve')
       const balls = document.createElement('div')
       balls.className = 'sp3-balls'
-      balls.innerHTML = ['soleil', ...PLANETS.map(p => p.id)].map(id => `<button class="sp3-pick" data-id="${id}" aria-label="${nameOf(id)}">${ballHTML(id)}</button>`).join('')
+      balls.innerHTML = BALLS.map(id => `<button class="sp3-pick" data-id="${id}" aria-label="${cosmos.byId[id].name}">${ballHTML(id)}</button>`).join('')
       const card = document.createElement('div')
       card.className = 'sp3-card off'
       card.innerHTML = `<div class="sp3-cardhead"><b class="sp3-name"></b>
@@ -559,103 +543,175 @@ export const space: GameDef = {
       ask.innerHTML = `<span class="sp3-askimg"></span><b class="geo-asktext"></b>
         <button class="geo-say" aria-label="Réécouter">${ICON.sound}</button><span class="geo-dots"></span>`
       const hint = document.createElement('div')
-      hint.className = 'tap-hint sp3-hint'
+      hint.className = 'tap-hint sp3-hint off'
       hint.innerHTML = ICON.tap
-      arena.append(bar, balls, card, ask, hint)
+      const time = document.createElement('div')
+      time.className = 'sp3-time'
+      time.innerHTML = `<button class="sp3-tbtn" data-t="+1" aria-label="Plus vite">${ICON_HARE}</button>
+        <span class="sp3-ticks">${RATES.slice(1).map((_, k) => `<i class="sp3-tick${k < RATE0 ? ' on' : ''}"></i>`).join('')}</span>
+        <button class="sp3-tbtn" data-t="-1" aria-label="Moins vite">${ICON_TURTLE}</button>`
+      arena.append(bar, balls, card, ask, hint, time)
 
+      const jd0 = Date.now() / 86400000 + 2440587.5
       const me: State = {
-        stage, T, fx: particles(stage, 400), planets, sun, sunHit, glow, halo, fill, rocket,
-        orbit: orbitCam(stage, 19, 9.5, [0, 0, 0]),
-        mode: 'explore', visited: new Set(), target: null, flyT: 0, arrived: false, t: 0, idle: 0, finaled: false,
+        stage, T, cosmos, fx: particles(stage, 500), rocket, halo, camLight,
+        mode: 'explore', visited: new Set(), target: 'terre', travel: null,
+        view: { yaw: 0, pitch: 0.2, distR: 3.2 }, tgtView: { yaw: 0, pitch: 0.2, distR: 3.2 },
+        vel: { yaw: 0, pitch: 0 }, lookTarget: new T.Vector3(), baseFov: 50,
+        rocketAt: 'terre', rocketOff: new T.Vector3(), arrived: true,
+        jd: jd0, spinJd: jd0, rate: RATE0, idle: 0, finaled: false, dragging: false,
         quiz: { order: [], i: 0, tries: 0, errors: 0, wanted: null, lock: false },
         ui: {
-          arena, balls, card, bar, hint, ask,
+          arena, balls, card, bar, hint, ask, time,
           cardName: card.querySelector('.sp3-name')!, cardText: card.querySelector('.sp3-text')!,
           askImg: ask.querySelector('.sp3-askimg')!, askText: ask.querySelector('.geo-asktext')!,
           dots: ask.querySelector('.geo-dots')!
         },
-        tmp: new T.Vector3(), tmp2: new T.Vector3(), goal: new T.Vector3()
+        perf: { avg: 16, last: performance.now(), frames: 0, lastAdapt: 0, maxPr: cosmos.pixelRatio },
+        tmp: new T.Vector3(), tmp2: new T.Vector3(), tmp3: new T.Vector3()
       }
       sp = me
-      markBalls(me)
+      // Le champ de vision suit la forme de l'écran (en portrait, plus large)
+      const fitFov = () => {
+        const w = arena.clientWidth, h = arena.clientHeight
+        me.baseFov = w >= h ? 50 : Math.min(80, 2 * Math.atan(Math.tan(25 * Math.PI / 180) / (w / h)) * 180 / Math.PI * 0.86)
+        if (!me.travel) { stage.camera.fov = me.baseFov; stage.camera.updateProjectionMatrix() }
+      }
+      fitFov()
+      stage.onResize = () => { fitFov(); cosmos.resize() }
+      stage.render = () => cosmos.render()
 
-      /* --- Gestes : taper une planète, glisser pour tourner le système --- */
-      const pick = picker(stage)
+      // Au départ : la fusée posée à côté de la Terre, puis on s'envole vers le système
+      cosmos.setTime(me.jd, me.spinJd)
+      travelTo(me, 'terre')
+      me.travel = null
+      me.arrived = true
+      Object.assign(me.view, arrivalView(me, 'terre')); Object.assign(me.tgtView, me.view)
+      orbitCamPos(me, 'terre', me.view, stage.camera.position)
+      me.lookTarget.copy(cosmos.worldPos('terre', me.tmp))
+      stage.camera.lookAt(me.lookTarget)
+      rocket.group.position.copy(cosmos.worldPos('terre', me.tmp)).add(me.rocketOff)
+      hideLoader()
+      markBalls(me)
+      ctx.after(1400, () => { if (sp === me && me.target === 'terre' && !me.travel) { travelTo(me, SYSTEM); markBalls(me) } })
+      // Contenu (pas consigne) : le Soleil et les planètes, c'est la leçon
+      ctx.say('Voici le Soleil, une étoile géante. Autour de lui tournent huit planètes.')
+
+      /* --- Gestes : taper un astre, glisser pour tourner, pincer pour zoomer --- */
       const cv = stage.renderer.domElement
-      let down: { x: number; y: number; moved: boolean } | null = null
-      const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY, moved: false }; me.idle = 0 }
+      const pointers = new Map<number, { x: number; y: number }>()
+      let pinch0 = 0, pinchD0 = 0
+      let down: { x: number; y: number; t: number; moved: number } | null = null
+      const onDown = (e: PointerEvent) => {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        me.dragging = true; me.vel.yaw = me.vel.pitch = 0; me.idle = 0
+        down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 }
+        if (pointers.size === 2) {
+          const [a, b] = [...pointers.values()]
+          pinch0 = Math.hypot(a.x - b.x, a.y - b.y); pinchD0 = me.tgtView.distR
+        }
+      }
       const onMove = (e: PointerEvent) => {
-        if (!down) return
-        const dx = e.clientX - down.x
-        if (!down.moved && Math.abs(dx) + Math.abs(e.clientY - down.y) > 10) down.moved = true
-        if (down.moved) { me.orbit.turn(-dx * 0.006); down.x = e.clientX; down.y = e.clientY; me.ui.hint.classList.add('off') }
+        const p = pointers.get(e.pointerId)
+        if (!p) return
+        const dx = e.clientX - p.x, dy = e.clientY - p.y
+        p.x = e.clientX; p.y = e.clientY
+        if (down) down.moved += Math.abs(dx) + Math.abs(dy)
+        if (me.travel) return
+        if (pointers.size === 1) {
+          const k = 0.005
+          me.tgtView.yaw -= dx * k
+          me.tgtView.pitch = Math.max(-1.45, Math.min(1.45, me.tgtView.pitch + dy * k))
+          me.vel.yaw = -dx * k; me.vel.pitch = dy * k
+          if (down && down.moved > 10) me.ui.hint.classList.add('off')
+        } else if (pointers.size === 2 && pinch0 > 0) {
+          const [a, b] = [...pointers.values()]
+          const lim = distLimits(me, me.target)
+          me.tgtView.distR = Math.max(lim[0], Math.min(lim[1], pinchD0 * pinch0 / Math.max(1, Math.hypot(a.x - b.x, a.y - b.y))))
+        }
       }
       const onUp = (e: PointerEvent) => {
+        if (!pointers.has(e.pointerId)) return
+        pointers.delete(e.pointerId)
+        if (pointers.size < 2) pinch0 = 0
+        if (pointers.size > 0) return
+        me.dragging = false
         const d = down
         down = null
-        if (!d || d.moved || me.finaled) return
-        const hits = pick(e, [...planets.map(p => p.hit), sunHit])
-        let o: import('three').Object3D | null = hits[0]?.object ?? null
-        while (o && !o.userData.pid) o = o.parent
-        const id = o?.userData.pid as string | undefined
-        if (me.mode === 'trouve') { if (id) answer(me, id); return }
-        if (id) fly(me, id)
-        else if (me.target && me.arrived) home(me) // taper le ciel : on rentre
+        if (!d || d.moved > 12 || performance.now() - d.t > 700 || me.finaled) return
+        const id = cosmos.pick(e.clientX, e.clientY, 38)
+        if (me.mode === 'trouve') { if (id && !me.travel) answer(me, id); return }
+        if (id && id !== me.target) fly(me, id)
+        else if (!id && me.target !== SYSTEM && !me.travel) home(me) // taper le ciel : on rentre
+      }
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault()
+        const lim = distLimits(me, me.target)
+        me.tgtView.distR = Math.max(lim[0], Math.min(lim[1], me.tgtView.distR * Math.exp(e.deltaY * 0.0012)))
       }
       cv.addEventListener('pointerdown', onDown)
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
+      cv.addEventListener('wheel', onWheel, { passive: false })
 
       balls.addEventListener('click', e => {
         const b = (e.target as HTMLElement).closest<HTMLElement>('.sp3-pick')
         if (!b || me.finaled || me.mode !== 'explore') return
         fly(me, b.dataset.id!)
       })
-      card.querySelector<HTMLElement>('.sp3-home')!.onclick = () => home(me)
-      card.querySelector<HTMLElement>('.sp3-again')!.onclick = () => { if (me.target) ctx.say(me.ui.cardText.textContent || '') }
-      ask.querySelector<HTMLElement>('.geo-say')!.onclick = () => { if (me.quiz.wanted) ctx.say(cap(nameOf(me.quiz.wanted))) }
+      card.querySelector<HTMLElement>('.sp3-home')!.onclick = () => { if (me.mode === 'explore') home(me) }
+      card.querySelector<HTMLElement>('.sp3-again')!.onclick = () => { ctx.say(me.ui.cardText.textContent || '') }
+      ask.querySelector<HTMLElement>('.geo-say')!.onclick = () => { if (me.quiz.wanted) ctx.say(cap(cosmos.byId[me.quiz.wanted].name)) }
       bar.addEventListener('click', e => {
         const b = (e.target as HTMLElement).closest<HTMLElement>('[data-mode]')
         if (b && !me.finaled) setMode(me, b.dataset.mode as Mode)
       })
-
-      // Contenu (pas consigne) : le Soleil et les planètes, c'est la leçon
-      ctx.say('Voici le Soleil, une étoile géante. Autour de lui tournent huit planètes.')
+      time.addEventListener('click', e => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>('[data-t]')
+        if (b) { me.idle = 0; setRate(me, me.rate + Number(b.dataset.t)) }
+      })
 
       /* --- Boucle --- */
       stage.start((dt, now) => {
         if (sp !== me) return
         me.idle += dt
-        // Le système ralentit pendant une visite : on regarde tranquillement
-        me.t += dt * (me.target ? 0.15 : 1)
-        for (const p of me.planets) {
-          planetPos(p, me.t, p.grp.position)
-          p.mesh.rotation.y += dt * 0.35
-          if (p.clouds) p.clouds.rotation.y += dt * 0.24
-          for (const mo of p.moons) {
-            const a = mo.ph + me.t * mo.s * 2.4
-            mo.m.position.set(Math.cos(a) * mo.d, Math.sin(a) * mo.d * 0.3, Math.sin(a) * mo.d)
-          }
-        }
-        me.sun.rotation.y += dt * 0.05
-        me.glow.scale.setScalar(3.6 + Math.sin(now / 900) * 0.18)
+        // Le temps : ralenti pendant une visite (on regarde tranquillement) ;
+        // les rotations et les lunes plafonnent pour rester lisibles
+        const visiting = me.target !== SYSTEM || !!me.travel
+        const rate = visiting ? Math.min(RATES[me.rate], 1) : RATES[me.rate]
+        me.jd += rate * dt
+        me.spinJd += Math.min(rate, 0.25) * dt
+        if (rate <= 1 / 24) me.spinJd = me.jd
+        cosmos.setTime(me.jd, me.spinJd)
+        updateCamera(me, dt)
+        updateRocket(me, dt, now)
+        cosmos.frame(dt)
+        me.camLight.position.copy(stage.camera.position)
+        me.camLight.target.position.copy(me.lookTarget)
 
-        // La démonstration : après 3 s sans geste, une lueur pulse autour
-        // d'une planète pas encore vue (en Trouve, jamais : ce serait la réponse)
-        // La plus grosse d'abord : Mercure, collée au Soleil, est la plus dure à viser
-        const suggest = me.mode === 'explore' && !me.target && me.idle > 3
-          ? me.planets.filter(p => !me.visited.has(p.def.id)).sort((x, y) => y.def.radius - x.def.radius)[0] : undefined
+        // Trouve : une visite achevée, on rentre et on enchaîne
+        if (me.mode === 'trouve' && me.arrived && me.target !== SYSTEM && me.quiz.lock && !me.travel && me.quiz.wanted === me.target) {
+          me.quiz.wanted = null
+          backAndNext(me)
+        }
+
+        // La démonstration : après 3 s sans geste, une lueur pulse autour de
+        // la plus grosse planète pas encore vue (en Trouve, jamais)
+        const suggest = me.mode === 'explore' && me.target === SYSTEM && !me.travel && me.idle > 3 && !me.finaled
+          ? PLANETS.filter(p => !me.visited.has(p.id)).sort((x, y) => cosmos.radius(y.id) - cosmos.radius(x.id))[0] : undefined
         const hm = me.halo.material
         if (suggest) {
-          me.halo.position.copy(suggest.grp.position)
+          const p = cosmos.worldPos(suggest.id, me.tmp)
+          me.halo.position.copy(p)
+          const d = stage.camera.position.distanceTo(p)
           const pulse = 0.5 + 0.5 * Math.sin(now / 260)
-          me.halo.scale.setScalar(Math.max(1.2, suggest.def.radius * 4.2) * (1 + pulse * 0.18))
+          me.halo.scale.setScalar(Math.max(cosmos.radius(suggest.id) * 3.6, 64 / cosmos.pxPerUnit(d)) * (1 + pulse * 0.18))
           hm.opacity = Math.min(1, hm.opacity + dt * 2) * (0.55 + pulse * 0.45)
-          // La main se pose SUR la planète suggérée, tant qu'on n'a rien visité
           const showHand = me.visited.size === 0
           me.ui.hint.classList.toggle('off', !showHand)
           if (showHand) {
-            const sc = toScreen(stage, suggest.grp.position), ar = arena.getBoundingClientRect()
+            const sc = toScreen(stage, p), ar = arena.getBoundingClientRect()
             me.ui.hint.style.left = sc.x - ar.left + 'px'
             me.ui.hint.style.top = sc.y - ar.top + 14 + 'px'
           }
@@ -663,41 +719,47 @@ export const space: GameDef = {
           hm.opacity = Math.max(0, hm.opacity - dt * 4)
           me.ui.hint.classList.add('off')
         }
-        me.ui.balls.querySelectorAll<HTMLElement>('.sp3-ball').forEach(b => b.classList.toggle('wink', b.dataset.id === suggest?.def.id))
-
-        if (me.target) {
-          const rad = bodyPos(me, me.target, me.goal)
-          const near = Math.max(1.3, rad * 3.4)
-          me.orbit.look = [me.goal.x, me.goal.y, me.goal.z]
-          me.orbit.dist = near
-          me.orbit.height = rad * 0.9
-          me.orbit.auto = 0.22
-          // La fusée se pose à côté
-          const want = me.tmp2.copy(me.goal)
-          want.x += rad * 1.5 + 0.3; want.y += rad * 0.5; want.z += rad * 1.5 + 0.3
-          me.rocket.group.position.lerp(want, Math.min(1, dt * 2.2))
-          me.rocket.group.lookAt(me.goal)
-          me.rocket.group.rotateX(Math.PI / 2)
-          me.flyT += dt
-          if (me.flyT > 1.1 && !me.arrived) arrive(me)
-        } else {
-          me.orbit.look = [0, 0, 0]
-          me.orbit.dist = me.finaled ? 23 : 19
-          me.orbit.height = me.finaled ? 12 : 9.5
-          me.orbit.auto = me.finaled ? 0.3 : 0.035
-          me.rocket.group.position.lerp(me.tmp2.set(2.9, 3.1, 7.2), Math.min(1, dt * 1.6))
-          me.rocket.group.rotation.set(0, now / 2600, 0)
-        }
-        me.rocket.flame.scale.setScalar(0.7 + Math.sin(now / 45) * 0.25)
-        me.orbit.update(dt)
-        me.fill.position.copy(stage.camera.position)
+        me.ui.balls.querySelectorAll<HTMLElement>('.sp3-ball').forEach(b => b.classList.toggle('wink', b.dataset.id === suggest?.id))
         me.fx.update(dt)
+
+        // La tablette peine (plus de 34 ms par image) : moins de pixels, puis
+        // plus de lissage ; elle respire (moins de 18 ms) : on en rend
+        const pf = me.perf
+        const wall = now - pf.last
+        pf.last = now
+        if (dt > 0) {
+          pf.avg = pf.avg * 0.93 + wall * 0.07
+          pf.frames++
+          if (now - pf.lastAdapt > 2000 && pf.frames > 60) {
+            const pr = cosmos.pixelRatio
+            if (pf.avg > 34) {
+              if (pr > 0.76) cosmos.setPixelRatio(Math.max(0.75, pr * 0.85))
+              else cosmos.setMsaa(false)
+              pf.lastAdapt = now
+            } else if (pf.avg < 18 && pr < pf.maxPr - 0.01) {
+              cosmos.setPixelRatio(Math.min(pf.maxPr, pr * 1.1))
+              pf.lastAdapt = now
+            }
+          }
+        }
       })
+
+      // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        ;(window as unknown as { __sp: unknown }).__sp = {
+          get target() { return me.target },
+          get travelling() { return !!me.travel },
+          get visited() { return me.visited.size },
+          get rate() { return me.rate }
+        }
+      }
 
       cleanups.push(() => {
         cv.removeEventListener('pointerdown', onDown)
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        cv.removeEventListener('wheel', onWheel)
         me.fx.dispose()
         stage.dispose()
       })

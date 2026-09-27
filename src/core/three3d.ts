@@ -79,6 +79,11 @@ export interface Stage {
   start(update: (dt: number, now: number) => void): void
   /** Enregistre une ressource GPU non attachée à la scène (texture, cible de rendu). */
   keep<R extends { dispose(): void }>(r: R): R
+  /** Rendu personnalisé (l'Espace : ciel, scène HDR, halo, ACES) à la place de
+      `renderer.render(scene, camera)`. */
+  render?: () => void
+  /** Appelé après chaque changement de taille du rendu (cibles à réallouer). */
+  onResize?: () => void
   dispose(): void
 }
 
@@ -175,7 +180,8 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         last = now
         try { update(dt, now) } catch (e) { stage.alive = false; throw e }
         if (!stage.alive) return
-        renderer.render(scene, camera)
+        if (stage.render) stage.render()
+        else renderer.render(scene, camera)
         probeFrame(performance.now() - now)
         raf = requestAnimationFrame(loop)
       }
@@ -211,6 +217,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     renderer.setSize(w, h)
+    stage.onResize?.()
   }
   window.addEventListener('resize', onResize)
   /* L'arène change aussi de taille SANS que la fenêtre bouge : la barre d'outils

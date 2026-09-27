@@ -877,16 +877,22 @@ await scenario('marche-quatre-paiements', async () => {
 /* 🚀 Voyage dans l'Espace : les huit planètes visitées par les billes, puis
    la fête et l'écran de fin. */
 await scenario('espace-huit-planetes', async () => {
-  await openGame("Voyage dans l'Espace")
-  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 30000 })
-  await page.waitForSelector('.sp3-pick', { timeout: 20000 })
+  // Refait le 27/09 (textures, shaders, HDR) : son accroche `__sp` arrive
+  // après le chargement ; chaque visite est un vol de caméra de 2 à 4 s
+  // simulées — sous swiftshader, bien plus en temps réel. On sonde, on ne
+  // compte pas les secondes.
+  errors.length = 0
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await clickTile("Voyage dans l'Espace")
+  await page.locator('.tierbtn.tier-easy').click()
+  await page.waitForFunction(() => window.__sp, null, { timeout: 300000, polling: 1000 })
   for (const id of ['mercure', 'venus', 'terre', 'mars', 'jupiter', 'saturne', 'uranus', 'neptune']) {
     await page.locator(`.sp3-pick[data-id="${id}"]`).click({ force: true })
-    await page.waitForSelector('.sp3-card:not(.off)', { timeout: 30000 })
+    await page.waitForFunction(i => window.__sp.target === i && !window.__sp.travelling && document.querySelector('.sp3-card:not(.off)'), id, { timeout: 180000, polling: 500 })
     await page.locator('.sp3-home').click({ force: true })
     await page.waitForTimeout(200)
   }
-  await finDe('Astronaute', 20000)
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Astronaute'), null, { timeout: 120000, polling: 500 })
 })
 
 /* 🎹 Petit Piano : « Au clair de la lune » jouée en suivant la touche qui brille. */
