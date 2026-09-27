@@ -1017,7 +1017,7 @@ const prSettle = () => prWait(() => window.__pr && window.__pr.pending === 0, 'v
 /** Attendre, et dire où l'on en était si ça n'arrive pas. */
 const prWait = async (fn, what, timeout = 300000) => {
   try { await page.waitForFunction(fn, null, { timeout, polling: 1000 }) } catch {
-    const st = await page.evaluate(() => window.__pr ? { ready: window.__pr.ready, pending: window.__pr.pending, tab: window.__pr.tab, looks: window.__pr.looks.length } : 'pas de __pr').catch(() => 'page perdue')
+    const st = await page.evaluate(() => window.__pr ? { ready: window.__pr.ready, pending: window.__pr.pending, tab: window.__pr.tab, ...window.__pr.dbg } : 'pas de __pr').catch(() => 'page perdue')
     const toast = await page.evaluate(() => document.querySelector('.toast')?.textContent || '').catch(() => '')
     throw new Error(`${what} : délai dépassé (${JSON.stringify(st)}) ${toast} ${[...errors, ...consoleErrs].slice(-5).join(' | ')}`)
   }
@@ -1066,12 +1066,17 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   // La photo : rangée dans l'Atelier (dossier et coloriage)
   await page.locator('#prPhoto').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 60000, polling: 250 })
+  // Lire la base de l'Atelier SANS jamais la créer : ouverte ici avant le
+  // jeu, elle naissait vide et le jeu ne pouvait plus rien y ranger
   await prWait(() => new Promise(res => {
-    const rq = indexedDB.open('ferme-atelier', 2)
+    const rq = indexedDB.open('ferme-atelier')
+    rq.onupgradeneeded = () => rq.transaction.abort()
     rq.onsuccess = () => {
-      const g = rq.result.transaction('pages').objectStore('pages').get('princesse:liste')
-      g.onsuccess = () => res(Array.isArray(g.result) && g.result.length > 0)
-      g.onerror = () => res(false)
+      const d = rq.result
+      if (!d.objectStoreNames.contains('pages')) { d.close(); res(false); return }
+      const g = d.transaction('pages').objectStore('pages').get('princesse:liste')
+      g.onsuccess = () => { d.close(); res(Array.isArray(g.result) && g.result.length > 0) }
+      g.onerror = () => { d.close(); res(false) }
     }
     rq.onerror = () => res(false)
   }), 'coloriage rangé', 120000)
