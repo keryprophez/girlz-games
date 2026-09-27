@@ -765,7 +765,11 @@ export const space: GameDef = {
           get target() { return me.target },
           get travelling() { return !!me.travel },
           get visited() { return me.visited.size },
-          get rate() { return me.rate }
+          get rate() { return me.rate },
+          get mode() { return me.mode },
+          get wanted() { return me.quiz.wanted },
+          /** Un astre à l'écran (pixels), pour que le bot le touche. */
+          screenOf(id: string) { return toScreen(stage, cosmos.worldPos(id, new T.Vector3())) }
         }
       }
 
