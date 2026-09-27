@@ -17,7 +17,7 @@ export interface FinishPayload {
   outroMs?: number
 }
 
-import type { Look } from './character'
+import type { Royal } from './royal'
 
 export interface GameContext {
   root: HTMLElement
@@ -27,8 +27,8 @@ export interface GameContext {
       Les messages de fin tutoient et ne citent jamais de prénom. */
   playerName: string
   avatar: string | null
-  /** Look choisi dans Habille-toi — suit la joueuse dans les autres jeux. */
-  look: Look | null
+  /** La princesse qu'on habille seule dans la Princesse. */
+  look: Royal
   byTier<T>(e: T, m: T, x: T): T
   /** À deux sur la même tablette, EN ÉQUIPE (23/09) : deux doigts à la
       fois, un seul score commun, aucune comparaison (règle 1). Toujours
@@ -82,7 +82,8 @@ export interface Profile {
   age: number
   avatar: string | null // dataURL
   tier: Tier
-  look?: Look
+  /** L'ancien look d'Habille-toi (avant le 27/09) : relu une fois pour la princesse. */
+  look?: unknown
 }
 
 /** Ce qu'on garde d'une partie à l'autre : la meilleure note par jeu,

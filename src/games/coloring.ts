@@ -3,8 +3,9 @@ import { useFerme } from '../core/store'
 import { sfx, preloadSfx } from '../core/sfx'
 import { tone } from '../core/audio'
 import { ICON } from '../core/icons'
-import { critterPortraits } from '../core/portraits'
-import { FARM, type CritterKind } from '../core/critters'
+import { critterPortraits, princessPortraits } from '../core/portraits'
+import { FARM } from '../core/critters'
+import { drawings, idbDel, idbGet, idbPut, princessPages, type Drawing } from '../core/atelierdb'
 
 /* L'Atelier — remplace le Coloriage (23/09), enrichi le 27/09 (« elles
    adorent l'Atelier : complexifie-le, rends-le encore plus stylé »).
@@ -57,7 +58,12 @@ function petals(cx: number, cy: number): string {
 
 /* Les dessins à colorier : les mêmes que l'ancien Coloriage (les zones
    `creg` servent à reprendre les coloriages déjà faits), en traits seuls. */
-interface Page { id: string; svg: string }
+interface Page { id: string; svg: string; img?: string }
+/** Les coloriages des princesses (photos de la Princesse, 27/09) : un trait
+    en image, rangé dans IndexedDB ; les quatre plus récents sont proposés. */
+const EXTRA: Page[] = []
+const PRINCESS_SHOWN = 4
+const pageById = (id: string) => PAGES.find(x => x.id === id) || EXTRA.find(x => x.id === id)
 const PAGES: Page[] = [
   { id: 'blanche', svg: '' },
   {
@@ -184,8 +190,6 @@ type Tool = 'brush' | 'bucket' | 'eraser' | 'stamp'
 interface Pour { fill: HTMLCanvasElement; x: number; y: number; r: number; rMax: number }
 interface Stroke { x: number; y: number; mx: number; my: number; run: number; acc: number }
 
-/** Un dessin rangé dans le dossier. */
-interface Drawing { id: number; profile: string; page: string; paper: string; paint: Blob; thumb: Blob; frames: Blob[]; at: number }
 
 interface State {
   running: boolean
@@ -196,7 +200,8 @@ interface State {
   color: string
   paper: string
   size: number
-  stamp: CritterKind
+  /** Un animal de la ferme, ou une princesse (`royal:jade`…). */
+  stamp: string
   page: Page
   /** Le dessin du dossier en cours de reprise (null : la feuille du modèle). */
   galleryId: number | null
@@ -208,7 +213,7 @@ interface State {
   strokes: Map<number, Stroke>
   hue: number
   pour: Pour | null
-  stamps: Partial<Record<CritterKind, HTMLImageElement>>
+  stamps: Record<string, HTMLImageElement>
   saveId: number
   frameId: number
   clearId: number
@@ -230,67 +235,6 @@ interface State {
 let at: State | null = null
 let ctx: GameContext
 
-/* ---- Tout est gardé dans IndexedDB, local à la tablette (règle 3) ----
-   `pages` : la feuille de chaque modèle (PNG), son film (`…:frames`) ;
-   `gallery` : les dessins rangés dans le dossier. localStorage est trop
-   petit pour des images. */
-let dbp: Promise<IDBDatabase> | null = null
-function db(): Promise<IDBDatabase> {
-  dbp ??= new Promise((res, rej) => {
-    const rq = indexedDB.open('ferme-atelier', 2)
-    rq.onupgradeneeded = () => {
-      const d = rq.result
-      if (!d.objectStoreNames.contains('pages')) d.createObjectStore('pages')
-      if (!d.objectStoreNames.contains('gallery')) d.createObjectStore('gallery', { keyPath: 'id' })
-    }
-    rq.onsuccess = () => res(rq.result)
-    rq.onerror = () => rej(rq.error)
-  })
-  return dbp
-}
-async function idbGet<T>(store: string, key: IDBValidKey): Promise<T | null> {
-  try {
-    const d = await db()
-    return await new Promise(res => {
-      const rq = d.transaction(store).objectStore(store).get(key)
-      rq.onsuccess = () => res((rq.result as T) ?? null)
-      rq.onerror = () => res(null)
-    })
-  } catch { return null }
-}
-async function idbPut(store: string, value: unknown, key?: IDBValidKey): Promise<boolean> {
-  try {
-    const d = await db()
-    return await new Promise(res => {
-      const tx = d.transaction(store, 'readwrite')
-      tx.objectStore(store).put(value, key)
-      tx.oncomplete = () => res(true)
-      tx.onerror = () => res(false)
-    })
-  } catch { return false } // stockage refusé (navigation privée) : le dessin reste à l'écran
-}
-async function idbDel(store: string, key: IDBValidKey) {
-  try {
-    const d = await db()
-    await new Promise(res => {
-      const tx = d.transaction(store, 'readwrite')
-      tx.objectStore(store).delete(key)
-      tx.oncomplete = () => res(true)
-      tx.onerror = () => res(false)
-    })
-  } catch { /* rien à jeter */ }
-}
-async function drawings(profile: string): Promise<Drawing[]> {
-  try {
-    const d = await db()
-    const all = await new Promise<Drawing[]>(res => {
-      const rq = d.transaction('gallery').objectStore('gallery').getAll()
-      rq.onsuccess = () => res((rq.result as Drawing[]) || [])
-      rq.onerror = () => res([])
-    })
-    return all.filter(x => x.profile === profile).sort((a, b) => b.at - a.at)
-  } catch { return [] }
-}
 const pageKey = (me: State, id: string) => `${me.profileId}:${id}`
 const paperKey = (key: string) => `ferme:atelier:papier:${key}`
 
@@ -308,8 +252,21 @@ async function blobImage(b: Blob): Promise<HTMLImageElement | null> {
 }
 const canvasBlob = (cv: HTMLCanvasElement, type = 'image/png', q?: number) =>
   new Promise<Blob | null>(res => cv.toBlob(b => res(b), type, q))
-const pageLines = (p: Page, paper: string) =>
-  loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(lineSvg(p, 3.2, isDark(paper) ? '#F4EFE6' : '#3A2E25')))
+async function pageLines(p: Page, paper: string): Promise<CanvasImageSource> {
+  if (p.img) {
+    // Le trait d'une photo de princesse : en clair sur un papier sombre
+    const im = await loadImage(p.img)
+    if (!isDark(paper)) return im
+    const cv = document.createElement('canvas')
+    cv.width = im.width; cv.height = im.height
+    const g = cv.getContext('2d')!
+    g.drawImage(im, 0, 0)
+    g.globalCompositeOperation = 'source-in'
+    g.fillStyle = '#F4EFE6'; g.fillRect(0, 0, cv.width, cv.height)
+    return cv
+  }
+  return loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(lineSvg(p, 3.2, isDark(paper) ? '#F4EFE6' : '#3A2E25')))
+}
 
 /* Les coloriages de l'ancien jeu (zones remplies, localStorage) reviennent
    dans la feuille : rien n'est perdu au passage à l'Atelier. */
@@ -339,7 +296,7 @@ async function setPaper(me: State, paper: string) {
   document.querySelectorAll<HTMLElement>('.at-pp').forEach(b => b.classList.toggle('sel', b.dataset.c === paper))
   const p = me.page
   me.lines.clearRect(0, 0, W, H)
-  if (!p.svg) return
+  if (!p.svg && !p.img) return
   const im = await pageLines(p, paper)
   if (at !== me || me.page !== p || me.paper !== paper) return
   me.lines.clearRect(0, 0, W, H)
@@ -363,7 +320,7 @@ async function openPage(me: State, p: Page, d?: Drawing) {
   const key = pageKey(me, p.id)
   let paper = PAPERS[0]
   try { paper = d ? d.paper : localStorage.getItem(paperKey(key)) || PAPERS[0] } catch { /* stockage refusé */ }
-  if (p.svg) {
+  if (p.svg || p.img) {
     // Les murs du pot de peinture : les traits du modèle, quelle que soit leur couleur
     const im = await pageLines(p, PAPERS[0])
     if (at !== me || me.page !== p) return
@@ -829,6 +786,11 @@ function stampAt(me: State, x: number, y: number) {
   me.pending = print
   ctx.after(230, () => { if (at === me && me.pending === print) flushStamp(me) })
 }
+function pickStamp(me: State, b: HTMLElement) {
+  me.stamp = b.dataset.k!
+  document.querySelectorAll('.at-stamp').forEach(x => x.classList.toggle('sel', x === b))
+  sfx('pluck', { vol: 0.5 })
+}
 function flushStamp(me: State) {
   const p = me.pending
   me.pending = null
@@ -975,8 +937,8 @@ async function drawingCanvas(d: Drawing, w: number, h: number): Promise<HTMLCanv
   g.fillRect(0, 0, w, h)
   const im = await blobImage(d.paint)
   if (im) g.drawImage(im, 0, 0, w, h)
-  const p = PAGES.find(x => x.id === d.page)
-  if (p?.svg) { try { g.drawImage(await pageLines(p, d.paper), 0, 0, w, h) } catch { /* sans les traits */ } }
+  const p = pageById(d.page)
+  if (p && (p.svg || p.img)) { try { g.drawImage(await pageLines(p, d.paper), 0, 0, w, h) } catch { /* sans les traits */ } }
   return cv
 }
 
@@ -1030,7 +992,7 @@ async function showDrawing(me: State, d: Drawing) {
     if (me.filming) return
     closeFolder()
     sfx('open', { vol: 0.5 })
-    const p = PAGES.find(x => x.id === d.page) || PAGES[0]
+    const p = pageById(d.page) || PAGES[0]
     void openPage(me, p, d)
   }
   ;(document.getElementById('atFFilm') as HTMLButtonElement).onclick = () => {
@@ -1205,21 +1167,43 @@ export const coloring: GameDef = {
     document.querySelectorAll<HTMLElement>('.at-stamp').forEach(b => {
       b.onclick = () => {
         if (!me.running) return
-        me.stamp = b.dataset.k as CritterKind
-        document.querySelectorAll('.at-stamp').forEach(x => x.classList.toggle('sel', x === b))
-        sfx('pluck', { vol: 0.5 })
+        pickStamp(me, b)
       }
     })
-    document.querySelectorAll<HTMLElement>('.at-page').forEach(b => {
+    document.querySelectorAll<HTMLElement>('.at-page').forEach(b => wirePage(me, b))
+    void (async () => {
+      // Les coloriages des princesses (photos de la Princesse), les plus récents
+      const ids = (await princessPages()).slice(0, PRINCESS_SHOWN)
+      const host = document.querySelector('.at-pages')
+      for (const id of ids) {
+        if (at !== me || !host) return
+        let p = EXTRA.find(x => x.id === id)
+        if (!p) {
+          const blob = await idbGet<Blob>('pages', id + ':trait')
+          if (!blob || at !== me) continue
+          p = { id, svg: '', img: URL.createObjectURL(blob) }
+          EXTRA.push(p)
+        }
+        const b = document.createElement('button')
+        b.className = 'at-page'
+        b.dataset.p = id
+        b.setAttribute('aria-label', 'Feuille')
+        b.innerHTML = `<img class="at-thumb" alt=""><img src="${p.img}" alt="">`
+        host.appendChild(b)
+        wirePage(me, b)
+        void idbGet<Blob>('pages', pageKey(me, id)).then(t => { if (t && at === me) setThumb(me, id, URL.createObjectURL(t)) })
+      }
+    })()
+    function wirePage(me: State, b: HTMLElement) {
       b.onclick = () => {
         if (!me.running) return
         closeTrays()
-        const p = PAGES.find(x => x.id === b.dataset.p)!
+        const p = pageById(b.dataset.p!)!
         if (p === me.page && me.galleryId === null) return
         sfx('open', { vol: 0.5 })
         void openPage(me, p)
       }
-    })
+    }
     const paperBtn = document.getElementById('atPaperBtn') as HTMLButtonElement
     paperBtn.onclick = () => { if (me.running) toggleTray('atPapers', paperBtn, 'left') }
     document.querySelectorAll<HTMLElement>('.at-pp').forEach(b => {
@@ -1345,6 +1329,34 @@ export const coloring: GameDef = {
     }
     raf = requestAnimationFrame(loop)
 
+    // Tampons : leurs princesses (gardées dans la Princesse), rendues en images
+    const rs = useFerme.getState().royals
+    for (const slot of ['jade', 'joyce', 'solo'] as const) {
+      const look = rs[slot]
+      if (!look || (slot === 'solo' && (rs.jade || rs.joyce))) continue
+      void princessPortraits([look], ['wave'], 180).then(async urls => {
+        if (at !== me || !urls.wave) return
+        // Carrée (les tampons le sont), la princesse au milieu
+        const src = await loadImage(urls.wave)
+        const cv = document.createElement('canvas')
+        cv.width = cv.height = src.height
+        cv.getContext('2d')!.drawImage(src, (src.height - src.width) / 2, 0)
+        const url = cv.toDataURL()
+        const im = new Image()
+        im.src = url
+        const key = 'royal:' + slot
+        me.stamps[key] = im
+        const host = document.querySelector('.at-stamps')
+        if (!host || host.querySelector(`[data-k="${key}"]`)) return
+        const b = document.createElement('button')
+        b.className = 'at-stamp'
+        b.dataset.k = key
+        b.setAttribute('aria-label', 'Tampon')
+        b.innerHTML = `<img src="${url}" alt="">`
+        host.prepend(b)
+        b.onclick = () => { if (me.running) pickStamp(me, b) }
+      })
+    }
     // Tampons : les animaux de la ferme en 3D, rendus en images
     critterPortraits(FARM, 180).then(urls => {
       if (at !== me) return

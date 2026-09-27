@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SHOW_PROFILES, useFerme } from '../core/store'
+import { SHOW_PROFILES, familyLooks, soloRoyal, useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Op, Tier } from '../core/types'
 import { toast } from '../core/utils'
@@ -12,8 +12,8 @@ import { playMusic, stopMusic } from '../core/music'
 import { ICON, starsHTML } from '../core/icons'
 import { BADGE } from '../core/badges'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
-import { dollPortraits } from '../core/portraits'
-import { defaultLook, type Look } from '../core/character'
+import { princessPortraits } from '../core/portraits'
+import { royalKey, type Royal } from '../core/royal'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
    Le jeu ne voit que `ctx` ; tout ce qui est commun à 30 jeux vit ici. */
@@ -59,19 +59,20 @@ function lastOps(gameId: string): Op[] {
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
-/** Leur personnage (Habille-toi) sur l'écran de fin : elle saute de joie
-    pour une belle partie, elle fait coucou « encore ! » pour une partie ratée.
+/** Leurs princesses (la Princesse) sur l'écran de fin : elles sautent de
+    joie pour une belle partie, elles font coucou « encore ! » pour une partie
+    ratée. Les deux sœurs ensemble dès qu'elles ont chacune gardé la leur.
     Les images sont rendues dès l'ouverture du jeu (cache) : elles sont prêtes. */
-function EndDoll({ look, mood }: { look: Look; mood: 'joy' | 'soft' | 'again' }) {
+function EndPrincesses({ looks, mood }: { looks: Royal[]; mood: 'joy' | 'soft' | 'again' }) {
   const [img, setImg] = useState<Record<string, string>>({})
   useEffect(() => {
     let on = true
-    dollPortraits(look, ['cheer', 'wave'], 200).then(r => { if (on) setImg(r) })
+    princessPortraits(looks, ['cheer', 'wave'], 200).then(r => { if (on) setImg(r) })
     return () => { on = false }
-  }, [look])
+  }, [looks])
   const src = mood === 'again' ? img.wave : img.cheer
   if (!src) return null
-  return <img className={'result-doll ' + mood} src={src} alt="" />
+  return <img className={'result-doll ' + mood + (looks.length > 1 ? ' two' : '')} src={src} alt="" />
 }
 
 /** Le score de fin en géant, qui défile de 0 jusqu'au résultat avec un tic
@@ -170,11 +171,11 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   }, [game.music, result])
 
   const profile = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
-  // Un objet stable : un nouveau look à chaque rendu relancerait le rendu 3D
-  const lookKey = JSON.stringify(profile.look || defaultLook())
-  const look = useMemo(() => JSON.parse(lookKey) as Look, [lookKey])
-  // Préparer tout de suite les images du personnage pour l'écran de fin
-  useEffect(() => { dollPortraits(look, ['cheer', 'wave'], 200) }, [look])
+  // Un objet stable : de nouvelles tenues à chaque rendu relanceraient le rendu 3D
+  const looksKey = JSON.stringify(familyLooks(store.royals).map(royalKey))
+  const looks = useMemo(() => familyLooks(useFerme.getState().royals), [looksKey])
+  // Préparer tout de suite les images des princesses pour l'écran de fin
+  useEffect(() => { princessPortraits(looks, ['cheer', 'wave'], 200) }, [looks])
 
   // Cérémonie des étoiles : chaque étoile gagnée sonne et étincelle
   useEffect(() => {
@@ -219,7 +220,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       tier,
       playerName: SHOW_PROFILES ? p.name : '',
       avatar: p.avatar,
-      look: p.look || null,
+      look: soloRoyal(useFerme.getState()),
       byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
       duo: !!game.duo && duoRef.current,
       ops: game.ops ? opsRef.current : [],
@@ -408,7 +409,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             ? e => { if (e.target === e.currentTarget) replay() }
             : undefined}>
           <div className="modal">
-            <EndDoll look={look} mood={creative || result.stars === 3 ? 'joy' : result.stars === 2 ? 'soft' : 'again'} />
+            <EndPrincesses looks={looks} mood={creative || result.stars === 3 ? 'joy' : result.stars === 2 ? 'soft' : 'again'} />
             <h2>{result.title}</h2>
             {result.score !== undefined && <BigScore value={result.score} icon={result.scoreIcon ?? ICON.star} />}
             <p>{result.msg}</p>

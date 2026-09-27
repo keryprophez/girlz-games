@@ -739,10 +739,30 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   le DOSSIER : « Ranger » y met le dessin et rend une feuille propre, et
   chaque dessin s'y reprend, se revoit en film, s'enregistre en image dans la
   tablette ou se jette ; « Fini » rejoue le film du dessin.
-- **La Princesse** (Habille-toi, plus réaliste, plus d'options, de vrais
-  décors, une sauvegarde pour Jade et une pour Joyce, les deux sur l'accueil
-  et les écrans de fin) : maquettes d'abord — la princesse 3D, et les décors
-  en 3D contre illustrés Canva, le père choisit en voyant.
+- ✅ **La Princesse** (Habille-toi devenu un vrai jeu, « fais les 10 d'un
+  coup ») — décor en 3D (recommandé contre l'illustré Canva) :
+  1. la garde-robe : les habits se PRENNENT au doigt et se glissent sur elle
+     (vignettes 3D : la princesse avec l'habit) ;
+  2. la tenue en pièces (`core/royal.ts`) : haut, jupe (bal, courte, sirène,
+     volants, pétales), traîne, cape, ailes, couronne, collier, lunettes,
+     chaussures, objet ;
+  3. la teinture magique : un pot (14 couleurs × 6 motifs), un toucher, la
+     couleur se répand depuis le doigt (shader du tissu, `core/princess3d.ts`) ;
+  4. elle est vivante : yeux qui suivent le doigt, clignements, cœurs dans les
+     yeux, rire aux chatouilles, clin d'œil, bisou ;
+  5. le BAL : la valse, six pas au choix (icônes), la révérence, la fin ;
+  6. à deux : les princesses de Jade et de Joyce côte à côte (`duo`) ;
+  7. un compagnon (`core/pet3d.ts`) : licorne, poney, chaton, chiot, teintables ;
+  8. le salon de coiffure : peigne (jusqu'au sol), ciseaux, fer, lisseur,
+     barrettes piquées où l'on veut ;
+  9. des décors qu'on touche (`core/castle3d.ts`) : lustre, rideaux, nuit et
+     feu d'artifice, fontaine, rosiers, papillons, lanternes, porte ;
+  10. la photo : elle devient un coloriage de l'Atelier et un dessin du dossier.
+  Cartes « Jade » / « Joyce » (portrait de la princesse gardée) ; les deux
+  sœurs se promènent sur l'accueil et font la fête en fin de partie ; leurs
+  princesses sont des tampons de l'Atelier. `doll3d.ts` et `character.ts`
+  sont sortis. **À mesurer sur la tablette** (`?fps`) : tissus satinés, deux
+  princesses et un compagnon ; la résolution baisse d'elle-même sous 30 i/s.
 
 ---
 

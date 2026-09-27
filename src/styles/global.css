@@ -45,7 +45,8 @@ button{font-family:inherit;color:inherit;}
 .walker{bottom:2.5%;left:0;width:64px;height:64px;animation:henWalk 42s linear infinite;animation-delay:-1.4s;}
 .walker.chick{width:40px;height:40px;animation-delay:0s;}
 /* Leur personnage marche devant la poule : deux images de pas qui alternent */
-.walker.doll{width:92px;height:92px;bottom:1.6%;animation-delay:-3.2s;}
+.walker.doll{width:76px;height:96px;bottom:1.6%;animation-delay:-3.2s;}
+.walker.doll.d2{animation-delay:-5.2s;}
 .walker.doll img{position:absolute;inset:0;width:100%;height:100%;animation:dollStep .5s steps(1) infinite;}
 .walker.doll img+img{animation-delay:-.25s;}
 @keyframes dollStep{50%{opacity:0;}}
@@ -296,7 +297,7 @@ button.chip:active{transform:scale(.92);}
 .modal p{font-size:15.5px;color:var(--ink-soft);margin-bottom:10px;}
 /* Leur personnage à côté de l'écran de fin : il danse, ou il encourage */
 .modal{position:relative;}
-.result-doll{position:absolute;left:-168px;bottom:-6px;width:200px;height:200px;pointer-events:none;
+.result-doll{position:absolute;left:-150px;bottom:-6px;width:160px;height:200px;pointer-events:none;
   transform-origin:50% 100%;animation:dollIn .5s var(--spring) both;}
 .result-doll.joy{animation:dollIn .5s var(--spring) both,dollJoy .55s ease-in-out .5s infinite alternate;}
 .result-doll.soft{animation:dollIn .5s var(--spring) both,dollSway 1.2s ease-in-out .5s infinite alternate;}
@@ -305,6 +306,7 @@ button.chip:active{transform:scale(.92);}
 @keyframes dollJoy{from{transform:translateY(0) rotate(-4deg);}to{transform:translateY(-26px) rotate(4deg);}}
 @keyframes dollSway{from{transform:rotate(-5deg);}to{transform:rotate(5deg);}}
 @keyframes dollWave{from{transform:rotate(-3deg) translateY(0);}to{transform:rotate(3deg) translateY(-6px);}}
+.result-doll.two{left:-250px;width:270px;}
 @media (max-width:760px){.result-doll{display:none;}}
 /* La « bonne réponse » qui rebondit : utilisée partout, jamais définie avant le 23/09 */
 @keyframes goodp{0%{transform:scale(.9);}45%{transform:scale(1.14);}100%{transform:scale(1);}}
@@ -498,30 +500,100 @@ body.playing .g3-bar{max-width:820px;}
 .at-fclose{position:absolute;left:16px;top:70px;width:70px;height:70px;}
 
 /* ============================================================
-   HABILLE-TOI (personnage illustré)
+   LA PRINCESSE (27/09) : la scène 3D à gauche, la garde-robe à droite
    ============================================================ */
-/* Habille-toi en 3D (23/09) : la scène à gauche, la garde-robe à droite */
-.du-arena{display:flex;align-items:stretch;gap:0;background:#F4EEFB;padding:0;overflow:hidden;}
-.du-scene{position:relative;flex:1;min-width:0;touch-action:none;}
-.du-scene canvas{display:block;width:100%;height:100%;}
-.du-side{width:min(410px,40%);display:flex;flex-direction:column;justify-content:center;gap:12px;padding:62px 14px 90px;
-  background:rgba(255,255,255,.72);backdrop-filter:blur(8px);overflow-y:auto;}
-.du-top{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
-.du-tool{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:#fff;cursor:pointer;font-size:24px;
-  display:grid;place-items:center;box-shadow:var(--e1);}
-.du-tool:active{transform:scale(.9);}
-.du-rows{display:flex;flex-direction:column;gap:10px;width:100%;}
-.du-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-start;}
-.du-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;width:100%;text-align:left;}
-.du-done{position:absolute;right:16px;bottom:16px;width:74px;height:74px;font-size:38px;}
-.du-opt{min-width:54px;height:54px;border-radius:13px;border:2px solid var(--line);background:var(--card);
-  cursor:pointer;box-shadow:var(--e1);transition:transform .2s var(--spring),border-color .2s;
-  display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;}
-.du-opt.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.1);}
-.du-opt:active{transform:scale(.9);}
-.du-opt.du-color{min-width:40px;width:40px;height:40px;border-radius:50%;border:3px solid #fff;
-  box-shadow:var(--e1);padding:0;}
-.du-opt.du-color.sel{box-shadow:0 0 0 3px var(--mango), var(--e1);border-color:#fff;}
+.pr-arena{display:flex;align-items:stretch;gap:0;background:#F3E4EA;padding:0;overflow:hidden;position:relative;}
+.pr-scene{position:relative;flex:1;min-width:0;touch-action:none;}
+.pr-scene canvas{display:block;width:100%;height:100%;}
+.pr-side{width:min(540px,40%);flex:none;display:flex;flex-direction:column;gap:10px;padding:64px 12px 12px 10px;
+  background:linear-gradient(180deg,#FFF8FB,#F6E6F0);box-shadow:-6px 0 24px rgba(120,60,90,.12);z-index:2;
+  transition:margin-right .7s var(--spring),opacity .4s;}
+.pr-arena.ball .pr-side{margin-right:calc(-1 * min(540px,40%));opacity:0;pointer-events:none;}
+.pr-saves{display:flex;gap:10px;}
+.pr-card{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 6px;border-radius:22px;background:#fff;
+  border:3px solid #F1D5E3;box-shadow:0 4px 10px rgba(150,80,110,.1);position:relative;}
+.pr-card b{font-family:'Baloo 2';font-weight:800;font-size:clamp(18px,2.4vmin,26px);color:#8A3558;}
+.pr-card.on{border-color:#E06A93;box-shadow:0 0 0 4px rgba(224,106,147,.22);}
+.pr-card.saved{animation:prSaved .8s var(--spring);}
+.pr-card.nudge{animation:prNudge .45s;}
+@keyframes prSaved{0%{transform:scale(1);}35%{transform:scale(1.08);box-shadow:0 0 0 10px rgba(255,211,77,.5);}100%{transform:scale(1);}}
+@keyframes prNudge{25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+.pr-face{width:60px;height:76px;flex:none;border-radius:16px;border:0;padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;
+  background:radial-gradient(circle at 50% 35%,#FFFFFF,#F8E0EA);}
+.pr-face img{width:100%;height:100%;object-fit:cover;}
+.pr-disk{margin-left:auto;width:50px;height:50px;flex:none;border-radius:50%;border:0;background:#E06A93;display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 3px 8px rgba(176,74,116,.35);}
+.pr-disk svg{width:28px;height:28px;}
+.pr-disk:active,.pr-face:active{transform:scale(.92);}
+.pr-body{flex:1;display:flex;gap:10px;min-height:0;}
+.pr-tabs{display:flex;flex-direction:column;gap:8px;overflow:auto;}
+.pr-tab{width:66px;height:66px;flex:none;border-radius:20px;background:#fff;border:3px solid #F1D5E3;display:grid;place-items:center;cursor:pointer;
+  color:#B04A74;padding:0;}
+.pr-tab svg{width:38px;height:38px;}
+.pr-tab.on{background:#E06A93;border-color:#E06A93;color:#fff;}
+.pr-tab.on svg *{stroke:#fff;}
+.pr-pane{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:2px 4px 8px 2px;}
+.pr-row{display:flex;flex-wrap:wrap;gap:10px;}
+.pr-tile{width:calc(33.3% - 7px);aspect-ratio:1;border-radius:22px;background:#fff;border:3px solid #F1D5E3;position:relative;overflow:hidden;
+  cursor:grab;touch-action:none;padding:0;display:grid;place-items:center;transition:transform .2s var(--spring);}
+.pr-tile img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none;}
+.pr-tile.ico svg{width:56%;height:56%;}
+.pr-tile.on{border-color:#E06A93;box-shadow:0 0 0 4px rgba(224,106,147,.22);}
+.pr-tile:active{transform:scale(.94);}
+.pr-tile.wait::after{content:'';position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,#F8E0EA,transparent 70%);
+  animation:prWait 1.2s ease-in-out infinite alternate;}
+@keyframes prWait{from{opacity:.3;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+.pr-sep{height:2px;background:#F1D5E3;border-radius:2px;flex:none;}
+.pr-dot{width:54px;height:54px;border-radius:50%;border:4px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.16);cursor:pointer;padding:0;
+  display:grid;place-items:center;overflow:hidden;transition:transform .2s var(--spring);}
+.pr-dot.on{box-shadow:0 0 0 4px #E06A93;transform:scale(1.08);}
+.pr-dot.small{width:40px;height:40px;border-width:3px;}
+.pr-dot.eye{background:#FBF8F4;}
+.pr-dot.eye i{width:60%;height:60%;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff 0 12%,var(--c) 14% 62%,#140C0A 64%);}
+.pr-dot.pat{background:#fff;}
+.pr-dot.pat img{width:100%;height:100%;}
+.pr-tool{width:62px;height:62px;border-radius:18px;background:#fff;border:3px solid #F1D5E3;display:grid;place-items:center;cursor:pointer;padding:0;color:#B04A74;}
+.pr-tool svg{width:36px;height:36px;}
+.pr-tool.small{width:50px;height:50px;}
+.pr-tool.on{background:#FFE6EF;border-color:#E06A93;box-shadow:0 0 0 3px rgba(224,106,147,.22);}
+.pr-pot-now{align-self:center;width:96px;height:96px;border-radius:50%;box-shadow:0 0 0 5px #fff,0 6px 16px rgba(150,80,110,.25);overflow:hidden;}
+.pr-pot-now img{width:100%;height:100%;}
+.pr-actions{display:flex;gap:10px;align-items:center;}
+.pr-btn{width:72px;height:72px;flex:none;border-radius:50%;background:#fff;border:3px solid #F1D5E3;display:grid;place-items:center;cursor:pointer;
+  padding:0;color:#B04A74;box-shadow:0 3px 8px rgba(150,80,110,.12);}
+.pr-btn svg{width:40px;height:40px;}
+.pr-btn:active,.pr-ballbtn:active{transform:scale(.93);}
+.pr-ballbtn{flex:1;height:80px;border-radius:40px;border:0;background:linear-gradient(180deg,#FF9DBD,#E06A93);display:grid;place-items:center;
+  cursor:pointer;color:#fff;box-shadow:0 6px 16px rgba(224,106,147,.4);animation:prGlow 2.4s ease-in-out infinite;}
+.pr-ballbtn svg{width:52px;height:52px;}
+@keyframes prGlow{50%{box-shadow:0 6px 26px rgba(255,211,77,.7);}}
+.pr-ghost{position:fixed;width:120px;height:120px;pointer-events:none;z-index:60;border-radius:24px;background:#fff;overflow:hidden;
+  transform:translate(-50%,-50%) scale(1.1) rotate(-4deg);box-shadow:0 12px 30px rgba(120,60,90,.35);display:grid;place-items:center;}
+.pr-ghost img{width:100%;height:100%;object-fit:cover;}
+.pr-ghost svg{width:56%;height:56%;}
+.pr-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5;}
+.pr-flash.go{animation:prFlash .7s ease-out;}
+@keyframes prFlash{0%{opacity:.95;}100%{opacity:0;}}
+.pr-polaroid{position:absolute;left:50%;top:40%;width:220px;padding:10px 10px 36px;background:#fff;border-radius:6px;z-index:6;
+  box-shadow:0 12px 30px rgba(0,0,0,.25);pointer-events:none;animation:prPolaroid 2.6s ease-in-out forwards;}
+.pr-polaroid img{width:100%;display:block;border-radius:3px;}
+.pr-polaroid span{position:absolute;right:10px;bottom:6px;width:26px;height:26px;opacity:.6;}
+.pr-polaroid span svg{width:100%;height:100%;}
+@keyframes prPolaroid{0%{transform:translate(-50%,-50%) scale(.3) rotate(-10deg);opacity:0;}15%{transform:translate(-50%,-50%) scale(1.1) rotate(4deg);opacity:1;}
+  60%{transform:translate(-50%,-50%) scale(1) rotate(-3deg);opacity:1;}100%{transform:translate(40vw,40vh) scale(.2) rotate(20deg);opacity:0;}}
+.pr-dance,.pr-strip{display:none;}
+.pr-arena.ball .pr-dance{position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center;gap:16px;z-index:4;}
+.pr-arena.ball .pr-strip{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:4;}
+.pr-move{width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.94);border:4px solid #F8D3E2;display:grid;place-items:center;
+  cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:0;animation:prIn .5s var(--spring) both;}
+.pr-move svg{width:62px;height:62px;}
+.pr-move:nth-child(2){animation-delay:.05s;}.pr-move:nth-child(3){animation-delay:.1s;}.pr-move:nth-child(4){animation-delay:.15s;}
+.pr-move:nth-child(5){animation-delay:.2s;}.pr-move:nth-child(6){animation-delay:.25s;}
+.pr-move:active{transform:scale(.9);}
+@keyframes prIn{from{transform:translateY(40px) scale(.6);opacity:0;}}
+.pr-slot{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.25);border:3px dashed rgba(255,255,255,.75);display:grid;place-items:center;}
+.pr-slot.done{background:#fff;border-style:solid;border-color:#FFD34D;animation:prIn .4s var(--spring);}
+.pr-slot svg{width:40px;height:40px;}
 
 /* ---- Personnage dans les jeux d'action ---- */
 .wing{transform-origin:44px 84px;animation:wingflap .5s ease-in-out infinite alternate;}
@@ -1207,8 +1279,6 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .fw-arena{background:linear-gradient(180deg,#0E0A22,#241A4A 70%,#3A2C66);cursor:pointer;}
 .fw-arena canvas{position:absolute;inset:0;}
 .fw-final{animation:rbob 1s ease-in-out infinite;}
-.du-swatch{width:44px;min-width:44px;height:44px;padding:0;border:2px solid #fff;}
-.du-swatch.sel{box-shadow:0 0 0 3px var(--mango), var(--e1);transform:scale(1.1);}
 
 
 #fwCanvas{position:absolute;inset:0;width:100%;height:100%;}

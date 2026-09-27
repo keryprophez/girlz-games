@@ -1,7 +1,7 @@
 import { loadThree, loadModel, fitModel, dotTex, type T3 } from './three3d'
 import { critterKit, type CritterKind } from './critters'
-import { makeDoll, poseDoll, type DollPose } from './doll3d'
-import type { Look } from './character'
+import { makePrincess, posePrincess, type Pose } from './princess3d'
+import { royalKey, type Royal } from './royal'
 
 /* Les personnages 3D de la ferme, rendus en IMAGES pour les jeux en DOM
    (Simon, Puissance 4, la Boîte à rythme, le Taquin). Ils remplacent les
@@ -116,56 +116,68 @@ function renderPortraits(T: T3, renderer: Renderer, env: import('three').Texture
   }
 }
 
-/** Le personnage des filles (Habille-toi) rendu en images, une par pose :
-    debout, qui saute de joie, qui fait coucou, qui marche. Cache par look. */
+/** LEURS princesses (la Princesse) rendues en images, une par pose : qui
+    saute de joie, qui fait coucou, qui marche. Une ou deux princesses côte à
+    côte dans la même image (les deux sœurs sur l'écran de fin). Cache par
+    tenue. L'image fait `px` de haut ; sa largeur suit le nombre de princesses. */
 const inflight = new Map<string, Promise<Record<string, string>>>()
-export function dollPortraits(look: Look, poses: DollPose[], px: number): Promise<Record<string, string>> {
+export function princessPortraits(looks: Royal[], poses: Pose[], px: number): Promise<Record<string, string>> {
   // Deux demandes identiques en même temps partagent le même rendu
-  const k = JSON.stringify(look) + poses.join() + px
+  const k = looks.map(royalKey).join('+') + poses.join() + px
   let p = inflight.get(k)
   if (!p) {
-    p = renderDolls(look, poses, px).finally(() => inflight.delete(k))
+    p = renderPrincesses(looks, poses, px).finally(() => inflight.delete(k))
     inflight.set(k, p)
   }
   return p
 }
 
-async function renderDolls(look: Look, poses: DollPose[], px: number): Promise<Record<string, string>> {
+async function renderPrincesses(looks: Royal[], poses: Pose[], px: number): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
-  const key = (p: DollPose) => 'doll:' + JSON.stringify(look) + ':' + p + '@' + px
+  const key = (p: Pose) => 'royal:' + looks.map(royalKey).join('+') + ':' + p + '@' + px
   const missing = poses.filter(p => { const hit = cache.get(key(p)); if (hit) out[p] = hit; return !hit })
-  if (!missing.length) return out
-  const size = Math.min(512, Math.round(px * 2))
-  await withRenderer(size, size, (T, renderer, env) => {
+  if (!missing.length || !looks.length) return out
+  const H = Math.min(640, Math.round(px * 2))
+  const W = Math.round(H * (looks.length > 1 ? 1.35 : 0.8))
+  await withRenderer(W, H, async (T, renderer, env) => {
     const shadowTex = dotTex(T, '#2A2018')
-    const doll = makeDoll(T, look, 1)
+    const ps = await Promise.all(looks.map(l => makePrincess(T, l, { live: false })))
     try {
       for (const pose of missing) {
         const scene = new T.Scene()
         lights(T, scene, env)
-        // Des instants choisis : en haut du saut, main levée, pas en avant
-        poseDoll(doll, pose, pose === 'cheer' ? 0.26 : pose === 'wave' ? 0.17 : pose === 'walk' || pose === 'stride' ? 0.2 : 0)
-        doll.obj.rotation.y = -0.3
-        scene.add(doll.obj)
-        const blob = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.3, depthWrite: false }))
-        blob.rotation.x = -Math.PI / 2
-        blob.position.y = 0.002
-        blob.scale.set(0.5, 0.36, 1)
-        scene.add(blob)
-        // Cadrage fixe (pas sur la boîte englobante : le saut et le ballon la
-        // déformeraient, et les poses ne se superposeraient plus)
-        const cam = new T.PerspectiveCamera(30, 1, 0.05, 50)
-        cam.position.set(0, 0.92, 2.45)
-        cam.lookAt(0, 0.6, 0)
+        ps.forEach((pr, i) => {
+          // Des instants choisis : en haut du saut, main levée, pas en avant
+          const yaw = posePrincess(pr, pose, pose === 'cheer' ? 0.26 + i * 0.1 : pose === 'wave' ? 0.17 : pose === 'walk' || pose === 'stride' ? 0.2 : 0.5)
+          pr.rig.rotation.y = yaw
+          pr.update(0)
+          pr.face.expr(pose === 'cheer' ? 'joy' : pose === 'wave' ? 'wink' : 'neutral', 99)
+          pr.face.redraw()
+          pr.obj.position.set(looks.length > 1 ? (i ? 0.3 : -0.3) : 0, 0, 0)
+          pr.obj.rotation.y = looks.length > 1 ? (i ? -0.35 : 0.35) : pose === 'walk' || pose === 'stride' ? 0.9 : -0.3
+          scene.add(pr.obj)
+          const blob = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.3, depthWrite: false }))
+          blob.rotation.x = -Math.PI / 2
+          blob.position.set(pr.obj.position.x, 0.002, 0)
+          blob.scale.set(0.62, 0.45, 1)
+          scene.add(blob)
+        })
+        // Cadrage fixe : tout le corps, le saut compris
+        const cam = new T.PerspectiveCamera(30, W / H, 0.05, 50)
+        cam.position.set(0, 0.72, looks.length > 1 ? 2.75 : 2.55)
+        cam.lookAt(0, 0.56, 0)
         renderer.render(scene, cam)
         const url = renderer.domElement.toDataURL('image/png')
         cache.set(key(pose), url)
         out[pose] = url
-        scene.remove(doll.obj)
-        blob.geometry.dispose(); (blob.material as import('three').Material).dispose()
+        ps.forEach(pr => scene.remove(pr.obj))
+        scene.traverse(o => {
+          const m = o as import('three').Mesh
+          if (m.isMesh && m.geometry) { m.geometry.dispose(); (m.material as import('three').Material).dispose() }
+        })
       }
     } finally {
-      doll.dispose()
+      ps.forEach(pr => pr.dispose())
       shadowTex.dispose()
     }
   }).catch(() => { /* pas de WebGL : rien à montrer, rien de cassé */ })

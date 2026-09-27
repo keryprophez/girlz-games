@@ -34,13 +34,18 @@ aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).
 
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
-neige, devant un chalet qui fume), Habille-toi (son personnage en 3D, qui la
-suit ensuite dans les jeux), Boîte à Rythme (les animaux chantent en
+neige, devant un chalet qui fume), la Princesse (une princesse en 3D qu'on
+habille pièce par pièce en glissant les habits de la garde-robe, qu'on teint
+au doigt, qu'on coiffe — peigne, ciseaux, fer, barrettes —, avec son
+compagnon — licorne, poney, chaton, chiot — dans une salle de bal ou un jardin
+de château qu'on touche ; une photo qui devient un coloriage de l'Atelier ; à
+deux, les princesses de Jade et de Joyce ; et pour finir, le bal), Boîte à Rythme (les animaux chantent en
 sautant), Petit Piano (un piano laqué, la partition qui descend, les animaux
 qui chantent), Feu d'artifice (au-dessus du village, reflété dans le lac),
 l'Atelier (dix pinceaux — néon, paillettes, aquarelle, craie, spray, cœurs,
 étoiles, arc-en-ciel… —, le miroir et la rosace, des papiers de couleur, le
-pot de peinture, les tampons de la ferme ; un dossier où ranger ses dessins,
+pot de peinture, les tampons de la ferme et leurs princesses, les coloriages
+tirés des photos de la Princesse ; un dossier où ranger ses dessins,
 les reprendre, revoir leur film ou les enregistrer dans la tablette), la
 Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
 

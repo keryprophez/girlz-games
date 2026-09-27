@@ -4,7 +4,7 @@
    des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
    catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
-   Boîte à rythme, Feu d'artifice, l'Atelier et Habille-toi compris.
+   Boîte à rythme, Feu d'artifice, l'Atelier et la Princesse compris.
 
    Les jeux exposent leur état de pilotage seulement quand `window.__BOT` est
    posé avant le chargement — inerte en production.
@@ -990,11 +990,100 @@ await scenario('atelier-papillon', async () => {
   await page.locator('#atDone').click()
   await finDe('Chef-d', 20000)
 })
-await scenario('habille-toi-surprise', async () => {
-  await openGame('Habille-toi')
-  await page.locator('#duRandom').click()
-  await page.locator('#duDone').click()
-  await finDe('Superbe look')
+/* 👑 La Princesse (27/09) : la partie entière, seule. Une jupe au toucher,
+   la couronne GLISSÉE de la garde-robe sur la tête, la teinture magique sur
+   la jupe, le peigne qui allonge les cheveux, la photo (rangée dans
+   l'Atelier), puis le bal : six pas de danse jusqu'à l'écran de fin. */
+const pr = f => page.evaluate(f)
+const prOpen = async (duo) => {
+  errors.length = 0
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await clickTile('La Princesse')
+  await page.locator('.duobtn').nth(duo ? 1 : 0).click()
+  await page.locator('.tierbtn.tier-easy').click()
+  await page.waitForFunction(() => window.__pr && window.__pr.ready, null, { timeout: 90000 })
+}
+await scenario('princesse-habiller-teindre-bal', async () => {
+  await prOpen(false)
+  // La jupe courte, au toucher
+  await page.locator('.pr-tab[data-t="dress"]').click()
+  await page.locator('.pr-tile[data-s="1"][data-i="1"]').click()
+  await page.waitForFunction(() => window.__pr.looks[0].skirt === 'short', null, { timeout: 20000 })
+  // La couronne glissée sur la tête
+  await page.locator('.pr-tab[data-t="crown"]').click()
+  const tile = await page.locator('.pr-tile[data-s="0"][data-i="2"]').boundingBox()
+  const head = await pr(() => window.__pr.screenOf('head'))
+  const x0 = tile.x + tile.width / 2, y0 = tile.y + tile.height / 2
+  await page.mouse.move(x0, y0)
+  await page.mouse.down()
+  for (let i = 1; i <= 12; i++) {
+    await page.mouse.move(x0 + (head.x - x0) * i / 12, y0 + (head.y - y0) * i / 12)
+    await page.waitForTimeout(25)
+  }
+  await page.mouse.up()
+  await page.waitForFunction(() => window.__pr.looks[0].crown === 'crown', null, { timeout: 20000 })
+  // La teinture : bleu à étoiles, sur la jupe
+  await page.locator('.pr-tab[data-t="dye"]').click()
+  await page.locator('[data-dye="#3F63C8"]').click()
+  await page.locator('[data-pat="stars"]').click()
+  await page.waitForTimeout(1500) // la caméra se pose
+  const sk = await pr(() => window.__pr.screenOf('skirt'))
+  await page.mouse.click(sk.x, sk.y)
+  await page.waitForFunction(() => window.__pr.looks[0].paint.skirt.c === '#3F63C8' && window.__pr.looks[0].paint.skirt.p === 'stars', null, { timeout: 20000 })
+  // Le peigne : tirer vers le bas allonge les cheveux
+  await page.locator('.pr-tab[data-t="hair"]').click()
+  await page.locator('[data-tool="comb"]').click()
+  await page.waitForTimeout(2500) // la caméra s'approche du visage
+  const len0 = await pr(() => window.__pr.looks[0].hair.len)
+  const hp = await pr(() => window.__pr.screenOf('hair'))
+  await page.mouse.move(hp.x, hp.y)
+  await page.mouse.down()
+  for (let i = 1; i <= 16; i++) { await page.mouse.move(hp.x, hp.y + i * 20); await page.waitForTimeout(60) }
+  await page.mouse.up()
+  await page.waitForFunction(l => window.__pr.looks[0].hair.len > l + 0.05, len0, { timeout: 30000 })
+  // La photo : rangée dans l'Atelier (dossier et coloriage)
+  await page.locator('#prPhoto').click()
+  await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 30000 })
+  await page.waitForFunction(() => new Promise(res => {
+    const rq = indexedDB.open('ferme-atelier', 2)
+    rq.onsuccess = () => {
+      const g = rq.result.transaction('pages').objectStore('pages').get('princesse:liste')
+      g.onsuccess = () => res(Array.isArray(g.result) && g.result.length > 0)
+      g.onerror = () => res(false)
+    }
+    rq.onerror = () => res(false)
+  }), null, { timeout: 30000, polling: 1000 })
+  // Le bal : six pas, puis la révérence et l'écran de fin
+  await page.locator('#prBall').click()
+  await page.locator('.pr-move').first().waitFor()
+  for (let k = 0; k < 6; k++) {
+    await page.locator('.pr-move').nth(k).click({ force: true })
+    await page.waitForFunction(n => window.__pr.ball && window.__pr.ball.moves >= n, k + 1, { timeout: 40000 })
+  }
+  await finDe('Quel bal', 60000)
+  // La princesse est gardée pour la prochaine fois
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.solo)
+  if (!saved || saved.skirt !== 'short' || saved.paint.skirt.c !== '#3F63C8') throw new Error('la princesse n\'est pas gardée')
+})
+
+/* 👑 À deux : deux princesses sur l'estrade, celles de Jade et de Joyce.
+   Teindre la seconde la rend active et la garde dans la carte de Joyce. */
+await scenario('princesse-a-deux', async () => {
+  await prOpen(true)
+  const n = await pr(() => window.__pr.looks.length)
+  if (n !== 2) throw new Error('il faut deux princesses à deux')
+  await page.locator('.pr-tab[data-t="dye"]').click()
+  await page.locator('[data-dye="#8CCB6A"]').click()
+  await page.waitForTimeout(1500)
+  const sk = await pr(() => window.__pr.screenOf('skirt', 1))
+  await page.mouse.click(sk.x, sk.y)
+  await page.waitForFunction(() => window.__pr.active === 1 && window.__pr.looks[1].paint.skirt.c === '#8CCB6A', null, { timeout: 20000 })
+  const joyce = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.joyce)
+  if (!joyce || joyce.paint.skirt.c !== '#8CCB6A') throw new Error('la princesse de Joyce n\'est pas gardée')
+  // On repart seule (le choix « à deux » est retenu par jeu)
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await clickTile('La Princesse')
+  await page.locator('.duobtn').first().click()
 })
 
 await browser.close()

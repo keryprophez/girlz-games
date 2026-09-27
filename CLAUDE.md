@@ -53,7 +53,7 @@ near-miss et outro (voir `AUDIT.md` §4 pour les huit manques communs).
 
 ```
 src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.ts
-             music.ts (générative) · voice.ts · juice.ts · fx.ts · character.ts
+             music.ts (générative) · voice.ts · juice.ts · fx.ts
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
              sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
              portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
@@ -70,8 +70,15 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
                            lapin, cactus, vache, poule, chien, canard, mouton
                            (`FARM`, les pions des jeux en DOM)
-             doll3d.ts   ← LEUR personnage en 3D (le look d'Habille-toi) :
-                           `makeDoll(T, look)`, `poseDoll(d, 'cheer'|'wave'|'sit'…)`
+             royal.ts    ← LEUR princesse en données (27/09) : pièces, peintures
+                           (couleur + motif) par pièce, cheveux, compagnon — testé
+             princess3d.ts ← LA PRINCESSE en 3D : `makePrincess(T, royal)`,
+                           tissu magique (`dye` : la teinture part du doigt),
+                           visage vivant (`face.expr`, `face.lookAt`),
+                           `posePrincess(p, 'cheer'|'spin'|'waltz'…)`
+             pet3d.ts    ← son compagnon : licorne, poney, chaton, chiot
+             castle3d.ts ← les décors qu'on touche : salle de bal, jardin, jour/nuit
+             atelierdb.ts ← l'IndexedDB de l'Atelier (partagée avec la Princesse)
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
                            chalet Kenney assemblé pièce par pièce, lanternes)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
@@ -95,11 +102,13 @@ Puissance 4, la Boîte à rythme, l'image du Taquin) est fait des personnages
 3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
 `critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
 WebGL jetable), `portraitImg(url, px)` les insère, `farmScene(kinds, px)` rend
-un pré 3D entier. Ce sont les mêmes personnages que Tape-Trous. **Le
-personnage des filles** (23/09) suit la même règle : construit en formes
-rondes dans `core/doll3d.ts` à partir de `ctx.look`, en vraie 3D dans
-Habille-toi, en images (`dollPortraits(look, poses,
-px)`) sur l'écran de fin et en promenade sur l'accueil. Pour ajouter un mot : une ligne dans
+un pré 3D entier. **Leurs princesses** (27/09) suivent la même règle :
+construites dans `core/princess3d.ts` à partir d'une `Royal`
+(`core/royal.ts`), en vraie 3D dans la Princesse, en images
+(`princessPortraits(looks, poses, px)`, une ou deux côte à côte) sur l'écran
+de fin, en promenade sur l'accueil et en tampons dans l'Atelier. Le store
+garde trois princesses (`royals.solo`, `.jade`, `.joyce`) ; `familyLooks()`
+donne celles à montrer (les deux sœurs dès qu'elles ont gardé la leur). Pour ajouter un mot : une ligne dans
 `TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
 **regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
 

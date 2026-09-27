@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
-import type { Look } from './character'
+import { defaultRoyal, normalizeRoyal, type Royal } from './royal'
 import { setSound } from './audio'
 
 /* Le choix de joueuse est MASQUÉ pour l'instant (demande du 10/09) : l'accueil
@@ -10,6 +10,35 @@ import { setSound } from './audio'
    ce drapeau, prêt à revenir. Tant qu'il est à false, personne n'est nommé :
    GameHost passe un prénom vide aux jeux (sinon Joyce s'appelait Jade). */
 export const SHOW_PROFILES = false as boolean
+
+export type RoyalSlot = 'solo' | 'jade' | 'joyce'
+
+/** Les princesses à montrer (accueil, écran de fin) : les deux sœurs dès
+    qu'elles ont gardé la leur, sinon la princesse qu'on habille seule. */
+export function familyLooks(r: Record<RoyalSlot, Royal | null>): Royal[] {
+  const both = [r.jade, r.joyce].filter((x): x is Royal => !!x)
+  return both.length ? both : [r.solo || defaultRoyal()]
+}
+
+/** La princesse qu'on habille seule (jamais nulle). */
+export const soloRoyal = (s: { royals: Record<RoyalSlot, Royal | null> }) => s.royals.solo || defaultRoyal()
+
+/** L'ancien look d'Habille-toi (avant le 27/09) devient une princesse :
+    on garde la couleur de la robe, celle des cheveux et la coiffure. */
+function fromOldLook(look: unknown): Royal {
+  const r = defaultRoyal()
+  if (!look || typeof look !== 'object') return r
+  const l = look as Record<string, string>
+  const hex = /^#[0-9a-fA-F]{6}$/
+  if (hex.test(l.color || '')) for (const k of ['bodice', 'sleeves', 'skirt'] as const) r.paint[k].c = l.color
+  if (hex.test(l.hairColor || '')) r.paint.hair.c = l.hairColor
+  if (l.hair === 'pigtails') r.hair.style = 'pigtails'
+  if (l.outfit === 'tee') r.skirt = 'short'
+  if (l.hat === 'crown') r.crown = 'crown'
+  if (l.held === 'wand') r.held = 'wand'
+  if (l.held === 'flower') r.held = 'bouquet'
+  return r
+}
 
 interface FermeState {
   profiles: Profile[]
@@ -26,7 +55,10 @@ interface FermeState {
   setAvatar(id: string, dataUrl: string | null): void
   setTier(id: string, tier: Tier): void
   updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'age'>>): void
-  setLook(id: string, look: Look): void
+  /** Les princesses (27/09) : celle qu'on habille seule, et les deux
+      sauvegardes « Jade » et « Joyce » (null tant qu'on n'a rien gardé). */
+  royals: Record<RoyalSlot, Royal | null>
+  setRoyal(slot: RoyalSlot, r: Royal | null): void
   /** Dernière photo choisie pour le Puzzle (indépendante de l'avatar). */
   puzzleImgs: Record<string, string>
   setPuzzleImg(id: string, img: string): void
@@ -72,8 +104,9 @@ export const useFerme = create<FermeState>()(
       updateProfile(id, patch) {
         set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, ...patch } : p)) }))
       },
-      setLook(id, look) {
-        set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, look } : p)) }))
+      royals: { solo: null, jade: null, joyce: null },
+      setRoyal(slot, r) {
+        set(s => ({ royals: { ...s.royals, [slot]: r ? normalizeRoyal(r) : null } }))
       },
       puzzleImgs: {},
       setPuzzleImg(id, img) {
@@ -118,6 +151,15 @@ export const useFerme = create<FermeState>()(
           next[id] = { bestStars: p?.bestStars || {} }
         }
         if (dirty) queueMicrotask(() => useFerme.setState({ progress: next }))
+        // Les princesses : relues prudemment ; la toute première reprend l'ancien look
+        const rs = (state.royals || {}) as Partial<Record<RoyalSlot, unknown>>
+        const old = state.profiles?.find(p => p.id === state.currentId)?.look
+        const royals: Record<RoyalSlot, Royal | null> = {
+          solo: rs.solo ? normalizeRoyal(rs.solo) : old ? fromOldLook(old) : null,
+          jade: rs.jade ? normalizeRoyal(rs.jade) : null,
+          joyce: rs.joyce ? normalizeRoyal(rs.joyce) : null
+        }
+        queueMicrotask(() => useFerme.setState({ royals }))
       }
     }
   )

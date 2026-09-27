@@ -52,6 +52,20 @@ const THEMES: Record<string, Theme> = {
     scale: [67, 69, 71, 74, 76, 79],
     bass: [43, 40, 36, 38]
   },
+  // Le château de la Princesse : boîte à musique rêveuse (27/09)
+  palace: {
+    bpm: 78, style: 'box',
+    chords: [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]],
+    scale: [74, 76, 78, 81, 83, 86, 88],
+    bass: [50, 47, 43, 45]
+  },
+  // Le bal : une grande valse (27/09)
+  ball: {
+    bpm: 150, style: 'waltz',
+    chords: [[62, 66, 69], [57, 61, 64], [59, 62, 66], [55, 59, 62], [62, 66, 69], [57, 61, 64], [55, 59, 64], [57, 61, 64]],
+    scale: [74, 76, 78, 79, 81, 83, 86],
+    bass: [50, 45, 47, 43, 50, 45, 43, 45]
+  },
   // Nuit calme sous les fusées
   night: {
     bpm: 46, style: 'pad',
