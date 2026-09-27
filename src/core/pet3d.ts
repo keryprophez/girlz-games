@@ -238,10 +238,11 @@ export async function makePet(T: T3, kind: Exclude<PetKind, 'none'>, look: Royal
     obj, kind, saddle,
     dye(part, paint, at) { fabs[part].dye(paint, at) },
     partOf(x) {
+      // Seulement si l'objet touché est à CE compagnon (à deux, il y en a deux)
+      let part: PetPart | 'deco' | null = null
       for (let o2: import('three').Object3D | null = x; o2; o2 = o2.parent) {
-        const p = o2.userData?.part
-        if (p) return p as PetPart | 'deco'
-        if (o2 === obj) break
+        if (!part && o2.userData?.part) part = o2.userData.part
+        if (o2 === obj) return part
       }
       return null
     },
