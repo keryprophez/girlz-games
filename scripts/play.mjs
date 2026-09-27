@@ -1005,21 +1005,28 @@ const prOpen = async (duo) => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
   await clickTile('La Princesse')
-  await page.locator('.duobtn').nth(duo ? 1 : 0).click()
-  await page.locator('.tierbtn.tier-easy').click()
+  await page.locator('.duobtn').nth(duo ? 1 : 0).click({ force: true, timeout: 120000 })
+  await page.locator('.tierbtn.tier-easy').click({ force: true, timeout: 120000 })
   // La princesse (un personnage VRM de 6 Mo) et ses vignettes : sous
   // swiftshader, une minute ; on sonde chaque seconde (sonder à chaque image
   // étouffe la page pendant la compilation des shaders)
   await page.waitForFunction(() => window.__pr && window.__pr.ready, null, { timeout: 300000, polling: 1000 })
+  await prSettle()
 }
+/* Les vignettes de la garde-robe se calculent en 3D (une princesse hors
+   écran) : tant qu'elles tournent, la page est prise et un clic peut rester
+   bloqué. On attend qu'elles soient toutes là, et on clique en force. */
+const prSettle = () => page.waitForFunction(() => window.__pr && window.__pr.pending === 0, null, { timeout: 300000, polling: 1000 })
 await scenario('princesse-habiller-teindre-bal', async () => {
   await prOpen(false)
   // La jupe courte, au toucher
-  await page.locator('.pr-tab[data-t="dress"]').click()
-  await page.locator('.pr-tile[data-s="1"][data-i="1"]').click()
+  await page.locator('.pr-tab[data-t="dress"]').click({ force: true, timeout: 120000 })
+  await prSettle()
+  await page.locator('.pr-tile[data-s="1"][data-i="1"]').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__pr.looks[0].skirt === 'short', null, { timeout: 40000, polling: 250 })
   // La couronne glissée sur la tête
-  await page.locator('.pr-tab[data-t="crown"]').click()
+  await page.locator('.pr-tab[data-t="crown"]').click({ force: true, timeout: 120000 })
+  await prSettle()
   const tile = await page.locator('.pr-tile[data-s="0"][data-i="2"]').boundingBox()
   const head = await pr(() => window.__pr.screenOf('head'))
   const x0 = tile.x + tile.width / 2, y0 = tile.y + tile.height / 2
@@ -1032,16 +1039,17 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   await page.mouse.up()
   await page.waitForFunction(() => window.__pr.looks[0].crown === 'crown', null, { timeout: 40000, polling: 250 })
   // La teinture : bleu à étoiles, sur la jupe
-  await page.locator('.pr-tab[data-t="dye"]').click()
-  await page.locator('[data-dye="#3F63C8"]').click()
-  await page.locator('[data-pat="stars"]').click()
+  await page.locator('.pr-tab[data-t="dye"]').click({ force: true, timeout: 120000 })
+  await page.locator('[data-dye="#3F63C8"]').click({ force: true, timeout: 120000 })
+  await page.locator('[data-pat="stars"]').click({ force: true, timeout: 120000 })
   await page.waitForTimeout(1500) // la caméra se pose
   const sk = await pr(() => window.__pr.screenOf('skirt'))
   await page.mouse.click(sk.x, sk.y)
   await page.waitForFunction(() => window.__pr.looks[0].paint.skirt.c === '#3F63C8' && window.__pr.looks[0].paint.skirt.p === 'stars', null, { timeout: 40000, polling: 250 })
   // Le peigne : tirer vers le bas allonge les cheveux
-  await page.locator('.pr-tab[data-t="hair"]').click()
-  await page.locator('[data-tool="comb"]').click()
+  await page.locator('.pr-tab[data-t="hair"]').click({ force: true, timeout: 120000 })
+  await prSettle()
+  await page.locator('[data-tool="comb"]').click({ force: true, timeout: 120000 })
   await page.waitForTimeout(2500) // la caméra s'approche du visage
   const len0 = await pr(() => window.__pr.looks[0].hair.len)
   const hp = await pr(() => window.__pr.screenOf('hair'))
@@ -1051,7 +1059,7 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   await page.mouse.up()
   await page.waitForFunction(l => window.__pr.looks[0].hair.len > l + 0.05, len0, { timeout: 60000, polling: 250 })
   // La photo : rangée dans l'Atelier (dossier et coloriage)
-  await page.locator('#prPhoto').click()
+  await page.locator('#prPhoto').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 60000, polling: 250 })
   await page.waitForFunction(() => new Promise(res => {
     const rq = indexedDB.open('ferme-atelier', 2)
@@ -1063,10 +1071,10 @@ await scenario('princesse-habiller-teindre-bal', async () => {
     rq.onerror = () => res(false)
   }), null, { timeout: 30000, polling: 1000 })
   // Le bal : six pas, puis la révérence et l'écran de fin
-  await page.locator('#prBall').click()
+  await page.locator('#prBall').click({ force: true, timeout: 120000 })
   await page.locator('.pr-move').first().waitFor()
   for (let k = 0; k < 6; k++) {
-    await page.locator('.pr-move').nth(k).click({ force: true })
+    await page.locator('.pr-move').nth(k).click({ force: true, timeout: 120000 })
     await page.waitForFunction(n => window.__pr.ball && window.__pr.ball.moves >= n, k + 1, { timeout: 80000, polling: 250 })
   }
   await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Quel bal'), null, { timeout: 120000, polling: 500 })
@@ -1081,8 +1089,8 @@ await scenario('princesse-a-deux', async () => {
   await prOpen(true)
   const n = await pr(() => window.__pr.looks.length)
   if (n !== 2) throw new Error('il faut deux princesses à deux')
-  await page.locator('.pr-tab[data-t="dye"]').click()
-  await page.locator('[data-dye="#8CCB6A"]').click()
+  await page.locator('.pr-tab[data-t="dye"]').click({ force: true, timeout: 120000 })
+  await page.locator('[data-dye="#8CCB6A"]').click({ force: true, timeout: 120000 })
   await page.waitForTimeout(1500)
   const sk = await pr(() => window.__pr.screenOf('skirt', 1))
   await page.mouse.click(sk.x, sk.y)
@@ -1092,7 +1100,7 @@ await scenario('princesse-a-deux', async () => {
   // On repart seule (le choix « à deux » est retenu par jeu)
   await page.goto(URL, { waitUntil: 'networkidle' })
   await clickTile('La Princesse')
-  await page.locator('.duobtn').first().click()
+  await page.locator('.duobtn').first().click({ force: true, timeout: 120000 })
 })
 
 await browser.close()
