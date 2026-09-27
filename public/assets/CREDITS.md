@@ -108,6 +108,10 @@ sont partagés sous la même licence.
   le Soleil** (`space/*.jpg`) : textures de **Solar System Scope**
   (<https://www.solarsystemscope.com/textures/>), licence **CC BY 4.0**,
   récupérées via Wikimedia Commons et réduites à 1024×512.
+- **La Terre du Voyage dans l'Espace** (`space/earth_day.jpg`, `earth_night.jpg`,
+  `earth_clouds.jpg`, `earth_spec.jpg` : le jour, les lumières des villes, les
+  nuages, les océans qui brillent) et **Jupiter et Mars en 2048×1024** : Solar
+  System Scope, **CC BY 4.0**, repris de la maquette du père (27/09).
 - **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
   `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.
 - **Régions de France** (`geo/regions.geojson`) : IGN Admin Express via

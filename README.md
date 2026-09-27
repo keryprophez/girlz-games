@@ -28,7 +28,9 @@ redemandées trois fois, de plus en plus dur ; Découvre, où chaque résultat
 reste écrit jusqu'à allumer toute la grille ; une récolte de douze questions
 qui retient ce qui est déjà su), le Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
-Voyage dans l'Espace (vraies planètes, une fusée, un mode « Trouve »),
+Voyage dans l'Espace (le vrai système solaire du jour : le Soleil qui bout,
+la Terre et ses villes la nuit, les anneaux de Saturne, les lunes de Jupiter ;
+une fusée qu'on suit en vol, le temps qui file, un mode « Trouve »),
 Suites logiques, le Miroir (on peint en glissant, le reflet se replie), Chasse
 aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).

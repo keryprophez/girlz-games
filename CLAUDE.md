@@ -82,6 +82,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              pet3d.ts    ← son compagnon : licorne, poney, chaton, chiot
              castle3d.ts ← les décors qu'on touche : salle de bal, jardin, jour/nuit
              atelierdb.ts ← l'IndexedDB de l'Atelier (partagée avec la Princesse)
+             cosmos.ts   ← LE SYSTÈME SOLAIRE de l'Espace (27/09, d'après la
+                           maquette du père) : ciel et Voie lactée procéduraux,
+                           Soleil qui bout, Terre jour/nuit/villes, atmosphères,
+                           ombres des anneaux, lunes, vraies positions (JPL),
+                           rendu HDR + halo + ACES branché sur `stage.render`
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
                            chalet Kenney assemblé pièce par pièce, lanternes)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
@@ -224,7 +229,10 @@ textures non attachées à la scène). Puis **`core/scene3d.ts`** : `ground()`,
 `decor()` (modèles du kit `nature` ou `holiday`, avec `shade` pour assombrir
 les kits clairs), `particles()` (GPU, dans la scène — plus de divs au-dessus du
 canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()`.
-`stage.timeScale` fait les ralentis d'outro.
+`stage.timeScale` fait les ralentis d'outro. Un jeu qui a son propre rendu
+(l'Espace : ciel à part, cible HDR, halo en sept étages, ACES écrit à la main)
+le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
+la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
 `caterpillar` · `dressup` ·
@@ -295,6 +303,9 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **VRM : cheveux qui s'envolent** | Les ressorts (`springBoneManager`) sont calculés dans le monde : déplacer la princesse d'un coup (placement, duo) ou la tourner au doigt fait voler ses cheveux à l'horizontale. `joint.center = obj` (le groupe de la princesse) : ils ne réagissent plus qu'à ses gestes à elle. Trois autres causes, mesurées une à une sur les pointes des mèches : ses matrices pas encore à jour quand les ressorts calculent (placée juste avant, ses mèches sautaient au-dessus de sa tête pendant 25 images) → `obj.updateWorldMatrix(true, true)` avant ; un pas de 0,1 s (à-coup, tests à 4 i/s) → les ressorts avancent par pas de 1/60 s ; une mèche allongée tout droit vers le bas traverse son dos et ses collisions la rejettent → on allonge en gardant l'écart naturel. Après avoir changé la longueur des chaînes : `setInitState()` puis `reset()`. |
 | **VRM : ce que les noms ne disent pas** | Ses os d'yeux sont près du nez (± 1,7 cm) : le centre des yeux se mesure sur le maillage des iris. Les deux iris partagent LE MÊME dessin dans la texture (un seul cœur à peindre). `HairBack` n'est que l'arrière du crâne : les longues mèches sont dans `Hair_00` — pour une coiffure attachée, on replie leurs chaînes d'os sur leur racine. Une texture recopiée dans un canvas garde le `flipY` (false) de la texture glTF, sinon elle s'affiche à l'envers. |
 | **Habit lié à un squelette** | Un habit construit (corsage, manches, bottes) suit les gestes si on lui recopie les poids du sommet du corps le plus proche (`skinned()` dans `princess3d.ts`), la géométrie ramenée dans l'espace de liaison (os × inverse de liaison × `bindMatrix`, inversé). Le toucher (`raycast`) d'un `SkinnedMesh` passe d'abord par une sphère englobante calculée UNE fois : on l'agrandit, sinon une manche levée ne se touche plus. |
+| **Plan proche qui suit les astres** | Dans l'Espace, `camera.near` suit la distance du plus proche astre (jusqu'à 20 unités loin de tout) pour garder la précision de profondeur sur 1e5 : la fusée, à 2 unités devant la caméra pendant le vol, était COUPÉE — invisible, sans un message. Tout objet de premier plan compte dans le calcul du plan proche. |
+| **Textures des `ShaderMaterial`** | `disposeTree` libère les cartes des matériaux standard (`map`, `normalMap`…), pas les textures rangées dans `uniforms` : chacune passe par `stage.keep()`, comme les cibles de rendu et le bruit 3D. |
+| **Attendre à chaque image sous charge** | `waitForFunction` sonde par défaut à chaque image : quand la page compile ses shaders ou calcule des vignettes 3D, les images s'espacent de plusieurs secondes et le bot rate un état pourtant atteint (la Princesse « jamais prête » alors qu'elle l'était en 60 s). Sonder par intervalle (`polling: 1000`), et cliquer en force quand la page est prise. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
