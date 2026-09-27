@@ -89,6 +89,17 @@ sont partagés sous la même licence.
 - **cheval** : « Mares-Prefer-the-Voices-of-Highly-Fertile-Stallions-pone.0118468.s002.oga », Lemasson A., Remeuf K., Trabalon M., Cuir F., Hausberger M., CC BY 4.0 — <https://commons.wikimedia.org/wiki/File:Mares-Prefer-the-Voices-of-Highly-Fertile-Stallions-pone.0118468.s002.oga> (0,67–2,82 s)
 - **chat** : « Meow.ogg », Dan Crosby (Dcrosby, Wikipédia en anglais), CC BY-SA 3.0 — <https://commons.wikimedia.org/wiki/File:Meow.ogg> (0–0,96 s)
 
+## La princesse (`princess/`)
+
+- **Le personnage** (`princess/princesse.vrm`) : « VRM1_Constraint_Twist_Sample »,
+  le modèle de démonstration de la norme VRM, **© 2022 pixiv Inc.** —
+  <https://github.com/vrm-c/vrm-specification/tree/master/samples/VRM1_Constraint_Twist_Sample>.
+  Licence **VRM Public License 1.0** (<https://vrm.dev/licenses/1.0/>) :
+  redistribution et modification permises, crédit non exigé (cité quand même).
+  Modifié pour le jeu : textures réduites (6 Mo au lieu de 11), vêtements
+  d'origine masqués et remplacés par les habits construits dans
+  `src/core/princess3d.ts`, cheveux, yeux et peau recolorés.
+
 ## Espace et géographie
 
 - **La Terre** (`space/earth.jpg`, `geo/earth.jpg`) : NASA Blue Marble, *Visible Earth*

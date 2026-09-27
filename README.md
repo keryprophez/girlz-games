@@ -34,8 +34,9 @@ aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).
 
 **Créer** — sans score : Bonhomme de neige (on roule vraiment la boule dans la
-neige, devant un chalet qui fume), la Princesse (une princesse en 3D qu'on
-habille pièce par pièce en glissant les habits de la garde-robe, qu'on teint
+neige, devant un chalet qui fume), la Princesse (une vraie princesse en
+3D — un visage expressif, des yeux qui suivent le doigt, des cheveux qui
+ondulent — qu'on habille pièce par pièce en glissant les habits de la garde-robe, qu'on teint
 au doigt, qu'on coiffe — peigne, ciseaux, fer, barrettes —, avec son
 compagnon — licorne, poney, chaton, chiot — dans une salle de bal ou un jardin
 de château qu'on touche ; une photo qui devient un coloriage de l'Atelier ; à

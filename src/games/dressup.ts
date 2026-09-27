@@ -532,7 +532,7 @@ function placePet(me: State, i: number) {
   if (!d.pet) return
   const fy = me.decor?.floorY ?? 0
   const big = d.look.pet === 'unicorn' || d.look.pet === 'pony'
-  if (me.duo) d.pet.obj.position.set(i === 0 ? -0.78 : 0.78, fy, 0.08)
+  if (me.duo) d.pet.obj.position.set(i === 0 ? -0.95 : 0.95, fy, 0.08)
   else d.pet.obj.position.set(big ? 0.62 : 0.42, fy, big ? 0.05 : 0.22)
   d.pet.obj.rotation.y = me.duo ? (i === 0 ? 0.9 : -0.9) : -0.9
 }
@@ -1008,7 +1008,7 @@ export const dressup: GameDef = {
       running: true, duo, stage: null, T: null, fx: null, decor: null, decorId: 'bal',
       dolls: looks.map(([slot, l], i) => ({
         slot, look: cloneRoyal(l), p: null, pet: null, petKind: 'none',
-        x: duo ? (i === 0 ? -0.33 : 0.33) : 0, yaw: 0, spin: 0, pose: 'idle' as Pose, poseT: 0, poseDur: 0, yawAdd: 0, lookUntil: 0, touchedAt: 0
+        x: duo ? (i === 0 ? -0.4 : 0.4) : 0, yaw: 0, spin: 0, pose: 'idle' as Pose, poseT: 0, poseDur: 0, yawAdd: 0, lookUntil: 0, touchedAt: 0
       })),
       active: 0, tab: 'dress', tool: null, pot: { c: DYES[0], p: 'none' }, clipKind: 'flower', clipColor: 0,
       t: 0, camPos: null, camTgt: null, ring: null, ball: null, photos: 0, thumbs: null, switching: false,

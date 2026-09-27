@@ -890,22 +890,45 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     ;(l[0].getWorldPosition(V(0, 0, 0)).z > P.head.z ? sideChains : backChains).push(l)
   }
   const restPos = new Map<Obj3, V3>()
-  ;[...sideChains, ...backChains].flat().forEach(b => restPos.set(b, b.position.clone()))
+  /** Chaque segment de mèche orienté comme la princesse (au repos), et le
+      retour dans le repère de son os parent. */
+  const segOf = new Map<Obj3, V3>(), invOf = new Map<Obj3, import('three').Quaternion>()
+  /** « Autour de la tête » (le sens des boucles), dans le repère du parent. */
+  const roundOf = new Map<Obj3, V3>()
+  const qq = new T.Quaternion(), wp = new T.Vector3()
+  ;[...sideChains, ...backChains].flat().forEach(b => {
+    restPos.set(b, b.position.clone())
+    const q = b.parent ? b.parent.getWorldQuaternion(qq).clone() : new T.Quaternion()
+    segOf.set(b, b.position.clone().applyQuaternion(q))
+    const inv = q.invert()
+    invOf.set(b, inv)
+    b.getWorldPosition(wp)
+    const out = V(wp.x - P.head.x, 0, wp.z - P.head.z).normalize()
+    roundOf.set(b, V(-out.z, 0, out.x).applyQuaternion(inv))
+  })
   const shapeHair = () => {
     const st = look.hair.style, len = look.hair.len
     // 0 : au menton · 1 : au milieu du dos (sa longueur à elle) · 1,6 : au sol
-    const s = len <= 1 ? 0.3 + 0.7 * len : 1 + ((len - 1) / 0.6) * 2.9
+    const s = len <= 1 ? 0.3 + 0.7 * len : 1 + ((len - 1) / 0.6) * 2.15
     const shape = (l: Obj3[], ci: number, k: number, curl: number) => l.forEach((b, i) => {
       const p0 = restPos.get(b)!
       if (i === 0) { b.position.copy(p0); return }
       b.position.copy(p0).multiplyScalar(k)
-      // Boucles : un zigzag de chaque côté, de plus en plus marqué vers les pointes
+      // Plus longs que les siens, ses cheveux s'allongent VERS LE BAS : étirés
+      // tels quels, ils s'écartaient en baguettes raides ; tombés droit, ils
+      // traversaient son dos (et ses collisions les rejetaient en l'air). On
+      // garde leur écart sur les côtés, un peu plus d'écart derrière le dos.
+      if (k > 1) {
+        const w = segOf.get(b)!
+        b.position.set(w.x, w.y * k, w.z * Math.min(k, 1.6)).applyQuaternion(invOf.get(b)!)
+      }
+      // Boucles : les mèches ondulent autour de la tête, de plus en plus vers les pointes
       const side = (i + ci) % 2 ? 1 : -1
-      b.position.x += side * curl * p0.length() * 0.45 * Math.min(1, i / 2)
+      b.position.addScaledVector(roundOf.get(b)!, side * curl * p0.length() * Math.min(k, 1.5) * 0.4 * Math.min(1, i / 2))
     })
     const curl = look.hair.curl
     backChains.forEach((l, ci) => shape(l, ci, st === 'loose' ? s : 0.04, st === 'loose' ? curl : 0))
-    sideChains.forEach((l, ci) => shape(l, ci, st === 'afro' ? 0.04 : st === 'loose' ? s : Math.min(s, 0.8), st === 'afro' ? 0 : curl))
+    sideChains.forEach((l, ci) => shape(l, ci, st === 'afro' ? 0.04 : Math.min(s, st === 'loose' ? 1.4 : 0.8), st === 'afro' ? 0 : curl))
     vrm.springBoneManager?.setInitState()
     vrm.springBoneManager?.reset()
   }
@@ -1657,7 +1680,18 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
         if (sd) side.rotation.y = sd * (-0.5 - st.wings)
       }))
       face.update(dt)
-      vrm.update(dt)
+      // Ses matrices à jour AVANT les ressorts : placée ou tournée depuis la
+      // dernière image, elle voyait ses longues mèches sauter au-dessus de sa tête
+      obj.updateWorldMatrix(true, true)
+      // Comme `vrm.update(dt)`, mais les ressorts avancent à petits pas : un
+      // à-coup (ou les 10 images/s des tests) faisait s'envoler les longues mèches
+      vrm.humanoid.update()
+      vrm.lookAt?.update(dt)
+      vrm.expressionManager?.update()
+      vrm.nodeConstraintManager?.update()
+      const n = Math.min(6, Math.max(1, Math.ceil(dt * 60 - 0.01)))
+      for (let q = 0; q < n; q++) vrm.springBoneManager?.update(dt / n)
+      vrm.materials?.forEach(m => (m as { update?: (d: number) => void }).update?.(dt))
       for (const list of fab.values()) list.forEach(f => f.update(dt))
     },
     dispose() {
@@ -1744,8 +1778,10 @@ export function posePrincess(p: Princess, pose: Pose, t: number): number {
     const turns = pose === 'twirl' ? 2 : 1
     yaw = ease(k) * Math.PI * 2 * turns
     const open = Math.sin(k * Math.PI)
-    s.armL = 0.12 + open * (pose === 'twirl' ? 2.6 : 1.1); s.armR = 0.12 + open * (pose === 'twirl' ? 2.6 : 1.1)
-    s.elbowL = 0.2; s.elbowR = 0.2
+    // Les bras s'ouvrent en danseuse : un peu sous l'horizontale, coudes souples, vers l'avant
+    s.armL = 0.12 + open * (pose === 'twirl' ? 2.6 : 0.6); s.armR = 0.12 + open * (pose === 'twirl' ? 2.6 : 0.6)
+    s.armLf = open * 0.3; s.armRf = open * 0.3
+    s.elbowL = 0.2 + open * 0.35; s.elbowR = 0.2 + open * 0.35
     s.flare = open
     s.skirtYaw = -open * 0.4
     s.bounce = open * 0.01
