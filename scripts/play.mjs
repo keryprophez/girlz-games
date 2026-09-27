@@ -1001,14 +1001,17 @@ const prOpen = async (duo) => {
   await clickTile('La Princesse')
   await page.locator('.duobtn').nth(duo ? 1 : 0).click()
   await page.locator('.tierbtn.tier-easy').click()
-  await page.waitForFunction(() => window.__pr && window.__pr.ready, null, { timeout: 90000 })
+  // La princesse (un personnage VRM de 6 Mo) et ses vignettes : sous
+  // swiftshader, une minute ; on sonde chaque seconde (sonder à chaque image
+  // étouffe la page pendant la compilation des shaders)
+  await page.waitForFunction(() => window.__pr && window.__pr.ready, null, { timeout: 300000, polling: 1000 })
 }
 await scenario('princesse-habiller-teindre-bal', async () => {
   await prOpen(false)
   // La jupe courte, au toucher
   await page.locator('.pr-tab[data-t="dress"]').click()
   await page.locator('.pr-tile[data-s="1"][data-i="1"]').click()
-  await page.waitForFunction(() => window.__pr.looks[0].skirt === 'short', null, { timeout: 20000 })
+  await page.waitForFunction(() => window.__pr.looks[0].skirt === 'short', null, { timeout: 40000, polling: 250 })
   // La couronne glissée sur la tête
   await page.locator('.pr-tab[data-t="crown"]').click()
   const tile = await page.locator('.pr-tile[data-s="0"][data-i="2"]').boundingBox()
@@ -1021,7 +1024,7 @@ await scenario('princesse-habiller-teindre-bal', async () => {
     await page.waitForTimeout(25)
   }
   await page.mouse.up()
-  await page.waitForFunction(() => window.__pr.looks[0].crown === 'crown', null, { timeout: 20000 })
+  await page.waitForFunction(() => window.__pr.looks[0].crown === 'crown', null, { timeout: 40000, polling: 250 })
   // La teinture : bleu à étoiles, sur la jupe
   await page.locator('.pr-tab[data-t="dye"]').click()
   await page.locator('[data-dye="#3F63C8"]').click()
@@ -1029,7 +1032,7 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   await page.waitForTimeout(1500) // la caméra se pose
   const sk = await pr(() => window.__pr.screenOf('skirt'))
   await page.mouse.click(sk.x, sk.y)
-  await page.waitForFunction(() => window.__pr.looks[0].paint.skirt.c === '#3F63C8' && window.__pr.looks[0].paint.skirt.p === 'stars', null, { timeout: 20000 })
+  await page.waitForFunction(() => window.__pr.looks[0].paint.skirt.c === '#3F63C8' && window.__pr.looks[0].paint.skirt.p === 'stars', null, { timeout: 40000, polling: 250 })
   // Le peigne : tirer vers le bas allonge les cheveux
   await page.locator('.pr-tab[data-t="hair"]').click()
   await page.locator('[data-tool="comb"]').click()
@@ -1040,10 +1043,10 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   await page.mouse.down()
   for (let i = 1; i <= 16; i++) { await page.mouse.move(hp.x, hp.y + i * 20); await page.waitForTimeout(60) }
   await page.mouse.up()
-  await page.waitForFunction(l => window.__pr.looks[0].hair.len > l + 0.05, len0, { timeout: 30000 })
+  await page.waitForFunction(l => window.__pr.looks[0].hair.len > l + 0.05, len0, { timeout: 60000, polling: 250 })
   // La photo : rangée dans l'Atelier (dossier et coloriage)
   await page.locator('#prPhoto').click()
-  await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 30000 })
+  await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 60000, polling: 250 })
   await page.waitForFunction(() => new Promise(res => {
     const rq = indexedDB.open('ferme-atelier', 2)
     rq.onsuccess = () => {
@@ -1058,9 +1061,9 @@ await scenario('princesse-habiller-teindre-bal', async () => {
   await page.locator('.pr-move').first().waitFor()
   for (let k = 0; k < 6; k++) {
     await page.locator('.pr-move').nth(k).click({ force: true })
-    await page.waitForFunction(n => window.__pr.ball && window.__pr.ball.moves >= n, k + 1, { timeout: 40000 })
+    await page.waitForFunction(n => window.__pr.ball && window.__pr.ball.moves >= n, k + 1, { timeout: 80000, polling: 250 })
   }
-  await finDe('Quel bal', 60000)
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Quel bal'), null, { timeout: 120000, polling: 500 })
   // La princesse est gardée pour la prochaine fois
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.solo)
   if (!saved || saved.skirt !== 'short' || saved.paint.skirt.c !== '#3F63C8') throw new Error('la princesse n\'est pas gardée')
@@ -1077,7 +1080,7 @@ await scenario('princesse-a-deux', async () => {
   await page.waitForTimeout(1500)
   const sk = await pr(() => window.__pr.screenOf('skirt', 1))
   await page.mouse.click(sk.x, sk.y)
-  await page.waitForFunction(() => window.__pr.active === 1 && window.__pr.looks[1].paint.skirt.c === '#8CCB6A', null, { timeout: 20000 })
+  await page.waitForFunction(() => window.__pr.active === 1 && window.__pr.looks[1].paint.skirt.c === '#8CCB6A', null, { timeout: 40000, polling: 250 })
   const joyce = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.joyce)
   if (!joyce || joyce.paint.skirt.c !== '#8CCB6A') throw new Error('la princesse de Joyce n\'est pas gardée')
   // On repart seule (le choix « à deux » est retenu par jeu)
