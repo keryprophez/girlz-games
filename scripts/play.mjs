@@ -102,7 +102,9 @@ const openGame = async (name, hook, tier = 'easy', ops = null) => {
   // Un jeu 3D n'installe son accroche qu'une fois ses modèles chargés : sur
   // un serveur d'intégration lent, 3,2 s ne suffisent pas toujours (la
   // Course a échoué en CI sur sa PREMIÈRE sonde, faute de `__run`).
-  if (hook) await page.waitForFunction(k => k in window, hook, { timeout: 30000 })
+  // Sondé toutes les demi-secondes, pas à chaque image : une page qui
+  // compile ses shaders espace ses images de plusieurs secondes
+  if (hook) await page.waitForFunction(k => k in window, hook, { timeout: 90000, polling: 500 })
 }
 
 const failures = []
