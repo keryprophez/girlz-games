@@ -38,7 +38,10 @@ neige, devant un chalet qui fume), Habille-toi (son personnage en 3D, qui la
 suit ensuite dans les jeux), Boîte à Rythme (les animaux chantent en
 sautant), Petit Piano (un piano laqué, la partition qui descend, les animaux
 qui chantent), Feu d'artifice (au-dessus du village, reflété dans le lac),
-l'Atelier (dessin au doigt, pot de peinture, tampons, dessins gardés), la
+l'Atelier (dix pinceaux — néon, paillettes, aquarelle, craie, spray, cœurs,
+étoiles, arc-en-ciel… —, le miroir et la rosace, des papiers de couleur, le
+pot de peinture, les tampons de la ferme ; un dossier où ranger ses dessins,
+les reprendre, revoir leur film ou les enregistrer dans la tablette), la
 Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus

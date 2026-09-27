@@ -926,24 +926,29 @@ await scenario('feu-bouquet-final', async () => {
   await finDe('Quel spectacle', 15000)
 })
 
-/* 🎨 L'Atelier et 👗 Habille-toi : les deux créations vont jusqu'à leur fin.
-   L'Atelier : un trait au doigt, un tampon, le papillon rempli au pot de
-   peinture, un « annuler » — et la peinture doit être sur la feuille. */
+/* 🎨 L'Atelier (27/09) : un trait, un tampon, le pot de peinture et
+   « annuler » sur le papillon ; puis un pinceau du tiroir (néon) sur papier
+   nuit avec le miroir ; « Ranger » met le dessin dans le dossier et rend une
+   feuille propre ; le dossier le montre, on le reprend ; « tout effacer »
+   (deux touchers) ; « Fini » rejoue le film puis la fête. */
 await scenario('atelier-papillon', async () => {
   await openGame("L'Atelier", '__at')
   const box = await page.locator('#atPaint').boundingBox()
   const X = f => box.x + box.width * f, Y = f => box.y + box.height * f
-  await page.mouse.move(X(0.15), Y(0.5))
-  await page.mouse.down()
-  for (let i = 1; i <= 12; i++) await page.mouse.move(X(0.15 + i * 0.05), Y(0.5 + Math.sin(i / 2) * 0.1))
-  await page.mouse.up()
+  const trait = async (x0, y0) => {
+    await page.mouse.move(X(x0), Y(y0))
+    await page.mouse.down()
+    for (let i = 1; i <= 12; i++) await page.mouse.move(X(x0 + i * 0.05), Y(y0 + Math.sin(i / 2) * 0.1))
+    await page.mouse.up()
+  }
+  await trait(0.15, 0.5)
   await page.locator('.at-tool[data-t="stamp"]').click()
   await page.locator('.at-stamp img').first().waitFor({ timeout: 20000 })
   await page.mouse.click(X(0.3), Y(0.8))
   await page.locator('.at-page[data-p="papillon"]').click()
-  await page.locator('.at-tool[data-t="brush"]').click()
-  await page.locator('.at-color[data-c="#FFA94D"]').click()
+  // En mode tampons, la palette laisse la place aux animaux : le pot d'abord, puis la couleur
   await page.locator('.at-tool[data-t="bucket"]').click()
+  await page.locator('.at-color[data-c="#FFA94D"]').click()
   await page.waitForTimeout(600)
   // L'aile gauche du papillon (x 130 du dessin 400 × 300, centré dans 450 × 300)
   await page.mouse.click(X(155 / 450), Y(120 / 300))
@@ -953,8 +958,37 @@ await scenario('atelier-papillon', async () => {
   await page.locator('#atUndo').click()
   const apres = await page.evaluate(() => window.__at.painted())
   if (apres > 0.001) throw new Error(`« annuler » n'a pas effacé le remplissage (${apres})`)
+  // Le tiroir : le néon, sur papier nuit, avec le miroir
+  await page.locator('.at-page[data-p="blanche"]').click()
+  await page.waitForTimeout(400)
+  await page.locator('#atBrush').click()
+  await page.locator('.at-bk[data-b="neon"]').click()
+  await page.locator('#atPaperBtn').click()
+  await page.locator('.at-pp').last().click()
+  await page.locator('#atSym').click()
+  const n0 = await page.evaluate(() => window.__at.painted())
+  await trait(0.1, 0.3)
+  const st = await page.evaluate(() => ({ brush: window.__at.brush, sym: window.__at.sym, paper: window.__at.paper, p: window.__at.painted() }))
+  if (st.brush !== 'neon' || st.sym !== 2 || st.paper !== '#1F1B2E') throw new Error(`outils : ${JSON.stringify(st)}`)
+  if (!(st.p > n0)) throw new Error('le néon n\'a rien dessiné')
+  // Ranger : le dossier gagne un dessin, la feuille est propre
+  await page.waitForFunction(() => window.__at.folder >= 0, null, { timeout: 5000 })
+  const f0 = await page.evaluate(() => window.__at.folder)
+  await page.locator('#atRanger').click()
+  await page.waitForFunction(f => window.__at.folder === f + 1, f0, { timeout: 10000 })
+  if (await page.evaluate(() => window.__at.painted()) > 0.0005) throw new Error('la feuille n\'est pas propre après « Ranger »')
+  // Le dossier, et la reprise
+  await page.locator('#atFolderBtn').click()
+  await page.locator('.at-fcard').first().click()
+  await page.locator('#atFEdit').click()
+  await page.waitForFunction(() => window.__at.gallery !== null && window.__at.painted() > 0.001, null, { timeout: 10000 })
+  // Tout effacer : deux touchers (la poubelle armée bouge : on touche sans attendre)
+  await page.locator('#atClear').click({ force: true })
+  await page.locator('#atClear').click({ force: true })
+  await page.waitForFunction(() => window.__at.painted() < 0.0005, null, { timeout: 5000 })
+  await trait(0.2, 0.4)
   await page.locator('#atDone').click()
-  await finDe('Chef-d')
+  await finDe('Chef-d', 20000)
 })
 await scenario('habille-toi-surprise', async () => {
   await openGame('Habille-toi')

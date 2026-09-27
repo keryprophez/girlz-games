@@ -731,6 +731,18 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   côté en douce, 18 en expert), des graines au fond des impasses ; et « le
   poussin suit le doigt et fait tout seul les virages » : il n'avance plus
   qu'en ligne droite vers le doigt, c'est au doigt de tourner.
+- ✅ **L'Atelier enrichi** (« elles adorent l'Atelier : complexifie-le, rends-le
+  encore plus stylé ») : un tiroir de dix pinceaux (feutre, crayon, aquarelle,
+  craie, spray, paillettes, néon, arc-en-ciel, cœurs, étoiles) ; le miroir (2,
+  4) et la rosace (8) ; six papiers dont le papier nuit (le néon y brille) ;
+  « tout effacer » : une poubelle à deux touchers, la feuille part en boule ;
+  le DOSSIER : « Ranger » y met le dessin et rend une feuille propre, et
+  chaque dessin s'y reprend, se revoit en film, s'enregistre en image dans la
+  tablette ou se jette ; « Fini » rejoue le film du dessin.
+- **La Princesse** (Habille-toi, plus réaliste, plus d'options, de vrais
+  décors, une sauvegarde pour Jade et une pour Joyce, les deux sur l'accueil
+  et les écrans de fin) : maquettes d'abord — la princesse 3D, et les décors
+  en 3D contre illustrés Canva, le père choisit en voyant.
 
 ---
 
