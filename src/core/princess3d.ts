@@ -1638,10 +1638,12 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       if (part === 'hair' || part === 'shoes') recolor()
     },
     partOf(x) {
+      // La pièce la plus proche de l'objet touché — à condition qu'il soit À
+      // ELLE : à deux, toucher la seconde princesse teignait la première
+      let part: Part | 'face' | 'skin' | 'deco' | null = null
       for (let q: Obj3 | null = x; q; q = q.parent) {
-        const p = q.userData?.part
-        if (p) return p as Part | 'face' | 'skin' | 'deco'
-        if (q === obj) break
+        if (!part && q.userData?.part) part = q.userData.part
+        if (q === obj) return part
       }
       return null
     },
