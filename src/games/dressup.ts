@@ -1291,6 +1291,8 @@ export const dressup: GameDef = {
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __pr: unknown }).__pr = {
         get ready() { return !!me.thumbs && me.dolls.every(d => !!d.p) },
+        /** Où en est le chargement (le bot le cite quand il attend trop). */
+        get dbg() { return { stage: !!me.stage, thumbs: !!me.thumbs, dolls: me.dolls.map(d => !!d.p), running: me.running } },
         get looks() { return me.dolls.map(d => cloneRoyal(d.look)) },
         get active() { return me.active },
         get tab() { return me.tab },
