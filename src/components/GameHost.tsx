@@ -174,8 +174,10 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   // Un objet stable : de nouvelles tenues à chaque rendu relanceraient le rendu 3D
   const looksKey = JSON.stringify(familyLooks(store.royals).map(royalKey))
   const looks = useMemo(() => familyLooks(useFerme.getState().royals), [looksKey])
-  // Préparer tout de suite les images des princesses pour l'écran de fin
-  useEffect(() => { princessPortraits(looks, ['cheer', 'wave'], 200) }, [looks])
+  // Les images des princesses de l'écran de fin ne se préparent PLUS à
+  // l'ouverture du jeu : le rendu du personnage VRM concurrençait le
+  // chargement du jeu lui-même. Elles sont gardées (cache du navigateur) et
+  // préparées sur l'accueil, au calme (voir Ambient).
 
   // Cérémonie des étoiles : chaque étoile gagnée sonne et étincelle
   useEffect(() => {

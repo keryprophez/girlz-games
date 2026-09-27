@@ -30,8 +30,13 @@ export function Ambient() {
     let on = true
     const t = window.setTimeout(() => {
       const looks = (JSON.parse(lookKey) as string[]).map(k => normalizeRoyal(JSON.parse(k)))
-      Promise.all(looks.map(l => princessPortraits([l], ['walk', 'stride'], 96))).then(r => { if (on) setDolls(r) })
-    }, 900)
+      Promise.all(looks.map(l => princessPortraits([l], ['walk', 'stride'], 96))).then(r => {
+        if (on) setDolls(r)
+        // Puis, toujours au calme, celles de l'écran de fin des jeux (une
+        // seule fois par tenue : elles sont gardées)
+        if (on) void princessPortraits(familyLooks(useFerme.getState().royals), ['cheer', 'wave'], 200)
+      })
+    }, 2500) // seulement si l'on reste sur l'accueil : un jeu lancé tout de suite n'attend personne
     return () => { on = false; clearTimeout(t) }
   }, [lookKey])
   return (
