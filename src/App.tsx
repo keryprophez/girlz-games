@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { PlayGuard } from './components/PlayTimer'
 import { ICON } from './core/icons'
 import { unlockVoice } from './core/voice'
+import { wakeAudio } from './core/audio'
 
 /* Plein écran + paysage, demandés depuis le tap sur la tuile (il faut un geste
    utilisateur). Tout est optionnel : si le navigateur refuse, on joue quand
@@ -44,7 +45,9 @@ export default function App() {
      de case en case : « injouable », ont dit les filles (15/09). */
   useEffect(() => {
     let lastTry = 0
-    const unlock = () => unlockVoice()   // Android : la synthèse se déverrouille sur un geste
+    // Android : la synthèse se déverrouille sur un geste, et le son se
+    // réveille dès que le doigt touche (avant le clic qui jouera la note)
+    const unlock = () => { wakeAudio(); unlockVoice() }
     const retake = () => {
       if (!document.body.classList.contains('playing')) return
       const now = performance.now()

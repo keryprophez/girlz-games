@@ -2,7 +2,10 @@
 let actx: AudioContext | null = null
 let soundOn = true
 
-export function setSound(on: boolean) { soundOn = on }
+export function setSound(on: boolean) {
+  soundOn = on
+  if (!on) sleepAudio()
+}
 export function isSoundOn() { return soundOn }
 
 /** Petite vibration tactile (tablettes Android) — silencieuse ailleurs. */
@@ -16,7 +19,9 @@ export function buzz(pattern: number | number[]) {
 export function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.15, delay = 0) {
   if (!soundOn) return
   try {
-    actx = actx || new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    const ac = getCtx()   // réveille aussi un contexte suspendu
+    if (!ac) return
+    actx = ac
     const at = actx.currentTime + delay
     const o = actx.createOscillator()
     const g = actx.createGain()
@@ -51,6 +56,36 @@ export function getCtx(): AudioContext | null {
     if (actx.state === 'suspended') actx.resume().catch(() => { /* rien */ })
     return actx
   } catch { return null }
+}
+
+/* ---- La sortie audio reste éveillée ----
+   Après quelques dizaines de secondes de silence, Chrome met la sortie audio
+   en veille (économie d'énergie) et ne la rallume qu'au son suivant : sur la
+   tablette, ce rallumage coûte près d'une seconde — la note des onglets de
+   l'accueil arrivait en retard (28/09). Un souffle continu, bien trop faible
+   pour s'entendre mais pas nul, la garde éveillée tant que le son est
+   permis ; il s'arrête quand on coupe le son ou quand l'app passe en fond. */
+let awake: ConstantSourceNode | null = null
+/** À appeler au début d'un geste (`pointerdown`) : réveille le contexte et la sortie. */
+export function wakeAudio() {
+  if (!soundOn || document.hidden) return
+  const ac = getCtx()
+  if (!ac || awake) return
+  try {
+    const src = ac.createConstantSource()
+    src.offset.value = 0.00002
+    src.connect(ac.destination)
+    src.start()
+    awake = src
+  } catch { /* navigateur sans ConstantSourceNode : tant pis */ }
+}
+function sleepAudio() {
+  if (!awake) return
+  try { awake.stop(); awake.disconnect() } catch { /* rien */ }
+  awake = null
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) sleepAudio() })
 }
 function noiseBurst(dur: number, freq: number, opts: {
   q?: number; vol?: number; type?: BiquadFilterType; sweepTo?: number; delay?: number
