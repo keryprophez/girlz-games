@@ -358,7 +358,8 @@ function updateRocket(me: State, dt: number, now: number) {
   }
   me.rocket.flameMat.uniforms.uTime.value = now / 1000
   me.rocket.flameMat.uniforms.uPow.value = thrust
-  me.rocket.flame.scale.set(1, 0.6 + thrust * 1.1 + Math.sin(now / 45) * 0.08, 1)
+  const fw = 1 + thrust * 0.5
+  me.rocket.flame.scale.set(fw, 0.6 + thrust * 0.85 + Math.sin(now / 45) * 0.08, fw)
 }
 
 /* ---------- Explore ---------- */
