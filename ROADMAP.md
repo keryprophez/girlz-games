@@ -796,8 +796,8 @@ en a retenu sept, et une suppression :
   jeu, sa vignette, son bot. `core/winter.ts` (le paysage d'hiver) reste,
   pour la Tour de Glace. Le bot de Memory vérifie désormais que la meilleure
   note s'enregistre (c'était celui du Bonhomme).
-- 🚧 **1. L'accueil en affiches** (maquette validée, « oui » ; tuiles et script
-  prêts, images à fabriquer et à montrer) : chaque tuile
+- ✅ **1. L'accueil en affiches** (maquette validée, « oui » ; l'accueil
+  complet montré et validé, « oui ») : chaque tuile
   montre le jeu en train de se jouer, le nom dessous — des images prises dans
   les vrais jeux par `scripts/posters.mjs` (mise en scène par jeu : la Tour à
   neuf blocs, le papillon colorié de l'Atelier, la pizza garnie, le feu
