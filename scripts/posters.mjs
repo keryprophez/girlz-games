@@ -20,21 +20,46 @@ const OUT = 'public/assets/affiches/'
 const W = 600, H = 450
 
 /* La mise en scène de chaque jeu : combien attendre, quoi faire avant la
-   photo (`act`), et le cadrage (`zoom` ≥ 1, centre `cx`/`cy` en fractions
-   de l'arène). Par défaut : 5 s, cadrage 4:3 au centre. */
+   photo (`act`), le cadrage (`zoom` ≥ 1, centre `cx`/`cy` en fractions de
+   l'arène), et `shots` : plusieurs photos à `every` ms d'écart, on garde la
+   plus colorée (le Ninja : le moment où il y a le plus de fruits en l'air).
+   Par défaut : 5 s, une photo, cadrage 4:3 au centre. */
 const STAGE = {
   // Jouer
   icetower: { wait: 6000, act: async p => { await p.evaluate(() => window.__itStack?.(9)) }, after: 7000, zoom: 1.15, cy: 0.42 },
-  ninja: { wait: 7000 },
-  caterpillar: { wait: 6000 },
+  ninja: { wait: 6000, shots: 10, every: 700 },
+  caterpillar: { wait: 6000, zoom: 1.3, cy: 0.55 },
   maze: { wait: 5000 },
   taquin2: { wait: 4000 },
   memory: { wait: 7000 },
   simon: { wait: 5000 },
-  connect4: { wait: 4000 },
+  // Une partie commencée contre la poule : quelques pions de chaque couleur
+  connect4: {
+    wait: 3000,
+    act: async p => {
+      if (await p.locator('.c4-mode[data-m="solo"]').count()) await p.locator('.c4-mode[data-m="solo"]').click({ force: true })
+      for (const col of [3, 2, 4, 3, 5, 1]) {
+        await p.waitForFunction(() => window.__c4 && window.__c4.turn === 0 && !window.__c4.lock, null, { timeout: 15000 }).catch(() => {})
+        await p.evaluate(c => window.__c4.drop(c), col)
+        await p.waitForTimeout(1300)
+      }
+    },
+    after: 1500
+  },
   // Apprendre
   clock: { wait: 4000 },
-  potager: { wait: 5000 },
+  // Découvre : un rectangle 4 × 6 tiré du doigt, les plantes poussent dedans
+  potager: {
+    wait: 4000,
+    act: async p => {
+      await p.locator('.pg-tool[data-m="discover"]').click({ force: true }).catch(() => {})
+      const a = await p.evaluate(() => window.__pg.cell(1, 1)), b = await p.evaluate(() => window.__pg.cell(4, 6))
+      await p.mouse.move(a.x, a.y); await p.mouse.down()
+      for (let i = 1; i <= 8; i++) { await p.mouse.move(a.x + (b.x - a.x) * i / 8, a.y + (b.y - a.y) * i / 8); await p.waitForTimeout(20) }
+      await p.mouse.up()
+    },
+    after: 1800
+  },
   market: { wait: 4000 },
   intrus: { wait: 5000 },
   geo: { wait: 12000 },
@@ -44,7 +69,7 @@ const STAGE = {
   letters: { wait: 4000 },
   sentences: { wait: 4000 },
   // Créer
-  dressup: { hook: '__pr', ready: () => window.__pr && window.__pr.ready && window.__pr.pending === 0, wait: 3000, zoom: 1.35, cx: 0.33, cy: 0.5 },
+  dressup: { ready: () => window.__pr && window.__pr.ready && window.__pr.pending === 0, wait: 3000, zoom: 1.45, cx: 0.29, cy: 0.5 },
   // Un air tout fait : la grille se remplit et les animaux chantent
   beatbox: { wait: 3000, act: async p => { await p.locator('#bbP1').click() }, after: 2600 },
   piano: { wait: 4000 },
@@ -70,16 +95,23 @@ const STAGE = {
     act: async p => {
       const cv = await p.locator('#pzArena canvas').first().boundingBox()
       const cx = cv.x + cv.width / 2, cy = cv.y + cv.height / 2
+      // La sauce : une spirale serrée jusqu'au bord
+      const R = Math.min(cv.width, cv.height) * 0.3
       await p.mouse.move(cx, cy); await p.mouse.down()
-      for (let i = 1; i <= 40; i++) { const a = i * 0.45, r = i * 3.2; await p.mouse.move(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7) }
+      for (let i = 1; i <= 90; i++) { const a = i * 0.42, r = R * i / 90; await p.mouse.move(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.75) }
       await p.mouse.up()
+      await p.waitForTimeout(400)
+      // Trois garnitures semées en zigzag sur toute la pizza
       const bowls = await p.$$eval('.pz-bowl', els => els.map(e => e.dataset.t))
       for (const [k, t] of bowls.slice(0, 3).entries()) {
         await p.locator(`.pz-bowl[data-t="${t}"]`).click()
-        await p.mouse.move(cx - 110, cy - 30 + k * 30); await p.mouse.down()
-        for (let i = 1; i <= 11; i++) await p.mouse.move(cx - 110 + i * 20, cy - 30 + k * 30 + Math.sin(i + k) * 45)
-        await p.mouse.up()
-        await p.waitForTimeout(400)
+        for (let row = 0; row < 3; row++) {
+          const y = cy + (row - 1) * R * 0.5 + (k - 1) * R * 0.12
+          await p.mouse.move(cx - R * 0.8, y); await p.mouse.down()
+          for (let i = 1; i <= 10; i++) await p.mouse.move(cx - R * 0.8 + i * R * 0.16, y + Math.sin(i * 1.3 + k) * R * 0.1)
+          await p.mouse.up()
+          await p.waitForTimeout(200)
+        }
       }
     },
     after: 1500
@@ -88,7 +120,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.pausewall,.toast,.pr-switch{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.pausewall,.toast,.pr-switch,.nj-waves,.nj-hint{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }
@@ -143,7 +175,25 @@ for (const g of games) {
   if (st.act) { await st.act(page, box); await page.waitForTimeout(st.after || 1000) }
   await page.addStyleTag({ content: HIDE })
   await page.waitForTimeout(300)
-  const png = await page.screenshot({ clip: box })
+  let png = await page.screenshot({ clip: box })
+  // Plusieurs photos : on garde la plus colorée (écart moyen entre canaux)
+  if (st.shots) {
+    let best = -1
+    for (let k = 0; k < st.shots; k++) {
+      const shot = k === 0 ? png : await page.screenshot({ clip: box })
+      const score = await page.evaluate(async b64 => {
+        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode()
+        const c = document.createElement('canvas'); c.width = 160; c.height = 100
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0, 160, 100)
+        const d = g.getImageData(0, 0, 160, 100).data
+        let s = 0
+        for (let i = 0; i < d.length; i += 4) s += Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2])
+        return s
+      }, shot.toString('base64'))
+      if (score > best) { best = score; png = shot }
+      if (k < st.shots - 1) await page.waitForTimeout(st.every || 500)
+    }
+  }
   // Recadrage 4:3 et WebP, dans le navigateur (aucune dépendance de plus)
   const webp = await page.evaluate(async ({ b64, zoom, cx, cy, W, H }) => {
     const img = new Image()
