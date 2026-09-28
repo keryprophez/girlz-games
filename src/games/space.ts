@@ -5,6 +5,7 @@ import { confetti, FX } from '../core/fx'
 import { ICON } from '../core/icons'
 import { shake } from '../core/juice'
 import { createStage, loader, type Stage, type T3 } from '../core/three3d'
+import { makeRocket, type Rocket } from '../core/rocket3d'
 import { particles, toScreen, type Particles } from '../core/scene3d'
 import { makeCosmos, SUN_R, type Cosmos } from '../core/cosmos'
 
@@ -64,8 +65,6 @@ const SYSTEM = 'systeme'
 const HQ = typeof location !== 'undefined' && new URLSearchParams(location.search).has('hq')
 type Mode = 'explore' | 'trouve'
 type V3 = import('three').Vector3
-type Group = import('three').Group
-type Mesh = import('three').Mesh
 interface View { yaw: number; pitch: number; distR: number }
 interface Travel { id: string; arr: View; from: V3; lookFrom: V3; t: number; dur: number }
 
@@ -74,7 +73,7 @@ interface State {
   T: T3
   cosmos: Cosmos
   fx: Particles
-  rocket: { group: Group; flame: Mesh; flameMat: import('three').ShaderMaterial }
+  rocket: Rocket
   halo: import('three').Sprite
   camLight: import('three').DirectionalLight
   mode: Mode
@@ -158,58 +157,6 @@ function haloTex(T: T3) {
 /* ---------- La fusée : dessinée en 3D (tour, ailerons, hublot, flamme qui
    brûle en HDR — le halo lumineux la fait rayonner). Longueur 1, nez en +y,
    origine au centre. ---------- */
-function makeRocket(T: T3, stage: Stage) {
-  const group = new T.Group()
-  const white = new T.MeshStandardMaterial({ color: 0xE9EAF0, roughness: 0.32, metalness: 0.15 })
-  const red = new T.MeshStandardMaterial({ color: 0xC8324C, roughness: 0.38, metalness: 0.1 })
-  const metal = new T.MeshStandardMaterial({ color: 0x6E7280, roughness: 0.35, metalness: 0.7 })
-  const V2 = (x: number, y: number) => new T.Vector2(x, y)
-  const body = new T.Mesh(new T.LatheGeometry([V2(0, -0.44), V2(0.13, -0.44), V2(0.165, -0.36), V2(0.185, -0.2), V2(0.185, 0.05), V2(0.165, 0.2), V2(0.14, 0.27)], 40), white)
-  const nose = new T.Mesh(new T.LatheGeometry([V2(0.141, 0.26), V2(0.12, 0.33), V2(0.08, 0.42), V2(0.035, 0.48), V2(0, 0.5)], 40), red)
-  const band = new T.Mesh(new T.TorusGeometry(0.186, 0.014, 10, 40), red)
-  band.rotation.x = Math.PI / 2; band.position.y = -0.3
-  const glass = new T.Mesh(new T.SphereGeometry(0.07, 24, 16), new T.MeshStandardMaterial({ color: 0x3A86C8, roughness: 0.08, metalness: 0.2, emissive: 0x5AAEF0, emissiveIntensity: 0.35 }))
-  glass.scale.set(1, 1, 0.45); glass.position.set(0, 0.08, 0.172)
-  const rim = new T.Mesh(new T.TorusGeometry(0.072, 0.012, 10, 32), new T.MeshStandardMaterial({ color: 0xE3B04B, roughness: 0.3, metalness: 0.8 }))
-  rim.position.set(0, 0.08, 0.168)
-  const nozzle = new T.Mesh(new T.CylinderGeometry(0.09, 0.12, 0.08, 24, 1, true), metal)
-  nozzle.position.y = -0.48
-  group.add(body, nose, band, glass, rim, nozzle)
-  const finShape = new T.Shape()
-  finShape.moveTo(0, 0); finShape.lineTo(0.17, -0.12); finShape.quadraticCurveTo(0.2, -0.2, 0.15, -0.2); finShape.lineTo(0, -0.14)
-  const finGeo = new T.ExtrudeGeometry(finShape, { depth: 0.02, bevelEnabled: true, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2 })
-  for (let k = 0; k < 3; k++) {
-    const f = new T.Mesh(finGeo, red)
-    const holder = new T.Group()
-    f.position.set(0.15, -0.24, -0.01)
-    holder.add(f)
-    holder.rotation.y = (k / 3) * Math.PI * 2 + Math.PI / 6
-    group.add(holder)
-  }
-  // La flamme : un cône additif, un cœur blanc très lumineux qui vacille
-  const flameMat = new T.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: T.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uPow: { value: 0.5 } },
-    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `uniform float uTime; uniform float uPow; varying vec2 vUv;
-    void main(){
-      float y = vUv.y;
-      float flick = 0.8 + 0.2 * sin(uTime * 40.0 + y * 12.0) * sin(uTime * 23.0);
-      float core = pow(y, 1.6) * flick;
-      vec3 col = mix(vec3(1.0, 0.35, 0.08), vec3(1.0, 0.95, 0.8), pow(y, 3.0));
-      float edge = 1.0 - abs(vUv.x - 0.5) * 2.0;
-      gl_FragColor = vec4(col * core * (0.6 + 0.4 * edge) * (2.0 + 6.0 * uPow), 1.0);
-    }`
-  })
-  const flame = new T.Mesh(new T.ConeGeometry(0.085, 0.42, 20, 1, true), flameMat)
-  flame.rotation.x = Math.PI
-  flame.position.y = -0.72
-  group.add(flame)
-  group.traverse(o => { const m = o as Mesh; if (m.isMesh && m !== flame) m.castShadow = false })
-  ;[white, red, metal].forEach(m => stage.keep(m))
-  return { group, flame, flameMat }
-}
-
 /* ---------- La caméra : on vise un astre (ou le système), vol en courbe ---------- */
 const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10)
 const radiusOf = (me: State, id: string) => id === SYSTEM ? SUN_R : me.cosmos.radius(id)
@@ -358,10 +305,8 @@ function updateRocket(me: State, dt: number, now: number) {
     g.quaternion.slerp(parkedQ, Math.min(1, dt * 3))
     g.scale.setScalar(parkScale)
   }
-  me.rocket.flameMat.uniforms.uTime.value = now / 1000
-  me.rocket.flameMat.uniforms.uPow.value = thrust
-  const fw = 1 + thrust * 0.5
-  me.rocket.flame.scale.set(fw, 0.6 + thrust * 0.85 + Math.sin(now / 45) * 0.08, fw)
+  // le Soleil est à l'origine : ses reflets glissent sur la coque
+  me.rocket.update(now, thrust, new T.Vector3().copy(g.position).negate())
 }
 
 /* ---------- Explore ---------- */
