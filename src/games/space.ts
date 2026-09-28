@@ -296,7 +296,8 @@ function updateRocket(me: State, dt: number, now: number) {
     const dest = targetPos(me, tr.id, new T.Vector3()).add(me.rocketOff)
     const kk = T.MathUtils.smoothstep(tr.t, 0.72, 1)
     g.position.copy(chase.lerp(dest, kk))
-    const axis = fwd.clone().multiplyScalar(0.55).addScaledVector(right, 0.7 + sway).addScaledVector(camUp, 0.42).normalize()
+    // presque de profil, en diagonale vers le haut à droite, comme sur l'image Canva
+    const axis = fwd.clone().multiplyScalar(0.3).addScaledVector(right, 0.78 + sway).addScaledVector(camUp, 0.58).normalize()
     g.quaternion.copy(aimRocket(T, axis, fwd.clone().negate())).slerp(parkedQ, kk)
     g.scale.setScalar(T.MathUtils.lerp(0.46, rocketScale(destR), kk))
     thrust = 1 - kk * 0.8
@@ -666,7 +667,13 @@ export const space: GameDef = {
         // Le plan proche suit les astres (cosmos) ET la fusée, qu'il ne coupe pas
         const rd = stage.camera.position.distanceTo(rocket.group.position) - rocket.group.scale.x * 0.6
         if (rd > 0 && rd * 0.5 < stage.camera.near) { stage.camera.near = Math.max(0.01, rd * 0.5); stage.camera.updateProjectionMatrix() }
+        // L'appoint de la fusée vient d'en haut à gauche de la caméra, comme la
+        // lumière de l'image Canva : posé sur la caméra, son reflet blanchissait
+        // en entier les ailerons vus de profil
+        const ld = stage.camera.position.distanceTo(me.lookTarget)
         me.camLight.position.copy(stage.camera.position)
+          .addScaledVector(me.tmp2.set(0, 1, 0).applyQuaternion(stage.camera.quaternion), ld * 0.55)
+          .addScaledVector(me.tmp2.set(1, 0, 0).applyQuaternion(stage.camera.quaternion), -ld * 0.75)
         me.camLight.target.position.copy(me.lookTarget)
 
         // Trouve : une visite achevée, on rentre et on enchaîne

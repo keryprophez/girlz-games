@@ -84,9 +84,9 @@ function spaceEnv(T: T3, stage: Stage) {
     void main(){
       float sun = max(dot(vD, vec3(1.0, 0.0, 0.0)), 0.0);
       float back = max(dot(vD, vec3(-0.7, 0.35, 0.0)), 0.0);
-      vec3 c = vec3(1.0, 0.86, 0.66) * (pow(sun, 3.0) * 0.9 + pow(sun, 40.0) * 6.0)
-             + vec3(0.25, 0.42, 0.85) * pow(back, 2.0) * 0.55
-             + vec3(0.03, 0.035, 0.05);
+      vec3 c = vec3(1.0, 0.86, 0.66) * (pow(sun, 8.0) * 0.45 + pow(sun, 70.0) * 9.0)
+             + vec3(0.25, 0.42, 0.85) * pow(back, 2.0) * 0.35
+             + vec3(0.06, 0.06, 0.07);
       gl_FragColor = vec4(c, 1.0);
     }`
   }))
@@ -149,7 +149,8 @@ export function makeRocket(T: T3, stage: Stage): Rocket {
   const env = spaceEnv(T, stage)
   const { map, bumpMap } = hullTextures(T, stage)
   const hull = new T.MeshPhysicalMaterial({ color: 0xffffff, map, bumpMap, bumpScale: 0.6, metalness: 0.45, roughness: 0.32, clearcoat: 0.35, clearcoatRoughness: 0.25, envMap: env, envMapIntensity: 1.1 })
-  const red = new T.MeshPhysicalMaterial({ color: 0x9c1119, metalness: 0.05, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, envMap: env, envMapIntensity: 1.2 })
+  // rouge sombre (l'ACES le remonte) mais jamais noir : un peu d'émission garde les ailerons rouges côté ombre
+  const red = new T.MeshPhysicalMaterial({ color: 0x9a0f18, emissive: 0x2a0407, metalness: 0.05, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.05, envMap: env, envMapIntensity: 0.9 })
   const steel = new T.MeshStandardMaterial({ color: 0xa7adb5, metalness: 1, roughness: 0.2, envMap: env, envMapIntensity: 1.3 })
   const gun = new T.MeshStandardMaterial({ color: 0x3b3f46, metalness: 0.9, roughness: 0.35, envMap: env, envMapIntensity: 1 })
   const glass = new T.MeshPhysicalMaterial({ color: 0x0a1a33, metalness: 0, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.02, envMap: env, envMapIntensity: 2.2, emissive: 0x16345e, emissiveIntensity: 0.35 })
@@ -195,6 +196,15 @@ export function makeRocket(T: T3, stage: Stage): Rocket {
   fin.lineTo(0.11, -0.04)
   const finGeo = new T.ExtrudeGeometry(fin, { depth: 0.018, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 3, curveSegments: 24 })
   finGeo.translate(0, 0, -0.009)
+  // une légère courbure (le bout de l'aileron s'incurve) : la lumière y dessine un dégradé
+  {
+    const pos = finGeo.attributes.position as import('three').BufferAttribute
+    for (let i = 0; i < pos.count; i++) {
+      const r = Math.max(0, pos.getX(i) - 0.1)
+      pos.setZ(i, pos.getZ(i) + 0.9 * r * r)
+    }
+    finGeo.computeVertexNormals()
+  }
   for (let k = 0; k < 4; k++) {
     const holder = new T.Group()
     // un aileron sous le hublot (+Z), comme sur l'image, et les trois autres à 90°
