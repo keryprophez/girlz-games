@@ -772,7 +772,7 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   étire ses mèches, les coiffures attachées replient ses mèches du dos. Les
   taches de rousseur sont peintes sur la texture de son visage.
 
-- 🚧 **L'Espace refait au niveau de la maquette du père** (« refais le
+- ✅ **L'Espace refait au niveau de la maquette du père** (« refais le
   système solaire à ce niveau de qualité », plan validé : « gogo ») — rendu
   dans `core/cosmos.ts` : ciel procédural et Voie lactée, Soleil qui bout et
   sa couronne, Terre de nuit avec ses villes, reflets des océans, nuages,
@@ -781,9 +781,9 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   les vraies positions du jour, HDR + halo + ACES. Le jeu garde les billes, la
   voix, Explore et Trouve ; la fusée est dessinée en 3D et la caméra de cinéma la suit ; une
   tortue et un lièvre règlent la vitesse du temps ; les lunes et Pluton se
-  visitent en bonus. **À mesurer sur la tablette** (`?fps`) avant la mise en
-  ligne : la qualité baisse d'elle-même (densité de pixels, puis lissage) si
-  une image dépasse 34 ms ; `?hq` la fige.
+  visitent en bonus. En ligne le 28/09 (« publie ») ; **reste à mesurer sur
+  la tablette** (`?fps`) : la qualité baisse d'elle-même (densité de pixels,
+  puis lissage) si une image dépasse 34 ms ; `?hq` la fige.
 
 ---
 
