@@ -90,7 +90,10 @@ const STAGE = {
    main qui montre où taper, le carton titre. */
 const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.pausewall,.toast,.pr-switch{display:none !important;}`
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', ...(process.env.DIST ? ['--outDir', process.env.DIST] : [])], { stdio: 'ignore' })
+// Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
+if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }
+// vite lui-même, pas `npx vite` : tuer npx laissait vite orphelin, port gardé
+const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort', ...(process.env.DIST ? ['--outDir', process.env.DIST] : [])], { stdio: 'ignore' })
 const kill = () => { try { server.kill() } catch { /* déjà mort */ } }
 process.on('exit', kill)
 for (let i = 0; ; i++) {

@@ -17,7 +17,7 @@ import { chromium } from 'playwright-core'
 const PORT = 4189
 const URL = `http://localhost:${PORT}/girlz-games/`
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
+const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {
   stdio: 'ignore', detached: false
 })
 const kill = () => { try { server.kill() } catch { /* déjà mort */ } }
