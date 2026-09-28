@@ -7,6 +7,10 @@ import { TimerButton } from './PlayTimer'
 import type { Tier } from '../core/types'
 import { ICON, starsHTML } from '../core/icons'
 import { BADGE, WORLD_BADGE } from '../core/badges'
+import { POSTERS } from '../core/posters'
+
+/** L'affiche d'un jeu (une image du jeu en train de se jouer, 28/09). */
+const posterUrl = (id: string) => import.meta.env.BASE_URL + 'assets/affiches/' + id + '.webp'
 
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
@@ -51,10 +55,12 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
     if (launching.current) return
     launching.current = true
     sFlip()
-    const from = (tile.querySelector('.sq') || tile).getBoundingClientRect()
+    const from = (tile.querySelector('.sq, .gc-img') || tile).getBoundingClientRect()
     const z = document.createElement('div')
     z.className = 'gc-zoom sq ' + sq
-    z.innerHTML = `<span class="gc-zoom-badge">${badge}</span>`
+    // L'affiche grandit jusqu'à remplir l'écran ; sans affiche, la vignette
+    if (POSTERS.has(id)) z.style.background = `center/cover no-repeat url("${posterUrl(id)}")`
+    else z.innerHTML = `<span class="gc-zoom-badge">${badge}</span>`
     Object.assign(z.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' })
     document.body.appendChild(z)
     requestAnimationFrame(() => requestAnimationFrame(() => z.classList.add('go')))
@@ -131,8 +137,11 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
         {shown.games.map(g => {
           const best = prog.bestStars[g.id] || 0
           return (
-            <button className="gc" key={g.id} onClick={e => launch(e.currentTarget, g.id, g.sq, BADGE[g.id] || g.icon)}>
-              <span className={'sq ' + g.sq}>{BADGE[g.id] ? <Svg html={BADGE[g.id]} /> : g.icon}</span>
+            <button className={'gc' + (POSTERS.has(g.id) ? ' gc-poster' : '')} key={g.id} data-id={g.id}
+              onClick={e => launch(e.currentTarget, g.id, g.sq, BADGE[g.id] || g.icon)}>
+              {POSTERS.has(g.id)
+                ? <img className="gc-img" src={posterUrl(g.id)} alt="" draggable={false} />
+                : <span className={'sq ' + g.sq}>{BADGE[g.id] ? <Svg html={BADGE[g.id]} /> : g.icon}</span>}
               <span className="nm">{g.name}</span>
               {world !== 'creer' && <Svg className="gc-stars" html={starsHTML(best)} />}
             </button>

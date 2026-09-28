@@ -1072,6 +1072,27 @@ await scenario('princesse-a-deux', async () => {
   await page.locator('.duobtn').first().click({ force: true, timeout: 120000 })
 })
 
+/* 👧 L'ancienne version (28/09) : le petit bouton rond de la Princesse ouvre
+   Habille-toi, la petite fille d'avant ; une couronne sur sa tête, gardée
+   dans le profil ; la couronne d'or ramène à la princesse. */
+await scenario('princesse-ancienne-version', async () => {
+  try {
+    await prOpen(false)
+    await page.locator('#prSwitch').click({ force: true, timeout: 120000 })
+    await page.waitForFunction(() => window.__du && window.__du.ready && !window.__pr, null, { timeout: 120000, polling: 500 })
+    await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 60000 })
+    await page.waitForFunction(() => window.__du.look.hat === 'crown', null, { timeout: 20000, polling: 250 })
+    const kept = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('ferme:v2') || '{}').state; return s?.profiles?.find(p => p.id === s.currentId)?.look })
+    if (!kept || kept.hat !== 'crown') throw new Error('le look de la petite fille n\'est pas gardé')
+    await page.locator('#duSwitch').click({ force: true, timeout: 60000 })
+    await prWait(() => window.__pr && window.__pr.ready && !window.__du, 'retour à la princesse')
+    if (errors.length) throw new Error('erreurs JS : ' + errors.join(' | '))
+  } finally {
+    // Le choix est retenu : ne pas laisser la petite fille aux bots suivants
+    await page.evaluate(() => localStorage.removeItem('ferme:princesse:mode')).catch(() => {})
+  }
+})
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)

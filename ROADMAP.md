@@ -796,20 +796,38 @@ en a retenu sept, et une suppression :
   jeu, sa vignette, son bot. `core/winter.ts` (le paysage d'hiver) reste,
   pour la Tour de Glace. Le bot de Memory vérifie désormais que la meilleure
   note s'enregistre (c'était celui du Bonhomme).
-- **1. L'accueil en affiches** : de grandes images tirées des jeux au lieu de
-  petites icônes et d'un nom écrit (maquette d'abord).
-- **2. La Tour de Glace dans le paysage d'hiver** (montagnes, chalet,
-  lanternes, glace qui brille, ciel qui change en montant) — « à condition
-  que ça n'impacte pas le gameplay » : cadrage, blocs, balancier et rampe
-  inchangés, les blocs restent aussi lisibles.
+- 🚧 **1. L'accueil en affiches** (maquette validée, « oui » ; tuiles et script
+  prêts, images à fabriquer et à montrer) : chaque tuile
+  montre le jeu en train de se jouer, le nom dessous — des images prises dans
+  les vrais jeux par `scripts/posters.mjs` (mise en scène par jeu : la Tour à
+  neuf blocs, le papillon colorié de l'Atelier, la pizza garnie, le feu
+  d'artifice en l'air…), la barre et le score cachés. La vignette dessinée
+  reste pour le carton titre et le chargement ; l'affiche grandit jusqu'à
+  remplir l'écran quand on touche la tuile.
+- ✅ **2. La Tour de Glace dans le paysage d'hiver** (captures validées,
+  « oui ») : chalet, sapin décoré, rennes, lanternes, forêt et montagnes
+  autour de la tour ; l'heure qui suit la hauteur (jour, lumière dorée vers
+  7 blocs, crépuscule vers 13, nuit étoilée et lune à 20, aurore au-dessus) ;
+  la glace vernie ; le repère central doré bordé de sombre (il disparaissait
+  sur le ciel de jour). Caméra, blocs, balancier, rampe et physique
+  inchangés. **Reste : mesurer `?fps` sur la tablette** (une cinquantaine de
+  modèles de plus).
 - **5. Le Marché** : de vraies pièces en 3D et de vrais billets, la caisse qui
   tinte et la voix qui dit le total.
 - **6. Les Suites logiques deviennent le petit train de la ferme.**
 - **8. Le Chœur sur une scène de grange en 3D**, et le coq, la chèvre, le
   cheval et le chat en personnages (ils rejoignent aussi le Piano et la Boîte
   à rythme).
-- **9. La garde-robe de la Princesse tout de suite pleine** : vignettes
-  gardées d'une ouverture à l'autre, silhouettes en attendant.
+- ✅ **9. La garde-robe de la Princesse tout de suite pleine** : vignettes
+  gardées d'une ouverture à l'autre (`core/diskcache.ts`, Cache API ; à la
+  deuxième ouverture : 12 lues, 0 recalculée), silhouettes en attendant.
+- ✅ **Et l'ancienne version de la Princesse** (« prévoir un petit bouton
+  pour qu'on puisse quand même faire l'ancienne version » ; laquelle : « A ·
+  Habille-toi ») : la petite fille à couettes en formes rondes d'avant le
+  27/09 (`games/doll.ts`, `core/doll3d.ts`, `core/character.ts`, revenus de
+  l'historique tels quels), derrière un bouton rond en bas à gauche de la
+  scène ; une couronne ramène à la princesse, le dernier choix est retenu,
+  son look est gardé dans le profil. Un bot : aller, chapeau, retour.
 - **10. Fluide partout** : la qualité qui s'adapte seule dans tous les jeux
   3D, comme dans l'Espace — après la mesure `?fps` sur la tablette.
 - Refusés : la lumière du Bonhomme (il sort), Puissance 4 en 3D, l'horloge

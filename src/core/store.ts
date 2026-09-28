@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
 import { defaultRoyal, normalizeRoyal, type Royal } from './royal'
+import type { Look } from './character'
 import { setSound } from './audio'
 
 /* Le choix de joueuse est MASQUÉ pour l'instant (demande du 10/09) : l'accueil
@@ -55,6 +56,8 @@ interface FermeState {
   setAvatar(id: string, dataUrl: string | null): void
   setTier(id: string, tier: Tier): void
   updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'age'>>): void
+  /** Le look de la petite fille d'Habille-toi (l'ancienne version, 28/09). */
+  setLook(id: string, look: Look): void
   /** Les princesses (27/09) : celle qu'on habille seule, et les deux
       sauvegardes « Jade » et « Joyce » (null tant qu'on n'a rien gardé). */
   royals: Record<RoyalSlot, Royal | null>
@@ -103,6 +106,9 @@ export const useFerme = create<FermeState>()(
       },
       updateProfile(id, patch) {
         set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, ...patch } : p)) }))
+      },
+      setLook(id, look) {
+        set(s => ({ profiles: s.profiles.map(p => (p.id === id ? { ...p, look } : p)) }))
       },
       royals: { solo: null, jade: null, joyce: null },
       setRoyal(slot, r) {

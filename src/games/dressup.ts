@@ -12,6 +12,7 @@ import { makePrincess, posePrincess, MOVES, type Princess, type Pose, type Expr 
 import { makePet, type Pet } from '../core/pet3d'
 import { makeDecor, type Decor, type DecorId } from '../core/castle3d'
 import { addPrincessPage, idbPut } from '../core/atelierdb'
+import { mountDoll } from './doll'
 import {
   CAPES, CLIP_KINDS, CLIPS_MAX, CROWNS, DYES, EYES, GLASSES, HAIR_LEN_MAX, HAIR_STYLES, HAIRS, HELDS, NECKS, PATTERNS, PETS,
   SHOES, SKINS, SKIRTS, TOPS, WINGS, cloneRoyal, moodFor, partsPresent, randomRoyal, royalKey, secondRoyal,
@@ -37,7 +38,11 @@ import {
       fontaine, rosiers, papillons, et une porte vers l'autre décor ;
    10. la photo : un flash, et elle devient un coloriage de l'Atelier (et
       un dessin de son dossier).
-   Rien à lire (les prénoms des cartes sont les seuls mots), rien à débloquer. */
+   Rien à lire (les prénoms des cartes sont les seuls mots), rien à débloquer.
+   Et depuis le 28/09, un petit bouton rond (la petite fille à couettes) en
+   bas à gauche de la scène : l'ANCIENNE VERSION, Habille-toi (`doll.ts`),
+   « qu'on puisse quand même la faire ». Une couronne y ramène ; le dernier
+   choix est retenu. */
 
 type Tab = 'face' | 'hair' | 'dress' | 'dye' | 'crown' | 'magic' | 'pet' | 'decor'
 type Tool = 'dye' | 'comb' | 'scissors' | 'curl' | 'straight' | 'clip'
@@ -1016,10 +1021,56 @@ function posAll(me: State, dt: number) {
   })
 }
 
+/** Le bouton de l'ancienne version : la petite fille à couettes d'Habille-toi. */
+const DOLL_ICON = `<svg viewBox="40 22 120 96" width="42" height="34"><circle cx="58" cy="62" r="15" fill="#5B3A21"/><circle cx="142" cy="62" r="15" fill="#5B3A21"/><ellipse cx="100" cy="68" rx="32" ry="34" fill="#F6C99F"/><path d="M67,60 Q69,30 100,28 Q131,30 133,60 Q116,44 100,45 Q84,44 67,60 Z" fill="#5B3A21"/><circle cx="88" cy="70" r="4.2" fill="#2B2118"/><circle cx="112" cy="70" r="4.2" fill="#2B2118"/><circle cx="80" cy="82" r="5" fill="#FF9CB1" opacity=".75"/><circle cx="120" cy="82" r="5" fill="#FF9CB1" opacity=".75"/><path d="M91,84 Q100,92 109,84" stroke="#2B2118" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>`
+
+type Mode = 'princesse' | 'poupee'
+const MODE_KEY = 'ferme:princesse:mode'
+function readMode(): Mode {
+  try { return localStorage.getItem(MODE_KEY) === 'poupee' ? 'poupee' : 'princesse' } catch { return 'princesse' }
+}
+function keepMode(m: Mode) {
+  try { localStorage.setItem(MODE_KEY, m) } catch { /* choix non retenu : on rouvrira la princesse */ }
+}
+
+/** Un contexte de partie à soi, pour une version : ses timers meurent quand
+    on passe à l'autre version (la partie, elle, continue). */
+function scoped(c: GameContext): { ctx: GameContext; end(): void } {
+  const ids = new Set<number>()
+  let on = true
+  const sub: GameContext = {
+    ...c,
+    after: (ms, fn) => { const id = c.after(ms, () => { ids.delete(id); if (on) fn() }); ids.add(id); return id },
+    every: (ms, fn) => { const id = c.every(ms, () => { if (on) fn() }); ids.add(id); return id },
+    cancel: id => { ids.delete(id); c.cancel(id) },
+    alive: () => on && c.alive()
+  }
+  return { ctx: sub, end() { on = false; ids.forEach(id => c.cancel(id)); ids.clear() } }
+}
+
 export const dressup: GameDef = {
   id: 'dressup', name: 'La Princesse', icon: '👑', sq: 'sq-lilac', cat: 'creatif', music: 'palace', duo: true,
   subtitle: 'Habille ta princesse, teins sa robe, coiffe-la… et au bal !',
   mount(c) {
+    // La princesse, ou l'ancienne version (Habille-toi) : un petit bouton passe de l'une à l'autre
+    let stop: (() => void) | null = null
+    let sub: ReturnType<typeof scoped> | null = null
+    const end = () => { stop?.(); stop = null; sub?.end(); sub = null }
+    const go = (m: Mode) => {
+      end()
+      keepMode(m)
+      sub = scoped(c)
+      c.root.innerHTML = ''
+      stop = m === 'poupee' ? mountDoll(sub.ctx, () => go('princesse')) : mountPrincess(sub.ctx, () => go('poupee'))
+    }
+    go(readMode())
+    return end
+  }
+}
+
+/** Monte la princesse dans `c.root` ; `toDoll` passe à l'ancienne version. */
+function mountPrincess(c: GameContext, toDoll: () => void): () => void {
+  {
     ctx = c
     const st0 = useFerme.getState()
     const duo = c.duo
@@ -1042,6 +1093,7 @@ export const dressup: GameDef = {
     c.root.innerHTML = `
       <div class="arena pr-arena">
         <div class="pr-scene" id="prScene">
+          <button class="pr-switch" id="prSwitch" aria-label="L'ancienne version">${DOLL_ICON}</button>
           <div class="pr-flash" id="prFlash"></div>
           <div class="pr-strip" id="prStrip"></div>
           <div class="pr-dance" id="prDance"></div>
@@ -1094,6 +1146,12 @@ export const dressup: GameDef = {
         refreshCards(me)
       }
     })
+    // L'ancienne version (Habille-toi) : pas pendant le bal
+    c.root.querySelector<HTMLElement>('#prSwitch')!.onclick = () => {
+      if (!me.running || me.ball || me.ended) return
+      sfx('switch', { vol: 0.5 })
+      toDoll()
+    }
     c.root.querySelector<HTMLElement>('#prDice')!.onclick = () => {
       if (!me.running || me.ball) return
       const i = me.active
@@ -1361,6 +1419,9 @@ export const dressup: GameDef = {
       me.fx?.dispose()
       me.stage?.dispose()
       if (pr === me) pr = null
+      // Le crochet des bots ne survit pas à sa partie (bot sur une valeur périmée)
+      const w = window as unknown as { __pr?: unknown }
+      if (w.__pr) delete w.__pr
     }
   }
 }

@@ -96,11 +96,19 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            assemblé pièce par pièce, lanternes, et l'HEURE qui
                            suit la hauteur (`setDusk` : jour → doré → crépuscule
                            → nuit, étoiles, lune, aurore)
+             doll3d.ts   ← la petite fille d'Habille-toi en formes rondes (+
+                           `character.ts`, son look) : l'ANCIENNE version de
+                           la Princesse, derrière son petit bouton (28/09,
+                           `games/doll.ts`, monté par `dressup.ts`)
+             posters.ts  ← les jeux qui ont leur AFFICHE sur l'accueil
+                           (écrit par `scripts/posters.mjs`)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
 scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
 scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
+scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
+                         scène (`STAGE`), photographié sans la coquille
 ```
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
@@ -123,7 +131,12 @@ construites dans `core/princess3d.ts` à partir d'une `Royal`
 (`princessPortraits(looks, poses, px)`, une ou deux côte à côte) sur l'écran
 de fin, en promenade sur l'accueil et en tampons dans l'Atelier. Le store
 garde trois princesses (`royals.solo`, `.jade`, `.joyce`) ; `familyLooks()`
-donne celles à montrer (les deux sœurs dès qu'elles ont gardé la leur). Pour ajouter un mot : une ligne dans
+donne celles à montrer (les deux sœurs dès qu'elles ont gardé la leur).
+Un petit bouton rond (la petite fille à couettes, en bas à gauche de la
+scène) ouvre l'**ancienne version**, Habille-toi (`games/doll.ts`, demandé
+le 28/09) ; une couronne y ramène, le dernier choix est retenu
+(`ferme:princesse:mode`), et chaque version a ses timers de partie à elle
+(`scoped()` dans `dressup.ts`). Pour ajouter un mot : une ligne dans
 `TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
 **regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
 
@@ -202,10 +215,15 @@ En jeu, `body.playing` met la coquille en **plein écran** :
 l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
 barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
 carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
-jamais d'emoji — et **les tuiles de l'accueil ont leur vignette dessinée**
-dans `core/badges.ts` (`BADGE[id]`, `viewBox 0 0 48 48`, formes pleines,
-palette de `global.css`). Un jeu sans entrée retombe sur son emoji : ajouter
-la vignette en même temps que le jeu.
+jamais d'emoji. **Les tuiles de l'accueil sont des AFFICHES** (28/09) : une
+image du jeu en train de se jouer (`public/assets/affiches/<id>.webp`, 4:3),
+prise dans le vrai jeu par `scripts/posters.mjs` — mise en scène par jeu
+(`STAGE` : attente, gestes, cadrage), barre, score et main cachés. La
+**vignette dessinée** de `core/badges.ts` (`BADGE[id]`, `viewBox 0 0 48 48`,
+formes pleines, palette de `global.css`) reste pour le carton titre, le
+chargement et un jeu sans affiche (sans vignette : son emoji). Un nouveau
+jeu arrive avec les deux : sa vignette, et son affiche
+(`ONLY=<id> node scripts/posters.mjs`, puis REGARDER l'image).
 
 **Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
 rampe par performance, timers simulés `game.after`, HUD en icônes dans
@@ -289,7 +307,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
-| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` touchent l'onglet de l'univers (`.hm-tab[data-w]`, un univers affiché à la fois depuis le 23/09), puis la tuile `.gc` (nom dans `.nm`), puis — jeu `ops` — la flèche des opérations (`.opsgo`, étiquettes `.opsbtn[data-op]`), puis le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
+| **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` touchent l'onglet de l'univers (`.hm-tab[data-w]`, un univers affiché à la fois depuis le 23/09), puis la tuile `.gc` (nom dans `.nm`, identifiant dans `data-id`), puis — jeu `ops` — la flèche des opérations (`.opsgo`, étiquettes `.opsbtn[data-op]`), puis le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
 | **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
 | **Bot sur une valeur périmée** | Un crochet de test (`__towerX`) qui n'est écrit que quand l'objet existe garde sa dernière valeur : le bot de la Tour cliquait « au centre » pendant la chute du bloc précédent, un bloc sur trois manquait, trois déploiements ont échoué sans qu'on le voie. Écrire `NaN` quand il n'y a rien à piloter, et faire attendre le bot sur le score plutôt que sur une durée murale. |
 | **Bot qui sonde avant l'accroche** | `openGame` attendait 3,2 s à plat, puis le bot de la Course lisait `window.__run` : un jeu 3D n'installe son accroche qu'APRÈS ses modèles, et sur le serveur d'intégration (plus lent que la session) elle n'était pas là — première sonde à `null`, « partie terminée avant 60 m », déploiement bloqué alors que tout passait ici. Un bot attend son accroche (`openGame(nom, '__run')` → `waitForFunction`) ou la disparition de `.nj-loading`, jamais une durée murale. |
@@ -328,7 +346,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (28/09 : 28 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (28/09 : 29 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

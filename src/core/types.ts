@@ -82,7 +82,9 @@ export interface Profile {
   age: number
   avatar: string | null // dataURL
   tier: Tier
-  /** L'ancien look d'Habille-toi (avant le 27/09) : relu une fois pour la princesse. */
+  /** Le look d'Habille-toi, la petite fille (l'ancienne version derrière le
+      petit bouton de la Princesse) : relu par `normalizeLook`, et une fois
+      pour la toute première princesse. */
   look?: unknown
 }
 
