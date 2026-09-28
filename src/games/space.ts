@@ -309,6 +309,16 @@ function updateCamera(me: State, dt: number) {
 
 const rocketScale = (R: number) => Math.min(0.9, Math.max(0.08, R * 0.2))
 /** La fusée : devant la caméra pendant le vol, puis posée à côté de l'astre. */
+/** L'axe de la fusée sur `axis`, son hublot (+z) tourné vers `toCam`. */
+function aimRocket(T: T3, axis: V3, toCam: V3) {
+  const y = axis.clone().normalize()
+  const z = toCam.clone().addScaledVector(y, -toCam.dot(y))
+  if (z.lengthSq() < 1e-6) z.set(0, 0, 1).addScaledVector(y, -y.z)
+  z.normalize()
+  const x = new T.Vector3().crossVectors(y, z)
+  return new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x, y, z))
+}
+
 function updateRocket(me: State, dt: number, now: number) {
   const T = me.T
   const g = me.rocket.group
@@ -319,25 +329,31 @@ function updateRocket(me: State, dt: number, now: number) {
   const parked = targetPos(me, me.rocketAt, me.tmp).add(me.rocketOff)
   parked.y += Math.sin(now / 700) * parkedR * 0.04
   const up = new T.Vector3(0, 1, 0)
+  const toCam = cam.position.clone().sub(g.position).normalize()
   const toBody = targetPos(me, me.rocketAt, me.tmp2).sub(parked).normalize()
   const parkedDir = up.clone().multiplyScalar(0.85).addScaledVector(toBody, 0.5).normalize()
+  const parkedQ = aimRocket(T, parkedDir, toCam)
   let thrust = 0.15
   if (tr && tr.id !== SYSTEM) {
-    // En route : la fusée file devant la caméra, vue de dos, flamme allumée
+    // En route : la fusée file de trois quarts en bas à gauche, le nez vers
+    // la destination au centre, le hublot vers nous (vue pile de dos, elle
+    // ne ressemblait plus qu'à une cible)
     const fwd = new T.Vector3(0, 0, -1).applyQuaternion(cam.quaternion)
     const camUp = new T.Vector3(0, 1, 0).applyQuaternion(cam.quaternion)
-    const chase = cam.position.clone().addScaledVector(fwd, 2.2).addScaledVector(camUp, -0.42)
+    const right = new T.Vector3(1, 0, 0).applyQuaternion(cam.quaternion)
+    const sway = Math.sin(now / 520) * 0.06
+    const chase = cam.position.clone().addScaledVector(fwd, 2.6).addScaledVector(right, -0.62 + sway * 0.5).addScaledVector(camUp, -0.36 + Math.sin(now / 380) * 0.025)
     const destR = radiusOf(me, tr.id)
     const dest = targetPos(me, tr.id, new T.Vector3()).add(me.rocketOff)
     const kk = T.MathUtils.smoothstep(tr.t, 0.72, 1)
     g.position.copy(chase.lerp(dest, kk))
-    const dir = fwd.clone().lerp(parkedDir, kk).normalize()
-    g.quaternion.setFromUnitVectors(up, dir)
-    g.scale.setScalar(T.MathUtils.lerp(0.42, rocketScale(destR), kk))
+    const axis = fwd.clone().multiplyScalar(0.55).addScaledVector(right, 0.7 + sway).addScaledVector(camUp, 0.42).normalize()
+    g.quaternion.copy(aimRocket(T, axis, fwd.clone().negate())).slerp(parkedQ, kk)
+    g.scale.setScalar(T.MathUtils.lerp(0.46, rocketScale(destR), kk))
     thrust = 1 - kk * 0.8
   } else {
     g.position.lerp(parked, Math.min(1, dt * 4))
-    g.quaternion.slerp(new T.Quaternion().setFromUnitVectors(up, parkedDir), Math.min(1, dt * 3))
+    g.quaternion.slerp(parkedQ, Math.min(1, dt * 3))
     g.scale.setScalar(parkScale)
   }
   me.rocket.flameMat.uniforms.uTime.value = now / 1000
@@ -361,7 +377,7 @@ function arrive(me: State) {
   me.arrived = true
   const R = radiusOf(me, id)
   const p = targetPos(me, id, me.tmp)
-  me.fx.burst(p, { count: 26, color: ['#FFE08A', '#FFFFFF', me.cosmos.byId[id]?.color || '#FFB13A'], speed: 1.4 * R + 0.6, spread: 1, life: 0.9, size: R * 0.5, gravity: 0 })
+  me.fx.burst(p, { count: 34, color: ['#FFE08A', '#FFFFFF', me.cosmos.byId[id]?.color || '#FFB13A'], speed: 1.4 * R + 0.6, spread: 1, life: 0.9, size: R * 0.28, gravity: 0 })
   if (me.mode === 'trouve') return
   const isNew = isPlanet(id) && !me.visited.has(id)
   if (isNew) { me.visited.add(id); sGood() } else sPop()
