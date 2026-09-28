@@ -121,6 +121,10 @@ sont partagés sous la même licence.
   (<https://commons.wikimedia.org/wiki/File:Ganymede_map_by_Askaniy.png>,
   <https://commons.wikimedia.org/wiki/File:Callisto_map_by_Askaniy.png>) ;
   réduites à 1024×512, contraste et luminosité ajustés (28/09).
+- **Io** (`space/io.jpg`) : mosaïque en couleurs Galileo SSI / Voyager de
+  l'**USGS Astrogeology Science Center** (NASA), domaine public, via Wikimedia
+  Commons (<https://commons.wikimedia.org/wiki/File:Io_for_GeoHacks.jpg>) ;
+  réduite à 1024×512, couleurs ravivées (28/09).
 - **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
   `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.
 - **Régions de France** (`geo/regions.geojson`) : IGN Admin Express via

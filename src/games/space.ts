@@ -45,7 +45,7 @@ const BONUS: Info[] = [
   { id: 'soleil', tex: 'sun.jpg', fact: 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.' },
   { id: 'pluton', tex: 'moon.jpg', fact: 'Pluton, une planète naine toute petite, si loin du Soleil qu\'il y fait glacial. Elle met deux cent quarante-huit ans à en faire le tour !' },
   { id: 'lune', tex: 'moon.jpg', fact: 'La Lune ! Elle tourne autour de la Terre, et des astronautes ont marché dessus.' },
-  { id: 'io', tex: 'moon.jpg', fact: 'Io, une lune de Jupiter pleine de volcans qui crachent du soufre jaune !' },
+  { id: 'io', tex: 'io.jpg', fact: 'Io, une lune de Jupiter pleine de volcans qui crachent du soufre jaune !' },
   { id: 'europe', tex: 'moon.jpg', fact: 'Europe, une lune de Jupiter couverte de glace. Dessous, il y a peut-être un océan !' },
   { id: 'ganymede', tex: 'ganymede.jpg', fact: 'Ganymède, la plus grosse lune de tout le système solaire : elle est plus grosse que Mercure !' },
   { id: 'callisto', tex: 'callisto.jpg', fact: 'Callisto, une lune de Jupiter toute couverte de cratères.' },
