@@ -23,11 +23,12 @@ const W = 600, H = 450
    photo (`act`), le cadrage (`zoom` ≥ 1, centre `cx`/`cy` en fractions de
    l'arène), et `shots` : plusieurs photos à `every` ms d'écart, on garde la
    plus colorée (le Ninja : le moment où il y a le plus de fruits en l'air).
-   Par défaut : 5 s, une photo, cadrage 4:3 au centre. */
+   `tier` : le niveau (le Ninja en expert, plus de fruits à la fois).
+   Par défaut : 5 s, une photo, cadrage 4:3 au centre, niveau doux. */
 const STAGE = {
   // Jouer
   icetower: { wait: 6000, act: async p => { await p.evaluate(() => window.__itStack?.(9)) }, after: 7000, zoom: 1.15, cy: 0.42 },
-  ninja: { wait: 6000, shots: 10, every: 700 },
+  ninja: { tier: 'exp', wait: 8000, shots: 14, every: 600 },
   caterpillar: { wait: 6000, zoom: 1.3, cy: 0.55 },
   maze: { wait: 5000 },
   taquin2: { wait: 4000 },
@@ -61,7 +62,8 @@ const STAGE = {
     after: 1800
   },
   market: { wait: 4000 },
-  intrus: { wait: 5000 },
+  // Les animaux de la ferme plutôt que la cuisine (la série est tirée au sort)
+  intrus: { wait: 4000, accept: () => /animaux/i.test(document.querySelector('#intQ')?.textContent || '') },
   geo: { wait: 12000 },
   space: { wait: 15000 },
   patterns: { wait: 4000 },
@@ -120,7 +122,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.pausewall,.toast,.pr-switch,.nj-waves,.nj-hint{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.pausewall,.toast,.pr-switch,.nj-waves,.nj-hint,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }
@@ -159,17 +161,21 @@ mkdirSync(OUT, { recursive: true })
 for (const g of games) {
   if (only && !only.includes(g.id)) continue
   const st = STAGE[g.id] || { wait: 5000 }
-  errors.length = 0
-  await page.goto(URL)
-  await page.locator(`.hm-tab[data-w="${g.w}"]`).click()
-  await page.locator(`.gc[data-id="${g.id}"]`).click()
-  await page.locator('.opsgo, .tierbtn.tier-easy').first().waitFor()
-  if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
-  if (await page.locator('.duobtn').count()) await page.locator('.duobtn').first().click({ force: true })
-  await page.locator('.tierbtn.tier-easy').click({ force: true })
-  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 120000 }).catch(() => {})
-  if (st.ready) await page.waitForFunction(st.ready, null, { timeout: 300000, polling: 1000 })
-  await page.waitForTimeout(st.wait)
+  // `accept` : une partie tirée au sort qui ne convient pas est relancée (6 fois au plus)
+  for (let tries = 0; ; tries++) {
+    errors.length = 0
+    await page.goto(URL)
+    await page.locator(`.hm-tab[data-w="${g.w}"]`).click()
+    await page.locator(`.gc[data-id="${g.id}"]`).click({ force: true })
+    await page.locator('.opsgo, .tierbtn').first().waitFor()
+    if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
+    if (await page.locator('.duobtn').count()) await page.locator('.duobtn').first().click({ force: true })
+    await page.locator('.tierbtn.tier-' + (st.tier || 'easy')).click({ force: true })
+    await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 120000 }).catch(() => {})
+    if (st.ready) await page.waitForFunction(st.ready, null, { timeout: 300000, polling: 1000 })
+    await page.waitForTimeout(st.wait)
+    if (!st.accept || tries >= 5 || await page.evaluate(st.accept)) break
+  }
   const arena = page.locator('.gameroot')
   const box = await arena.boundingBox()
   if (st.act) { await st.act(page, box); await page.waitForTimeout(st.after || 1000) }
