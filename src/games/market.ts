@@ -4,9 +4,13 @@ import { photoImg } from '../core/sprites'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
+import { tone } from '../core/audio'
+import { moneyImages } from '../core/money3d'
 
-/* Le Marché de la Ferme — apprendre l'argent avec de vraies pièces en euros
-   dessinées (cuivre, or, bicolores) et des billets. Trois façons de jouer :
+/* Le Marché de la Ferme — apprendre l'argent avec de VRAIES pièces en euros,
+   en 3D depuis le 28/09 (`core/money3d.ts` : métal, relief, tranche, tailles
+   fidèles) et de vrais billets ; la caisse tinte quand le compte est bon, et
+   la voix dit le total à chaque pièce posée. Trois façons de jouer :
    🔎 Découvre (tape une pièce, la voix dit sa valeur),
    🛒 Paye (compose le prix exact dans le panier),
    💰 La monnaie (le client paye avec un billet : rends la différence). */
@@ -24,8 +28,16 @@ const DENOMS: Denom[] = [
 const ITEMS = ['apple', 'carrot', 'baguette', 'cheese', 'strawberry',
   'egg', 'honey', 'corn', 'cookie', 'muffin', 'tomato', 'pear', 'cake']
 
-/** Pièces et billets dessinés en SVG, aux couleurs des vrais euros. */
-export function moneySVG(v: number): string {
+/* Les images 3D de l'argent, une fois rendues (en attendant : le dessin SVG) */
+const ALL = DENOMS.map(d => d.v)
+const imgs: Record<number, string> = {}
+function money(v: number): string {
+  return imgs[v] ? `<img class="mk-img" src="${imgs[v]}" alt="" draggable="false">` : moneySVG(v)
+}
+
+/** Pièces et billets dessinés en SVG, aux couleurs des vrais euros : le temps
+    que les pièces 3D soient prêtes (une seconde la première fois). */
+function moneySVG(v: number): string {
   if (v >= 500) {
     const conf: Record<number, [string, string, string]> = {
       500: ['#B9BFC6', '#8E99A3', '5 €'], 1000: ['#F2B4A8', '#D98577', '10 €'], 2000: ['#9DBBE0', '#6E93C4', '20 €']
@@ -114,7 +126,7 @@ function buildBank(me: State, denoms: number[]) {
     const b = document.createElement('button')
     b.className = 'mk-coin' + (d.kind === 'note' ? ' mk-note' : '')
     b.dataset.v = String(v)
-    b.innerHTML = moneySVG(v)
+    b.innerHTML = money(v)
     b.onclick = () => tapBank(me, v, b)
     bank.appendChild(b)
   })
@@ -126,7 +138,10 @@ function renderTray(me: State) {
   me.tray.forEach((v, i) => {
     const b = document.createElement('button')
     b.className = 'mk-coin mk-intray' + (v >= 500 ? ' mk-note' : '')
-    b.innerHTML = moneySVG(v)
+    b.dataset.v = String(v)
+    // Posée comme on la lâche : jamais deux fois tout à fait droite
+    b.style.setProperty('--r', `${((i * 47) % 29) - 14}deg`)
+    b.innerHTML = money(v)
     b.onclick = () => {
       if (mk !== me || !me.running || me.lock) return
       me.tray.splice(i, 1); sfx('coins', { vol: 0.4, rate: 0.9 }); renderTray(me)
@@ -161,9 +176,19 @@ function tapBank(me: State, v: number, b: HTMLElement) {
   ctx.say(speak(sum))
 }
 
+/** La caisse : le tiroir claque, la sonnette tinte, les pièces y tombent. */
+function ring(me: State) {
+  const wrap = $('mkTrayWrap')
+  wrap.classList.remove('paid'); void wrap.offsetWidth; wrap.classList.add('paid')
+  sfx('coins', { vol: 0.7, rate: 0.85 })
+  tone(2349, 0.9, 'sine', 0.08, 0.12); tone(2960, 0.7, 'sine', 0.045, 0.13); tone(1175, 0.5, 'triangle', 0.03, 0.12)
+  ctx.after(1200, () => { if (mk === me) wrap.classList.remove('paid') })
+}
+
 function success(me: State) {
   me.lock = true
-  sfx('confirm', { vol: 0.8 })
+  sfx('confirm', { vol: 0.6 })
+  ring(me)
   fxAt($('mkTray'), JUICE.green, 14)
   ctx.say(speak(me.goal))
   me.q++
@@ -189,7 +214,7 @@ function nextRound(me: State) {
     me.goal = note - price
     $('mkItem').innerHTML = `<div class="mk-show">${photoImg(item, 210)}</div>
       <span class="mk-price">${fmt(price)}</span>
-      <span class="mk-paid"><span class="mk-paynote">${moneySVG(note)}</span>${ICON.turnLeft}</span>`
+      <span class="mk-paid"><span class="mk-paynote" data-v="${note}">${money(note)}</span>${ICON.turnLeft}</span>`
   }
   // Les manches en pastilles, plus « 2/4 » à lire
   $('mkDots').innerHTML = Array.from({ length: me.totalQ }, (_, i) =>
@@ -243,8 +268,9 @@ export const market: GameDef = {
             <div class="mk-counter"></div>
           </div>
           <div class="mk-traywrap" id="mkTrayWrap">
-            <div class="mk-till"><div class="mk-total" id="mkTotal">—</div></div>
+            <div class="mk-till"><i class="mk-bell"></i><div class="mk-total" id="mkTotal">—</div></div>
             <div class="mk-tray" id="mkTray"></div>
+            <div class="mk-drawer"></div>
           </div>
         </div>
         <div class="mk-bank" id="mkBank"></div>
@@ -268,10 +294,18 @@ export const market: GameDef = {
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __mk: unknown }).__mk = {
-        get goal() { return me.goal }, get q() { return me.q }, get lock() { return me.lock }, get sum() { return me.tray.reduce((a, b) => a + b, 0) }
+        get goal() { return me.goal }, get q() { return me.q }, get lock() { return me.lock }, get sum() { return me.tray.reduce((a, b) => a + b, 0) },
+      /** Les pièces et billets 3D sont-ils affichés ? */
+      get real() { return Object.keys(imgs).length === ALL.length && !!document.querySelector('#mkBank .mk-img') }
       }
     }
     setMode(me, 'explore')
+    // Les pièces 3D : rendues une fois (gardées), puis elles remplacent les dessins
+    moneyImages(ALL, 320).then(r => {
+      Object.assign(imgs, r)
+      if (mk !== me || !me.running) return
+      c.root.querySelectorAll<HTMLElement>('#mkArena [data-v]').forEach(el => { el.innerHTML = money(+el.dataset.v!) })
+    }).catch(e => console.warn('pièces 3D indisponibles, on garde les dessins', e))
     return () => { me.running = false; if (mk === me) mk = null }
   }
 }

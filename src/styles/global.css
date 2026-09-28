@@ -1245,6 +1245,28 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .mk-coin.mk-note{width:170px;height:95px;}
 .mk-coin.boing{animation:goodp .4s var(--spring);}
 .mk-dots{position:absolute;top:18px;left:50%;transform:translateX(-50%);}
+/* L'argent en 3D (28/09) : des images rendues, une ombre posée dessous */
+.mk-img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;
+  filter:drop-shadow(0 5px 4px rgba(60,40,20,.3));}
+.mk-tray .mk-coin{transform:rotate(var(--r,0deg));}
+/* La caisse qui tinte : la sonnette, le tiroir qui s'ouvre, les pièces qui y tombent */
+.mk-till{position:relative;}
+.mk-traywrap{position:relative;}
+/* En Paye et Monnaie, la banque tient sur l'écran même en expert (8 pièces + 2 billets) */
+.mk-arena:not(.explore) .mk-bank .mk-coin{width:104px;height:104px;}
+.mk-arena:not(.explore) .mk-bank .mk-coin.mk-note{width:152px;height:85px;}
+.mk-bell{position:absolute;right:-16px;top:-14px;width:30px;height:30px;border-radius:50% 50% 12% 12%;
+  background:radial-gradient(circle at 35% 30%,#FFF3B8,#E7B43A 55%,#A87618);box-shadow:0 2px 3px rgba(0,0,0,.3);}
+.mk-drawer{position:absolute;top:100%;left:11%;width:78%;height:0;border-radius:0 0 12px 12px;background:linear-gradient(180deg,#6B5440,#45362A);
+  box-shadow:inset 0 6px 8px rgba(0,0,0,.35);transition:height .25s var(--spring);}
+.mk-traywrap.paid .mk-drawer{height:34px;}
+.mk-traywrap.paid .mk-bell{animation:mkBell .5s ease-in-out 2;}
+.mk-traywrap.paid .mk-total{color:#7CFF6B;text-shadow:0 0 12px rgba(124,255,107,.7);}
+.mk-traywrap.paid .mk-tray .mk-coin{animation:mkIntoDrawer .55s ease-in both;}
+.mk-traywrap.paid .mk-tray .mk-coin:nth-child(2n){animation-delay:.06s;}
+.mk-traywrap.paid .mk-tray .mk-coin:nth-child(3n){animation-delay:.12s;}
+@keyframes mkBell{0%,100%{transform:rotate(0);}25%{transform:rotate(-22deg);}75%{transform:rotate(22deg);}}
+@keyframes mkIntoDrawer{to{transform:translateY(90px) scale(.55) rotate(var(--r,0deg));opacity:0;}}
 .mk-done{position:absolute;right:16px;bottom:16px;width:74px;height:74px;font-size:38px;display:none;}
 /* Découvre : la bourse devient l'étal entier, les pièces en très grand */
 .mk-arena.explore .mk-main,.mk-arena.explore .mk-dots{display:none;}

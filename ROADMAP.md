@@ -812,8 +812,14 @@ en a retenu sept, et une suppression :
   sur le ciel de jour). Caméra, blocs, balancier, rampe et physique
   inchangés. **Reste : mesurer `?fps` sur la tablette** (une cinquantaine de
   modèles de plus).
-- **5. Le Marché** : de vraies pièces en 3D et de vrais billets, la caisse qui
-  tinte et la voix qui dit le total.
+- ✅ **5. Le Marché** (« fais les 4 de suite sans redemander aucune
+  validation ») : les pièces en vrai métal 3D (`core/money3d.ts` — cuivre,
+  or nordique, bimétal pour 1 € et 2 €, face commune en relief avec une
+  patine qui fait lire le chiffre, tranche striée, tailles relatives exactes)
+  et de vrais billets (papier courbé, arches du 5, arcs du 10, vitraux du 20,
+  drapeau étoilé, bande argentée), rendus une fois en images et gardés ; la
+  caisse qui tinte (sonnette, tiroir qui s'ouvre, pièces qui y tombent) ; la
+  voix dit le total à chaque pièce, puis le prix payé.
 - **6. Les Suites logiques deviennent le petit train de la ferme.**
 - **8. Le Chœur sur une scène de grange en 3D**, et le coq, la chèvre, le
   cheval et le chat en personnages (ils rejoignent aussi le Piano et la Boîte

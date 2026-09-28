@@ -24,8 +24,9 @@ const cache = new Map<string, string>()
 
 type Renderer = import('three').WebGLRenderer
 
-/** Ouvre un moteur de rendu jetable, le passe à `fn`, puis libère tout. */
-async function withRenderer<R>(w: number, h: number, fn: (T: T3, r: Renderer, env: import('three').Texture) => Promise<R> | R): Promise<R> {
+/** Ouvre un moteur de rendu jetable, le passe à `fn`, puis libère tout (servi aussi
+    aux pièces et billets du Marché, `core/money3d.ts`). */
+export async function withRenderer<R>(w: number, h: number, fn: (T: T3, r: Renderer, env: import('three').Texture) => Promise<R> | R): Promise<R> {
   const T = await loadThree()
   const { RoomEnvironment } = await import('three/examples/jsm/environments/RoomEnvironment.js')
   const renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })

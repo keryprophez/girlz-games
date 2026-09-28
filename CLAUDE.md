@@ -100,6 +100,9 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            `character.ts`, son look) : l'ANCIENNE version de
                            la Princesse, derrière son petit bouton (28/09,
                            `games/doll.ts`, monté par `dressup.ts`)
+             money3d.ts  ← L'ARGENT du Marché en 3D (28/09) : pièces en métal
+                           (relief, patine, tranche, vraies tailles) et billets
+                           courbés, rendus en IMAGES (`moneyImages`), gardés
              posters.ts  ← les jeux qui ont leur AFFICHE sur l'accueil
                            (écrit par `scripts/posters.mjs`)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
