@@ -24,7 +24,10 @@ const ROWS: { animal: CritterKind; color: string; synth(): void }[] = [
   { animal: 'cow', color: '#B197FC', synth() { sMoo() } },
   { animal: 'pig', color: '#F58FB8', synth() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) } },
   { animal: 'duck', color: '#4FB8E7', synth() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) } },
-  { animal: 'hen', color: '#FFA94D', synth() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } }
+  { animal: 'hen', color: '#FFA94D', synth() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } },
+  // Le 28/09, la chèvre et le coq rejoignent l'orchestre (leurs voix attendaient un personnage)
+  { animal: 'goat', color: '#8CCB6A', synth() { tone(520, 0.12, 'sawtooth', 0.07); tone(470, 0.12, 'sawtooth', 0.06, 0.08) } },
+  { animal: 'rooster', color: '#E0607E', synth() { tone(660, 0.08, 'triangle', 0.12); tone(990, 0.12, 'triangle', 0.1, 0.07) } }
 ]
 
 const TEMPOS = [{ ms: 500, cap: 'Lent', dots: 1 }, { ms: 340, cap: 'Moyen', dots: 2 }, { ms: 230, cap: 'Vite', dots: 3 }]
@@ -35,13 +38,17 @@ const PRESETS: Record<string, number[][]> = {
     [1, 0, 0, 0, 1, 0, 0, 0],
     [0, 0, 1, 0, 0, 0, 1, 0],
     [0, 0, 0, 0, 0, 1, 0, 0],
-    [1, 0, 1, 0, 1, 0, 1, 1]
+    [1, 0, 1, 0, 1, 0, 1, 1],
+    [0, 0, 0, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1]
   ],
   p2: [
     [1, 0, 0, 1, 0, 0, 1, 0],
     [0, 1, 0, 0, 1, 0, 0, 1],
     [0, 0, 1, 0, 0, 1, 0, 0],
-    [1, 1, 0, 1, 1, 0, 1, 0]
+    [1, 1, 0, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1, 0],
+    [1, 0, 0, 0, 0, 0, 0, 0]
   ]
 }
 

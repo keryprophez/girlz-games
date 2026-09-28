@@ -15,9 +15,13 @@ import type { T3 } from './three3d'
 
 export type CritterKind = 'mole' | 'chick' | 'pig' | 'rabbit' | 'cactus'
   | 'cow' | 'hen' | 'dog' | 'duck' | 'sheep'
+  | 'rooster' | 'goat' | 'horse' | 'cat'
 /** Toute la ferme (22/09) : les pions de Simon, Puissance 4, la Boîte à
     rythme et l'image du Taquin, rendus en portrait par `core/portraits.ts`. */
 export const FARM: CritterKind[] = ['cow', 'pig', 'hen', 'chick', 'duck', 'sheep', 'dog', 'rabbit']
+/** Et depuis le 28/09, ceux dont la voix attendait un personnage : le coq, la
+    chèvre, le cheval et le chat (le Chœur, le Piano, la Boîte à rythme). */
+export const FARM_MORE: CritterKind[] = ['rooster', 'goat', 'horse', 'cat']
 
 type Obj = import('three').Object3D
 type Mesh = import('three').Mesh
@@ -58,6 +62,10 @@ export function critterKit(T: T3): CritterKit {
     feather: mat(0xD6D0C6, 0.8), red: mat(0xB0302A, 0.6), horn: mat(0xB9A67E, 0.5),
     wool: mat(0xD2CBBE, 0.95), face: mat(0x3A302A, 0.8), mallard: mat(0x1F5A36, 0.35),
     duckBody: mat(0x8A7B68, 0.8), gold: mat(0xC99A1E, 0.5), tongue: mat(0xC4506A, 0.6),
+    rust: mat(0x8A3418, 0.7), rustDark: mat(0x5E2410, 0.7), hackle: mat(0xB86A1A, 0.6), sickle: mat(0x173D30, 0.35),
+    goat: mat(0xC9C0B0, 0.85), goatShade: mat(0xA0947F, 0.85), hoof: mat(0x3A2E26, 0.6),
+    chestnut: mat(0x6A3A1E, 0.6), mane: mat(0x24160C, 0.7), horseLight: mat(0x9E7250, 0.7),
+    catOrange: mat(0xAE5E24, 0.75), catStripe: mat(0x6E3510, 0.8),
     shine: new T.MeshBasicMaterial({ color: 0xFFFFFF })
   }
 
@@ -220,6 +228,101 @@ export function critterKit(T: T3): CritterKit {
         grp.add(part(geos.cyl, mats.face, s * 0.16 * S, 0.08 * S, 0.1 * S, 0.05 * S, 0.16 * S, 0.05 * S))
       }
       return eyes(grp, S, 0.07, 0.68, 0.42, 0.05)
+    },
+    rooster(grp, S) {
+      // Le coq : plumage roux, poitrail sombre, camail doré, grande crête,
+      // barbillons, et la queue haute en faucilles vert bouteille
+      grp.add(part(geos.sphere, mats.rust, 0, 0.42 * S, -0.04 * S, 0.36 * S, 0.37 * S, 0.4 * S))
+      grp.add(part(geos.sphere, mats.sickle, 0, 0.36 * S, 0.14 * S, 0.24 * S, 0.24 * S, 0.24 * S))
+      grp.add(part(geos.sphere, mats.hackle, 0, 0.66 * S, 0.08 * S, 0.24 * S, 0.27 * S, 0.24 * S))
+      grp.add(part(geos.sphere, mats.rust, 0, 0.82 * S, 0.14 * S, 0.2 * S))
+      for (const [z, r, y] of [[0.04, 0.085, 1.0], [0.11, 0.11, 1.05], [0.19, 0.1, 1.04], [0.26, 0.075, 0.99]]) {
+        grp.add(part(geos.sphere, mats.red, 0, y * S, z * S, 0.035 * S, r * S, r * 0.8 * S))
+      }
+      grp.add(part(geos.cone, mats.gold, 0, 0.8 * S, 0.37 * S, 0.055 * S, 0.13 * S, 0.055 * S, Math.PI / 2))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.red, s * 0.03 * S, 0.66 * S, 0.3 * S, 0.035 * S, 0.075 * S, 0.04 * S))
+        grp.add(part(geos.sphere, mats.rustDark, s * 0.34 * S, 0.44 * S, -0.06 * S, 0.08 * S, 0.2 * S, 0.27 * S, 0, 0, s * 0.3))
+        grp.add(part(geos.cyl, mats.gold, s * 0.12 * S, 0.06 * S, 0.02 * S, 0.028 * S, 0.12 * S, 0.028 * S))
+        grp.add(part(geos.sphere, mats.gold, s * 0.12 * S, 0.01 * S, 0.08 * S, 0.075 * S, 0.02 * S, 0.1 * S))
+      }
+      // Les faucilles : de longues plumes qui montent puis retombent en arrière
+      for (let i = -2; i <= 2; i++) {
+        grp.add(part(geos.capsule, mats.sickle, i * 0.06 * S, (0.82 - Math.abs(i) * 0.05) * S, -0.42 * S,
+          0.045 * S, 0.24 * S, 0.06 * S, -0.55 - Math.abs(i) * 0.12, 0, i * 0.22))
+      }
+      grp.add(part(geos.capsule, mats.sickle, 0, 1.06 * S, -0.56 * S, 0.04 * S, 0.14 * S, 0.05 * S, -1.6))
+      return eyes(grp, S, 0.1, 0.86, 0.3, 0.05)
+    },
+    goat(grp, S) {
+      // La chèvre : sur ses quatre pattes, cornes en arrière, barbiche, oreilles de côté
+      grp.add(part(geos.sphere, mats.goat, 0, 0.52 * S, -0.06 * S, 0.34 * S, 0.3 * S, 0.44 * S))
+      for (const [x, z] of [[-0.16, 0.2], [0.16, 0.2], [-0.16, -0.3], [0.16, -0.3]]) {
+        grp.add(part(geos.cyl, mats.goatShade, x * S, 0.18 * S, z * S, 0.06 * S, 0.32 * S, 0.06 * S))
+        grp.add(part(geos.cyl, mats.hoof, x * S, 0.03 * S, z * S, 0.065 * S, 0.06 * S, 0.065 * S))
+      }
+      grp.add(part(geos.capsule, mats.goat, 0, 0.74 * S, 0.24 * S, 0.12 * S, 0.12 * S, 0.12 * S, 0.5))
+      grp.add(part(geos.sphere, mats.goat, 0, 0.9 * S, 0.34 * S, 0.17 * S, 0.19 * S, 0.22 * S, 0.35))
+      grp.add(part(geos.sphere, mats.goatShade, 0, 0.8 * S, 0.5 * S, 0.1 * S, 0.08 * S, 0.1 * S))
+      grp.add(part(geos.cone, mats.goatShade, 0, 0.66 * S, 0.5 * S, 0.045 * S, 0.12 * S, 0.045 * S, Math.PI))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.black, s * 0.035 * S, 0.83 * S, 0.59 * S, 0.018 * S))
+        grp.add(part(geos.cone, mats.horn, s * 0.07 * S, 1.1 * S, 0.26 * S, 0.035 * S, 0.2 * S, 0.035 * S, -0.7, 0, -s * 0.15))
+        grp.add(part(geos.sphere, mats.goat, s * 0.21 * S, 0.95 * S, 0.28 * S, 0.11 * S, 0.04 * S, 0.06 * S, 0, 0, s * 0.35))
+      }
+      grp.add(part(geos.sphere, mats.goat, 0, 0.72 * S, -0.5 * S, 0.06 * S, 0.1 * S, 0.05 * S, -0.6))
+      return eyes(grp, S, 0.1, 0.95, 0.48, 0.05)
+    },
+    horse(grp, S) {
+      // Le cheval alezan : quatre longues jambes, encolure haute, crinière et
+      // queue sombres, une liste blanche sur le chanfrein
+      grp.add(part(geos.sphere, mats.chestnut, 0, 0.66 * S, -0.06 * S, 0.3 * S, 0.29 * S, 0.46 * S))
+      for (const [x, z] of [[-0.15, 0.24], [0.15, 0.24], [-0.15, -0.34], [0.15, -0.34]]) {
+        grp.add(part(geos.cyl, mats.chestnut, x * S, 0.26 * S, z * S, 0.065 * S, 0.48 * S, 0.065 * S))
+        grp.add(part(geos.cyl, mats.hoof, x * S, 0.03 * S, z * S, 0.075 * S, 0.06 * S, 0.075 * S))
+      }
+      grp.add(part(geos.capsule, mats.chestnut, 0, 0.98 * S, 0.26 * S, 0.13 * S, 0.22 * S, 0.13 * S, 0.55))
+      grp.add(part(geos.sphere, mats.chestnut, 0, 1.2 * S, 0.4 * S, 0.14 * S, 0.15 * S, 0.21 * S, 0.45))
+      grp.add(part(geos.sphere, mats.horseLight, 0, 1.08 * S, 0.58 * S, 0.11 * S, 0.1 * S, 0.12 * S, 0.3))
+      grp.add(part(geos.box, mats.white, 0, 1.2 * S, 0.58 * S, 0.04 * S, 0.14 * S, 0.02 * S, 0.55))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.sphere, mats.black, s * 0.045 * S, 1.07 * S, 0.69 * S, 0.02 * S))
+        grp.add(part(geos.cone, mats.chestnut, s * 0.07 * S, 1.38 * S, 0.32 * S, 0.035 * S, 0.1 * S, 0.03 * S, -0.2))
+      }
+      // La crinière, le long de l'encolure, et la queue
+      for (let i = 0; i < 6; i++) {
+        grp.add(part(geos.sphere, mats.mane, 0, (1.3 - i * 0.085) * S, (0.3 - i * 0.07) * S, 0.05 * S, 0.075 * S, 0.06 * S))
+      }
+      grp.add(part(geos.capsule, mats.mane, 0, 0.58 * S, -0.54 * S, 0.06 * S, 0.2 * S, 0.06 * S, 0.35))
+      return eyes(grp, S, 0.115, 1.26, 0.42, 0.045)
+    },
+    cat(grp, S) {
+      // Le chat roux tigré, assis : grosse tête ronde, oreilles pointues roses
+      // dedans, moustaches, queue enroulée autour des pattes
+      grp.add(part(geos.sphere, mats.catOrange, 0, 0.36 * S, -0.04 * S, 0.33 * S, 0.36 * S, 0.33 * S))
+      grp.add(part(geos.sphere, mats.cream, 0, 0.34 * S, 0.14 * S, 0.2 * S, 0.26 * S, 0.18 * S))
+      grp.add(part(geos.sphere, mats.catOrange, 0, 0.78 * S, 0.08 * S, 0.29 * S, 0.26 * S, 0.26 * S))
+      grp.add(part(geos.sphere, mats.cream, 0, 0.7 * S, 0.29 * S, 0.13 * S, 0.08 * S, 0.06 * S))
+      grp.add(part(geos.sphere, mats.pink, 0, 0.745 * S, 0.335 * S, 0.035 * S, 0.025 * S, 0.02 * S))
+      for (const s of [-1, 1]) {
+        grp.add(part(geos.cone, mats.catOrange, s * 0.16 * S, 1.02 * S, 0.04 * S, 0.1 * S, 0.16 * S, 0.06 * S, 0, 0, -s * 0.28))
+        grp.add(part(geos.cone, mats.pink, s * 0.155 * S, 1.0 * S, 0.075 * S, 0.055 * S, 0.1 * S, 0.02 * S, 0, 0, -s * 0.28))
+        for (const dy of [-0.02, 0.025]) {
+          grp.add(part(geos.cyl, mats.white, s * 0.22 * S, (0.7 + dy) * S, 0.3 * S, 0.005 * S, 0.22 * S, 0.005 * S, 0, 0, Math.PI / 2 + s * 0.15))
+        }
+        grp.add(part(geos.sphere, mats.cream, s * 0.1 * S, 0.05 * S, 0.22 * S, 0.09 * S, 0.06 * S, 0.12 * S))
+      }
+      // Les rayures du front
+      for (const x of [-0.07, 0, 0.07]) grp.add(part(geos.box, mats.catStripe, x * S, 0.99 * S, 0.12 * S, 0.03 * S, 0.1 * S, 0.02 * S, -0.5))
+      // La queue : de l'arrière, elle fait le tour par la droite et vient se
+      // poser devant les pattes ; le bout est rayé
+      for (let i = 0; i < 16; i++) {
+        const a = Math.PI * 0.95 - i * 0.13
+        const r = 0.36 - i * 0.004
+        grp.add(part(geos.sphere, i > 11 && i % 2 ? mats.catStripe : mats.catOrange,
+          Math.sin(a) * r * S, (0.06 + Math.max(0, 3 - i) * 0.03) * S, (Math.cos(a) * r * 0.85 - 0.04) * S, 0.062 * S))
+      }
+      return eyes(grp, S, 0.1, 0.83, 0.3, 0.058)
     },
     cactus(grp, S) {
       grp.add(part(geos.capsule, mats.green, 0, 0.5 * S, 0, 0.2 * S, 0.28 * S, 0.2 * S))

@@ -26,7 +26,8 @@ const NOTES = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25]
 const NAMES = ['Do', 'Ré', 'Mi', 'Fa', 'Sol', 'La', 'Si', 'Do']
 const KEY_COLORS = ['#FF6B81', '#FFA94D', '#FFD43B', '#94D82D', '#5EC97B', '#4FB8E7', '#B197FC', '#F58FB8']
 /** Un chanteur par note, du plus grave au plus aigu */
-const SINGERS: CritterKind[] = ['cow', 'pig', 'sheep', 'dog', 'duck', 'hen', 'rabbit', 'chick']
+/* Le 28/09, le cheval et le chat prennent la place du lapin et du poussin */
+const SINGERS: CritterKind[] = ['cow', 'pig', 'sheep', 'dog', 'duck', 'hen', 'horse', 'cat']
 /** Les dièses (décor) : entre Do-Ré, Ré-Mi, Fa-Sol, Sol-La, La-Si */
 const SHARPS = [0, 1, 3, 4, 5]
 /** Notes de la partition visibles d'un coup dans les couloirs */

@@ -830,9 +830,15 @@ en a retenu sept, et une suppression :
   gare. En expert, le même animal petit, moyen, grand. Deux motifs entiers
   toujours montrés ; aucune sanction (le mauvais animal s'efface, au
   deuxième raté le bon monte tout seul).
-- **8. Le Chœur sur une scène de grange en 3D**, et le coq, la chèvre, le
-  cheval et le chat en personnages (ils rejoignent aussi le Piano et la Boîte
-  à rythme).
+- ✅ **8. Le Chœur sur une scène de grange en 3D** : mur de planches rouges
+  aux portes en croix, poutres, bottes de foin, guirlande d'ampoules,
+  estrade ; chaque choriste sur son coussin, sous son projecteur qui
+  s'allume quand il chante (il saute, des notes s'envolent) ; on le touche
+  directement ; la salle se tamise pendant l'écoute, la guirlande clignote au
+  concert. Le coq, la chèvre, le cheval et le chat ont leur personnage
+  (`critters.ts`) et leur voix : le coq, le chat et le cheval dans le
+  Chœur, la chèvre et le coq dans la Boîte à rythme (6 lignes), le cheval
+  et le chat au Piano.
 - ✅ **9. La garde-robe de la Princesse tout de suite pleine** : vignettes
   gardées d'une ouverture à l'autre (`core/diskcache.ts`, Cache API ; à la
   deuxième ouverture : 12 lues, 0 recalculée), silhouettes en attendant.

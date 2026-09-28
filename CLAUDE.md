@@ -69,7 +69,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
              critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
                            lapin, cactus, vache, poule, chien, canard, mouton
-                           (`FARM`, les pions des jeux en DOM)
+                           (`FARM`, les pions des jeux en DOM) et, depuis le
+                           28/09, coq, chèvre, cheval, chat (`FARM_MORE`)
              royal.ts    ← LEUR princesse en données (27/09) : pièces, peintures
                            (couleur + motif) par pièce, cheveux, compagnon — testé
              princess3d.ts ← LA PRINCESSE en 3D : le personnage VRM de pixiv
@@ -238,8 +239,8 @@ d'affilée la musique gagne un shaker, un arpège, une contre-voix) et de
 solo})`, `CRY[critter]`, `preloadCries`) : dix cris enregistrés de Wikimedia
 Commons choisis à l'oreille par le père, dans `public/assets/sounds/animals/`
 (crédits dans CREDITS.md). Un animal de la ferme qui « parle » prend sa voix
-là, jamais un `tone()` — le coq, la chèvre, le cheval et le chat attendent
-encore leur personnage 3D.
+là, jamais un `tone()` — depuis le 28/09, les dix ont leur personnage 3D
+(le coq, la chèvre, le cheval et le chat sont arrivés avec le Chœur sur scène).
 Modèles : `icetower.ts` et, en 2D, `ninja.ts` (un canvas, les fruits Canva,
 ombres et lueurs précalculées une fois par image, vagues puis pluie finale).
 Poussin Volant et Tape-Trous sont sortis le 27/09 (« vire-les »), avec
@@ -263,6 +264,7 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
+`simon` (le Chœur sur scène, 28/09) ·
 `caterpillar` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour

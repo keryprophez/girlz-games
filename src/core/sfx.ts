@@ -105,7 +105,8 @@ export type AnimalVoice = 'vache' | 'poule' | 'canard' | 'mouton' | 'cochon' | '
 
 /** La voix de chaque personnage de la ferme qui en a une. */
 export const CRY: Partial<Record<import('./critters').CritterKind, AnimalVoice>> = {
-  cow: 'vache', hen: 'poule', duck: 'canard', sheep: 'mouton', pig: 'cochon', dog: 'chien'
+  cow: 'vache', hen: 'poule', duck: 'canard', sheep: 'mouton', pig: 'cochon', dog: 'chien',
+  rooster: 'coq', goat: 'chevre', horse: 'cheval', cat: 'chat'
 }
 
 function loadCry(v: AnimalVoice) {
