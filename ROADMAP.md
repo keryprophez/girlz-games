@@ -820,7 +820,16 @@ en a retenu sept, et une suppression :
   drapeau étoilé, bande argentée), rendus une fois en images et gardés ; la
   caisse qui tinte (sonnette, tiroir qui s'ouvre, pièces qui y tombent) ; la
   voix dit le total à chaque pièce, puis le prix payé.
-- **6. Les Suites logiques deviennent le petit train de la ferme.**
+- ✅ **6. Les Suites logiques deviennent le petit train de la ferme** : une
+  vraie scène 3D (le pré, la voie, une locomotive rouge et verte qui fume,
+  des wagons), chaque wagon porte un animal de la ferme (les personnages 3D
+  de `critters.ts`), le dernier wagon est vide sous un anneau doré ; on
+  touche l'animal qui y monte (portraits en bas). Trouvé : il saute dans le
+  wagon et dit son cri, les ridelles se colorent motif par motif (on voit
+  pourquoi), la vague, le sifflet, le train repart et le suivant entre en
+  gare. En expert, le même animal petit, moyen, grand. Deux motifs entiers
+  toujours montrés ; aucune sanction (le mauvais animal s'efface, au
+  deuxième raté le bon monte tout seul).
 - **8. Le Chœur sur une scène de grange en 3D**, et le coq, la chèvre, le
   cheval et le chat en personnages (ils rejoignent aussi le Piano et la Boîte
   à rythme).

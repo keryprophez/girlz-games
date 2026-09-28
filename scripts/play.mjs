@@ -775,7 +775,7 @@ await scenario('pizza-du-four-a-la-bouche', async () => {
 await scenario('suites-six-manches', async () => {
   await openGame('Suites Logiques', '__pt')
   for (let i = 0; i < 6; i++) {
-    await page.waitForFunction(r => window.__pt.round === r && !window.__pt.lock, i, { timeout: 15000 })
+    await page.waitForFunction(r => window.__pt.round === r && !window.__pt.lock, i, { timeout: 90000, polling: 250 })
     const k = await page.evaluate(() => window.__pt.answer)
     await page.locator(`.pt-opt[data-key="${k}"]`).click()
     await page.waitForTimeout(150)

@@ -262,7 +262,7 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
-Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` ·
+Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
 `caterpillar` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
