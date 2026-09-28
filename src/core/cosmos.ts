@@ -38,7 +38,8 @@ const D2R = Math.PI / 180
 /* ---------- L'échelle : compressée pour que tout reste visible ---------- */
 export const distScene = (au: number) => 60 * Math.pow(au, 0.55)
 export const radScene = (km: number) => Math.pow(km / 6371, 0.6)
-const moonOrbitScene = (aKm: number, parentKm: number, parentR: number) => parentR * (2.2 + 0.9 * Math.log(aKm / parentKm))
+// Les lunes serrées autour de leur planète : les quatre de Jupiter tiennent dans le cadre de l'arrivée
+const moonOrbitScene = (aKm: number, parentKm: number, parentR: number) => parentR * (1.9 + 0.7 * Math.log(aKm / parentKm))
 export const SUN_R = 10
 
 /* JPL, « Keplerian elements for approximate positions of the major planets »
