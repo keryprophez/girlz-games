@@ -256,7 +256,7 @@ function updateCamera(me: State, dt: number) {
   cam.lookAt(me.lookTarget)
 }
 
-const rocketScale = (R: number) => Math.min(0.9, Math.max(0.08, R * 0.2))
+const rocketScale = (R: number) => Math.min(1.1, Math.max(0.08, R * 0.26))
 /** La fusée : devant la caméra pendant le vol, puis posée à côté de l'astre. */
 /** L'axe de la fusée sur `axis`, son hublot (+z) tourné vers `toCam`. */
 function aimRocket(T: T3, axis: V3, toCam: V3) {
