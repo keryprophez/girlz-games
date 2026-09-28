@@ -114,6 +114,13 @@ sont partagés sous la même licence.
   System Scope, **CC BY 4.0**, repris de la maquette du père (27/09). La carte 2k
   de Mars (relevé Viking, beige et bleuté) a reçu la palette rouge de la carte
   1k de Solar System Scope : « la planète rouge » doit l'être (28/09).
+- **Ganymède et Callisto** (`space/ganymede.jpg`, `space/callisto.jpg`) : cartes
+  en couleurs vraies d'**Askaniy Anpilogov** (Callisto avec John van Vliet ;
+  Ganymède d'après USGS, Björn Jónsson, NASA/JPL-Caltech/SwRI/MSSS/Brian Swift),
+  **CC BY-SA 3.0**, via Wikimedia Commons
+  (<https://commons.wikimedia.org/wiki/File:Ganymede_map_by_Askaniy.png>,
+  <https://commons.wikimedia.org/wiki/File:Callisto_map_by_Askaniy.png>) ;
+  réduites à 1024×512, contraste et luminosité ajustés (28/09).
 - **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
   `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.
 - **Régions de France** (`geo/regions.geojson`) : IGN Admin Express via

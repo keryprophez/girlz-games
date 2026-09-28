@@ -47,8 +47,8 @@ const BONUS: Info[] = [
   { id: 'lune', tex: 'moon.jpg', fact: 'La Lune ! Elle tourne autour de la Terre, et des astronautes ont marché dessus.' },
   { id: 'io', tex: 'moon.jpg', fact: 'Io, une lune de Jupiter pleine de volcans qui crachent du soufre jaune !' },
   { id: 'europe', tex: 'moon.jpg', fact: 'Europe, une lune de Jupiter couverte de glace. Dessous, il y a peut-être un océan !' },
-  { id: 'ganymede', tex: 'moon.jpg', fact: 'Ganymède, la plus grosse lune de tout le système solaire : elle est plus grosse que Mercure !' },
-  { id: 'callisto', tex: 'moon.jpg', fact: 'Callisto, une lune de Jupiter toute couverte de cratères.' },
+  { id: 'ganymede', tex: 'ganymede.jpg', fact: 'Ganymède, la plus grosse lune de tout le système solaire : elle est plus grosse que Mercure !' },
+  { id: 'callisto', tex: 'callisto.jpg', fact: 'Callisto, une lune de Jupiter toute couverte de cratères.' },
   { id: 'titan', tex: 'venus.jpg', fact: 'Titan, la grosse lune de Saturne, cachée sous un épais brouillard orange.' }
 ]
 const INFO: Record<string, Info> = Object.fromEntries([...PLANETS, ...BONUS].map(i => [i.id, i]))
