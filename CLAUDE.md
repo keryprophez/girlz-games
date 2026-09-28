@@ -258,7 +258,13 @@ textures non attachées à la scène). Puis **`core/scene3d.ts`** : `ground()`,
 `decor()` (modèles du kit `nature` ou `holiday`, avec `shade` pour assombrir
 les kits clairs), `particles()` (GPU, dans la scène — plus de divs au-dessus du
 canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()`.
-`stage.timeScale` fait les ralentis d'outro. Un jeu qui a son propre rendu
+`stage.timeScale` fait les ralentis d'outro. **La qualité s'adapte seule**
+(28/09) dans la boucle de `createStage` : plus de 30 ms par image en moyenne →
+densité de rendu ×0,85 (plancher 0,75), puis ombres coupées ; moins de 17 ms →
+la densité remonte (jamais au-dessus du départ, les ombres ne reviennent pas).
+Rien les 3 premières secondes, ni avec `?hq` (captures, mesures), ni pour les
+bots (`__BOT`), ni pour un jeu à rendu propre ; `?fps` affiche l'état. Un jeu
+n'a donc plus à faire sa propre baisse de qualité. Un jeu qui a son propre rendu
 (l'Espace : ciel à part, cible HDR, halo en sept étages, ACES écrit à la main)
 le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.

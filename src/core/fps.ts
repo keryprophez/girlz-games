@@ -7,7 +7,8 @@
    - les images par seconde (moyenne sur 1 s) et la pire seconde des 10 dernières ;
    - pour un jeu 3D : le temps de calcul d'une image (simulation + rendu, côté
      processeur), le nombre d'appels de dessin et de triangles ;
-   - la taille de l'écran, la densité de rendu appliquée et le nom du GPU.
+   - la taille de l'écran, la densité de rendu appliquée et le nom du GPU ;
+   - la qualité automatique (densité choisie, ombres) — `?hq` la fige.
    Les chiffres se relisent à l'œil : aucune donnée ne quitte la tablette. */
 
 import type { WebGLRenderer } from 'three'
@@ -27,6 +28,7 @@ let on = false
 let renderer: WebGLRenderer | null = null
 let gpu = ''
 let cpuMs = 0
+let quality = ''
 
 /** three3d signale la scène active (null au démontage). */
 export function probeRenderer(r: WebGLRenderer | null) {
@@ -39,6 +41,11 @@ export function probeRenderer(r: WebGLRenderer | null) {
       gpu = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER))
     } catch { gpu = '?' }
   }
+}
+
+/** three3d signale où en est la qualité automatique (densité, ombres). */
+export function probeQuality(s: string) {
+  if (on) quality = s
 }
 
 /** three3d signale le coût d'une image (ms de simulation + rendu). */
@@ -71,7 +78,8 @@ export function startFpsProbe() {
       if (renderer) {
         const info = renderer.info.render
         lines.push(`3D ${cpuMs.toFixed(1)} ms/image · ${info.calls} appels · ${Math.round(info.triangles / 1000)}k tri.`)
-        lines.push(`rendu ×${renderer.getPixelRatio()} · ${gpu}`)
+        lines.push(`rendu ×${renderer.getPixelRatio().toFixed(2)} · ${gpu}`)
+        if (quality) lines.push(`qualité ${quality}`)
       }
       lines.push(`écran ${innerWidth}×${innerHeight} ×${devicePixelRatio}`)
       box.textContent = lines.join('\n')

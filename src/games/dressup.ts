@@ -1305,7 +1305,6 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
       hideLoader()
       me.thumbs = await makeThumbs(await loadThree(), () => me.running && pr === me)
       renderPane(me)
-      let slow = 0
       stage.start(dt => {
         me.t += dt
         petHappy = Math.max(0, petHappy - dt)
@@ -1361,9 +1360,7 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
         me.camTgt!.lerp(goalT, Math.min(1, dt * 2.5))
         stage.camera.position.copy(me.camPos!)
         stage.camera.lookAt(me.camTgt!)
-        // Tablette qui peine (moins de 30 images/s pendant 3 s) : moins de pixels
-        if (dt > 0.034) slow += dt; else slow = Math.max(0, slow - dt)
-        if (slow > 3 && stage.renderer.getPixelRatio() > 1) { stage.renderer.setPixelRatio(1); slow = 0 }
+        // La tablette qui peine : c'est le socle qui baisse la qualité (three3d)
       })
     })().catch(() => { hideLoader(); ctx.toast('La 3D n\'est pas disponible ici') })
 

@@ -849,8 +849,14 @@ en a retenu sept, et une suppression :
   l'historique tels quels), derrière un bouton rond en bas à gauche de la
   scène ; une couronne ramène à la princesse, le dernier choix est retenu,
   son look est gardé dans le profil. Un bot : aller, chapeau, retour.
-- **10. Fluide partout** : la qualité qui s'adapte seule dans tous les jeux
-  3D, comme dans l'Espace — après la mesure `?fps` sur la tablette.
+- ✅ **10. Fluide partout** (fait sans attendre la mesure, à la demande du
+  père) : la qualité s'adapte seule dans tous les jeux 3D (`createStage`) —
+  moins de pixels quand la tablette peine (plus de 30 ms par image), puis
+  plus d'ombres ; les pixels reviennent quand elle respire. La Princesse
+  n'a plus sa propre baisse ; l'Espace garde la sienne (rendu à part).
+  `?fps` montre la densité choisie et les ombres ; `?hq` fige la qualité.
+  **Reste : regarder `?fps` sur la tablette** (Tour de Glace, Chœur, petit
+  train, Princesse) pour vérifier que le seuil de 30 ms est le bon.
 - Refusés : la lumière du Bonhomme (il sort), Puissance 4 en 3D, l'horloge
   « journée à la ferme » (« trop brouillon, c'est pour apprendre l'heure »).
 

@@ -8,7 +8,7 @@
 
 import { BADGE } from './badges'
 import { onPause, isPaused } from './session'
-import { probeFrame, probeRenderer } from './fps'
+import { probeFrame, probeRenderer, probeQuality } from './fps'
 
 export type T3 = typeof import('three')
 export type Cannon = typeof import('cannon-es')
@@ -167,6 +167,48 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   let last = performance.now()
   let unPause: () => void = () => {}
 
+  /* LA QUALITÉ QUI S'ADAPTE (28/09), pour tous les jeux 3D, comme l'Espace :
+     si la tablette peine (plus de 30 ms par image en moyenne, soit moins de
+     ~33 images/s), on rend un peu moins de pixels (×0,85, jusqu'à 0,75) ;
+     au plancher, on coupe les ombres. Si elle respire (moins de 17 ms), on
+     rend les pixels, sans dépasser la densité de départ ; les ombres, elles,
+     ne reviennent pas (pas de va-et-vient). Rien pendant les 3 premières
+     secondes (chargement, shaders qui compilent), ni avec `?hq` (captures,
+     mesures), ni pour les bots, ni pour un jeu qui a son propre rendu
+     (l'Espace a le sien). La sonde `?fps` affiche l'état. */
+  const maxPr = renderer.getPixelRatio()
+  const perf = { avg: 16, frames: 0, t0: 0, lastAdapt: 0 }
+  const autoQuality = !new URLSearchParams(location.search).has('hq') &&
+    !(window as unknown as { __BOT?: boolean }).__BOT
+  const tellQuality = () => probeQuality(`auto ×${renderer.getPixelRatio().toFixed(2)} · ombres ${renderer.shadowMap.enabled ? 'oui' : 'non'}`)
+  const adapt = (now: number, wallMs: number) => {
+    if (!autoQuality || stage.render) return
+    if (!perf.t0) { perf.t0 = now; tellQuality() }
+    perf.avg = perf.avg * 0.93 + Math.min(wallMs, 100) * 0.07
+    perf.frames++
+    if (now - perf.t0 < 3000 || now - perf.lastAdapt < 2500 || perf.frames < 12) return
+    const pr = renderer.getPixelRatio()
+    if (perf.avg > 30) {
+      if (pr > 0.8) {
+        renderer.setPixelRatio(Math.max(0.75, pr * 0.85))
+        onResize()
+      } else if (renderer.shadowMap.enabled) {
+        renderer.shadowMap.enabled = false
+        // Les matériaux se recompilent sans ombres
+        scene.traverse(o => {
+          const m = (o as import('three').Mesh).material
+          if (m) (Array.isArray(m) ? m : [m]).forEach(x => { x.needsUpdate = true })
+        })
+      } else return
+    } else if (perf.avg < 17 && pr < maxPr - 0.01) {
+      renderer.setPixelRatio(Math.min(maxPr, pr * 1.1))
+      onResize()
+    } else return
+    perf.lastAdapt = now
+    perf.frames = 0
+    tellQuality()
+  }
+
   const stage: Stage = {
     T, renderer, scene, camera, sun, arena, alive: true, timeScale: 1,
     keep(r) { extras.push(r); return r },
@@ -176,13 +218,15 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         if (!stage.alive) return
         if (isPaused()) { raf = 0; return } // figé : la pause relancera la boucle
         const now = performance.now()
-        const dt = Math.min(0.1, (now - last) / 1000) * stage.timeScale
+        const wallMs = now - last
+        const dt = Math.min(0.1, wallMs / 1000) * stage.timeScale
         last = now
         try { update(dt, now) } catch (e) { stage.alive = false; throw e }
         if (!stage.alive) return
         if (stage.render) stage.render()
         else renderer.render(scene, camera)
         probeFrame(performance.now() - now)
+        adapt(now, wallMs)
         raf = requestAnimationFrame(loop)
       }
       unPause = onPause(p => {
