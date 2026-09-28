@@ -87,6 +87,10 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            Soleil qui bout, Terre jour/nuit/villes, atmosphères,
                            ombres des anneaux, lunes, vraies positions (JPL),
                            rendu HDR + halo + ACES branché sur `stage.render`
+             rocket3d.ts ← LA FUSÉE de l'Espace (28/09) : la fusée « A » choisie
+                           dans Canva, reconstruite en vraie 3D (l'image sert de
+                           modèle) — profil lissé, peinture vernie, joints et
+                           rivets, reflets tournés vers le vrai Soleil, flamme
              winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
                            chalet Kenney assemblé pièce par pièce, lanternes)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
