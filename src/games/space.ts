@@ -231,7 +231,7 @@ function arrivalView(me: State, id: string): View {
   const yaw = Math.atan2(-p.x, -p.z) + (id === 'terre' ? 1.35 : 0.75)
   const b = me.cosmos.byId[id]
   // Jupiter d'un peu plus loin et d'un peu plus haut : ses quatre lunes autour d'elle
-  if (id === 'jupiter') return { yaw, pitch: 0.34, distR: 5.4 }
+  if (id === 'jupiter') return { yaw, pitch: 0.55, distR: 5.8 }
   return { yaw, pitch: b.rings ? 0.32 : 0.18, distR: b.rings ? 6.0 : b.parent ? 4.3 : 3.9 }
 }
 function distLimits(me: State, id: string): [number, number] {
