@@ -777,9 +777,9 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   dans `core/cosmos.ts` : ciel procédural et Voie lactée, Soleil qui bout et
   sa couronne, Terre de nuit avec ses villes, reflets des océans, nuages,
   atmosphères, ombres des anneaux de Saturne, la Lune, les quatre lunes de
-  Jupiter (Io, Ganymède et Callisto avec leurs vraies cartes), Titan, Pluton,
-  la ceinture d'astéroïdes, les vraies positions du jour, HDR + halo + ACES. Le jeu garde les billes, la voix, Explore et
-  Trouve ; la fusée est dessinée en 3D et la caméra de cinéma la suit ; une
+  Jupiter avec leurs vraies cartes, Titan, Pluton, la ceinture d'astéroïdes,
+  les vraies positions du jour, HDR + halo + ACES. Le jeu garde les billes, la
+  voix, Explore et Trouve ; la fusée est dessinée en 3D et la caméra de cinéma la suit ; une
   tortue et un lièvre règlent la vitesse du temps ; les lunes et Pluton se
   visitent en bonus. **À mesurer sur la tablette** (`?fps`) avant la mise en
   ligne : la qualité baisse d'elle-même (densité de pixels, puis lissage) si

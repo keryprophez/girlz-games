@@ -120,7 +120,7 @@ const DEFS: Def[] = [
   { id: 'mars', name: 'Mars', km: 3389.5, tex: 'mars.jpg', tilt: 25.19, period: 24.6229, color: '#e0875a', atmo: [1.0, 0.62, 0.42, 0.45] },
   { id: 'jupiter', name: 'Jupiter', km: 69911, tex: 'jupiter.jpg', tilt: 3.13, period: 9.925, color: '#d9b38c', kind: 'gas', flat: 0.0649, atmo: [0.95, 0.85, 0.7, 0.45] },
   { id: 'io', name: 'Io', km: 1821.6, tex: 'io.jpg', parent: 'jupiter', aKm: 421700, pDays: 1.769138, L0: 163.8069, color: '#e6d36a' },
-  { id: 'europe', name: 'Europe', km: 1560.8, tex: 'moon.jpg', tint: [1.25, 1.12, 0.95], parent: 'jupiter', aKm: 671034, pDays: 3.551181, L0: 358.4140, color: '#d9cfbf' },
+  { id: 'europe', name: 'Europe', km: 1560.8, tex: 'europa.jpg', parent: 'jupiter', aKm: 671034, pDays: 3.551181, L0: 358.4140, color: '#d9cfbf' },
   { id: 'ganymede', name: 'Ganymède', km: 2634.1, tex: 'ganymede.jpg', parent: 'jupiter', aKm: 1070412, pDays: 7.154553, L0: 5.7176, color: '#a8a094' },
   { id: 'callisto', name: 'Callisto', km: 2410.3, tex: 'callisto.jpg', parent: 'jupiter', aKm: 1882709, pDays: 16.689018, L0: 224.8092, color: '#7d766c' },
   { id: 'saturne', name: 'Saturne', km: 58232, tex: 'saturn.jpg', tilt: 26.73, period: 10.656, color: '#e6cf98', kind: 'gas', flat: 0.098, rings: true, atmo: [0.95, 0.88, 0.7, 0.35] },

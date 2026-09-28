@@ -125,6 +125,10 @@ sont partagés sous la même licence.
   l'**USGS Astrogeology Science Center** (NASA), domaine public, via Wikimedia
   Commons (<https://commons.wikimedia.org/wiki/File:Io_for_GeoHacks.jpg>) ;
   réduite à 1024×512, couleurs ravivées (28/09).
+- **Europe** (`space/europa.jpg`) : carte Voyager de **Caltech/JPL/USGS** (NASA),
+  domaine public, via Wikimedia Commons
+  (<https://commons.wikimedia.org/wiki/File:Jupiter_II-Europa_map_NASA_JPL_Voyager.jpg>) ;
+  en niveaux de gris à l'origine, colorisée en glace crème et fissures brunes (28/09).
 - **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
   `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.
 - **Régions de France** (`geo/regions.geojson`) : IGN Admin Express via
