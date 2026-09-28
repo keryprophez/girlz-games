@@ -33,7 +33,8 @@ const STAGE = {
   maze: { wait: 5000 },
   taquin2: { wait: 4000 },
   memory: { wait: 7000 },
-  simon: { wait: 5000 },
+  // Le Chœur sur scène : un choriste chante sous son projecteur
+  simon: { tier: 'med', wait: 3000, act: async p => { await p.evaluate(() => window.__simon?.press?.(0)); await p.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 60000 }).catch(() => {}); await p.evaluate(() => window.__simon.press(window.__simon.seq[0])) }, after: 300 },
   // Une partie commencée contre la poule : quelques pions de chaque couleur
   connect4: {
     wait: 3000,
@@ -61,12 +62,27 @@ const STAGE = {
     },
     after: 1800
   },
-  market: { wait: 4000 },
+  // Le Marché : un prix, des pièces 3D dans le panier
+  market: {
+    tier: 'med', wait: 2000,
+    act: async p => {
+      await p.waitForFunction(() => window.__mk && window.__mk.real, null, { timeout: 120000 }).catch(() => {})
+      await p.locator('.mk-mode[data-m="pay"]').click()
+      await p.waitForTimeout(600)
+      const denoms = await p.$$eval('#mkBank .mk-coin', els => els.map(e => +e.dataset.v).sort((a, b) => b - a))
+      let reste = await p.evaluate(() => window.__mk.goal)
+      const plan = []
+      for (const v of denoms) while (reste >= v) { plan.push(v); reste -= v }
+      for (const v of plan.slice(0, -1)) { await p.locator(`#mkBank .mk-coin[data-v="${v}"]`).click(); await p.waitForTimeout(120) }
+    },
+    after: 1200
+  },
   // Les animaux de la ferme plutôt que la cuisine (la série est tirée au sort)
   intrus: { wait: 4000, accept: () => /animaux/i.test(document.querySelector('#intQ')?.textContent || '') },
   geo: { wait: 12000 },
   space: { wait: 15000 },
-  patterns: { wait: 4000 },
+  // Le petit train à quai, l'anneau doré sur le wagon vide
+  patterns: { tier: 'easy', ready: () => window.__pt && !window.__pt.lock, wait: 1500, zoom: 1.12, cy: 0.5 },
   mirror: { wait: 4000 },
   letters: { wait: 4000 },
   sentences: { wait: 4000 },
