@@ -111,7 +111,9 @@ sont partagés sous la même licence.
 - **La Terre du Voyage dans l'Espace** (`space/earth_day.jpg`, `earth_night.jpg`,
   `earth_clouds.jpg`, `earth_spec.jpg` : le jour, les lumières des villes, les
   nuages, les océans qui brillent) et **Jupiter et Mars en 2048×1024** : Solar
-  System Scope, **CC BY 4.0**, repris de la maquette du père (27/09).
+  System Scope, **CC BY 4.0**, repris de la maquette du père (27/09). La carte 2k
+  de Mars (relevé Viking, beige et bleuté) a reçu la palette rouge de la carte
+  1k de Solar System Scope : « la planète rouge » doit l'être (28/09).
 - **Pays et continents** (`geo/countries-110m.json`) : Natural Earth via
   `world-atlas` (<https://github.com/topojson/world-atlas>), domaine public.
 - **Régions de France** (`geo/regions.geojson`) : IGN Admin Express via
