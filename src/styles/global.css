@@ -367,11 +367,8 @@ button.chip:active{transform:scale(.92);}
   background:linear-gradient(90deg,var(--lagoon),var(--meadow));}
 body.playing .g3-bar{max-width:820px;}
 /* Barre posée DANS l'arène : reste visible même en plein écran */
-.sn-overlay{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:6;
-  width:auto;max-width:94%;margin:0;padding:9px 14px;border-radius:18px;
-  background:rgba(255,255,255,.78);backdrop-filter:blur(6px);box-shadow:var(--e2);}
-/* Bonhomme de neige : jauge de la boule et pastilles des trois boules */
-.sn-overlay .sn-dots{display:flex;gap:8px;align-items:center;}
+/* Pastilles de progression et boutons ronds d'outils (partagés : Horloge,
+   Memory, Piano, Labyrinthe, Taquin, Puissance 4…) */
 .sn-dot{width:16px;height:16px;border-radius:50%;background:rgba(69,54,42,.14);border:2px solid rgba(69,54,42,.25);}
 .sn-dot.on{background:var(--lagoon);border-color:var(--lagoon);}
 /* Outils d'habillage : colonne d'icônes à droite, rien à lire */
@@ -381,11 +378,9 @@ body.playing .g3-bar{max-width:820px;}
   transition:transform .2s var(--spring);touch-action:manipulation;}
 .sn-tool:active{transform:scale(.9);}
 .sn-tool.go{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;}
-.sn-arena{background:#AEDCF5;touch-action:none;}
 @media(prefers-reduced-motion:reduce){.g3-btn.ready{animation:none;}}
 
 /* ---- Ninja ---- */
-/* ---- Poussin volant ---- */
 
 /* ============================================================
    L'ATELIER (dessin au doigt, 23/09)

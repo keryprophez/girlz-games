@@ -91,7 +91,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            dans Canva, reconstruite en vraie 3D (l'image sert de
                            modèle) — profil lissé, peinture vernie, joints et
                            rivets, reflets tournés vers le vrai Soleil, flamme
-             winter.ts   ← le paysage d'hiver du Bonhomme (ciel, montagnes,
+             winter.ts   ← le paysage d'hiver (né avec le Bonhomme, sorti le 28/09 ;
+                           gardé pour la Tour de Glace) (ciel, montagnes,
                            chalet Kenney assemblé pièce par pièce, lanternes)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
@@ -238,7 +239,7 @@ canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()
 le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
-Jeux déjà en vraie 3D : `snowman` · `pizza` · `space` · `icetower` ·
+Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` ·
 `caterpillar` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
@@ -260,7 +261,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 |---|---|
 | **cannon-es : corps figé** | `body.type = STATIC` ne suffit pas, `invMass` reste fini. Mettre `body.mass = 0` **avant** `updateMassProperties()`. |
 | **matter.js `isStatic`** | Même famille : créer **dynamique puis** `Body.setStatic(b, true)`, sinon positions `NaN`. |
-| **Sphère sur sphère** | Empiler des sphères en physique pure finit toujours par rouler. Verrouiller x/z pendant la chute (voir `snowman.ts`). |
+| **Sphère sur sphère** | Empiler des sphères en physique pure finit toujours par rouler. Verrouiller x/z pendant la chute (vécu dans le Bonhomme de neige, sorti le 28/09). |
 | **Blocs sur une coupole** | Des cubes tangents à une sphère donnent une boîte. Découper les blocs **dans** la sphère (`SphereGeometry` + `phiStart`/`thetaStart`). |
 | **Planètes côté nuit** | Une seule lumière ponctuelle = premier plan en ombre totale. Ajouter une directionnelle faible recollée sur la caméra. |
 | **Nettoyage GPU** | Disposer géométries, matériaux, **toutes** les textures et le renderer au démontage, sinon fuite à chaque partie. |
@@ -325,7 +326,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (27/09 : 29 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (28/09 : 28 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

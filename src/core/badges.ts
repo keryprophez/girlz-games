@@ -192,17 +192,6 @@ export const BADGE: Record<string, string> = {
     <circle cx="36" cy="18.5" r="2.1" fill="${C.white}"/>`),
 
   /* ---------- Créer ---------- */
-  snowman: svg(`
-    <circle cx="24" cy="33" r="10" fill="${C.white}"/>
-    <circle cx="24" cy="18" r="7" fill="${C.white}"/>
-    <rect x="16" y="8" width="16" height="4" rx="1.5" fill="${C.ink}"/>
-    <rect x="19" y="2" width="10" height="7" rx="2" fill="${C.ink}"/>
-    <circle cx="21.5" cy="17" r="1.5" fill="${C.ink}"/>
-    <circle cx="26.5" cy="17" r="1.5" fill="${C.ink}"/>
-    <path d="M24 19l5 2-5 2z" fill="${C.mango}"/>
-    <circle cx="24" cy="30" r="1.6" fill="${C.ink}"/>
-    <circle cx="24" cy="36" r="1.6" fill="${C.ink}"/>`),
-
   dressup: svg(`
     <path d="M19 7h10l7 5-4 5-2-1.6V22l6 18a30 30 0 0 1-24 0l6-18v-6.6L16 17l-4-5z" fill="${C.coral}"/>
     <path d="M18 22h12l1.6 5H16.4z" fill="${C.coralDark}" opacity=".55"/>

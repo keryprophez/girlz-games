@@ -77,7 +77,8 @@ const MODELS = [
     // Pêche Précise
     'fish.glb'
   ] },
-  // Le paysage d'hiver du Bonhomme de neige (colormap externe, comme food) :
+  // Le paysage d'hiver (core/winter.ts, né avec le Bonhomme de neige, sorti le
+  // 28/09) (colormap externe, comme food) :
   // sapins, le chalet en pièces modulaires (assemblé dans core/winter.ts),
   // lanternes, luge, banc, rennes, rochers et congères
   { pack: 'holiday', dir: 'Models/GLB format', out: 'holiday', files: [

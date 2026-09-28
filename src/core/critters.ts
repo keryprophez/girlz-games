@@ -1,7 +1,7 @@
 import type { T3 } from './three3d'
 
-/* Les petits personnages en 3D — construits en formes rondes, comme le
-   Bonhomme de neige, et non plus des planches de sprites plantées dans le
+/* Les petits personnages en 3D — construits en formes rondes, et non plus
+   des planches de sprites plantées dans le
    décor : « un sprite atroce digne d'un Minitel », ont dit les filles de la
    pastille ronde de Tape-Trous (15/09).
 

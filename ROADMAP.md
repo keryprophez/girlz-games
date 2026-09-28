@@ -787,6 +787,34 @@ est passé devant parce que les deux autres attendent leur planche Canva.
   la tablette** (`?fps`) : la qualité baisse d'elle-même (densité de pixels,
   puis lissage) si une image dépasse 34 ms ; `?hq` la fige.
 
+## « Trouve encore 10 améliorations » (28/09)
+
+Tournée de captures de l'accueil et des 25 jeux, dix propositions ; le père
+en a retenu sept, et une suppression :
+
+- ✅ **Le Bonhomme de neige sorti** (« supprime le bonhomme de neige ») : son
+  jeu, sa vignette, son bot. `core/winter.ts` (le paysage d'hiver) reste,
+  pour la Tour de Glace. Le bot de Memory vérifie désormais que la meilleure
+  note s'enregistre (c'était celui du Bonhomme).
+- **1. L'accueil en affiches** : de grandes images tirées des jeux au lieu de
+  petites icônes et d'un nom écrit (maquette d'abord).
+- **2. La Tour de Glace dans le paysage d'hiver** (montagnes, chalet,
+  lanternes, glace qui brille, ciel qui change en montant) — « à condition
+  que ça n'impacte pas le gameplay » : cadrage, blocs, balancier et rampe
+  inchangés, les blocs restent aussi lisibles.
+- **5. Le Marché** : de vraies pièces en 3D et de vrais billets, la caisse qui
+  tinte et la voix qui dit le total.
+- **6. Les Suites logiques deviennent le petit train de la ferme.**
+- **8. Le Chœur sur une scène de grange en 3D**, et le coq, la chèvre, le
+  cheval et le chat en personnages (ils rejoignent aussi le Piano et la Boîte
+  à rythme).
+- **9. La garde-robe de la Princesse tout de suite pleine** : vignettes
+  gardées d'une ouverture à l'autre, silhouettes en attendant.
+- **10. Fluide partout** : la qualité qui s'adapte seule dans tous les jeux
+  3D, comme dans l'Espace — après la mesure `?fps` sur la tablette.
+- Refusés : la lumière du Bonhomme (il sort), Puissance 4 en 3D, l'horloge
+  « journée à la ferme » (« trop brouillon, c'est pour apprendre l'heure »).
+
 ---
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅

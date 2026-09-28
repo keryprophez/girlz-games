@@ -2,7 +2,8 @@ import type { Stage } from './three3d'
 import { loadModel, dotTex } from './three3d'
 import { decor, ring } from './scene3d'
 
-/* Le paysage d'hiver du Bonhomme de neige (23/09) — là où il n'y avait
+/* Le paysage d'hiver, né avec le Bonhomme de neige (23/09, sorti du
+   catalogue le 28/09) et gardé pour la Tour de Glace — là où il n'y avait
    qu'une plaine blanche et une couronne de sapins sous un ciel uni :
    - un ciel en dégradé (bleu profond en haut, pêche à l'horizon) et des
      montagnes enneigées au loin, noyées dans une brume de la même couleur ;
@@ -11,8 +12,8 @@ import { decor, ring } from './scene3d'
      murs, coins, pignons, toit enneigé, cheminée qui FUME), sa couronne sur
      la porte, un sapin décoré, une luge, un banc, des lanternes qui luisent,
      deux rennes qui broutent.
-   Tout est posé HORS du champ de jeu (rayon > FIELD + 1) : la caméra tourne
-   autour du bonhomme, le décor doit tenir de tous les côtés. */
+   Tout est posé HORS du champ de jeu (rayon > FIELD + 1) : le décor doit
+   tenir de tous les côtés. */
 
 type T3 = Stage['T']
 

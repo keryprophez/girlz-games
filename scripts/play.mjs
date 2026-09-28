@@ -1,6 +1,5 @@
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
-   vérifient qu'on peut Y JOUER — rouler les boules du bonhomme jusqu'au bout,
-   croquer des fruits à la chenille, passer
+   vérifient qu'on peut Y JOUER — croquer des fruits à la chenille, passer
    des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
    catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
@@ -108,7 +107,7 @@ const openGame = async (name, hook, tier = 'easy', ops = null) => {
 }
 
 const failures = []
-// BOTS=poste,bonhomme npm run test:play → seulement les scénarios dont le nom contient l'un des mots
+// BOTS=poste,chenille npm run test:play → seulement les scénarios dont le nom contient l'un des mots
 const only = process.env.BOTS ? process.env.BOTS.split(',') : null
 const scenario = async (name, fn) => {
   if (only && !only.some(k => name.includes(k))) return
@@ -121,61 +120,6 @@ const scenario = async (name, fn) => {
     console.error(`✗ ${name} — ${String(e).split('\n')[0]}`)
   }
 }
-
-/* ⛄ Bonhomme de neige : le parcours complet, jusqu'à l'écran de fin.
-   Protège le blocage vécu (barre de pose hors écran). */
-await scenario('bonhomme-parcours-complet', async () => {
-  await openGame('Bonhomme de neige', '__sn')
-  const sn = () => page.evaluate(() => new Promise(res => requestAnimationFrame(() => {
-    const s = window.__sn
-    res(s ? { phase: s.phase, r: s.r, min: s.minPose, stack: s.stack, ball: s.ball(), pile: s.pile() } : null)
-  })))
-  // Rouler : d'abord en rond pour grossir, puis droit sur la pile ; trois fois
-  for (let k = 0; k < 60; k++) {
-    const st = await sn()
-    if (!st) throw new Error('le bonhomme ne répond pas')
-    if (st.phase === 'deco') break
-    if (st.phase !== 'roll' || !st.ball) { await page.waitForTimeout(150); continue }
-    const grow = st.r < st.min
-    const to = grow ? { x: st.ball.x + (k % 2 ? 140 : -140), y: st.ball.y + 30 } : st.pile
-    await page.mouse.move(st.ball.x, st.ball.y)
-    await page.mouse.down()
-    for (let i = 1; i <= 8; i++) {
-      await page.mouse.move(st.ball.x + (to.x - st.ball.x) * i / 8, st.ball.y + (to.y - st.ball.y) * i / 8)
-      await page.waitForTimeout(16)
-    }
-    await page.mouse.up()
-  }
-  const deco = await sn()
-  if (!deco || deco.phase !== 'deco') throw new Error(`pas d'habillage après 60 coups (phase ${deco && deco.phase}, ${deco && deco.stack} boules)`)
-  // Habiller : glisser le haut-de-forme du plateau sur la tête
-  await page.waitForTimeout(400)
-  const where = await page.evaluate(() => {
-    const s = window.__sn
-    const hat = s.items().find(i => i.kind === 'hat' && i.variant === 'tophat')
-    return { from: hat.screen, to: s.head() }
-  })
-  await page.mouse.move(where.from.x, where.from.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 10; i++) {
-    await page.mouse.move(where.from.x + (where.to.x - where.from.x) * i / 10, where.from.y + (where.to.y - where.from.y) * i / 10)
-    await page.waitForTimeout(16)
-  }
-  await page.mouse.up()
-  await page.waitForTimeout(300)
-  const placed = await page.evaluate(() => window.__sn.items().find(i => i.variant === 'tophat').placed)
-  if (!placed) throw new Error('le chapeau glissé sur la tête ne s\'est pas posé')
-  await page.locator('#snDone').click()
-  await page.waitForTimeout(1200)
-  const fini = await page.evaluate(() => document.body.innerText.includes('beau bonhomme'))
-  if (!fini) throw new Error('l\'écran de fin n\'est pas apparu')
-  // Et la meilleure note du jeu est enregistrée (sous sa tuile à l'accueil)
-  const best = await page.evaluate(() => {
-    const d = JSON.parse(localStorage.getItem('ferme:v2') || '{}')
-    return d.state?.progress?.jade?.bestStars?.snowman
-  })
-  if (typeof best !== 'number') throw new Error('meilleure note non enregistrée après la partie')
-})
 
 /* 🐛 La Chenille : piloter la tête vers les fruits, en croquer au moins 2. */
 await scenario('chenille-croque-des-fruits', async () => {
@@ -388,6 +332,13 @@ await scenario('memory-toutes-les-paires', async () => {
   }
   // (finDe est défini plus bas dans le script : zone morte si on l'appelle ici)
   await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('paires trouvées'), null, { timeout: 12000 })
+  // Et la meilleure note du jeu est enregistrée (sous sa tuile à l'accueil) —
+  // vérifiée ici depuis que le Bonhomme de neige est sorti (28/09)
+  const best = await page.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('ferme:v2') || '{}')
+    return d.state?.progress?.jade?.bestStars?.memory
+  })
+  if (typeof best !== 'number') throw new Error('meilleure note non enregistrée après la partie')
 })
 
 /* 🎵 Le Chœur (l'ancien Simon, 25/09) : le bot lit la mélodie sur le crochet
