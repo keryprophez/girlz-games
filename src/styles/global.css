@@ -535,6 +535,7 @@ body.playing .g3-bar{max-width:820px;}
 .pr-tile.ico svg{width:56%;height:56%;}
 .pr-tile.on{border-color:#E06A93;box-shadow:0 0 0 4px rgba(224,106,147,.22);}
 .pr-tile:active{transform:scale(.94);}
+.pr-tile.wait svg{width:56%;height:56%;position:relative;z-index:1;}
 .pr-tile.wait::after{content:'';position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,#F8E0EA,transparent 70%);
   animation:prWait 1.2s ease-in-out infinite alternate;}
 @keyframes prWait{from{opacity:.3;transform:scale(.8);}to{opacity:1;transform:scale(1);}}

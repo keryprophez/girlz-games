@@ -1,4 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
+import { diskGet, diskPut } from '../core/diskcache'
 import { sfx, preloadSfx, cry, preloadCries, type AnimalVoice } from '../core/sfx'
 import { tone } from '../core/audio'
 import { playMusic } from '../core/music'
@@ -158,8 +159,13 @@ function save(me: State, i: number) {
    de chaque habit et qu'on photographie, un habit à la fois.
    ===================================================================== */
 type Frame = 'head' | 'bust' | 'body' | 'back' | 'hand' | 'feet' | 'pet' | 'card'
+/* Les vignettes sont GARDÉES d'une ouverture à l'autre (`core/diskcache.ts`) :
+   la garde-robe est pleine tout de suite dès la deuxième fois. Changer ce
+   numéro quand l'allure des habits, de la princesse ou du cadrage change,
+   sinon les anciennes vignettes resteraient. */
+const VIGNETTE = 'v1:'
 interface Job { key: string; look: Royal; frame: Frame; done: (url: string) => void }
-interface Thumbs { want(j: Job): void; clear(): void; dispose(): void; pending(): number }
+interface Thumbs { want(j: Job): void; clear(): void; dispose(): void; pending(): number; stats: { disk: number; rendered: number } }
 
 async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
   const { RoomEnvironment } = await import('three/examples/jsm/environments/RoomEnvironment.js')
@@ -181,6 +187,8 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
   const sun = new T.DirectionalLight('#FFF1D0', 2.2); sun.position.set(2, 3, 4); scene.add(sun)
   const cam = new T.PerspectiveCamera(30, 1, 0.01, 20)
   const cache = new Map<string, string>()
+  const stats = { disk: 0, rendered: 0 }
+  let gen = 0 // change à chaque `clear()` : une lecture arrivée après ne remet rien en file
   let princess: Princess | null = null
   let pet: Pet | null = null
   let petKind = ''
@@ -244,8 +252,11 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
         if (dead || !alive()) break
         frameCam(j.frame, j.look.pet)
         renderer.render(scene, cam)
-        const url = renderer.domElement.toDataURL('image/png')
+        // WebP (transparence gardée) : quatre fois plus léger à garder que le PNG
+        const url = renderer.domElement.toDataURL('image/webp', 0.9)
         cache.set(j.key, url)
+        void diskPut('vignette', VIGNETTE + j.key, url, 600)
+        stats.rendered++
         j.done(url)
         // Laisser respirer la page entre deux vignettes
         await new Promise(r => requestAnimationFrame(() => r(null)))
@@ -257,11 +268,20 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
     want(j) {
       const hit = cache.get(j.key)
       if (hit) { j.done(hit); return }
-      queue.push(j)
-      void pump()
+      // Les vignettes gardées se lisent toutes en même temps, sans attendre la
+      // file : seules celles qui manquent passent par la 3D
+      const g = gen
+      void diskGet('vignette', VIGNETTE + j.key).then(kept => {
+        if (dead || !alive()) return
+        if (kept) { stats.disk++; cache.set(j.key, kept); j.done(kept); return }
+        if (g !== gen) return
+        queue.push(j)
+        void pump()
+      })
     },
-    clear() { queue.length = 0 },
+    clear() { queue.length = 0; gen++ },
     pending: () => queue.length + (busy ? 1 : 0),
+    stats,
     dispose() {
       dead = true
       queue.length = 0
@@ -355,8 +375,10 @@ function renderPane(me: State) {
   const d = me.dolls[me.active]
   const r = d.look
   let html = ''
+  // En attendant sa vignette 3D, une tuile montre la silhouette pâle de son onglet
+  const ghost = I[me.tab] ? icon(me.tab, '#EBC3D5', 2.6) : ''
   const tileHtml = (td: TileDef, sectionIdx: number, i: number) =>
-    `<button class="pr-tile${isOn(r, td) ? ' on' : ''}${td.icon ? ' ico' : ' wait'}" data-s="${sectionIdx}" data-i="${i}" aria-label="Habit">${td.icon || ''}</button>`
+    `<button class="pr-tile${isOn(r, td) ? ' on' : ''}${td.icon ? ' ico' : ' wait'}" data-s="${sectionIdx}" data-i="${i}" aria-label="Habit">${td.icon || ghost}</button>`
   if (me.tab === 'face') {
     html += `<div class="pr-row">${SKINS.map(c => `<button class="pr-dot${r.skin === c ? ' on' : ''}" data-skin="${c}" style="background:${c}" aria-label="Peau"></button>`).join('')}</div>`
     html += `<div class="pr-sep"></div><div class="pr-row">${EYES.map(c => `<button class="pr-dot eye${r.eyes === c ? ' on' : ''}" data-eyes="${c}" style="--c:${c}" aria-label="Yeux"><i></i></button>`).join('')}</div>`
@@ -1298,6 +1320,8 @@ export const dressup: GameDef = {
         get tab() { return me.tab },
         get tool() { return me.tool },
         get pending() { return me.thumbs?.pending() ?? 0 },
+        /** Vignettes lues dans le cache ou calculées en 3D (depuis l'ouverture). */
+        get thumbStats() { return me.thumbs ? { ...me.thumbs.stats } : null },
         get photos() { return me.photos },
         get ball() { return me.ball ? { moves: me.ball.moves.length, finale: me.ball.finale } : null },
         /** Un point de l'écran sur une pièce de la princesse n° i : on part

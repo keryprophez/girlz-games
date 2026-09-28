@@ -2,6 +2,7 @@ import { loadThree, loadModel, fitModel, dotTex, type T3 } from './three3d'
 import { critterKit, type CritterKind } from './critters'
 import { makePrincess, posePrincess, type Pose } from './princess3d'
 import { royalKey, type Royal } from './royal'
+import { diskGet, diskPut } from './diskcache'
 
 /* Les personnages 3D de la ferme, rendus en IMAGES pour les jeux en DOM
    (Simon, Puissance 4, la Boîte à rythme, le Taquin). Ils remplacent les
@@ -18,38 +19,8 @@ const cache = new Map<string, string>()
 
 /* Les portraits de princesses coûtent cher (le personnage VRM : 6 Mo à lire,
    ses matériaux à compiler, dans un contexte 3D de plus) : ils sont GARDÉS
-   dans le cache du navigateur, d'une ouverture de l'appli à l'autre, et ne
-   se recalculent que pour une tenue nouvelle. Les 48 plus récents restent. */
-const DISK = 'ferme-princesses-v1'
-const hashKey = (s: string) => {
-  let h = 5381
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0
-  return (h >>> 0).toString(36) + '-' + s.length.toString(36)
-}
-async function diskGet(key: string): Promise<string | null> {
-  if (typeof caches === 'undefined') return null
-  try {
-    const r = await (await caches.open(DISK)).match('portrait/' + hashKey(key))
-    if (!r) return null
-    const b = await r.blob()
-    return await new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.onerror = () => rej(fr.error); fr.readAsDataURL(b) })
-  } catch (e) {
-    console.warn('portrait gardé illisible, on le recalcule', e)
-    return null
-  }
-}
-async function diskPut(key: string, url: string) {
-  if (typeof caches === 'undefined') return
-  try {
-    const c = await caches.open(DISK)
-    const b = await (await fetch(url)).blob()
-    await c.put('portrait/' + hashKey(key), new Response(b, { headers: { 'content-type': 'image/png' } }))
-    const keys = await c.keys()
-    for (const k of keys.slice(0, Math.max(0, keys.length - 48))) await c.delete(k)
-  } catch (e) {
-    console.warn('portrait non gardé (stockage refusé ?)', e)
-  }
-}
+   (`core/diskcache.ts`) et ne se recalculent que pour une tenue nouvelle.
+   Les 48 plus récents restent. */
 
 type Renderer = import('three').WebGLRenderer
 
@@ -173,7 +144,7 @@ async function renderPrincesses(looks: Royal[], poses: Pose[], px: number): Prom
   let missing = poses.filter(p => { const hit = cache.get(key(p)); if (hit) out[p] = hit; return !hit })
   if (!missing.length || !looks.length) return out
   // Gardés d'une fois précédente ?
-  const kept = await Promise.all(missing.map(p => diskGet(key(p))))
+  const kept = await Promise.all(missing.map(p => diskGet('portrait', key(p))))
   missing.forEach((p, i) => { const u = kept[i]; if (u) { cache.set(key(p), u); out[p] = u } })
   missing = missing.filter((_, i) => !kept[i])
   if (!missing.length) return out
@@ -209,7 +180,7 @@ async function renderPrincesses(looks: Royal[], poses: Pose[], px: number): Prom
         renderer.render(scene, cam)
         const url = renderer.domElement.toDataURL('image/png')
         cache.set(key(pose), url)
-        void diskPut(key(pose), url)
+        void diskPut('portrait', key(pose), url, 48)
         out[pose] = url
         ps.forEach(pr => scene.remove(pr.obj))
         scene.traverse(o => {
