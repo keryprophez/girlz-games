@@ -13,8 +13,8 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-// PORT / DIST : pour tourner à côté des bots (qui prennent 4188 et dist/)
-const PORT = Number(process.env.PORT || 4188)
+// PORT / DIST : à côté du smoke (4188) et des bots (4189), qui servent dist/
+const PORT = Number(process.env.PORT || 4187)
 const URL = `http://localhost:${PORT}/girlz-games/`
 const OUT = 'public/assets/affiches/'
 const W = 600, H = 450
