@@ -2,52 +2,183 @@ import type { Stage } from './three3d'
 import { loadModel, dotTex } from './three3d'
 import { decor, ring } from './scene3d'
 
-/* Le paysage d'hiver, né avec le Bonhomme de neige (23/09, sorti du
-   catalogue le 28/09) et gardé pour la Tour de Glace — là où il n'y avait
-   qu'une plaine blanche et une couronne de sapins sous un ciel uni :
-   - un ciel en dégradé (bleu profond en haut, pêche à l'horizon) et des
-     montagnes enneigées au loin, noyées dans une brume de la même couleur ;
-   - des collines de neige, des rochers coiffés de blanc ;
+/* Le paysage d'hiver de la Tour de Glace (né avec le Bonhomme de neige le
+   23/09, redessiné pour la Tour le 28/09 quand le Bonhomme est sorti du
+   catalogue). La caméra de la Tour regarde toujours vers −z et ne fait que
+   monter : le décor est composé pour CE regard.
+   - un ciel en dégradé et des montagnes enneigées au loin, noyées dans une
+     brume de la même couleur ; des collines, des rochers coiffés de blanc ;
    - un chalet en rondins assemblé pièce par pièce (kit Holiday de Kenney :
-     murs, coins, pignons, toit enneigé, cheminée qui FUME), sa couronne sur
-     la porte, un sapin décoré, une luge, un banc, des lanternes qui luisent,
-     deux rennes qui broutent.
-   Tout est posé HORS du champ de jeu (rayon > FIELD + 1) : le décor doit
-   tenir de tous les côtés. */
+     murs, coins, pignons, toit enneigé, cheminée qui FUME), sa couronne, un
+     sapin décoré, une luge, un banc, des lanternes, deux rennes ;
+   - des nuages qu'on traverse en montant ;
+   - L'HEURE QUI TOURNE AVEC LA HAUTEUR (`setDusk`) : plein jour au pied de
+     la tour, lumière dorée, crépuscule rose, puis la nuit — étoiles, lune et
+     aurore boréale au sommet. C'est la seule récompense de la hauteur : rien
+     ne se débloque, on voit seulement le ciel changer.
+   Rien n'est posé devant la caméra ni derrière la tour à hauteur des blocs :
+   le décor ne gêne jamais la visée. */
 
 type T3 = Stage['T']
 
 export interface Winter {
-  /** À appeler à chaque image : fumée de la cheminée, lanternes, rennes. */
+  /** À appeler à chaque image : fumée, lanternes, aurore. */
   update(dt: number, t: number): void
+  /** L'heure du ciel : 0 = plein jour d'hiver, 1 = nuit étoilée avec aurore. */
+  setDusk(k: number): void
 }
 
 /* Les kits Kenney sont clairs : sous hemi + soleil + IBL, l'ACES les délave
    (piège connu). On les assombrit, la lumière les remonte. */
 const SHADE = 0.74
 
-/** Les couleurs du ciel : à reprendre pour le brouillard (horizon). */
+/** Les couleurs du ciel de jour : à reprendre pour le brouillard (horizon). */
 export const WINTER_SKY = { top: '#5E97D6', mid: '#A9CFEF', horizon: '#F4DCCB' }
 
-function skyDome(T: T3): import('three').Mesh {
-  const geo = new T.SphereGeometry(160, 32, 16)
-  const top = new T.Color(WINTER_SKY.top), mid = new T.Color(WINTER_SKY.mid), hor = new T.Color(WINTER_SKY.horizon)
-  const pos = geo.attributes.position
-  const cols = new Float32Array(pos.count * 3)
-  const c = new T.Color()
-  for (let i = 0; i < pos.count; i++) {
-    const h = pos.getY(i) / 160 // -1 … 1
-    if (h < 0.02) c.copy(hor)
-    else if (h < 0.3) c.copy(hor).lerp(mid, (h - 0.02) / 0.28)
-    else c.copy(mid).lerp(top, Math.min(1, (h - 0.3) / 0.5))
-    cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b
+/* Les quatre heures du ciel, de 0 (jour) à 1 (nuit). Entre deux, on mélange. */
+interface Hour {
+  at: number
+  top: string; mid: string; hor: string
+  sun: string; sunI: number
+  hemi: [string, string, number]
+  env: number
+  cloud: string
+}
+const HOURS: Hour[] = [
+  { at: 0, top: WINTER_SKY.top, mid: WINTER_SKY.mid, hor: WINTER_SKY.horizon, sun: '#FFF4E0', sunI: 2.5, hemi: ['#DDF0FF', '#9FBBD0', 1.15], env: 0.55, cloud: '#FFFFFF' },
+  { at: 0.35, top: '#4A78C0', mid: '#EAC39A', hor: '#FFB27A', sun: '#FFD29A', sunI: 2.3, hemi: ['#FFE3C2', '#A89AB0', 1.0], env: 0.5, cloud: '#FFE6CC' },
+  { at: 0.65, top: '#26386F', mid: '#9E6FA6', hor: '#F4948A', sun: '#FF9E86', sunI: 1.5, hemi: ['#C9A6D8', '#6C6A94', 0.9], env: 0.42, cloud: '#F2B6C4' },
+  { at: 1, top: '#070D26', mid: '#15244E', hor: '#2A3F6E', sun: '#A8C2FF', sunI: 1.1, hemi: ['#7F98D0', '#26345A', 0.75], env: 0.32, cloud: '#6A7AAE' }
+]
+
+function skyDome(T: T3) {
+  const u = {
+    uTop: { value: new T.Color(WINTER_SKY.top) },
+    uMid: { value: new T.Color(WINTER_SKY.mid) },
+    uHor: { value: new T.Color(WINTER_SKY.horizon) }
   }
-  geo.setAttribute('color', new T.BufferAttribute(cols, 3))
-  const m = new T.Mesh(geo, new T.MeshBasicMaterial({
-    vertexColors: true, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false
+  const m = new T.Mesh(new T.SphereGeometry(160, 32, 16), new T.ShaderMaterial({
+    uniforms: u, side: T.BackSide, depthWrite: false, fog: false, toneMapped: false,
+    vertexShader: `varying vec3 vDir;
+      void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 uTop, uMid, uHor; varying vec3 vDir;
+      void main() {
+        float h = vDir.y;
+        vec3 c = mix(uHor, uMid, smoothstep(0.0, 0.3, h));
+        c = mix(c, uTop, smoothstep(0.3, 0.8, h));
+        gl_FragColor = vec4(c, 1.0);
+        #include <colorspace_fragment>
+      }`
   }))
   m.renderOrder = -10
-  return m
+  return { mesh: m, u }
+}
+
+/** Des étoiles sur le haut du ciel (deux tailles), invisibles de jour. */
+function stars(T: T3, dot: import('three').Texture) {
+  const mk = (n: number, size: number) => {
+    const pos = new Float32Array(n * 3)
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2
+      const h = 0.06 + Math.pow(Math.random(), 0.7) * 0.94
+      const r = Math.sqrt(1 - h * h) * 150
+      pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = h * 150; pos[i * 3 + 2] = Math.sin(a) * r
+    }
+    const geo = new T.BufferGeometry()
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3))
+    const p = new T.Points(geo, new T.PointsMaterial({
+      map: dot, size, sizeAttenuation: false, transparent: true, opacity: 0,
+      depthWrite: false, fog: false, color: 0xEAF2FF, blending: T.AdditiveBlending
+    }))
+    p.renderOrder = -9
+    return p
+  }
+  return [mk(420, 2.2), mk(70, 3.6)]
+}
+
+/** La lune : un disque pâle, un halo, quelques mers. */
+function moon(T: T3) {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')!
+  const halo = g.createRadialGradient(64, 64, 24, 64, 64, 64)
+  halo.addColorStop(0, 'rgba(200,216,255,.35)'); halo.addColorStop(1, 'rgba(200,216,255,0)')
+  g.fillStyle = halo; g.fillRect(0, 0, 128, 128)
+  g.fillStyle = '#F6F2E4'; g.beginPath(); g.arc(64, 64, 24, 0, Math.PI * 2); g.fill()
+  g.fillStyle = 'rgba(150,160,185,.4)'
+  for (const [x, y, r] of [[56, 56, 7], [72, 68, 5.5], [58, 75, 4], [74, 52, 3]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill() }
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  const s = new T.Sprite(new T.SpriteMaterial({ map: t, transparent: true, opacity: 0, depthWrite: false, fog: false }))
+  s.position.set(0.42, 0.3, -1).normalize().multiplyScalar(140)
+  s.scale.setScalar(20)
+  s.renderOrder = -8
+  return { s, t }
+}
+
+/** L'aurore boréale : un rideau lointain derrière la tour, qui ondule. */
+function aurora(T: T3) {
+  const u = { uTime: { value: 0 }, uAlpha: { value: 0 } }
+  const geo = new T.CylinderGeometry(130, 130, 40, 64, 1, true, Math.PI - 1.0, 2.0)
+  const m = new T.Mesh(geo, new T.ShaderMaterial({
+    uniforms: u, side: T.BackSide, transparent: true, depthWrite: false, fog: false, toneMapped: false,
+    blending: T.AdditiveBlending,
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float uTime, uAlpha; varying vec2 vUv;
+      void main() {
+        float x = vUv.x * 6.2831;
+        float n = sin(x * 2.0 + uTime * 0.3) * 0.5 + sin(x * 3.7 - uTime * 0.23 + 1.3) * 0.3 + sin(x * 9.1 + uTime * 0.4) * 0.2;
+        float y = vUv.y - 0.1 * n;
+        float band = smoothstep(0.02, 0.14, y) * (1.0 - smoothstep(0.14, 0.72, y));
+        float rays = 0.62 + 0.38 * sin(x * 23.0 + 2.5 * sin(x * 3.1 + uTime * 0.4)) * sin(x * 11.0 - uTime * 0.2);
+        float spot = 0.35 + 0.65 * smoothstep(-0.4, 0.8, sin(x * 1.3 + uTime * 0.12 + 2.0));
+        float edge = smoothstep(0.0, 0.25, vUv.x) * (1.0 - smoothstep(0.75, 1.0, vUv.x));
+        vec3 col = mix(vec3(0.25, 0.9, 0.62), vec3(0.56, 0.4, 0.95), smoothstep(0.12, 0.6, y));
+        gl_FragColor = vec4(col * band * rays * spot * edge * uAlpha, 1.0);
+        #include <colorspace_fragment>
+      }`
+  }))
+  m.position.y = 36
+  m.renderOrder = -7
+  return { m, u }
+}
+
+/** Un nuage de dessin animé : des boules nettes, le dessous en aplat plus
+    sombre (comme les modèles Kenney, pas de flou). */
+function cloudTex(T: T3) {
+  const c = document.createElement('canvas')
+  c.width = 256; c.height = 128
+  const g = c.getContext('2d')!
+  const balls = [[58, 84, 30], [98, 66, 40], [148, 60, 38], [192, 80, 28], [124, 88, 32], [80, 94, 24], [170, 96, 22]]
+  const draw = (dy: number) => { for (const [x, y, r] of balls) { g.beginPath(); g.arc(x, y + dy, r, 0, Math.PI * 2); g.fill() } }
+  g.fillStyle = '#C9D6E6'; draw(0)
+  g.fillStyle = '#FFFFFF'; draw(-7)
+  // Le bas bien à plat
+  g.globalCompositeOperation = 'destination-out'
+  g.fillRect(0, 106, 256, 22)
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return t
+}
+
+function clouds(T: T3, tex: import('three').Texture) {
+  const list: import('three').Sprite[] = []
+  const n = 8
+  for (let i = 0; i < n; i++) {
+    // Hauts et loin, de part et d'autre : jamais derrière la visée (la
+    // colonne des blocs), jamais devant la lune (à droite)
+    const side = i % 2 ? 1 : -1
+    const a = Math.PI * (1.5 + side * (0.12 + ((i >> 1) + Math.random() * 0.5) / (n / 2) * 0.3))
+    if (side > 0 && a > Math.PI * 1.6 && a < Math.PI * 1.72) continue
+    const r = 70 + Math.random() * 30
+    const s = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }))
+    const w = 16 + Math.random() * 12
+    s.scale.set(w, w * 0.5, 1)
+    s.position.set(Math.cos(a) * r, 16 + Math.random() * 16, Math.sin(a) * r)
+    s.renderOrder = -6
+    list.push(s)
+  }
+  return list
 }
 
 /** Des montagnes en facettes, coiffées de neige, sur tout l'horizon. */
@@ -75,7 +206,7 @@ function mountains(T: T3, scene: import('three').Scene) {
   scene.add(g)
 }
 
-/** Des collines de neige douces entre le champ et les montagnes. */
+/** Des collines de neige douces entre la tour et les montagnes. */
 function hills(T: T3, scene: import('three').Scene, snowMat: import('three').Material) {
   const geo = new T.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2)
   for (const [x, z, s, h] of [
@@ -144,51 +275,64 @@ async function cabin(T: T3): Promise<{ obj: import('three').Group; chimney: impo
 
 /** Pose tout le décor ; les modèles arrivent en arrière-plan (le jeu n'attend pas). */
 export function winterScene(stage: Stage, o: {
-  field: number
   /** Le matériau du sol (neige), pour les collines. */
   snowMat: import('three').Material
 }): Winter {
   const { T, scene } = stage
-  scene.add(skyDome(T))
+  const sky = skyDome(T)
+  scene.add(sky.mesh)
   scene.background = new T.Color(WINTER_SKY.horizon)
   mountains(T, scene)
   hills(T, scene, o.snowMat)
 
-  const toCenter = (x: number, z: number) => Math.atan2(-x, -z)
-  const R = o.field
+  const dot = stage.keep(dotTex(T))
+  const starPts = stars(T, dot)
+  starPts.forEach(p => scene.add(p))
+  const mn = moon(T)
+  stage.keep(mn.t)
+  scene.add(mn.s)
+  const au = aurora(T)
+  scene.add(au.m)
+  const cTex = stage.keep(cloudTex(T))
+  const cloudList = clouds(T, cTex)
+  cloudList.forEach(c => scene.add(c))
 
-  /* Où vivent les éléments du décor (le reste de la couronne = sapins) */
-  const CABIN = { x: -8.2, z: -R - 10.5, s: 1.9 }
+  // Tourné vers la caméra de la Tour (qui regarde −z depuis z ≈ 8)
+  const faceCam = (x: number, z: number) => Math.atan2(-x, 8 - z)
+
+  /* Où vivent les éléments du décor (le reste = sapins) */
+  const CABIN = { x: -7.2, z: -15, s: 1.9 }
   const spots: { model: string; x: number; z: number; size: number; rot?: number; shade?: number }[] = ([
     { model: 'holiday/tree-decorated-snow', x: CABIN.x + 4.1, z: CABIN.z + 0.4, size: 3.4, rot: 0.4 },
     { model: 'holiday/sled', x: CABIN.x + 2.7, z: CABIN.z + 3.2, size: 1.1, rot: 0.9 },
-    { model: 'holiday/bench', x: CABIN.x - 2.2, z: CABIN.z + 3.3, size: 1.25, rot: toCenter(CABIN.x - 2.2, CABIN.z + 3.3) },
-    { model: 'holiday/reindeer', x: 7.4, z: -7.2, size: 1.5, rot: -2.2 },
-    { model: 'holiday/reindeer', x: 9.1, z: -5.4, size: 1.2, rot: -1.2 },
-    { model: 'holiday/rocks-large', x: 10.5, z: 1.5, size: 2.6 },
-    { model: 'holiday/rocks-large', x: -10.8, z: 3.5, size: 2.2 },
-    { model: 'holiday/rocks-medium', x: 3.5, z: 10.8, size: 1.3 },
-    { model: 'holiday/rocks-medium', x: -8.5, z: -3.8, size: 1.1 },
-    { model: 'holiday/snow-bunker', x: 6.8, z: 7.5, size: 2.2 },
-    { model: 'holiday/snow-pile', x: -6.2, z: 8.2, size: 1.6 },
-    { model: 'holiday/snow-pile', x: 7.2, z: -2.6, size: 1.4 },
+    { model: 'holiday/bench', x: CABIN.x - 2.2, z: CABIN.z + 3.3, size: 1.25, rot: faceCam(CABIN.x - 2.2, CABIN.z + 3.3) },
+    { model: 'holiday/reindeer', x: 6.2, z: -10.5, size: 1.5, rot: -2.2 },
+    { model: 'holiday/reindeer', x: 8.2, z: -13, size: 1.2, rot: -1.2 },
+    { model: 'holiday/rocks-large', x: 7.6, z: -9.5, size: 2 },
+    { model: 'holiday/rocks-medium', x: -5.8, z: -7.2, size: 1.3 },
+    { model: 'holiday/snow-bunker', x: 4.2, z: -12, size: 2 },
+    { model: 'holiday/snow-pile', x: 3.4, z: -5.2, size: 1.2 },
+    { model: 'holiday/snow-pile', x: -3.2, z: -6, size: 1 },
     { model: 'holiday/snow-flat-large', x: CABIN.x + 0.3, z: CABIN.z + 3.4, size: 4.2, rot: 0.3 }
   ] as { model: string; x: number; z: number; size: number; rot?: number }[]).map(it => ({ ...it, shade: SHADE }))
-  const LANTERNS: [number, number][] = [[CABIN.x + 1.6, CABIN.z + 4.1], [1.6, -R - 2.4], [6.3, -R + 0.6], [-R - 2.2, -1.2]]
+  const LANTERNS: [number, number][] = [[CABIN.x + 1.6, CABIN.z + 4.1], [1.6, -8.4], [5.2, -7.5]]
   for (const [x, z] of LANTERNS) spots.push({ model: 'holiday/lantern', x, z, size: 1.9, rot: 0, shade: SHADE })
   for (let i = 0; i < 4; i++) {
     const x = CABIN.x - 2.6 + i * 1.28, z = CABIN.z + 4.6
     spots.push({ model: 'holiday/cabin-fence', x, z, size: 1.3, rot: 0, shade: SHADE })
   }
 
-  // Sapins en couronne, mais pas sur le chalet ni sur les autres éléments
+  // Sapins : une forêt derrière et sur les côtés, jamais devant la caméra ni
+  // juste derrière la tour, ni sur le chalet et les autres éléments
   const busy: [number, number, number][] = [[CABIN.x, CABIN.z, 4.4], ...spots.map(s => [s.x, s.z, Math.max(1.2, s.size * 0.8)] as [number, number, number])]
-  const trees = ring(34, R + 1.6, R + 9).filter(([x, z]) => busy.every(([bx, bz, br]) => Math.hypot(x - bx, z - bz) > br + 0.9))
+  const free = (x: number, z: number) =>
+    z < -4 && !(Math.abs(x) < 2.6 && z > -13) && busy.every(([bx, bz, br]) => Math.hypot(x - bx, z - bz) > br + 0.9)
+  const trees = [...ring(40, 9, 20, [Math.PI * 1.02, Math.PI * 1.98]), ...ring(30, 22, 34, [Math.PI * 1.05, Math.PI * 1.95])]
+    .filter(([x, z]) => free(x, z))
   const treeItems = trees.map(([x, z], i) => ({
-    model: `holiday/tree-snow-${['a', 'b', 'c'][i % 3]}`, x, z, size: 1.8 + Math.random() * 1.9
+    model: `holiday/tree-snow-${['a', 'b', 'c'][i % 3]}`, x, z, size: 1.8 + Math.random() * 1.9 + Math.hypot(x, z) * 0.04
   }))
 
-  const out: Winter = { update() { /* remplacé une fois le décor chargé */ } }
   const smoke = puffs(stage)
 
   Promise.all([
@@ -199,10 +343,11 @@ export function winterScene(stage: Stage, o: {
     const house = cab.obj
     house.scale.setScalar(CABIN.s)
     house.position.set(CABIN.x, 0, CABIN.z)
-    house.rotation.y = toCenter(CABIN.x, CABIN.z)
+    house.rotation.y = faceCam(CABIN.x, CABIN.z)
     scene.add(house)
     house.updateMatrixWorld(true)
     smoke.from.copy(cab.chimney).applyMatrix4(house.matrixWorld)
+    glows.forEach(g => { g.visible = true })
   }).catch(() => { /* sans décor, le jeu tourne */ })
 
   // Halos chauds des lanternes (le haut de la lanterne, là où est la flamme)
@@ -212,17 +357,67 @@ export function winterScene(stage: Stage, o: {
     const s = new T.Sprite(new T.SpriteMaterial({ map: halo, transparent: true, opacity: 0.55, depthWrite: false, blending: T.AdditiveBlending }))
     s.position.set(x, 1.62, z)
     s.scale.setScalar(0.5)
+    s.visible = false   // allumés quand les lanternes sont arrivées
     scene.add(s)
     return s
   })
 
-  out.update = (dt, t) => {
-    smoke.update(dt)
-    glows.forEach((g, i) => {
-      const k = 0.85 + Math.sin(t * 5.3 + i * 1.7) * 0.06 + Math.sin(t * 11 + i) * 0.04
-      g.scale.setScalar(0.5 * k)
-    })
+  /* L'heure : on retrouve les lumières posées par createStage */
+  const hemi = scene.children.find(x => (x as import('three').HemisphereLight).isHemisphereLight) as import('three').HemisphereLight | undefined
+  const hemiK = hemi ? hemi.intensity / HOURS[0].hemi[2] : 0.32
+  const ca = new T.Color(), cb = new T.Color()
+  const mixHex = (a: string, b: string, t: number, out: import('three').Color) => out.copy(ca.set(a)).lerp(cb.set(b), t)
+  let dusk = -1
+  let glowK = 1
+
+  const out: Winter = {
+    setDusk(k) {
+      k = Math.max(0, Math.min(1, k))
+      if (Math.abs(k - dusk) < 0.002) return
+      dusk = k
+      let i = 0
+      while (i < HOURS.length - 2 && k > HOURS[i + 1].at) i++
+      const a = HOURS[i], b = HOURS[i + 1]
+      const t = (k - a.at) / (b.at - a.at)
+      mixHex(a.top, b.top, t, sky.u.uTop.value)
+      mixHex(a.mid, b.mid, t, sky.u.uMid.value)
+      mixHex(a.hor, b.hor, t, sky.u.uHor.value)
+      ;(scene.background as import('three').Color).copy(sky.u.uHor.value)
+      if (scene.fog) scene.fog.color.copy(sky.u.uHor.value)
+      if (stage.sun) {
+        mixHex(a.sun, b.sun, t, stage.sun.color)
+        stage.sun.intensity = a.sunI + (b.sunI - a.sunI) * t
+      }
+      if (hemi) {
+        mixHex(a.hemi[0], b.hemi[0], t, hemi.color)
+        mixHex(a.hemi[1], b.hemi[1], t, hemi.groundColor)
+        hemi.intensity = (a.hemi[2] + (b.hemi[2] - a.hemi[2]) * t) * hemiK
+      }
+      scene.environmentIntensity = a.env + (b.env - a.env) * t
+      const cloud = mixHex(a.cloud, b.cloud, t, new T.Color())
+      const night = Math.max(0, Math.min(1, (k - 0.62) / 0.33))
+      cloudList.forEach(c => {
+        const m = c.material as import('three').SpriteMaterial
+        m.color.copy(cloud)
+        m.opacity = 1 - night * 0.55   // la nuit, ils s'effacent devant l'aurore
+      })
+      starPts.forEach(p => { (p.material as import('three').PointsMaterial).opacity = night })
+      ;(mn.s.material as import('three').SpriteMaterial).opacity = night
+      au.u.uAlpha.value = Math.max(0, Math.min(1, (k - 0.8) / 0.2)) * 0.9
+      au.m.visible = au.u.uAlpha.value > 0
+      glowK = 1 + Math.max(0, (k - 0.4) / 0.6) * 1.6
+    },
+    update(dt, t) {
+      smoke.update(dt)
+      au.u.uTime.value = t
+      glows.forEach((g, i) => {
+        const f = 0.85 + Math.sin(t * 5.3 + i * 1.7) * 0.06 + Math.sin(t * 11 + i) * 0.04
+        g.scale.setScalar(0.5 * f * (0.8 + glowK * 0.35))
+        ;(g.material as import('three').SpriteMaterial).opacity = Math.min(1, 0.45 * glowK)
+      })
+    }
   }
+  out.setDusk(0)
   return out
 }
 
@@ -247,9 +442,9 @@ function puffs(stage: Stage) {
         p.age += dt
         if (p.age > p.life) p.age -= p.life
         const k = p.age / p.life
-        p.s.position.set(from.x + k * 1.6 + Math.sin(p.age * 1.3) * 0.12, from.y + k * 3.4, from.z + k * 0.6)
-        p.s.scale.setScalar(0.45 + k * 1.7)
-        ;(p.s.material as import('three').SpriteMaterial).opacity = from.x > 1e3 ? 0 : Math.min(1, k * 6) * (1 - k) * 0.7
+        p.s.position.set(from.x + k * 2.6 + Math.sin(p.age * 1.3) * 0.12, from.y + k * 2.2, from.z + k * 0.6)
+        p.s.scale.setScalar(0.4 + k * 1.3)
+        ;(p.s.material as import('three').SpriteMaterial).opacity = from.x > 1e3 ? 0 : Math.min(1, k * 6) * (1 - k) * (1 - k) * 0.5
       }
     }
   }

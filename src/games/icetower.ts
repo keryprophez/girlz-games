@@ -2,9 +2,10 @@ import type { GameContext, GameDef } from '../core/types'
 import { $ } from '../core/utils'
 import { tone } from '../core/audio'
 import { force, impact } from '../core/impact'
-import { createStage, fixedStep, loader, loadPhysics, snowTex, type Stage, type Cannon, type T3 } from '../core/three3d'
+import { createStage, fixedStep, loader, loadPhysics, snowTex, bumpyNormal, type Stage, type Cannon, type T3 } from '../core/three3d'
 import { arcade, type Arcade } from '../core/arcade'
-import { ground, decor, particles, camShake, ring, type Particles, type CamShake } from '../core/scene3d'
+import { particles, camShake, type Particles, type CamShake } from '../core/scene3d'
+import { winterScene, WINTER_SKY, type Winter } from '../core/winter'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 
@@ -44,7 +45,8 @@ interface State {
   world: import('cannon-es').World
   matIce: import('cannon-es').Material
   cable: import('three').Mesh
-  iceMap: import('three').Texture
+  /** Une seule glace pour tous les blocs (vernie : elle brille sous le ciel). */
+  iceMat: import('three').Material
   RB: typeof import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
   game: Arcade
   fx: Particles
@@ -63,6 +65,9 @@ interface State {
   camY: number
   over: boolean
   tapHint: HTMLElement
+  winter: Winter
+  /** L'heure du ciel, qui suit la hauteur de la tour (0 = jour, 1 = nuit). */
+  dusk: number
 }
 
 let it: State | null = null
@@ -100,7 +105,7 @@ function iceMesh(me: State, w: number) {
   const { T, RB } = me
   const mesh = new T.Mesh(
     new RB.RoundedBoxGeometry(w, BLOCK_H, 0.82, 3, 0.045),
-    new T.MeshStandardMaterial({ map: me.iceMap, color: 0x5FA8D4, roughness: 0.2, metalness: 0.1 })
+    me.iceMat
   )
   mesh.castShadow = true; mesh.receiveShadow = true
   return mesh
@@ -309,12 +314,13 @@ export const icetower: GameDef = {
         import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
       ])
       if (dead) return
+      // Caméra et cadrage INCHANGÉS : seul le décor et la lumière ont changé (28/09)
       const stage = await createStage(arena, {
-        sky: '#1B3350', fog: [15, 40], fogColor: '#1E3A59',
+        sky: WINTER_SKY.horizon, fog: [16, 110], fogColor: WINTER_SKY.horizon,
         cam: [0, 1.5, 8.4], target: [0, 1.1, 0], fov: 34,
-        hemi: ['#BBD8F0', '#24405E', 0.7],
-        sun: { pos: [4, 8, 6], color: '#FFF0D4', intensity: 1.6, area: 6, far: 30 },
-        fill: 0.25, exposure: 0.9, iblIntensity: 0.55
+        hemi: ['#DDF0FF', '#9FBBD0', 1.15],
+        sun: { pos: [4, 8, 6], color: '#FFF4E0', intensity: 2.5, area: 6, far: 30 },
+        fill: 0.5, exposure: 1.0, iblIntensity: 0.55
       })
       if (dead) { stage.dispose(); return }
       const { scene } = stage
@@ -327,19 +333,24 @@ export const icetower: GameDef = {
       // Frottement élevé : les blocs adhèrent mais un porte-à-faux fait basculer
       world.addContactMaterial(new CANNON.ContactMaterial(matIce, matIce, { friction: 0.62, restitution: 0.02 }))
 
-      // Neige au sol, un peu bleutée par la nuit
-      const snow = stage.keep(snowTex(T, 8))
-      const g = ground(stage, { radius: 26, map: snow, color: 0x9FB8D0, roughness: 0.98 })
-      void g
+      // La neige va jusqu'aux montagnes : même grain, répété loin
+      const snow = stage.keep(snowTex(T, 30))
+      const snowNrm = stage.keep(bumpyNormal(T, 10, 30))
+      const snowMat = new T.MeshStandardMaterial({ map: snow, normalMap: snowNrm, normalScale: new T.Vector2(0.35, 0.35), color: 0xDCE6F0, roughness: 0.86 })
+      const groundMesh = new T.Mesh(new T.PlaneGeometry(200, 200), snowMat)
+      groundMesh.rotation.x = -Math.PI / 2
+      groundMesh.receiveShadow = true
+      scene.add(groundMesh)
+      const winter = winterScene(stage, { snowMat })
       world.addBody(new CANNON.Body({
         type: CANNON.Body.STATIC, material: matIce, shape: new CANNON.Plane(),
         quaternion: new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0)
       }))
 
-      // Socle de départ
+      // Socle de départ : un bloc de granit (mêmes dimensions qu'avant)
       const baseMesh = new T.Mesh(
         new RB.RoundedBoxGeometry(BASE_W + 0.35, 0.3, 1, 2, 0.03),
-        new T.MeshStandardMaterial({ color: 0x37597B, roughness: 0.82 })
+        new T.MeshStandardMaterial({ color: 0x4B5566, roughness: 0.78, normalMap: snowNrm })
       )
       baseMesh.position.set(0, 0.15, 0)
       baseMesh.castShadow = true; baseMesh.receiveShadow = true
@@ -350,10 +361,18 @@ export const icetower: GameDef = {
         position: new CANNON.Vec3(0, 0.15, 0)
       }))
 
-      // Repère central : rend l'adresse APPRENABLE (on voit où viser)
+      // Repère central : rend l'adresse APPRENABLE (on voit où viser). Un
+      // cœur doré bordé de sombre : il se lit sur le ciel clair comme la nuit
+      const gc = document.createElement('canvas')
+      gc.width = 8; gc.height = 2
+      const gx = gc.getContext('2d')!
+      gx.fillStyle = 'rgba(27,51,80,.5)'; gx.fillRect(0, 0, 8, 2)
+      gx.fillStyle = '#FFD27A'; gx.fillRect(2, 0, 4, 2)
+      const guideTex = stage.keep(new T.CanvasTexture(gc))
+      guideTex.colorSpace = T.SRGBColorSpace
       const guide = new T.Mesh(
-        new T.PlaneGeometry(0.035, 40),
-        new T.MeshBasicMaterial({ color: 0xFFB13D, transparent: true, opacity: 0.32 })
+        new T.PlaneGeometry(0.06, 40),
+        new T.MeshBasicMaterial({ map: guideTex, transparent: true, opacity: 0.6, fog: false })
       )
       guide.position.set(0, 20, -0.5)
       scene.add(guide)
@@ -364,13 +383,6 @@ export const icetower: GameDef = {
         new T.MeshBasicMaterial({ color: 0x8AA6B8 })
       )
       scene.add(cable)
-
-      // Sapins enneigés (Holiday Kit) et rochers : un vrai décor, posé une fois
-      // Une forêt en arc derrière la tour, loin pour ne pas la concurrencer
-      const trees = ring(11, 7, 13, [Math.PI * 0.06, Math.PI * 0.94]).map(([x, z], i) => ({
-        model: `holiday/tree-snow-${'abc'[i % 3]}`, x: x * 1.15, z: -Math.abs(z) - 3, size: 1.4 + Math.random() * 1.3
-      }))
-      decor(stage, trees).catch(() => { /* sans décor, le jeu tourne quand même */ })
 
       const tapHint = document.createElement('div')
       tapHint.className = 'tap-hint'
@@ -392,16 +404,42 @@ export const icetower: GameDef = {
 
       const me: State = {
         stage, T, CANNON, world, matIce, cable, RB,
-        iceMap: stage.keep(iceTex(T)),
+        iceMat: new T.MeshPhysicalMaterial({
+          map: stage.keep(iceTex(T)), color: 0x5FA8D4, roughness: 0.16, metalness: 0,
+          clearcoat: 1, clearcoatRoughness: 0.06, emissive: 0x0A2236, envMapIntensity: 1.4
+        }),
         game, fx: particles(stage, 500), shake: camShake(stage),
         blocks: [], tower: [], perfectRun: 0, swing: null, placed: 0, topY: 0.3,
         swingSpeed: c.byTier(1.05, 1.5, 1.9),
         swingSpan: c.byTier(1.05, 1.35, 1.55),
-        busy: false, camY: 1.1, over: false, tapHint
+        busy: false, camY: 1.1, over: false, tapHint, winter, dusk: 0
       }
       it = me
       hideLoader()
       nextBlock(me)
+      if ((window as unknown as { __BOT?: boolean }).__BOT) {
+        // Accroche des tests : empile `n` blocs parfaits d'un coup (voir le ciel à toutes les heures)
+        (window as unknown as { __itStack: (n: number) => void }).__itStack = n => {
+          if (it !== me || !me.swing) return
+          const s = me.swing
+          me.stage.scene.remove(s.mesh); s.mesh.geometry.dispose(); me.world.removeBody(s.body)
+          me.swing = null
+          for (let i = 0; i < n; i++) {
+            const w = topOf(me).w, x = topOf(me).x
+            const mesh = iceMesh(me, w)
+            me.stage.scene.add(mesh)
+            const b: Block = { mesh, body: new CANNON.Body({ mass: 0 }), w, x }
+            me.world.addBody(b.body)
+            settle(me, b, Math.min(BASE_W, w), x, me.topY + BLOCK_H / 2)
+            me.tower.push(b)
+            me.topY += BLOCK_H
+            me.placed++
+            me.game.hit(1, { silent: true })
+          }
+          me.dusk = Math.min(1, me.placed / 20)   // l'heure tout de suite, sans fondu
+          nextBlock(me)
+        }
+      }
 
       arena.addEventListener('pointerdown', drop)
       const onKey = (e: KeyboardEvent) => { if (e.code === 'Space' || e.code === 'Enter') drop() }
@@ -409,7 +447,7 @@ export const icetower: GameDef = {
 
       const step = fixedStep(1 / 60, 4)
       let outroT = 0
-      stage.start(dt => {
+      stage.start((dt, now) => {
         if (it !== me) return
         game.tick(dt)
 
@@ -450,6 +488,11 @@ export const icetower: GameDef = {
 
         // La caméra suit le sommet (recul progressif : on voit la tour entière) ;
         // pendant l'outro elle recule franchement pour cadrer la chute
+        // L'heure suit la hauteur : jour au pied, crépuscule vers 13 blocs, nuit à 20
+        me.dusk += (Math.min(1, me.placed / 20) - me.dusk) * Math.min(1, dt * 0.6)
+        winter.setDusk(me.dusk)
+        winter.update(dt, now / 1000)
+
         if (me.over) outroT += dt
         const want = me.over ? Math.max(0.9, me.topY * 0.45) : me.topY + 0.55
         me.camY += (want - me.camY) * Math.min(1, dt * 2.8)

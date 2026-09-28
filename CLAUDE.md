@@ -91,9 +91,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            dans Canva, reconstruite en vraie 3D (l'image sert de
                            modèle) — profil lissé, peinture vernie, joints et
                            rivets, reflets tournés vers le vrai Soleil, flamme
-             winter.ts   ← le paysage d'hiver (né avec le Bonhomme, sorti le 28/09 ;
-                           gardé pour la Tour de Glace) (ciel, montagnes,
-                           chalet Kenney assemblé pièce par pièce, lanternes)
+             winter.ts   ← le paysage d'hiver de la Tour de Glace (né avec le
+                           Bonhomme, sorti le 28/09) : montagnes, chalet Kenney
+                           assemblé pièce par pièce, lanternes, et l'HEURE qui
+                           suit la hauteur (`setDusk` : jour → doré → crépuscule
+                           → nuit, étoiles, lune, aurore)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
