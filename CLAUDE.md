@@ -309,15 +309,15 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) ·
-`caterpillar` · `dressup` ·
+`simon` (le Chœur sur scène, 28/09) · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
 retirées le soir même — « mille fois moins bien que la version isométrique
 hyper mignonne », « de la 2D saccadée et pixelisée sur une surface
-minuscule » ; les 3D du 23/09 sont revenues telles quelles. **Un jeu en vraie
+minuscule » ; les 3D du 23/09 sont revenues telles quelles. La Chenille est
+sortie le 30/09 (« elles aiment pas »). **Un jeu en vraie
 3D ne redescend pas en 2D.** Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
@@ -403,7 +403,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 30 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 29 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

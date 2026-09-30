@@ -29,7 +29,6 @@ const STAGE = {
   // Jouer
   icetower: { wait: 6000, act: async p => { await p.evaluate(() => window.__itStack?.(9)) }, after: 7000, zoom: 1.15, cy: 0.42 },
   ninja: { tier: 'exp', wait: 8000, shots: 14, every: 600 },
-  caterpillar: { wait: 6000, zoom: 1.3, cy: 0.55 },
   maze: { wait: 5000 },
   taquin2: { wait: 4000 },
   memory: { wait: 7000 },

@@ -1015,6 +1015,20 @@ vitesse avec un flou de rotation (la surface s'étire le long de la
 rotation), et des traînées de lumière le long des orbites (la planète
 suivie reste nette). Plan présenté, **en attente du go**.
 
+**Retours du 30/09 après-midi** (« fais tout ce qu'on a validé ensemble ») :
+- ✅ **La Chenille sort** (« vire la chenille, elles aiment pas ») : son
+  jeu, sa vignette, son affiche et son bot. 23 → 22 jeux.
+- ✅ **Plus de choix de niveau là où il n'y en a pas** (« retire les
+  niveaux sur l'Atelier et tout ce qui n'a pas de niveau ») : `GameDef.noTier`.
+  L'Atelier et le Piano démarrent tout de suite ; la Princesse garde
+  « seule / à deux » et une flèche pour jouer. Plus de bouton « Niveau »
+  à la fin de ces jeux.
+- 🔨 En cours, un agent par chantier : le **Miroir devient les perles à
+  repasser** (proposition 1 : le père attendait l'évolution et ne voyait
+  « encore que l'ancien jeu miroir »), le **puzzle** (2), le **Feu
+  d'artifice qu'on dessine** (7), les **cubes de l'alphabet** (3) et
+  l'**Atelier des bijoux** (le collier que la princesse porte).
+
 Refusés : 9 (trois jeux de plus à deux), 10 (le Mini-golf), 12 (le
 Chamboule-tout), 14 (les boîtes à œufs), 15 (la Balance), 16 (le Tangram),
 17 (le cycle de la vie).

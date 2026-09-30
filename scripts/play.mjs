@@ -1,6 +1,6 @@
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
-   vérifient qu'on peut Y JOUER — croquer des fruits à la chenille, passer
-   des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
+   vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
+   Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
    catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
    Feu d'artifice, l'Atelier et la Princesse compris.
@@ -108,7 +108,7 @@ const openGame = async (name, hook, tier = 'easy', ops = null) => {
 }
 
 const failures = []
-// BOTS=poste,chenille npm run test:play → seulement les scénarios dont le nom contient l'un des mots
+// BOTS=poste,ninja npm run test:play → seulement les scénarios dont le nom contient l'un des mots
 const only = process.env.BOTS ? process.env.BOTS.split(',') : null
 const scenario = async (name, fn) => {
   if (only && !only.some(k => name.includes(k))) return
@@ -121,35 +121,6 @@ const scenario = async (name, fn) => {
     console.error(`✗ ${name} — ${String(e).split('\n')[0]}`)
   }
 }
-
-/* 🐛 La Chenille : piloter la tête vers les fruits, en croquer au moins 2. */
-await scenario('chenille-croque-des-fruits', async () => {
-  await openGame('La Chenille', '__cp')
-  for (let i = 0; i < 110; i++) {
-    const st = await page.evaluate(() => {
-      const cp = window.__cp
-      if (!cp || !cp.running) return null
-      return { hx: cp.snake[0].x, hy: cp.snake[0].y, fx: cp.fruit.x, fy: cp.fruit.y, d: cp.dir, eaten: cp.eaten }
-    })
-    if (!st) break
-    if (st.eaten >= 2) return
-    // Cap voulu ; la clôture est un vrai mur et le demi-tour est interdit,
-    // donc si le fruit est derrière on tourne d'abord de côté.
-    const wx = Math.sign(st.fx - st.hx), wy = Math.sign(st.fy - st.hy)
-    let want = null
-    if (wx && st.d.x === 0) want = { x: wx, y: 0 }
-    else if (wy && st.d.y === 0) want = { x: 0, y: wy }
-    else if (wx && wx !== st.d.x) want = { x: 0, y: wy || (st.hy > 5 ? -1 : 1) }
-    else if (wy && wy !== st.d.y) want = { x: wx || (st.hx > 6 ? -1 : 1), y: 0 }
-    if (want) {
-      const key = want.x ? (want.x > 0 ? 'ArrowRight' : 'ArrowLeft') : (want.y > 0 ? 'ArrowDown' : 'ArrowUp')
-      await page.keyboard.press(key)
-    }
-    await page.mouse.move(300 + (i % 5) * 40, 300)
-    await page.waitForTimeout(200)
-  }
-  throw new Error('moins de 2 fruits croqués en 22 s')
-})
 
 /* 🍕 Pizzeria : la sauce doit apparaître SOUS le doigt (régression UV). */
 await scenario('pizza-sauce-sous-le-doigt', async () => {

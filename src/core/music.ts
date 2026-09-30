@@ -45,7 +45,7 @@ const THEMES: Record<string, Theme> = {
     scale: [72, 74, 76, 77, 79, 81],
     bass: [48, 45, 41, 43]
   },
-  // Prairie douce (chenille, créatifs)
+  // Prairie douce (créatifs)
   meadow: {
     bpm: 84, style: 'box',
     chords: [[55, 59, 62], [52, 55, 59], [48, 52, 55], [50, 54, 57]],

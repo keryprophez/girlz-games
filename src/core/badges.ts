@@ -70,14 +70,6 @@ export const BADGE: Record<string, string> = {
     </g>
     <path d="M4 30 44 15l1.6 4.2L5.6 34.2z" fill="${C.white}" opacity=".95"/>`),
 
-  caterpillar: svg(`
-    <circle cx="12" cy="30" r="7" fill="${C.meadowDark}"/>
-    <circle cx="22" cy="27" r="8" fill="${C.meadow}"/>
-    <circle cx="33" cy="22" r="9" fill="${C.leaf}"/>
-    <circle cx="30" cy="19" r="1.9" fill="${C.ink}"/>
-    <circle cx="37" cy="18" r="1.9" fill="${C.ink}"/>
-    <path d="M31 12c-1-3 0-5 2-6M38 12c0-3 1-4 3-5" stroke="${C.meadowDark}" stroke-width="2" fill="none" stroke-linecap="round"/>`),
-
   maze: svg(`
     <rect x="5" y="5" width="38" height="38" rx="8" fill="${C.woodDark}"/>
     <path d="M24 38a14 14 0 1 1 14-14 10 10 0 1 1-10 10 6 6 0 1 0 6-6"

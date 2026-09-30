@@ -18,13 +18,12 @@ import { connect4 } from './connect4'
 import { pizza } from './pizza'
 import { space } from './space'
 import { geoGame } from './geo'
-import { caterpillar } from './caterpillar'
 import { fireworks } from './fireworks'
 import { icetower } from './icetower'
 import { sentences } from './sentences'
 
 export const GAMES: GameDef[] = [
-  icetower, ninja, caterpillar, maze, taquin, memory, simonGame,
+  icetower, ninja, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, piano, fireworks, coloring, pizza
@@ -46,7 +45,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
-      icetower, ninja, caterpillar,
+      icetower, ninja,
       maze, taquin, memory, simonGame, connect4
     ]
   },
