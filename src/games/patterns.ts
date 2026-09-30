@@ -8,6 +8,7 @@ import { ground, decor, particles, type Particles } from '../core/scene3d'
 import { critterKit, type Critter, type CritterKind, type CritterKit } from '../core/critters'
 import { critterPortraits, portraitImg } from '../core/portraits'
 import { visible } from '../core/hand'
+import { trainModel, trainParts, TRAIN_LOCO, type TrainParts } from '../core/train3d'
 
 /* Suites logiques — LE PETIT TRAIN DE LA FERME (28/09). Qu'est-ce qui vient
    après ? Un train entre en gare dans le pré : chaque wagon porte un animal
@@ -29,8 +30,8 @@ type Item = { kind: CritterKind; size?: number }
 const KINDS: CritterKind[] = ['cow', 'pig', 'hen', 'chick', 'duck', 'sheep', 'dog', 'rabbit']
 const GROW = [0.62, 0.8, 1]
 /** Couleurs des ridelles : neutre, puis motif pair / impair une fois trouvé. */
-const BOARD = 0x9C6B45, BOARD_A = 0xE39A2E, BOARD_B = 0x3D8FC4
-const WAGON_L = 1.25, LOCO_L = 2.2
+const BOARD_A = 0xE39A2E, BOARD_B = 0x3D8FC4
+const LOCO_L = TRAIN_LOCO
 const ANIMAL = 0.74
 
 const key = (it: Item) => it.kind + ':' + (it.size ?? 1)
@@ -96,108 +97,12 @@ interface Train {
   chimney: import('three').Object3D
 }
 
-interface Parts {
-  box: import('three').BoxGeometry
-  cyl: import('three').CylinderGeometry
-  sph: import('three').SphereGeometry
-  ring: import('three').TorusGeometry
-  dark: import('three').MeshStandardMaterial
-  wood: import('three').MeshStandardMaterial
-  red: import('three').MeshStandardMaterial
-  green: import('three').MeshStandardMaterial
-  gold: import('three').MeshStandardMaterial
-  steel: import('three').MeshStandardMaterial
-  lamp: import('three').MeshStandardMaterial
-  glow: import('three').MeshStandardMaterial
-  glass: import('three').MeshStandardMaterial
-}
-
-function makeParts(T: T3): Parts {
-  const std = (color: number, roughness = 0.6, metalness = 0, extra: Record<string, unknown> = {}) =>
-    new T.MeshStandardMaterial({ color, roughness, metalness, ...extra })
+function buildTrain(T: T3, P: TrainParts, n: number): Train {
+  const m = trainModel(T, P, n)
   return {
-    box: new T.BoxGeometry(1, 1, 1),
-    cyl: new T.CylinderGeometry(1, 1, 1, 28),
-    sph: new T.SphereGeometry(1, 24, 16),
-    ring: new T.TorusGeometry(0.3, 0.045, 12, 40),
-    dark: std(0x2E2A28, 0.55, 0.3),
-    wood: std(0x7A4B2A, 0.85),
-    red: std(0xA3261F, 0.4, 0.1),
-    green: std(0x24613B, 0.5),
-    gold: std(0xB8892E, 0.3, 0.9),
-    steel: std(0x8E959C, 0.35, 0.85),
-    lamp: std(0xFFE7A0, 0.3, 0, { emissive: 0xFFC94D, emissiveIntensity: 1.2 }),
-    glow: std(0xFFD34D, 0.3, 0, { emissive: 0xFFB300, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 }),
-    glass: std(0x2B3B48, 0.15, 0.2)
+    g: m.g, wagons: m.wagons.map(w => ({ ...w, item: null, critter: null, hop: 0, pop: 1, ring: null })),
+    wheels: m.wheels, x: 0, phase: 'in', delay: 0, stop: 0, glow: null, t: 0, from: 0, length: m.length, chimney: m.chimney
   }
-}
-
-function add(T: T3, parent: import('three').Object3D, geo: import('three').BufferGeometry, mat: import('three').Material,
-  pos: [number, number, number], scale: [number, number, number], rot: [number, number, number] = [0, 0, 0]) {
-  const m = new T.Mesh(geo, mat)
-  m.position.set(...pos); m.scale.set(...scale); m.rotation.set(...rot)
-  m.castShadow = true; m.receiveShadow = true
-  parent.add(m)
-  return m
-}
-
-/** Une roue : le rayon, et un moyeu doré ; elle tourne autour de z. */
-function wheel(T: T3, P: Parts, parent: import('three').Object3D, x: number, z: number, r: number, wheels: import('three').Object3D[]) {
-  const w = new T.Group()
-  w.position.set(x, r, z)
-  add(T, w, P.cyl, P.red, [0, 0, 0], [r, 0.08, r], [Math.PI / 2, 0, 0])
-  add(T, w, P.cyl, P.gold, [0, 0, z > 0 ? 0.045 : -0.045], [r * 0.35, 0.03, r * 0.35], [Math.PI / 2, 0, 0])
-  // Un rayon, pour voir la roue tourner
-  add(T, w, P.box, P.dark, [0, 0, z > 0 ? 0.042 : -0.042], [r * 1.7, r * 0.18, 0.02])
-  parent.add(w)
-  wheels.push(w)
-}
-
-function buildTrain(T: T3, P: Parts, n: number): Train {
-  const g = new T.Group()
-  const wheels: import('three').Object3D[] = []
-  // La locomotive, qui mène à gauche (le train roule vers −x)
-  const loco = new T.Group()
-  add(T, loco, P.box, P.dark, [0, 0.31, 0], [2.0, 0.14, 0.66])
-  add(T, loco, P.cyl, P.red, [-0.25, 0.72, 0], [0.34, 1.15, 0.34], [0, 0, Math.PI / 2])
-  add(T, loco, P.cyl, P.dark, [-0.86, 0.72, 0], [0.35, 0.14, 0.35], [0, 0, Math.PI / 2])
-  for (const bx of [-0.62, 0.12]) add(T, loco, P.cyl, P.gold, [bx, 0.72, 0], [0.355, 0.05, 0.355], [0, 0, Math.PI / 2])
-  add(T, loco, P.cyl, P.dark, [-0.62, 1.2, 0], [0.1, 0.4, 0.1])
-  add(T, loco, P.cyl, P.dark, [-0.62, 1.42, 0], [0.16, 0.1, 0.16])
-  add(T, loco, P.sph, P.gold, [-0.08, 1.06, 0], [0.14, 0.14, 0.14])
-  add(T, loco, P.cyl, P.lamp, [-0.95, 0.98, 0], [0.08, 0.06, 0.08], [0, 0, Math.PI / 2])
-  // La cabine, son toit, ses fenêtres
-  add(T, loco, P.box, P.green, [0.6, 0.83, 0], [0.64, 0.72, 0.8])
-  add(T, loco, P.box, P.red, [0.62, 1.23, 0], [0.84, 0.08, 0.94])
-  for (const z of [-0.41, 0.41]) add(T, loco, P.box, P.glass, [0.6, 0.98, z], [0.34, 0.26, 0.02])
-  // Le chasse-pierres
-  add(T, loco, P.box, P.red, [-1.06, 0.22, 0], [0.18, 0.2, 0.64], [0, 0, 0.55])
-  for (const z of [-0.34, 0.34]) {
-    wheel(T, P, loco, 0.05, z, 0.25, wheels)
-    wheel(T, P, loco, 0.6, z, 0.25, wheels)
-    wheel(T, P, loco, -0.68, z, 0.15, wheels)
-  }
-  g.add(loco)
-  const chimney = new T.Object3D()
-  chimney.position.set(-0.62, 1.5, 0)
-  loco.add(chimney)
-  // Les wagons, à la suite
-  const wagons: Wagon[] = []
-  for (let i = 0; i < n; i++) {
-    const w = new T.Group()
-    w.position.x = LOCO_L / 2 + 0.08 + WAGON_L * (i + 0.5)
-    const boards = new T.MeshStandardMaterial({ color: BOARD, roughness: 0.7 })
-    add(T, w, P.box, P.dark, [0, 0.29, 0], [1.02, 0.12, 0.6])
-    add(T, w, P.box, P.wood, [0, 0.38, 0], [1.1, 0.06, 0.8])
-    for (const z of [-0.39, 0.39]) add(T, w, P.box, boards, [0, 0.49, z], [1.1, 0.18, 0.05])
-    for (const x of [-0.53, 0.53]) add(T, w, P.box, boards, [x, 0.49, 0], [0.05, 0.18, 0.8])
-    add(T, w, P.box, P.dark, [-0.6, 0.29, 0], [0.16, 0.06, 0.08])
-    for (const z of [-0.33, 0.33]) { wheel(T, P, w, -0.32, z, 0.15, wheels); wheel(T, P, w, 0.32, z, 0.15, wheels) }
-    g.add(w)
-    wagons.push({ g: w, boards, item: null, critter: null, hop: 0, pop: 1, ring: null })
-  }
-  const length = LOCO_L + n * WAGON_L
-  return { g, wagons, wheels, x: 0, phase: 'in', delay: 0, stop: 0, glow: null, t: 0, from: 0, length, chimney }
 }
 
 /** Place un animal dans un wagon (le voici, ou il y saute). */
@@ -226,7 +131,7 @@ interface State {
   root: HTMLElement
   stage: Stage | null
   T: T3 | null
-  P: Parts | null
+  P: TrainParts | null
   kit: CritterKit | null
   fx: Particles | null
   train: Train | null
@@ -509,7 +414,7 @@ export const patterns: GameDef = {
       me.faces = faces
       me.stage = stage
       const T = me.T = stage.T
-      me.P = makeParts(T)
+      me.P = trainParts(T)
       me.kit = critterKit(T)
       me.fx = particles(stage, 300)
       stage.keep({ dispose: () => me.kit?.dispose() })

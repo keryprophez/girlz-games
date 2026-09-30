@@ -863,12 +863,42 @@ en a retenu sept, et une suppression :
 ## « 20 autres améliorations, nouveaux jeux, apprentissage ou création » (29/09)
 
 Vingt propositions tirées de la planche des 24 affiches ; le père a répondu
-au QCM (cinq salves de quatre questions). Retenues, dans l'ordre du plan :
+au QCM (cinq salves de quatre questions). Retenues, dans l'ordre du plan ;
+le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
 
-- **4. La main qui montre** (en priorité) : une main fantôme mime le geste
-  (taper, glisser, tirer) dans tous les jeux, à la première partie, puis de
-  nouveau quand rien ne se passe pendant quelques secondes. Aujourd'hui,
-  cinq jeux sur 24 le font.
+- ✅ **4. La main qui montre** (en priorité, `core/hand.ts`) : un gant blanc
+  mime le geste de chacun des 24 jeux, sur sa vraie cible — taper, glisser
+  (pointillé ; dans la Princesse, l'habit suit la main jusqu'à la jupe),
+  trancher (Ninja, Chenille, Labyrinthe sur la glace), ou « l'un de
+  ceux-là » : dans Apprendre et le Chœur, la main survole plusieurs cibles
+  sans appuyer, une lueur autour de chacune — jamais la réponse. À la
+  première partie d'un jeu, puis après 7 s sans toucher quand le jeu attend
+  (15 s dans Créer) ; un toucher la chasse ; deux démonstrations sans
+  réponse et elle se fait plus rare. Les anciennes mains fixes (Tour,
+  Chenille, Feu d'artifice, Ninja, Potager, Tour du Monde) sont retirées ;
+  l'Espace garde la sienne (elle suit la planète à découvrir) avec le même
+  gant.
+- ✅ **6. Le Piano** : il avait déjà cinq chansons (ma proposition se
+  trompait) ; cinq VRAIMENT nouvelles, relevées sur des partitions et
+  transposées pour ses huit touches — Une poule sur un mur, Meunier tu dors,
+  Le bon roi Dagobert, Il court le furet, À la claire fontaine. Il était
+  un petit navire, Une souris verte, Savez-vous planter les choux n'y
+  tiennent pas (voir le piège dans CLAUDE.md). Les dix dessins sur deux
+  colonnes.
+- ✅ **5. La Boîte à rythme sur scène** : la grange du Chœur (sortie dans
+  `core/barn3d.ts`) au-dessus de la grille, les six musiciens sur l'estrade
+  sur un coussin de la couleur de leur ligne ; leur case joue, ils sautent
+  sous le projecteur ; la guirlande bat la mesure ; on les touche aussi sur
+  scène.
+- ✅ **8. Le livre de coloriages de l'Atelier** (`core/lineart.ts`) : les
+  13 animaux (les 12 de la ferme et la taupe), de trois quarts et de
+  profil, dans leur pré sous le soleil ; le petit train et ses voyageurs
+  (sorti dans `core/train3d.ts`) ; la fusée dans les étoiles ; la chorale
+  sur la scène de la grange — 29 pages, des dessins au trait tirés des
+  personnages 3D (une couleur par pièce, on garde les bords, les pupilles à
+  l'encre), calculés à la première demande puis gardés. Le pot de peinture
+  s'arrête sur le trait ; un dessin rangé se reprend même après avoir fermé
+  l'app. Un bot : la tête de la vache au pot.
 - **1. Le Miroir en perles à repasser** : plaque à picots en 3D, on complète
   le reflet perle par perle ; le fer les fait fondre, l'objet se décolle.
 - **2. Le Taquin devient un vrai puzzle** : pièces aux vraies découpes, en
@@ -876,15 +906,8 @@ au QCM (cinq salves de quatre questions). Retenues, dans l'ordre du plan :
   ferme, Espace), de 6 à 48 pièces ; le taquin reste en second mode.
 - **3. Les cubes de l'alphabet** (la Chasse aux lettres) : cubes en bois 3D,
   chaque cube posé dit son son, puis la syllabe, puis le mot (pour Jade).
-- **5. La Boîte à rythme sur la scène de la grange** : les six animaux sur
-  l'estrade du Chœur chantent en direct quand leur case joue.
-- **6. Le Piano, cinq chansons de plus** : Frère Jacques, Ah vous dirai-je
-  maman, Une souris verte, Meunier tu dors, Il était un petit navire,
-  choisies par une image.
 - **7. Le Feu d'artifice qu'on dessine** : la fusée éclate selon la forme
   tracée au doigt ; un « grand final » en musique.
-- **8. L'Atelier : les animaux de la ferme à colorier** (les 14 personnages
-  3D rendus au trait, plus le train, la fusée, la grange).
 - **11. Le Flipper de la grange** (nouveau, Jouer, 3D) : deux batteurs, les
   animaux en bumpers ; à deux, un batteur chacune, un seul score.
 - **13. Cache-cache à la ferme** (nouveau, Jouer, 3D) : trouver les animaux
@@ -895,6 +918,13 @@ au QCM (cinq salves de quatre questions). Retenues, dans l'ordre du plan :
   une voix rigolote ; le son ne quitte pas la tablette, rien n'est gardé.
 - **20. La Pâtisserie** (nouveau, Créer, 3D) : étages, crème au doigt,
   fruits, bougies qu'on souffle.
+
+**Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
+(« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute
+deux choses quand le temps va vite : les planètes tournent à leur vraie
+vitesse avec un flou de rotation (la surface s'étire le long de la
+rotation), et des traînées de lumière le long des orbites (la planète
+suivie reste nette). Plan présenté, **en attente du go**.
 
 Refusés : 9 (trois jeux de plus à deux), 10 (le Mini-golf), 12 (le
 Chamboule-tout), 14 (les boîtes à œufs), 15 (la Balance), 16 (le Tangram),

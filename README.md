@@ -43,20 +43,22 @@ compagnon — licorne, poney, chaton, chiot — dans une salle de bal ou un jard
 de château qu'on touche ; une photo qui devient un coloriage de l'Atelier ; à
 deux, les princesses de Jade et de Joyce ; et pour finir, le bal — un petit
 bouton ouvre l'ancienne version, Habille-toi, la petite fille à couettes
-qu'on coiffe d'un chapeau et qui tient un ballon), Boîte à Rythme (les animaux chantent en
-sautant), Petit Piano (un piano laqué, la partition qui descend, les animaux
-qui chantent), Feu d'artifice (au-dessus du village, reflété dans le lac),
+qu'on coiffe d'un chapeau et qui tient un ballon), Boîte à Rythme (les animaux chantent sur
+la scène de la grange quand leur case joue), Petit Piano (un piano laqué, la
+partition qui descend, les animaux qui chantent, dix chansons), Feu d'artifice (au-dessus du village, reflété dans le lac),
 l'Atelier (dix pinceaux — néon, paillettes, aquarelle, craie, spray, cœurs,
 étoiles, arc-en-ciel… —, le miroir et la rosace, des papiers de couleur, le
 pot de peinture, les tampons de la ferme et leurs princesses, les coloriages
-tirés des photos de la Princesse ; un dossier où ranger ses dessins,
+tirés des photos de la Princesse, et un livre de coloriages : les animaux de
+la ferme de face et de profil, le petit train, la fusée, la grange ; un dossier où ranger ses dessins,
 les reprendre, revoir leur film ou les enregistrer dans la tablette), la
 Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se
 jouer), la difficulté choisie dans chaque jeu (fleur,
-éclair, flamme), le Ninja et la Princesse à deux en équipe sur la même tablette,
+éclair, flamme), une main fantôme qui montre le geste de chaque jeu (sans
+jamais donner la réponse), le Ninja et la Princesse à deux en équipe sur la même tablette,
 minuteur parental avec verrou « question de grand », voix de la famille
 enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
 quand le combo monte, vrais bruitages foley sur les chocs, mise à jour

@@ -106,6 +106,18 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            courbés, rendus en IMAGES (`moneyImages`), gardés
              posters.ts  ← les jeux qui ont leur AFFICHE sur l'accueil
                            (écrit par `scripts/posters.mjs`)
+             hand.ts     ← LA MAIN QUI MONTRE (30/09) : le geste de chaque jeu
+                           mimé par un gant blanc (`GameDef.hand`, lancé par
+                           GameHost) — taper, glisser, trancher, ou `choose`
+                           (« l'un de ceux-là », sans appuyer : jamais la
+                           réponse dans Apprendre)
+             barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, la
+                           Boîte à rythme, le coloriage) : `barnChoir`,
+                           `singOn`, `stepChoir`
+             train3d.ts  ← le petit train (Suites logiques, coloriage)
+             lineart.ts  ← le LIVRE DE COLORIAGES de l'Atelier (30/09) : les
+                           personnages 3D rendus en dessins au trait (une
+                           couleur par pièce, on garde les bords), gardés
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -226,8 +238,15 @@ prise dans le vrai jeu par `scripts/posters.mjs` — mise en scène par jeu
 **vignette dessinée** de `core/badges.ts` (`BADGE[id]`, `viewBox 0 0 48 48`,
 formes pleines, palette de `global.css`) reste pour le carton titre, le
 chargement et un jeu sans affiche (sans vignette : son emoji). Un nouveau
-jeu arrive avec les deux : sa vignette, et son affiche
-(`ONLY=<id> node scripts/posters.mjs`, puis REGARDER l'image).
+jeu arrive avec les trois : sa vignette, son affiche
+(`ONLY=<id> node scripts/posters.mjs`, puis REGARDER l'image), et **sa
+main** (`hand`, `core/hand.ts`) : une fonction qui rend le geste à montrer
+selon la phase du jeu, ou `null` quand il n'attend rien (chargement, écoute,
+animation). Ses cibles : un élément (`visible(root, sel)` ne garde que ceux
+qu'un doigt toucherait vraiment), un point d'écran (`toScreen` en 3D) ou une
+fraction de l'arène. Dans Apprendre, `choose` sur plusieurs cibles, jamais
+la bonne seule. Elle vient à la première partie, puis après 7 s sans toucher
+(15 s dans Créer) ; un toucher la chasse.
 
 **Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
 rampe par performance, timers simulés `game.after`, HUD en icônes dans
@@ -344,6 +363,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Textures des `ShaderMaterial`** | `disposeTree` libère les cartes des matériaux standard (`map`, `normalMap`…), pas les textures rangées dans `uniforms` : chacune passe par `stage.keep()`, comme les cibles de rendu et le bruit 3D. |
 | **Attendre à chaque image sous charge** | `waitForFunction` sonde par défaut à chaque image : quand la page compile ses shaders ou calcule des vignettes 3D, les images s'espacent de plusieurs secondes et le bot rate un état pourtant atteint (la Princesse « jamais prête » alors qu'elle l'était en 60 s). Sonder par intervalle (`polling: 1000`), et cliquer en force quand la page est prise. |
 | **Tuer le serveur d'un autre** | Un `vite preview` resté ouvert n'est pas forcément orphelin : le smoke sert sur 4188, les bots (`play.mjs`) sur **4189**. Arrêté « parce qu'il traînait », celui des bots est tombé en pleine série (la Chenille en échec) et la suite a tourné contre un autre build. Un script de vérification lancé à côté prend **4187** (`scripts/posters.mjs` aussi), et on ne tue que ce qu'on a lancé. Et `spawn('npx', ['vite', …]).kill()` ne tue que `npx` : vite reste orphelin et garde le port, le script suivant (`--strictPort`) échoue à démarrer le sien et teste l'ANCIEN build sans le dire. Les scripts lancent `node_modules/.bin/vite` directement. |
+| **Photographier une animation** | Sous la 3D logicielle, une capture prend 1,5 s : la démonstration de la main (2 s) est finie quand l'image est prise — « la main n'apparaît pas », alors qu'elle était là. Figer les animations avant la capture (`el.getAnimations().forEach(a => a.pause())`). Et un script sans `__BOT` a la qualité automatique : elle baisse la résolution sous swiftshader et la capture tombe sur une image effacée (un Memory tout bleu) — ajouter `?hq` à l'adresse. |
+| **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -358,7 +379,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (28/09 : 29 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 30 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

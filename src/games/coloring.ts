@@ -6,6 +6,7 @@ import { ICON } from '../core/icons'
 import { critterPortraits, princessPortraits } from '../core/portraits'
 import { FARM } from '../core/critters'
 import { drawings, idbDel, idbGet, idbPut, princessPages, type Drawing } from '../core/atelierdb'
+import { SHEETS, sheetById, sheetLines, sheetMinis } from '../core/lineart'
 
 /* L'Atelier — remplace le Coloriage (23/09), enrichi le 27/09 (« elles
    adorent l'Atelier : complexifie-le, rends-le encore plus stylé »).
@@ -64,6 +65,22 @@ interface Page { id: string; svg: string; img?: string }
 const EXTRA: Page[] = []
 const PRINCESS_SHOWN = 4
 const pageById = (id: string) => PAGES.find(x => x.id === id) || EXTRA.find(x => x.id === id)
+/** Une feuille du livre de coloriages (core/lineart.ts) : son trait est
+    calculé à la première demande, puis gardé. */
+async function sheetPage(id: string): Promise<Page | null> {
+  const had = EXTRA.find(x => x.id === id)
+  if (had) return had
+  const url = await sheetLines(id)
+  if (!url) return null
+  let p = EXTRA.find(x => x.id === id)
+  if (!p) { p = { id, svg: '', img: url }; EXTRA.push(p) }
+  return p
+}
+/** N'importe quelle feuille, y compris celle d'un livre pas encore ouvert
+    (un dessin du dossier repris après avoir fermé l'app). */
+async function pageFor(id: string): Promise<Page | undefined> {
+  return pageById(id) || (sheetById(id) ? (await sheetPage(id)) ?? undefined : undefined)
+}
 const PAGES: Page[] = [
   { id: 'blanche', svg: '' },
   {
@@ -313,6 +330,8 @@ async function openPage(me: State, p: Page, d?: Drawing) {
   me.pour = null
   me.strokes.clear()
   document.querySelectorAll<HTMLElement>('.at-page').forEach(b => b.classList.toggle('sel', !d && b.dataset.p === p.id))
+  document.getElementById('atBookBtn')?.classList.toggle('sel', !d && !!sheetById(p.id))
+  document.querySelectorAll<HTMLElement>('.at-sheet').forEach(b => b.classList.toggle('sel', !d && b.dataset.p === p.id))
   document.getElementById('atFolderBtn')?.classList.toggle('sel', !!d)
   me.paint.clearRect(0, 0, W, H)
   me.lines.clearRect(0, 0, W, H)
@@ -937,7 +956,7 @@ async function drawingCanvas(d: Drawing, w: number, h: number): Promise<HTMLCanv
   g.fillRect(0, 0, w, h)
   const im = await blobImage(d.paint)
   if (im) g.drawImage(im, 0, 0, w, h)
-  const p = pageById(d.page)
+  const p = await pageFor(d.page)
   if (p && (p.svg || p.img)) { try { g.drawImage(await pageLines(p, d.paper), 0, 0, w, h) } catch { /* sans les traits */ } }
   return cv
 }
@@ -992,8 +1011,7 @@ async function showDrawing(me: State, d: Drawing) {
     if (me.filming) return
     closeFolder()
     sfx('open', { vol: 0.5 })
-    const p = pageById(d.page) || PAGES[0]
-    void openPage(me, p, d)
+    void pageFor(d.page).then(p => { if (at === me) void openPage(me, p || PAGES[0], d) })
   }
   ;(document.getElementById('atFFilm') as HTMLButtonElement).onclick = () => {
     if (me.filming) return
@@ -1062,6 +1080,7 @@ export const coloring: GameDef = {
           <div class="at-pages">
             ${PAGES.map((p, i) => `<button class="at-page${i === 0 ? ' sel' : ''}" data-p="${p.id}" aria-label="Feuille">
               <img class="at-thumb" alt="">${p.svg ? lineSvg(p, 7).replace(/ width="\d+" height="\d+"/, '') : ''}</button>`).join('')}
+            <button class="at-page at-bookbtn" id="atBookBtn" aria-label="Coloriages"><img class="at-bookcover" alt=""></button>
           </div>
           <div class="at-row">
             <button class="at-tool at-small" id="atPaperBtn" aria-label="Papier"></button>
@@ -1078,6 +1097,7 @@ export const coloring: GameDef = {
         <div class="at-tray at-brushes" id="atBrushes">
           ${BRUSHES.map(b => `<button class="at-bk" data-b="${b}" aria-label="Pinceau"></button>`).join('')}
         </div>
+        <div class="at-tray at-book" id="atBook"></div>
         <div class="at-tray at-papers" id="atPapers">
           ${PAPERS.map(p => `<button class="at-pp" data-c="${p}" style="background:${p}" aria-label="Papier"></button>`).join('')}
         </div>
@@ -1214,6 +1234,41 @@ export const coloring: GameDef = {
         void openPage(me, p)
       }
     }
+    // Le livre de coloriages : les animaux de la ferme, le train, la fusée, la grange
+    const bookBtn = document.getElementById('atBookBtn') as HTMLButtonElement
+    const book = document.getElementById('atBook')!
+    book.innerHTML = SHEETS.map(sh => `<button class="at-sheet" data-p="${sh.id}" aria-label="Coloriage"><img alt=""></button>`).join('')
+    let bookFilled = false
+    bookBtn.onclick = () => {
+      if (!me.running) return
+      toggleTray('atBook', bookBtn, 'left')
+      if (bookFilled) return
+      bookFilled = true
+      void sheetMinis().then(urls => {
+        if (at !== me) return
+        for (const [id, url] of Object.entries(urls)) {
+          const img = book.querySelector<HTMLImageElement>(`.at-sheet[data-p="${id}"] img`)
+          if (img) img.src = url
+        }
+      })
+    }
+    book.querySelectorAll<HTMLElement>('.at-sheet').forEach(b => {
+      b.onclick = async () => {
+        if (!me.running || b.classList.contains('busy')) return
+        b.classList.add('busy')
+        const p = await sheetPage(b.dataset.p!)
+        b.classList.remove('busy')
+        if (!p || at !== me) return
+        closeTrays()
+        if (p === me.page && me.galleryId === null) return
+        sfx('open', { vol: 0.5 })
+        void openPage(me, p)
+      }
+    })
+    critterPortraits(['cow'], 120).then(u => {
+      const im = bookBtn.querySelector<HTMLImageElement>('img')
+      if (u.cow && im && at === me) im.src = u.cow
+    })
     const paperBtn = document.getElementById('atPaperBtn') as HTMLButtonElement
     paperBtn.onclick = () => { if (me.running) toggleTray('atPapers', paperBtn, 'left') }
     document.querySelectorAll<HTMLElement>('.at-pp').forEach(b => {
@@ -1399,6 +1454,7 @@ export const coloring: GameDef = {
         get sym() { return me.sym },
         get brush() { return me.brush },
         get paper() { return me.paper },
+        get page() { return me.page.id },
         /** Part de la feuille couverte de peinture (échantillon grossier). */
         painted() {
           const d = me.paint.getImageData(0, 0, W, H).data

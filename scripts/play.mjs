@@ -875,6 +875,28 @@ await scenario('rythme-un-air', async () => {
   await finDe('Quel orchestre')
 })
 
+/* ✏️ Le livre de coloriages de l'Atelier : la vache (un dessin au trait
+   calculé depuis son personnage 3D), le pot de peinture remplit sa tête et
+   s'arrête sur le trait, puis « fini ». */
+await scenario('atelier-livre', async () => {
+  await openGame("L'Atelier", '__at')
+  await page.locator('#atBookBtn').click()
+  await page.locator('.at-sheet[data-p="bete-cow-face"]').click()
+  await page.waitForFunction(() => window.__at.page === 'bete-cow-face', null, { timeout: 120000, polling: 500 })
+  await page.locator('.at-tool[data-t="bucket"]').click()
+  await page.locator('.at-color[data-c="#F58FB8"]').click()
+  await page.waitForTimeout(800)
+  const box = await page.locator('#atPaint').boundingBox()
+  // Le haut de la tête de la vache, entre les yeux et le front
+  await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.34)
+  await page.waitForFunction(() => window.__at.marks >= 1 && !window.__at.pouring, null, { timeout: 10000 })
+  const p = await page.evaluate(() => window.__at.painted())
+  if (p < 0.01) throw new Error(`le pot n'a rien rempli sur la vache (${p})`)
+  if (p > 0.5) throw new Error(`le pot a débordé du trait de la vache (${p})`)
+  await page.locator('#atDone').click()
+  await finDe('Chef-d', 20000)
+})
+
 /* 🎆 Feu d'artifice : huit fusées, puis le bouquet final jusqu'à la fin. */
 await scenario('feu-bouquet-final', async () => {
   await openGame("Feu d'Artifice")
