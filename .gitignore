@@ -7,3 +7,6 @@ tsconfig.tsbuildinfo
 .photos-candidats/
 photos.picks.json
 .verify-*
+
+# Les worktrees des agents (session Claude Code)
+.claude/worktrees/
