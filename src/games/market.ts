@@ -6,6 +6,7 @@ import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
 import { tone } from '../core/audio'
 import { moneyImages } from '../core/money3d'
+import { some, visible } from '../core/hand'
 
 /* Le Marché de la Ferme — apprendre l'argent avec de VRAIES pièces en euros,
    en 3D depuis le 28/09 (`core/money3d.ts` : métal, relief, tranche, tailles
@@ -252,6 +253,14 @@ function finish(me: State) {
 export const market: GameDef = {
   id: 'market', name: 'Le Marché', icon: '💶', sq: 'sq-peach', cat: 'reflexion',
   subtitle: 'Découvre les pièces, paye et rends la monnaie !',
+  // La main : Découvre, on touche une pièce ; pour payer, « l'une de celles-là »
+  hand: root => {
+    const me = mk
+    if (!me || me.lock) return null
+    const coins = visible(root, '#mkBank .mk-coin')
+    if (!coins.length) return null
+    return me.mode === 'explore' ? { tap: some(coins, 1)[0] } : { choose: some(coins, 3) }
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

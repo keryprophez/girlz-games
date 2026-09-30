@@ -5,7 +5,8 @@ import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
 import { PHOTOS, photoUrl } from '../core/sprites'
 import { createStage, loader, woodTex, picker, type Stage, type T3 } from '../core/three3d'
-import { particles, type Particles } from '../core/scene3d'
+import { particles, type Particles, toScreen } from '../core/scene3d'
+import { some } from '../core/hand'
 
 /* Memory — retrouver les paires.
 
@@ -316,6 +317,16 @@ function finish(me: State) {
 export const memory: GameDef = {
   id: 'memory', name: 'Memory', icon: '🃏', sq: 'sq-peach', cat: 'memoire',
   subtitle: 'Mémorise pendant l\'aperçu, puis retrouve les paires',
+  // La main : une carte face cachée ; pour la deuxième, « l'une de celles-là »
+  // (montrer la paire, ce serait jouer à sa place)
+  hand: () => {
+    const me = mem
+    if (!me || me.lock) return null
+    const down = me.cards.filter(c => !c.matched && !c.up && c !== me.first)
+    if (!down.length) return null
+    const at = (c: Card) => toScreen(me.stage, c.g.position)
+    return me.first ? { choose: some(down, 3).map(at) } : { tap: at(some(down, 1)[0]) }
+  },
   mount(c) {
     ctx = c
     let dead = false

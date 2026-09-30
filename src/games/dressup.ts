@@ -7,7 +7,7 @@ import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
 import { useFerme, soloRoyal, type RoyalSlot } from '../core/store'
 import { createStage, loader, loadThree, type Stage, type T3 } from '../core/three3d'
-import { particles, type Particles } from '../core/scene3d'
+import { particles, type Particles, toScreen } from '../core/scene3d'
 import { makePrincess, posePrincess, MOVES, type Princess, type Pose, type Expr } from '../core/princess3d'
 import { makePet, type Pet } from '../core/pet3d'
 import { makeDecor, type Decor, type DecorId } from '../core/castle3d'
@@ -18,6 +18,7 @@ import {
   SHOES, SKINS, SKIRTS, TOPS, WINGS, cloneRoyal, moodFor, partsPresent, randomRoyal, royalKey, secondRoyal,
   type ClipKind, type Paint, type Part, type Pattern, type Royal
 } from '../core/royal'
+import { some, visible } from '../core/hand'
 
 /* LA PRINCESSE (27/09) — Habille-toi devenu un vrai jeu, en dix idées :
    1. la garde-robe : on PREND un habit au doigt et on le GLISSE sur elle
@@ -1051,6 +1052,26 @@ function scoped(c: GameContext): { ctx: GameContext; end(): void } {
 export const dressup: GameDef = {
   id: 'dressup', name: 'La Princesse', icon: '👑', sq: 'sq-lilac', cat: 'creatif', music: 'palace', duo: true,
   subtitle: 'Habille ta princesse, teins sa robe, coiffe-la… et au bal !',
+  // La main : un habit glissé de la garde-robe sur la princesse ; au bal,
+  // « l'un de ces pas-là » ; dans l'ancienne version, une case d'habit
+  hand: root => {
+    if (root.querySelector('.du-arena')) {
+      const opts = visible(root, '.du-opt')
+      return opts.length ? { tap: some(opts, 1)[0] } : null
+    }
+    const me = pr
+    const st = me?.stage
+    const d = me?.dolls[me.active]
+    if (!me || !st || !d?.p || !me.running || me.switching || me.ended || !me.thumbs) return null
+    if (me.ball) {
+      const moves = visible(root, '#prDance .pr-move')
+      return !me.ball.finale && !me.ball.playing && !me.ball.queue.length && moves.length ? { choose: moves } : null
+    }
+    const tiles = visible(root, '#prPane .pr-tile[data-s]')
+    if (!tiles.length) return null
+    const skirt = toScreen(st, d.p.obj.localToWorld(new st.T.Vector3(0.1, 0.4, 0.15)))
+    return { drag: [some(tiles, 1)[0], skirt], ghost: true }
+  },
   mount(c) {
     // La princesse, ou l'ancienne version (Habille-toi) : un petit bouton passe de l'une à l'autre
     let stop: (() => void) | null = null

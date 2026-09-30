@@ -4,6 +4,7 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, confetti } from '../core/fx'
 import { shake } from '../core/juice'
 import { ICON } from '../core/icons'
+import { visible } from '../core/hand'
 
 /* 📮 La Poste aux Phrases — les types de phrases (leçon GR2 de Joyce).
 
@@ -699,6 +700,13 @@ function finish() {
 export const sentences: GameDef = {
   id: 'sentences', name: 'La Poste aux Phrases', icon: '📮', sq: 'sq-mint', cat: 'reflexion',
   subtitle: 'Tamponne chaque phrase avec le bon signe !',
+  // La main : « l'un de ces tampons-là » (ou oui / non, ou les points) — jamais le bon
+  hand: root => {
+    const me = po
+    if (!me || !me.running || me.lock || me.busy || grip) return null
+    const opts = visible(root, '.po-stamp, .po-yes, .po-no, .po-bigmark, .po-label')
+    return opts.length ? { choose: opts } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

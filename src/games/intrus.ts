@@ -4,6 +4,7 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
 import { photoImg } from '../core/sprites'
+import { visible } from '../core/hand'
 
 /* L'Intrus — parmi des choses qui vont ensemble, une seule ne va pas.
 
@@ -169,6 +170,11 @@ function finish(me: State) {
 export const intrus: GameDef = {
   id: 'intrus', name: "L'Intrus", icon: '🔍', sq: 'sq-sun', cat: 'reflexion',
   subtitle: 'Trouve celui qui ne va pas avec les autres',
+  // La main : « l'une de celles-là » — jamais l'intrus
+  hand: root => {
+    const tiles = intr && !intr.lock ? visible(root, '#intGrid .itile') : []
+    return tiles.length ? { choose: tiles } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

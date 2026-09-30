@@ -7,6 +7,7 @@ import { createStage, loader, dotTex, type Stage, type T3 } from '../core/three3
 import { ground, decor, particles, type Particles } from '../core/scene3d'
 import { critterKit, type Critter, type CritterKind, type CritterKit } from '../core/critters'
 import { critterPortraits, portraitImg } from '../core/portraits'
+import { visible } from '../core/hand'
 
 /* Suites logiques — LE PETIT TRAIN DE LA FERME (28/09). Qu'est-ce qui vient
    après ? Un train entre en gare dans le pré : chaque wagon porte un animal
@@ -470,6 +471,11 @@ function puff(me: State, tr: Train) {
 export const patterns: GameDef = {
   id: 'patterns', name: 'Suites Logiques', icon: '🔷', sq: 'sq-lilac', cat: 'reflexion',
   subtitle: 'Regarde le petit train : quel animal monte dans le dernier wagon ?',
+  // La main : « l'un de ceux-là » — jamais celui qui monte
+  hand: root => {
+    const opts = pt && pt.running && !pt.lock ? visible(root, '.pt-opt:not(.gone)') : []
+    return opts.length ? { choose: opts } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

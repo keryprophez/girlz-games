@@ -2,6 +2,7 @@ import type { GameContext, GameDef } from '../core/types'
 import { rnd, pick } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
+import { some, visible } from '../core/hand'
 
 /* Le Miroir — la moitié gauche montre un motif de pixels, il faut peindre la
    moitié droite pour compléter la symétrie (axe vertical en pointillés).
@@ -187,6 +188,11 @@ function finish(me: State) {
 export const mirror: GameDef = {
   id: 'mirror', name: 'Le Miroir', icon: '🪞', sq: 'sq-lilac', cat: 'reflexion',
   subtitle: 'Peins la moitié droite pour compléter le reflet !',
+  // La main : on peint dans la moitié droite, là où l'on veut
+  hand: root => {
+    const cells = mr && mr.running && !mr.done && !mr.stroke ? visible(root, '.mr-free') : []
+    return cells.length ? { choose: some(cells, 3) } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

@@ -1024,6 +1024,16 @@ async function showDrawing(me: State, d: Drawing) {
 export const coloring: GameDef = {
   id: 'coloring', name: 'L\'Atelier', icon: '🎨', sq: 'sq-sun', cat: 'creatif', music: 'meadow',
   subtitle: 'Dessine au doigt, remplis, tamponne',
+  // La main : un trait sur la feuille (le seau et les tampons : un toucher)
+  hand: root => {
+    const me = at
+    const paper = root.querySelector('#atPaint')
+    const folder = root.querySelector<HTMLElement>('#atFolder')
+    if (!me || !paper || !me.running || me.filming || me.strokes.size || me.pour || (folder && !folder.hidden)) return null
+    const r = paper.getBoundingClientRect()
+    const p = (u: number, v: number) => ({ x: r.left + r.width * u, y: r.top + r.height * v })
+    return me.tool === 'bucket' || me.tool === 'stamp' ? { tap: p(0.5, 0.5) } : { drag: [p(0.32, 0.4), p(0.68, 0.6)] }
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

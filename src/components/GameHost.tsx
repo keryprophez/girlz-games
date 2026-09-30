@@ -14,6 +14,7 @@ import { BADGE } from '../core/badges'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
 import { princessPortraits } from '../core/portraits'
 import { royalKey, type Royal } from '../core/royal'
+import { coachHand } from '../core/hand'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
    Le jeu ne voit que `ctx` ; tout ce qui est commun à 30 jeux vit ici. */
@@ -263,7 +264,10 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       document.removeEventListener('fullscreenchange', doMount)
       raf = requestAnimationFrame(() => {
         try {
-          cleanupRef.current = game.mount(ctx)
+          const off = game.mount(ctx)
+          // La main qui montre : Créer laisse le temps de contempler
+          const hand = game.hand ? coachHand(ctx, game.id, game.hand, creative ? 15000 : 7000) : null
+          cleanupRef.current = () => { hand?.(); off() }
         } catch (err) {
           console.error(err)
           setCrashed(true)

@@ -64,7 +64,6 @@ interface State {
   busy: boolean
   camY: number
   over: boolean
-  tapHint: HTMLElement
   winter: Winter
   /** L'heure du ciel, qui suit la hauteur de la tour (0 = jour, 1 = nuit). */
   dusk: number
@@ -140,7 +139,6 @@ function drop() {
   s.dropped = true
   me.busy = true
   me.cable.visible = false
-  me.tapHint.classList.add('off')
   s.body.type = me.CANNON.Body.DYNAMIC
   s.body.wakeUp()
   s.body.updateMassProperties()
@@ -300,6 +298,8 @@ function gameOver(me: State, collapsed: boolean) {
 export const icetower: GameDef = {
   id: 'icetower', name: 'La Tour de Glace', icon: '🏔', sq: 'sq-sky', cat: 'action', music: 'winter',
   subtitle: 'Un tap pour lâcher le bloc. Monte le plus haut possible !',
+  // La main : un toucher quand le bloc se balance (le bon moment, c'est le jeu)
+  hand: () => it && it.swing && !it.swing.dropped && !it.busy && !it.over ? { tap: { fx: 0.5, fy: 0.62 } } : null,
   mount(c) {
     ctx = c
     c.root.innerHTML = `<div class="arena it-arena" id="itArena"></div>`
@@ -384,10 +384,6 @@ export const icetower: GameDef = {
       )
       scene.add(cable)
 
-      const tapHint = document.createElement('div')
-      tapHint.className = 'tap-hint'
-      tapHint.innerHTML = ICON.tap
-      arena.appendChild(tapHint)
 
       const game = arcade(c, {
         host: arena,
@@ -412,7 +408,7 @@ export const icetower: GameDef = {
         blocks: [], tower: [], perfectRun: 0, swing: null, placed: 0, topY: 0.3,
         swingSpeed: c.byTier(1.05, 1.5, 1.9),
         swingSpan: c.byTier(1.05, 1.35, 1.55),
-        busy: false, camY: 1.1, over: false, tapHint, winter, dusk: 0
+        busy: false, camY: 1.1, over: false, winter, dusk: 0
       }
       it = me
       hideLoader()

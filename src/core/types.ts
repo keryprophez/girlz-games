@@ -18,6 +18,7 @@ export interface FinishPayload {
 }
 
 import type { Royal } from './royal'
+import type { HandSpec } from './hand'
 
 export interface GameContext {
   root: HTMLElement
@@ -72,6 +73,10 @@ export interface GameDef {
       propose les étiquettes + − × ÷ (plusieurs à la fois, + par défaut,
       le dernier choix retenu) et `ctx.ops` suit (27/09). */
   ops?: boolean
+  /** La main qui montre (30/09, core/hand.ts) : le geste à mimer MAINTENANT
+      (taper, glisser, trancher, ou « l'un de ceux-là » sans appuyer — jamais
+      la réponse dans Apprendre), ou null quand le jeu n'attend rien. */
+  hand?: HandSpec
   /** Monte le jeu dans root et renvoie une fonction de nettoyage idempotente. */
   mount(ctx: GameContext): () => void
 }

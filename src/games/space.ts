@@ -8,6 +8,7 @@ import { createStage, loader, type Stage, type T3 } from '../core/three3d'
 import { makeRocket, type Rocket } from '../core/rocket3d'
 import { particles, toScreen, type Particles } from '../core/scene3d'
 import { makeCosmos, SUN_R, type Cosmos } from '../core/cosmos'
+import { HAND_SVG, some } from '../core/hand'
 
 /* Voyage dans l'Espace — refait le 27/09 au niveau de la maquette du père
    (« refais le système solaire à ce niveau de qualité ») : le rendu est dans
@@ -470,6 +471,14 @@ function setRate(me: State, i: number) {
 export const space: GameDef = {
   id: 'space', name: 'Voyage dans l\'Espace', icon: '🚀', sq: 'sq-lilac', cat: 'reflexion', music: 'space',
   subtitle: 'Pilote ta fusée jusqu\'aux vraies planètes du système solaire !',
+  // La main : Explore a déjà la sienne (la lueur sur une planète pas encore
+  // vue) ; Trouve, « l'une de ces planètes-là » — jamais celle qu'on cherche
+  hand: () => {
+    const me = sp
+    if (!me || me.mode !== 'trouve' || !me.quiz.wanted || me.quiz.lock || me.travel) return null
+    const ids = PLANETS.map(p => p.id).filter(id => id !== me.quiz.wanted)
+    return { choose: some(ids, 3).map(id => toScreen(me.stage, me.cosmos.worldPos(id, new me.T.Vector3()))) }
+  },
   mount(c) {
     ctx = c
     let dead = false
@@ -521,7 +530,7 @@ export const space: GameDef = {
         <button class="geo-say" aria-label="Réécouter">${ICON.sound}</button><span class="geo-dots"></span>`
       const hint = document.createElement('div')
       hint.className = 'tap-hint sp3-hint off'
-      hint.innerHTML = ICON.tap
+      hint.innerHTML = HAND_SVG
       const time = document.createElement('div')
       time.className = 'sp3-time'
       time.innerHTML = `<button class="sp3-tbtn" data-t="+1" aria-label="Plus vite">${ICON_HARE}</button>

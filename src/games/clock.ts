@@ -3,6 +3,7 @@ import { $, rnd, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
+import { visible } from '../core/hand'
 
 /* Quelle heure ? — apprendre à LIRE l'heure pas à pas, en cinq modes :
    Découvre (manipule l'horloge, elle dit l'heure), Les heures (la petite
@@ -420,6 +421,25 @@ function finishQuizMode(me: State) {
 export const clock: GameDef = {
   id: 'clock', name: 'Quelle heure ?', icon: '🕐', sq: 'sq-sun', cat: 'reflexion',
   subtitle: 'Découvre, apprends les aiguilles, puis règle l\'horloge toi-même',
+  // La main : on tourne la grande aiguille (Découvre, Règle), ou « l'une de
+  // ces heures-là » (jamais la bonne)
+  hand: root => {
+    const me = ck
+    if (!me || me.lock || me.grab) return null
+    if (me.mode === 'discover' || me.mode === 'set') {
+      const svg = root.querySelector('#ckFace svg')
+      if (!svg) return null
+      const r = svg.getBoundingClientRect()
+      const tip = (deg: number) => {
+        const a = deg * Math.PI / 180
+        return { x: r.left + (100 + 60 * Math.cos(a)) / 200 * r.width, y: r.top + (100 + 60 * Math.sin(a)) / 200 * r.height }
+      }
+      const b = me.m * 6 - 90
+      return { drag: [tip(b), tip(b + 70)] }
+    }
+    const opts = visible(root, '#ckOpts .qopt')
+    return opts.length ? { choose: opts } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `

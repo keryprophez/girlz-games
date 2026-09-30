@@ -275,6 +275,8 @@ function bouquet() {
 export const fireworks: GameDef = {
   id: 'fireworks', name: "Feu d'Artifice", icon: '🎆', sq: 'sq-lilac', cat: 'creatif', music: 'night',
   subtitle: 'Tape dans le ciel pour lancer tes fusées !',
+  // La main : on touche le ciel
+  hand: () => fw && fw.running && !fw.finale ? { tap: { fx: 0.5, fy: 0.32 } } : null,
   mount(c) {
     ctx = c
     const need = c.byTier(8, 10, 12)
@@ -283,7 +285,6 @@ export const fireworks: GameDef = {
         <canvas id="fwSky" class="fw-layer"></canvas>
         <canvas id="fwCanvas" class="fw-layer"></canvas>
         <canvas id="fwShore" class="fw-layer"></canvas>
-        <div class="tap-hint" id="fwHint">${ICON.tap}</div>
         <div class="tq-side">
           <div class="tq-moves" id="fwCount">${ICON.bolt}<span>0</span></div>
           <button class="sn-tool go fw-final" id="fwFinal" style="display:none" aria-label="Bouquet final">${ICON.star}</button>
@@ -319,7 +320,6 @@ export const fireworks: GameDef = {
       // Un toucher dans le lac lance quand même une fusée, juste au-dessus des toits
       launch(e.clientX - r.left, Math.min(e.clientY - r.top, me.shore - 140))
       me.count++
-      $('fwHint').classList.add('off')
       $('fwCount').innerHTML = `${ICON.bolt}<span>${me.count}</span>`
       if (me.count === need) $('fwFinal').style.display = ''
     }

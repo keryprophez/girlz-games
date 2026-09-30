@@ -7,6 +7,7 @@ import { ICON } from '../core/icons'
 import { critterPortraits, portraitImg } from '../core/portraits'
 import type { CritterKind } from '../core/critters'
 import { SHOW_PROFILES, useFerme } from '../core/store'
+import { visible } from '../core/hand'
 
 /* Puissance 4 des Sœurs — LE jeu à deux sur la même tablette, au tour par
    tour : chacune joue avec SA tête comme jeton. Aligne 4 pour gagner !
@@ -236,6 +237,13 @@ const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 export const connect4: GameDef = {
   id: 'connect4', name: 'Puissance 4', icon: '🔴', sq: 'sq-sun', cat: 'reflexion',
   subtitle: 'À deux, chacune son tour, ou seule contre la poule : aligne 4 têtes !',
+  // La main : on touche une colonne qui n'est pas pleine
+  hand: root => {
+    const me = c4
+    if (!me || me.lock || me.over || (me.solo && me.turn === 1)) return null
+    const cols = visible(root, '.c4-col').filter(b => me.grid[0][Number(b.dataset.c)] === -1)
+    return cols.length ? { tap: cols[Math.floor(Math.random() * cols.length)] } : null
+  },
   mount(c) {
     ctx = c
     // Tant que le choix de joueuse est masqué, on ne sait pas qui tient la

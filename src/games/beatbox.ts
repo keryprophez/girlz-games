@@ -4,7 +4,10 @@ import { ICON } from '../core/icons'
 import { cry, preloadCries, CRY } from '../core/sfx'
 import { isPaused, onPause } from '../core/session'
 import { critterPortraits, portraitImg } from '../core/portraits'
-import type { CritterKind } from '../core/critters'
+import { critterKit, type CritterKind } from '../core/critters'
+import { createStage, loader, picker, type Stage } from '../core/three3d'
+import { barnChoir, singOn, stepChoir, type Choir } from '../core/barn3d'
+import { some, visible } from '../core/hand'
 
 /* Boîte à Rythme de la Ferme — une grille de 8 temps × 4 animaux :
    on allume des cases, on appuie sur Joue, la ferme fait de la musique.
@@ -17,17 +20,25 @@ import type { CritterKind } from '../core/critters'
    note, l'écran de fin ne juge pas. La lecture s'arrête avec la pause.
    Depuis le 25/09, les animaux chantent avec leur VRAIE voix (les cris
    choisis par le père pour le Chœur, `cry()` de core/sfx.ts), coupée à la
-   longueur d'un temps ; l'ancienne voix synthétique reste en secours. */
+   longueur d'un temps ; l'ancienne voix synthétique reste en secours.
+
+   Sur scène depuis le 30/09 : au-dessus de la grille, la grange du Chœur
+   (core/barn3d.ts) et les six musiciens sur l'estrade, chacun sur un
+   coussin de la couleur de sa ligne. Quand sa case joue, il saute sous son
+   projecteur et des notes s'envolent ; la guirlande bat la mesure (plus
+   fort au premier temps). On peut aussi les toucher sur scène. */
 
 const STEPS = 8
-const ROWS: { animal: CritterKind; color: string; synth(): void }[] = [
-  { animal: 'cow', color: '#B197FC', synth() { sMoo() } },
-  { animal: 'pig', color: '#F58FB8', synth() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) } },
-  { animal: 'duck', color: '#4FB8E7', synth() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) } },
-  { animal: 'hen', color: '#FFA94D', synth() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } },
+/* `cushion` : la couleur de la ligne, assombrie pour la 3D (sous la
+   lumière et l'ACES, une couleur vive ressort blanche) */
+const ROWS: { animal: CritterKind; color: string; cushion: number; synth(): void }[] = [
+  { animal: 'cow', color: '#B197FC', cushion: 0x6E55B8, synth() { sMoo() } },
+  { animal: 'pig', color: '#F58FB8', cushion: 0xB84E78, synth() { tone(150, 0.09, 'square', 0.12); tone(110, 0.09, 'square', 0.1, 0.06) } },
+  { animal: 'duck', color: '#4FB8E7', cushion: 0x2A7EAE, synth() { tone(280, 0.1, 'sawtooth', 0.12); tone(230, 0.1, 'sawtooth', 0.1, 0.07) } },
+  { animal: 'hen', color: '#FFA94D', cushion: 0xC0702A, synth() { tone(880, 0.05, 'triangle', 0.14); tone(1180, 0.06, 'triangle', 0.1, 0.045) } },
   // Le 28/09, la chèvre et le coq rejoignent l'orchestre (leurs voix attendaient un personnage)
-  { animal: 'goat', color: '#8CCB6A', synth() { tone(520, 0.12, 'sawtooth', 0.07); tone(470, 0.12, 'sawtooth', 0.06, 0.08) } },
-  { animal: 'rooster', color: '#E0607E', synth() { tone(660, 0.08, 'triangle', 0.12); tone(990, 0.12, 'triangle', 0.1, 0.07) } }
+  { animal: 'goat', color: '#8CCB6A', cushion: 0x55903C, synth() { tone(520, 0.12, 'sawtooth', 0.07); tone(470, 0.12, 'sawtooth', 0.06, 0.08) } },
+  { animal: 'rooster', color: '#E0607E', cushion: 0xA83A52, synth() { tone(660, 0.08, 'triangle', 0.12); tone(990, 0.12, 'triangle', 0.1, 0.07) } }
 ]
 
 const TEMPOS = [{ ms: 500, cap: 'Lent', dots: 1 }, { ms: 340, cap: 'Moyen', dots: 2 }, { ms: 230, cap: 'Vite', dots: 3 }]
@@ -63,6 +74,10 @@ interface State {
   cells: HTMLElement[][]
   animals: HTMLElement[]
   head: HTMLElement
+  stage: Stage | null
+  choir: Choir | null
+  /** La mesure pour la guirlande : 1 au temps, décroît entre deux */
+  beat: number
 }
 
 let bb: State | null = null
@@ -79,6 +94,8 @@ function sing(me: State, r: number) {
   if (!voice || !cry(voice, { max: Math.min(0.9, me.tempo / 1000 * 1.5), vol: 0.85 })) ROWS[r].synth()
   const a = me.animals[r]
   a.classList.remove('sing'); void a.offsetWidth; a.classList.add('sing')
+  // Sur scène : il saute sous son projecteur
+  if (me.choir) singOn(me.choir, r, Math.min(0.8, me.tempo / 1000 * 1.4), 2)
 }
 
 function tick(me: State) {
@@ -91,6 +108,7 @@ function tick(me: State) {
   me.head.style.top = c0.offsetTop + 'px'
   me.head.style.height = cN.offsetTop + cN.offsetHeight - c0.offsetTop + 'px'
   ROWS.forEach((_, r) => { if (me.grid[r][me.step]) sing(me, r) })
+  me.beat = me.step % 4 === 0 ? 1 : 0.55
 }
 
 /* L'horloge : le temps du prochain pas est ACCUMULÉ sur `performance.now()`
@@ -134,6 +152,15 @@ const tool = (id: string, icon: string, cap: string, extra = '') =>
 export const beatbox: GameDef = {
   id: 'beatbox', name: 'Boîte à Rythme', icon: '🥁', sq: 'sq-pink', cat: 'creatif',
   subtitle: 'Allume des cases, appuie sur Joue : la ferme fait de la musique !',
+  // La main : on allume une case ; des cases allumées et rien ne joue ? « Joue »
+  hand: root => {
+    const me = bb
+    if (!me) return null
+    const play = root.querySelector<HTMLElement>('#bbPlay')
+    if (!me.playing && play && me.grid.some(row => row.some(Boolean))) return { tap: play }
+    const cells = visible(root, '.bb-cell:not(.on)')
+    return cells.length ? { tap: some(cells, 1)[0] } : null
+  },
   mount(c) {
     ctx = c
     preloadCries(ROWS.map(r => CRY[r.animal]!).filter(Boolean))
@@ -146,12 +173,15 @@ export const beatbox: GameDef = {
           ${tool('bbP2', ICON.sound + '<i class="bb-num">2</i>', 'Air 2')}
           ${tool('bbClear', ICON.replay, 'Efface')}
         </div>
+        <div class="bb-main">
+        <div class="bb-scene" id="bbScene"></div>
         <div class="bb-board" id="bbGrid">
           <div class="bb-head"></div>
           ${ROWS.map((row, r) => `
             <button class="bb-animal" data-r="${r}" style="--rc:${row.color}" aria-label="${row.animal}"></button>
             ${Array.from({ length: STEPS }, (_, s) =>
               `<button class="bb-cell${s % 4 === 0 ? ' bar' : ''}" data-r="${r}" data-s="${s}" style="--rc:${row.color}"></button>`).join('')}`).join('')}
+        </div>
         </div>
         <button class="sn-tool go bb-done" id="bbDone" aria-label="Fini">${ICON.check}</button>
       </div>`
@@ -161,9 +191,41 @@ export const beatbox: GameDef = {
     const animals = Array.from(board.querySelectorAll<HTMLElement>('.bb-animal'))
     const me: State = {
       grid: ROWS.map(() => Array(STEPS).fill(0)), playing: false, step: -1, tempo: 340, raf: 0, nextAt: 0,
-      root, cells, animals, head: board.querySelector<HTMLElement>('.bb-head')!
+      root, cells, animals, head: board.querySelector<HTMLElement>('.bb-head')!,
+      stage: null, choir: null, beat: 0
     }
     bb = me
+
+    // La scène de la grange, au-dessus de la grille (la grille marche déjà pendant le chargement)
+    const holder = root.querySelector<HTMLElement>('#bbScene')!
+    const hideLoader = loader(holder, 'beatbox')
+    ;(async () => {
+      const stage = await createStage(holder, {
+        sky: '#1E1410', fog: [10, 24], fogColor: '#2A1C14', fov: 30,
+        cam: [0, 1.5, 4.3], target: [0, 1.0, -0.8],
+        hemi: ['#FFE2B8', '#3A2416', 1.05],
+        sun: { pos: [2.5, 7.5, 5], color: '#FFE3B0', intensity: 1.7, area: 7, far: 25 },
+        fill: 0.55, exposure: 1.08
+      })
+      if (bb !== me) { stage.dispose(); return }
+      me.stage = stage
+      const kit = critterKit(stage.T)
+      stage.keep({ dispose: () => kit.dispose() })
+      const choir = barnChoir(stage, kit, ROWS.map(r => ({ animal: r.animal, color: r.cushion })))
+      me.choir = choir
+      // On touche un musicien sur scène : il chante, comme son bouton de ligne
+      const pick = picker(stage)
+      stage.renderer.domElement.addEventListener('pointerdown', e => {
+        const hits = pick(e, choir.actors.map(a => a.hit), false)
+        if (hits.length) sing(me, hits[0].object.userData.i as number)
+      })
+      hideLoader()
+      stage.start(dt => {
+        if (bb !== me) return
+        me.beat *= Math.exp(-dt * 7)
+        stepChoir(choir, dt, { beat: me.playing ? me.beat : 0 })
+      })
+    })().catch(err => { hideLoader(); if (bb === me) throw err })
 
     // Les vrais personnages de la ferme sur les boutons de ligne
     const px = Math.max(64, Math.round(animals[0].clientHeight * 0.95))
@@ -208,6 +270,8 @@ export const beatbox: GameDef = {
       cancelAnimationFrame(me.raf)
       me.playing = false
       if (bb === me) bb = null
+      me.stage?.dispose()
+      me.stage = null
     }
   }
 }

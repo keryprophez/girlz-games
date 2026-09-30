@@ -186,6 +186,16 @@ function build(img: string) {
 export const taquin: GameDef = {
   id: 'taquin2', name: 'Taquin', icon: '🖼', sq: 'sq-sky', cat: 'reflexion',
   subtitle: 'Fais glisser les morceaux pour recomposer l\'image',
+  // La main : on touche un morceau à côté du trou, il glisse
+  hand: () => {
+    const me = tq
+    if (!me || !me.running) return null
+    const n = me.size, b = me.blank, br = Math.floor(b / n), bc = b % n
+    const near = [b - n, b + n, bc > 0 ? b - 1 : -1, bc < n - 1 ? b + 1 : -1]
+      .filter(i => i >= 0 && i < n * n && (i % n === bc || Math.floor(i / n) === br))
+    const i = near[Math.floor(Math.random() * near.length)]
+    return i === undefined ? null : { tap: me.tiles[me.cells[i]] }
+  },
   mount(c) {
     ctx = c
     const st = useFerme.getState()

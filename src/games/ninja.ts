@@ -108,7 +108,6 @@ interface State {
   dead: boolean
   raf: number
   last: number
-  hint: HTMLElement | null
   lastWhoosh: number
 }
 
@@ -288,7 +287,6 @@ function burst(me: State, x: number, y: number, cols: string[], n: number, nx: n
 
 function slice(me: State, f: Fruit, dx: number, dy: number, blade: { stroke: number }) {
   if (me.over) return
-  if (me.hint) { me.hint.remove(); me.hint = null }
   const i = me.fruits.indexOf(f)
   if (i < 0) return
 
@@ -511,6 +509,15 @@ function drawBlades(me: State, now: number) {
 export const ninja: GameDef = {
   id: 'ninja', name: 'Ninja Verger', icon: '🥷', sq: 'sq-mint', cat: 'action', music: 'fair', duo: true,
   subtitle: 'Tranche les fruits d\'un trait de doigt… pas le cactus !',
+  // La main : un coup de lame à travers un fruit (jamais le cactus)
+  hand: () => {
+    const me = nj
+    const f = me && !me.over ? me.fruits.find(f => !f.bad && !f.knocked) : null
+    if (!me || !f) return null
+    const r = me.cv.getBoundingClientRect()
+    const x = r.left + f.x, y = r.top + f.y
+    return { swipe: [{ x: x - 120, y: y + 55 }, { x: x + 120, y: y - 55 }] }
+  },
   mount(c) {
     ctx = c
     let dead = false
@@ -550,7 +557,7 @@ export const ninja: GameDef = {
         fruits: [], halves: [], drops: [], trail: [], blades: new Map(), game,
         wave: 0, volleys: 0, pending: 0, waiting: false, raining: false, rainDone: false,
         launched: 0, sliced: 0, rainSliced: 0, streak: 0, bestStreak: 0, pace: 1, simT: 0, slowUntil: 0, shakeT: 0,
-        over: false, dead: false, raf: 0, last: performance.now(), hint: null, lastWhoosh: 0
+        over: false, dead: false, raf: 0, last: performance.now(), lastWhoosh: 0
       }
       nj = me
 
@@ -572,11 +579,6 @@ export const ninja: GameDef = {
 
       if (c.duo) game.flash(ICON.duo)
       // Le geste, montré sans un mot : une main qui balaie, jusqu'au premier fruit tranché
-      const hint = document.createElement('div')
-      hint.className = 'nj-hint'
-      hint.innerHTML = `<i></i>${ICON.tap}`
-      arena.appendChild(hint)
-      me.hint = hint
 
       if ((window as unknown as { __BOT?: boolean }).__BOT) {
         ;(window as unknown as { __nj: unknown }).__nj = {

@@ -11,6 +11,7 @@ import {
   mulPool, nearMiss, nearMissAdd, orient, planHarvest, record, requeue, saveMemory, subChoices, subFact, subPool, viewLevel,
   LV, type Fact, type Item, type Level, type Memory
 } from '../core/facts'
+import { some, visible } from '../core/hand'
 
 /* 🥕 Le Potager — LE jeu des calculs (27/09 : « je veux un seul jeu »). Il
    remplace le Grand Tableau + : les quatre opérations dans la même grille
@@ -169,7 +170,6 @@ interface State {
   streak: number
   done: number
   drag: number | null
-  hint: HTMLElement | null
   pausedMs: number
   pauseAt: number
   path: Path | null
@@ -894,7 +894,6 @@ function startPath(me: State) {
   setFam(me, me.fams[0])
   paintStages(me)
   paintPathDots(me)
-  showHint(me)
 }
 
 /** Une case du Parcours, posée avec l'une des opérations choisies de son
@@ -918,7 +917,6 @@ function nextStage(me: State) {
   p.stage++
   me.gen++
   me.lock = true
-  me.hint?.remove(); me.hint = null
   clearMarks(me)
   setShape(me, 0, 0)
   lightHeads(me, 0, 0)
@@ -1014,16 +1012,6 @@ function pathOutro(me: State) {
 
 /* ---------- Les modes ---------- */
 
-function showHint(me: State) {
-  me.hint?.remove()
-  // La main qui montre le geste : on touche une case
-  const hint = document.createElement('div')
-  hint.className = 'pg-hint'
-  hint.innerHTML = ICON.tap
-  me.grid.appendChild(hint)
-  me.hint = hint
-}
-
 function setMode(me: State, mode: Mode) {
   me.mode = mode
   me.gen++
@@ -1051,15 +1039,12 @@ function setMode(me: State, mode: Mode) {
   $('pgStages').innerHTML = ''
   const extra = $('pgExtra')
   extra.innerHTML = ''
-  me.hint?.remove()
-  me.hint = null
   if (mode === 'discover') {
     extra.innerHTML = `<div class="pg-count" id="pgCount"></div>
       <span class="tool-item"><button class="sn-tool pg-big" id="pgPivot" aria-label="Tourne" disabled>${ICON.rotate}</button><i class="tool-cap">Tourne</i></span>`
     ;($('pgPivot') as HTMLButtonElement).onclick = () => { if (pg === me) pivot(me) }
     setFam(me, me.fam)
     paintCount(me)
-    showHint(me)
   } else if (mode === 'path') {
     startPath(me)
   } else {
@@ -1075,6 +1060,25 @@ export const potager: GameDef = {
   music: 'meadow',
   ops: true,
   subtitle: 'Les tables qui poussent : + − × ÷',
+  // La main : Découvre, on dessine une bande de cases ; sinon « l'une de
+  // celles-là » (réponses, touches, cases) — jamais la réponse
+  hand: root => {
+    const me = pg
+    if (!me || me.lock || me.over || me.counting || me.drag !== null) return null
+    const cells = visible(root, '#pgGrid .pg-cell:not(.out)')
+    if (me.mode === 'discover' || (me.mode === 'path' && me.path?.stage === 0)) {
+      const a = some(cells, 1)[0]
+      if (!a) return null
+      const b = root.querySelector<HTMLElement>(`#pgGrid .pg-cell[data-r="${Number(a.dataset.r) + 1}"][data-c="${Number(a.dataset.c) + 2}"]:not(.out)`)
+      return b ? { drag: [a, b] } : { tap: a }
+    }
+    if (!me.q?.ready) return null
+    const opts = visible(root, '#pgOpts .pg-opt')
+    if (opts.length) return { choose: opts }
+    const keys = visible(root, '.pg-pad .pg-key')
+    if (keys.length) return { choose: some(keys, 4) }
+    return cells.length ? { choose: some(cells, 4) } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `
@@ -1102,7 +1106,7 @@ export const potager: GameDef = {
       cells: [], rows: [], cols: [], corner: document.createElement('div'), grid: $('pgGrid'), frame: document.createElement('div'),
       R: 0, C: 0, lastR: 0, lastC: 0, found: emptyKept(),
       mem: loadMemory('potager'), queue: [], qi: 0, q: null, firstTry: 0, streak: 0, done: 0,
-      drag: null, hint: null, pausedMs: 0, pauseAt: 0, path: null
+      drag: null, pausedMs: 0, pauseAt: 0, path: null
     }
     pg = me
     buildGrid(me)
@@ -1128,7 +1132,6 @@ export const potager: GameDef = {
       if (me.mode === 'path' && me.path?.stage === 3) { findTap(me, cell); return }
       if (!drawing() || me.drag !== null || !inZone(me, cell.r, cell.c)) return
       me.drag = ev.pointerId
-      me.hint?.remove(); me.hint = null
       dragTo(me, cell.r, cell.c, true)
     }
     const onMove = (ev: PointerEvent) => {

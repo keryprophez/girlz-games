@@ -61,7 +61,6 @@ interface State {
   ringGeo: import('three').SphereGeometry
   curve: import('three').CatmullRomCurve3
   over: boolean
-  tapHint: HTMLElement
 }
 
 let cp: State | null = null
@@ -94,7 +93,6 @@ function setDir(x: number, y: number) {
   if (!me || me.over) return
   if (x === -me.dir.x && y === -me.dir.y) return // pas de demi-tour sur place
   me.nextDir = { x, y }
-  me.tapHint.classList.add('off')
 }
 
 function bite(me: State, at: Cell, wall: boolean) {
@@ -205,6 +203,17 @@ function makeHead(T: T3) {
 export const caterpillar: GameDef = {
   id: 'caterpillar', name: 'La Chenille', icon: '🐛', sq: 'sq-mint', cat: 'action', music: 'meadow',
   subtitle: 'Glisse ton doigt pour guider la chenille vers les fruits !',
+  // La main : un glissé vers le fruit (jamais un demi-tour, que le jeu refuse)
+  hand: () => {
+    const me = cp
+    const el = document.getElementById('cpArena')
+    if (!me || me.over || !el) return null
+    const h = me.snake[0], dx = me.fruit.x - h.x, dy = me.fruit.y - h.y
+    let d = Math.abs(dx) >= Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) }
+    if ((!d.x && !d.y) || (d.x === -me.dir.x && d.y === -me.dir.y)) d = me.dir.x ? { x: 0, y: dy >= 0 ? 1 : -1 } : { x: dx >= 0 ? 1 : -1, y: 0 }
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.55, L = 80
+    return { swipe: [{ x: cx - d.x * L, y: cy - d.y * L }, { x: cx + d.x * L, y: cy + d.y * L }] }
+  },
   mount(c) {
     ctx = c
     let dead = false
@@ -279,10 +288,6 @@ export const caterpillar: GameDef = {
       scene.add(fruitGroup, bonusGroup)
       hideLoader()
 
-      const tapHint = document.createElement('div')
-      tapHint.className = 'tap-hint'
-      tapHint.innerHTML = ICON.tap
-      arena.appendChild(tapHint)
 
       /* La chenille : la tête + des anneaux posés sur une courbe continue */
       const head = makeHead(T)
@@ -326,7 +331,7 @@ export const caterpillar: GameDef = {
         fruit: { x: 0, y: 0, kind: 'apple' }, bonus: null,
         fruitGroup, bonusGroup, fruitModels, head, rings, ringGeo,
         curve: new T.CatmullRomCurve3([new T.Vector3(), new T.Vector3()], false, 'centripetal', 0.5),
-        over: false, tapHint
+        over: false
       }
       cp = me
       placeFruit(me)

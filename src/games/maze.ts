@@ -5,7 +5,7 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { ICON } from '../core/icons'
 import { tone } from '../core/audio'
 import { createStage, loader, bumpyNormal, type Stage, type T3 } from '../core/three3d'
-import { particles, camShake, type Particles, type CamShake } from '../core/scene3d'
+import { particles, camShake, type Particles, type CamShake, toScreen } from '../core/scene3d'
 import { critterKit, type Critter, type CritterKit } from '../core/critters'
 
 /* Labyrinthe — trois façons de se perdre : le jour (classique), la nuit
@@ -493,6 +493,20 @@ function finish(me: State) {
 export const maze: GameDef = {
   id: 'maze', name: 'Labyrinthe', icon: '🌀', sq: 'sq-peach', cat: 'reflexion',
   subtitle: 'Classique, dans le noir… ou sur la glace !',
+  // La main : le poussin glisse d'une case dans un couloir ouvert (sur la
+  // glace, un geste vif) — jamais un chemin entier
+  hand: () => {
+    const me = mz
+    if (!me || me.won || me.path.length) return null
+    const { stage, T } = me.s3
+    const { x, y } = me.pos
+    const open = [0, 1, 2, 3].filter(k => !me.grid[y][x].walls[k])
+    if (!open.length) return null
+    const k = open[Math.floor(Math.random() * open.length)]
+    const at = (cx: number, cy: number) => toScreen(stage, new T.Vector3(wx(me, cx), 0, wz(me, cy)))
+    const a = at(x, y), b = at(x + D[k][0], y + D[k][1])
+    return me.mode === 'ice' ? { swipe: [a, b] } : { drag: [a, b] }
+  },
   mount(c) {
     ctx = c
     let dead = false

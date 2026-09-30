@@ -6,7 +6,7 @@ import {
   createStage, loader, woodTex, bumpyNormal, picker,
   type Stage, type T3
 } from '../core/three3d'
-import { particles, decor, type Particles } from '../core/scene3d'
+import { particles, decor, type Particles, toScreen } from '../core/scene3d'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 
@@ -534,6 +534,26 @@ function finish(me: State) {
 export const pizza: GameDef = {
   id: 'pizza', name: 'La Pizzeria', icon: '🍕', sq: 'sq-peach', cat: 'creatif', music: 'kitchen',
   subtitle: 'Sauce, fromage, garniture… au four, puis on croque !',
+  // La main : la sauce s'étale d'un glissé, un ingrédient se pose d'un
+  // toucher ; bien garnie, au four ; cuite, on prend une part
+  hand: root => {
+    const me = S
+    if (!me || me.ended) return null
+    const T = me.stage.T
+    const on = (x: number, z: number) => toScreen(me.stage, me.pizza.localToWorld(new T.Vector3(x, PH, z)))
+    if (me.phase === 'garnir') {
+      const oven = root.querySelector<HTMLElement>('#pzOven')
+      if (me.pieces >= 6 && oven) return { tap: oven }
+      return me.tool === 'tomato' || me.tool === 'cream' ? { drag: [on(-0.25, 0.12), on(0.25, -0.12)] } : { tap: on(0.12, -0.06) }
+    }
+    if (me.phase === 'servi' && me.cut >= 3) {
+      const w = me.wedges.find(w => !w.eaten && w.lift === 0)
+      if (!w) return null
+      const a = w.a0 + Math.PI / SLICES
+      return { tap: on(Math.cos(a) * 0.3, -Math.sin(a) * 0.3) }
+    }
+    return null
+  },
   mount(c) {
     ctx = c
     let dead = false

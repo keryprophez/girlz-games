@@ -2,12 +2,13 @@ import type { GameContext, GameDef } from '../core/types'
 import { $, pick } from '../core/utils'
 import { photoImg } from '../core/sprites'
 import { createStage, loader, loadThree, picker, dotTex, type Stage, type T3 } from '../core/three3d'
-import { particles, type Particles } from '../core/scene3d'
+import { particles, type Particles, toScreen } from '../core/scene3d'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 import { feature } from 'topojson-client'
 import type { Topology, GeometryCollection } from 'topojson-specification'
 import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson'
+import { some } from '../core/hand'
 
 /* Le Tour du Monde — de la VRAIE géographie (2/09).
 
@@ -172,7 +173,7 @@ interface State {
   busy: boolean
   over: boolean
   ui: { bar: HTMLElement; ask: HTMLElement; askImg: HTMLElement; askText: HTMLElement; say: HTMLElement
-    dots: HTMLElement; done: HTMLElement; name: HTMLElement; hint: HTMLElement }
+    dots: HTMLElement; done: HTMLElement; name: HTMLElement }
   /** Dernier nom affiché : le haut-parleur du bandeau le redit. */
   lastName: string | null
   camFrom: import('three').Vector3
@@ -351,7 +352,6 @@ function tapped(me: State, hit: { kind: 'pays' | 'ville' | 'region'; name: strin
       showName(me, asCont ? CONTINENTS[CONTINENT_OF[hit.name]].fr : frCountry(hit.name))
     } else if (hit.kind === 'region') { selectRegion(me, hit.name); pulseCity(me, null); showName(me, hit.name) }
     else { pulseCity(me, hit.city!); showName(me, hit.name) }
-    me.ui.hint.classList.add('off')
     sfx('pluck', { vol: 0.5 })
     return
   }
@@ -392,6 +392,25 @@ function animalJumps(me: State, countryName: string) {
 export const geoGame: GameDef = {
   id: 'geo', name: 'Le Tour du Monde', icon: '🌍', sq: 'sq-sky', cat: 'reflexion', music: 'space',
   subtitle: 'Le vrai globe, les vrais pays, et la France avec ses régions et ses villes',
+  // La main : Explore, on touche le globe ou une région ; Trouve, « l'un de
+  // ces endroits-là » (jamais celui qu'on cherche)
+  hand: () => {
+    const me = geo
+    if (!me || me.over || me.busy) return null
+    const T = me.stage.T
+    if (me.map === 'france') {
+      const wanted = me.target?.kind === 'region' ? me.target.nom : null
+      const others = [...me.regionMeshes].filter(([n]) => n !== wanted).map(([, m]) => m)
+      const pts = some(others, me.mode === 'explore' ? 1 : 3).map(m => toScreen(me.stage, new T.Box3().setFromObject(m).getCenter(new T.Vector3())))
+      if (!pts.length) return null
+      return me.mode === 'explore' ? { tap: pts[0] } : { choose: pts }
+    }
+    const c = toScreen(me.stage, { x: 0, y: 0, z: 0 }), top = toScreen(me.stage, { x: 0, y: R, z: 0 })
+    const rr = Math.abs(top.y - c.y)
+    if (me.mode === 'explore') return { tap: { x: c.x - rr * 0.2, y: c.y - rr * 0.15 } }
+    if (!me.target) return null
+    return { choose: [[-0.45, -0.3], [0.4, 0.1], [-0.1, 0.45]].map(([u, v]) => ({ x: c.x + u * rr, y: c.y + v * rr })) }
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `<div class="arena g3-arena geo-arena" id="geoArena"></div>`
@@ -533,10 +552,6 @@ export const geoGame: GameDef = {
       nameEl.innerHTML = `<b></b><button class="geo-again" aria-label="Réécouter">${ICON.sound}</button>`
       arena.appendChild(nameEl)
       // L'invite : une main qui tape sur le globe, tant qu'on n'a rien touché
-      const hintEl = document.createElement('div')
-      hintEl.className = 'tap-hint geo-hint'
-      hintEl.innerHTML = ICON.tap
-      arena.appendChild(hintEl)
       const done = document.createElement('button')
       done.className = 'geo-done'
       done.setAttribute('aria-label', "J'ai fini")
@@ -549,7 +564,7 @@ export const geoGame: GameDef = {
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
         selected: null, target: null, tries: 0, asked: 0, errors: 0, total: 8, busy: false, over: false,
         ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, askText: ask.querySelector('.geo-asktext')!,
-          say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl, hint: hintEl },
+          say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl },
         lastName: null,
         camFrom: new T.Vector3(0, 0.6, 6.4), camTo: new T.Vector3(0, 0.6, 6.4), camLook: new T.Vector3(0, 0, 0)
       }
@@ -585,7 +600,7 @@ export const geoGame: GameDef = {
           b.classList.toggle('on', on); b.parentElement?.classList.toggle('sel', on)
         })
         done.style.display = m === 'explore' ? '' : 'none'
-        if (m === 'explore') { me.ui.ask.classList.add('off'); me.target = null; showName(me, null); me.ui.hint.classList.remove('off') }
+        if (m === 'explore') { me.ui.ask.classList.add('off'); me.target = null; showName(me, null) }
         else startRound()
         sfx('click', { vol: 0.5 })
       }

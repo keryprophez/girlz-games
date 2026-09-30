@@ -4,6 +4,7 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
 import { photoImg } from '../core/sprites'
+import { some, visible } from '../core/hand'
 
 /* Chasse aux lettres — retrouve les lettres du mot, dans l'ordre. Premier
    mot : ton prénom (quand on sait qui joue). Calibré CP pour Jade, mots plus
@@ -164,6 +165,12 @@ function finish(me: State) {
 export const letters: GameDef = {
   id: 'letters', name: 'Chasse aux lettres', icon: '🔤', sq: 'sq-mint', cat: 'reflexion',
   subtitle: 'Retrouve les lettres du mot, dans l\'ordre !',
+  // La main : « l'une de ces lettres-là » — jamais la suivante du mot
+  hand: root => {
+    const me = lg
+    const tiles = me && me.running && !me.peeking && me.pos < me.word.length ? visible(root, '.lg-tile:not(.used)') : []
+    return tiles.length ? { choose: some(tiles, 4) } : null
+  },
   mount(c) {
     ctx = c
     c.root.innerHTML = `
