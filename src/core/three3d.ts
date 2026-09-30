@@ -28,7 +28,11 @@ export function loader(arena: HTMLElement, gameId: string, timeoutMs = 15000): (
   arena.appendChild(el)
   // Un chargement qui n'aboutit jamais (glTF en 404, import cassé) laissait
   // tourner l'écran d'attente sans fin : au-delà du délai, c'est une erreur
-  // comme une autre, GameHost affiche « Oups » avec Réessayer.
+  // comme une autre, GameHost affiche « Oups » avec Réessayer. Sous les bots
+  // (3D logicielle, navigateur à froid : shaders compilés un par un), le
+  // premier jeu ouvert met jusqu'à 15 s à charger — il était déclaré « bloqué »
+  // en pleine compilation (la Chenille, 30/09) : on leur laisse une minute
+  if ((window as unknown as { __BOT?: boolean }).__BOT) timeoutMs = Math.max(timeoutMs, 60000)
   const guard = window.setTimeout(() => {
     if (!el.isConnected) return
     el.remove()
