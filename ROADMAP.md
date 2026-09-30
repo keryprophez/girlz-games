@@ -860,6 +860,46 @@ en a retenu sept, et une suppression :
 - Refusés : la lumière du Bonhomme (il sort), Puissance 4 en 3D, l'horloge
   « journée à la ferme » (« trop brouillon, c'est pour apprendre l'heure »).
 
+## « 20 autres améliorations, nouveaux jeux, apprentissage ou création » (29/09)
+
+Vingt propositions tirées de la planche des 24 affiches ; le père a répondu
+au QCM (cinq salves de quatre questions). Retenues, dans l'ordre du plan :
+
+- **4. La main qui montre** (en priorité) : une main fantôme mime le geste
+  (taper, glisser, tirer) dans tous les jeux, à la première partie, puis de
+  nouveau quand rien ne se passe pendant quelques secondes. Aujourd'hui,
+  cinq jeux sur 24 le font.
+- **1. Le Miroir en perles à repasser** : plaque à picots en 3D, on complète
+  le reflet perle par perle ; le fer les fait fondre, l'objet se décolle.
+- **2. Le Taquin devient un vrai puzzle** : pièces aux vraies découpes, en
+  vrac sur la table, images tirées de leurs créations (princesse, Atelier,
+  ferme, Espace), de 6 à 48 pièces ; le taquin reste en second mode.
+- **3. Les cubes de l'alphabet** (la Chasse aux lettres) : cubes en bois 3D,
+  chaque cube posé dit son son, puis la syllabe, puis le mot (pour Jade).
+- **5. La Boîte à rythme sur la scène de la grange** : les six animaux sur
+  l'estrade du Chœur chantent en direct quand leur case joue.
+- **6. Le Piano, cinq chansons de plus** : Frère Jacques, Ah vous dirai-je
+  maman, Une souris verte, Meunier tu dors, Il était un petit navire,
+  choisies par une image.
+- **7. Le Feu d'artifice qu'on dessine** : la fusée éclate selon la forme
+  tracée au doigt ; un « grand final » en musique.
+- **8. L'Atelier : les animaux de la ferme à colorier** (les 14 personnages
+  3D rendus au trait, plus le train, la fusée, la grange).
+- **11. Le Flipper de la grange** (nouveau, Jouer, 3D) : deux batteurs, les
+  animaux en bumpers ; à deux, un batteur chacune, un seul score.
+- **13. Cache-cache à la ferme** (nouveau, Jouer, 3D) : trouver les animaux
+  cachés dans la ferme qu'on fait tourner ; la nuit, à la lampe torche.
+- **18. La Ferme à construire** (nouveau, Créer, 3D) : poser bâtiments,
+  enclos, mare, arbres, chemins, puis les 14 animaux qui y vivent.
+- **19. L'animal qui répète** (nouveau, Créer) : il redit ce qu'on dit avec
+  une voix rigolote ; le son ne quitte pas la tablette, rien n'est gardé.
+- **20. La Pâtisserie** (nouveau, Créer, 3D) : étages, crème au doigt,
+  fruits, bougies qu'on souffle.
+
+Refusés : 9 (trois jeux de plus à deux), 10 (le Mini-golf), 12 (le
+Chamboule-tout), 14 (les boîtes à œufs), 15 (la Balance), 16 (le Tangram),
+17 (le cycle de la vie).
+
 ---
 
 ## Ce qui est déjà fait et qu'on ne refait pas ✅
