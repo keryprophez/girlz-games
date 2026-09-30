@@ -988,6 +988,15 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
     et seul son rectangle (≈ 160 px) part à la carte graphique, à chaque
     image. **À mesurer sur la tablette avec `?fps`.**
   - L'Intrus est bien dans Apprendre (4ᵉ tuile).
+- ✅ **Partager les dessins de l'Atelier** (30/09, « pour que je puisse
+  partager les images qu'elles font… les imprimer pour qu'elles les
+  gardent » ; plan réduit à sa demande : « juste Partager », sans album
+  PDF ni verrou) : dans le Dossier, un dessin ouvert a un bouton
+  **Partager** — le menu de partage d'Android (Drive, Gmail, WhatsApp,
+  Imprimer…), l'image en 1500 × 1000 nommée à la date du dessin. Sans
+  menu de partage (ordinateur), l'image est enregistrée. Rien ne quitte la
+  tablette sans qu'on choisisse où l'envoyer. Les boutons de la vue ont
+  leurs petits noms (Reprendre · Film · Partager · Enregistrer · Jeter).
 
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute

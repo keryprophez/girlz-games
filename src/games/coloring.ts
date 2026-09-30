@@ -199,7 +199,10 @@ const TOOL_ICON = {
     <circle cx="24" cy="18" r="3" fill="#FF6B81"/><path d="M4 22h40v17a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z" fill="#FFCE5C"/>`),
   download: () => svgI(`<path d="M24 6v22m-9-9 9 9 9-9" stroke="#45362A" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M8 32v6a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-6" stroke="#45362A" stroke-width="5" fill="none" stroke-linecap="round"/>`),
-  close: () => svgI(`<path d="M12 12l24 24M36 12 12 36" stroke="#45362A" stroke-width="5.5" stroke-linecap="round"/>`)
+  close: () => svgI(`<path d="M12 12l24 24M36 12 12 36" stroke="#45362A" stroke-width="5.5" stroke-linecap="round"/>`),
+  // Le partage d'Android : trois points reliés
+  share: () => svgI(`<path d="M33 13 15 23m0 3 18 10" stroke="#45362A" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="35" cy="11" r="6.5" fill="#4FB8E7"/><circle cx="13" cy="24.5" r="6.5" fill="#FF6B81"/><circle cx="35" cy="38" r="6.5" fill="#FFC94D"/>`)
 }
 
 type Tool = 'brush' | 'bucket' | 'eraser' | 'stamp'
@@ -935,20 +938,46 @@ async function range(me: State) {
   flushSave(me)
 }
 
-function exportPng(cv: HTMLCanvasElement) {
-  cv.toBlob(b => {
-    if (!b) return
-    const url = URL.createObjectURL(b)
-    const a = document.createElement('a')
-    const d = new Date()
-    a.href = url
-    a.download = `dessin-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}-${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}.png`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    ctx.after(4000, () => URL.revokeObjectURL(url)) // après le téléchargement
-  }, 'image/png')
+/** « dessin-2026-09-30-10h25.png » : la date du dessin, pas celle de l'envoi */
+function drawingName(at: number): string {
+  const d = new Date(at)
+  return `dessin-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}-${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}.png`
+}
+
+function downloadPng(b: Blob, name: string) {
+  const url = URL.createObjectURL(b)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  ctx.after(4000, () => URL.revokeObjectURL(url)) // après le téléchargement
+}
+
+function exportPng(cv: HTMLCanvasElement, at = Date.now()) {
+  cv.toBlob(b => { if (b) downloadPng(b, drawingName(at)) }, 'image/png')
   sfx('confirm', { vol: 0.5 })
+}
+
+/** Partager un dessin (30/09, demandé par le père : « pour que je puisse
+    partager les images qu'elles font ») : le menu de partage d'Android
+    (Drive, Gmail, WhatsApp, Imprimer…), l'image en pleine taille. Rien ne
+    quitte la tablette sans qu'un grand choisisse où l'envoyer ; sans menu
+    de partage (ordinateur), l'image est enregistrée. */
+async function shareDrawing(png: Promise<Blob | null>, at: number) {
+  const b = await png
+  if (!b) return
+  const file = new File([b], drawingName(at), { type: 'image/png' })
+  sfx('confirm', { vol: 0.5 })
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Un dessin de l’Atelier' })
+    } catch (e) {
+      // Menu refermé sans rien choisir : rien à faire ; un vrai refus : on enregistre
+      if ((e as DOMException).name !== 'AbortError') downloadPng(b, file.name)
+    }
+  } else downloadPng(b, file.name)
 }
 
 /** Un dessin du dossier, en grand : papier, peinture, traits du modèle. */
@@ -1008,6 +1037,10 @@ async function showDrawing(me: State, d: Drawing) {
   grid.hidden = true
   view.hidden = false
   sfx('pluck', { vol: 0.5 })
+  // L'image en pleine taille se prépare tout de suite : au toucher de
+  // « Partager », le menu doit s'ouvrir dans la foulée du geste
+  const png = drawingCanvas(d, W, H).then(big => new Promise<Blob | null>(res => big.toBlob(res, 'image/png')))
+  ;(document.getElementById('atFShare') as HTMLButtonElement).onclick = () => { void shareDrawing(png, d.at) }
   const del = document.getElementById('atFDel')!
   del.classList.remove('arm')
   let armed = false, armId = 0
@@ -1023,7 +1056,7 @@ async function showDrawing(me: State, d: Drawing) {
     else sfx('error', { vol: 0.3 })
   }
   ;(document.getElementById('atFSave') as HTMLButtonElement).onclick = () => {
-    void drawingCanvas(d, W, H).then(exportPng)
+    void drawingCanvas(d, W, H).then(cv => exportPng(cv, d.at))
   }
   del.onclick = async () => {
     if (me.filming) return
@@ -1111,10 +1144,11 @@ export const coloring: GameDef = {
           <div class="at-fview" id="atFView" hidden>
             <canvas id="atFCanvas" width="900" height="600"></canvas>
             <div class="at-factions">
-              <button class="at-tool" id="atFEdit" aria-label="Reprendre">${BRUSH_ICON.feutre('#FF6B81')}</button>
-              <button class="at-tool" id="atFFilm" aria-label="Film">${svgI('<path d="M15 10v28l24-14z" fill="#45362A"/>')}</button>
-              <button class="at-tool" id="atFSave" aria-label="Enregistrer">${TOOL_ICON.download()}</button>
-              <button class="at-tool at-trash" id="atFDel" aria-label="Jeter">${TOOL_ICON.trash()}</button>
+              <span class="tool-item"><button class="at-tool" id="atFEdit" aria-label="Reprendre">${BRUSH_ICON.feutre('#FF6B81')}</button><i class="tool-cap">Reprendre</i></span>
+              <span class="tool-item"><button class="at-tool" id="atFFilm" aria-label="Film">${svgI('<path d="M15 10v28l24-14z" fill="#45362A"/>')}</button><i class="tool-cap">Film</i></span>
+              <span class="tool-item"><button class="at-tool" id="atFShare" aria-label="Partager">${TOOL_ICON.share()}</button><i class="tool-cap">Partager</i></span>
+              <span class="tool-item"><button class="at-tool" id="atFSave" aria-label="Enregistrer">${TOOL_ICON.download()}</button><i class="tool-cap">Enregistrer</i></span>
+              <span class="tool-item"><button class="at-tool at-trash" id="atFDel" aria-label="Jeter">${TOOL_ICON.trash()}</button><i class="tool-cap">Jeter</i></span>
             </div>
           </div>
           <button class="at-tool at-fclose" id="atFClose" aria-label="Fermer">${TOOL_ICON.close()}</button>
