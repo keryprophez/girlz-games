@@ -130,13 +130,13 @@ function generate(n: number): Cell[][] {
   return g
 }
 
-/* Les tailles (27/09 : « beaucoup trop simple ») : en douce, 7 à 9 cases de
-   côté (5 à 7 avant) ; la nuit un cran au-dessus ; la glace, qui glisse
-   jusqu'au mur, reste plus petite. */
+/* Les tailles (27/09 : « beaucoup trop simple », puis décalées d'un cran le
+   30/09) : à la fleur, 10 à 14 cases de côté ; la nuit un cran au-dessus ; la
+   glace, qui glisse jusqu'au mur, reste plus petite. */
 function sizesFor(mode: Mode): number[] {
-  if (mode === 'fog') return ctx.byTier([8, 9, 10], [11, 13, 15], [15, 17, 19])
-  if (mode === 'ice') return ctx.byTier([6, 7, 8], [8, 10, 12], [12, 13, 14])
-  return ctx.byTier([7, 8, 9], [10, 12, 14], [14, 16, 18])
+  if (mode === 'fog') return ctx.byTier([11, 13, 15], [15, 17, 19], [19, 21, 23])
+  if (mode === 'ice') return ctx.byTier([8, 10, 12], [12, 13, 14], [14, 15, 16])
+  return ctx.byTier([10, 12, 14], [14, 16, 18], [18, 20, 22])
 }
 
 /* La glace ne permet pas de s'arrêter en plein couloir : certaines grilles
@@ -380,7 +380,7 @@ function sowGrains(me: State) {
   const deadEnd = (k: number) => me.grid[Math.floor(k / n)][k % n].walls.filter(Boolean).length === 3
   const off = shuffle([...prev.keys()].filter(k => k > 0 && !path.includes(k) && k !== key(n - 1, n - 1)))
     .sort((a, b) => Number(deadEnd(b)) - Number(deadEnd(a)))
-  for (const k of off.slice(0, ctx.byTier(2, 3, 4))) me.grains.add(`${k % n}:${Math.floor(k / n)}`)
+  for (const k of off.slice(0, ctx.byTier(3, 4, 5))) me.grains.add(`${k % n}:${Math.floor(k / n)}`)
   me.grainsTotal += me.grains.size
 }
 

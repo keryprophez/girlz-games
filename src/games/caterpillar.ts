@@ -163,7 +163,7 @@ function finish(me: State) {
   if (me.over) return
   me.over = true
   me.stage.timeScale = 0.4
-  const th = ctx.byTier([14, 7], [18, 9], [24, 12])
+  const th = ctx.byTier([18, 9], [24, 12], [30, 15])
   const n = me.eaten
   me.game.end({
     title: n >= th[0] ? 'Chenille GÉANTE !' : n >= th[1] ? 'Belle chenille !' : 'Elle s\'est cognée !',
@@ -316,10 +316,10 @@ export const caterpillar: GameDef = {
 
       const game = arcade(c, {
         host: arena,
-        lives: c.byTier(5, 3, 3),
+        lives: c.byTier(3, 3, 3),
         scoreIcon: ICON.apple,
         plainScore: true, // le compteur, c'est le nombre de fruits, pas un score à combo
-        stars: s => { const th = c.byTier([14, 7], [18, 9], [24, 12]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
+        stars: s => { const th = c.byTier([18, 9], [24, 12], [30, 15]); return s.score >= th[0] ? 3 : s.score >= th[1] ? 2 : 1 }
       })
       const midY = Math.floor(ROWS / 2)
       const snake = Array.from({ length: 6 }, (_, i) => ({ x: 6 - i, y: midY }))
@@ -327,7 +327,7 @@ export const caterpillar: GameDef = {
         stage, T, game, fx: particles(stage, 400), shake: camShake(stage),
         snake, prev: snake.map(s => ({ x: s.x - 1, y: s.y })),
         dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 },
-        eaten: 0, speed: c.byTier(300, 250, 200), floor: c.byTier(150, 125, 100), acc: 0,
+        eaten: 0, speed: c.byTier(250, 200, 160), floor: c.byTier(125, 100, 80), acc: 0,
         fruit: { x: 0, y: 0, kind: 'apple' }, bonus: null,
         fruitGroup, bonusGroup, fruitModels, head, rings, ringGeo,
         curve: new T.CatmullRomCurve3([new T.Vector3(), new T.Vector3()], false, 'centripetal', 0.5),

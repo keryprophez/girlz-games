@@ -28,8 +28,9 @@ import { visible } from '../core/hand'
    d'une grille de photos, il se repèrerait à son trait, pas à sa famille. */
 
 /* --- Les familles --- */
-const FARM = ['cow', 'pig', 'chicken', 'duck', 'horse', 'goat', 'sheep', 'rabbit', 'dog', 'cat']
-const WILD = ['elephant', 'giraffe', 'lion', 'monkey', 'bear', 'zebra', 'fox', 'deer', 'hedgehog', 'turtle']
+const FARM = ['cow', 'pig', 'chicken', 'chick', 'duck', 'horse', 'goat', 'sheep', 'rabbit', 'dog', 'cat']
+const WILD = ['elephant', 'giraffe', 'lion', 'monkey', 'bear', 'zebra', 'fox', 'deer', 'hedgehog', 'turtle',
+  'tiger', 'hippo', 'kangaroo', 'koala', 'panda', 'sloth', 'bison', 'moose']
 const WATER = ['whale', 'fish', 'penguin', 'frog']
 const BIRD = ['duck', 'owl', 'parrot', 'penguin', 'chicken']
 const NONBIRD = ['cow', 'pig', 'dog', 'rabbit', 'frog', 'snake', 'fish', 'lion']
@@ -37,7 +38,7 @@ const FRUITS = ['apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange',
   'lemon', 'watermelon', 'peach', 'plum']
 const VEG = ['carrot', 'tomato', 'broccoli', 'corn', 'eggplant', 'onion', 'cabbage',
   'pumpkin', 'radish', 'potato', 'cucumber', 'mushroom']
-const FOODS = ['bread', 'baguette', 'cheese', 'cake', 'cookie', 'muffin', 'croissant', 'egg', 'honey']
+const FOODS = ['bread', 'baguette', 'cheese', 'cake', 'cookie', 'muffin', 'croissant', 'egg', 'honey', 'milk']
 const OBJECTS = ['plate', 'cup', 'pot', 'spoon', 'glass']
 const ANIMALS = [...FARM, ...WILD]
 /* La famille (la majorité) et les intrus possibles ; `q` nomme la famille, en positif */
@@ -68,6 +69,8 @@ interface State {
   score: number
   lock: boolean
   intruder: number
+  /** La famille de la manche d'avant : pas deux fois la même d'affilée. */
+  lastQ: string
 }
 
 let intr: State | null = null
@@ -80,8 +83,14 @@ function paintSide(me: State) {
 
 function load(me: State) {
   paintSide(me)
-  const size = ctx.byTier(me.round >= 3 ? 6 : 4, me.round >= 3 ? 9 : 6, me.round >= 2 ? 12 : 9)
-  const cat = pick(CATS)
+  // La flamme (30/09) : douze photos dès la première manche. Une grande
+  // grille ne se remplit qu'avec une famille assez nombreuse (les animaux de
+  // l'eau ne sont que quatre) : on tire parmi celles qui la remplissent (à
+  // une photo près)
+  const size = ctx.byTier(me.round >= 3 ? 9 : 6, me.round >= 2 ? 12 : 9, 12)
+  const fits = CATS.filter(c => c.maj.length >= size - 2 && c.q !== me.lastQ)
+  const cat = pick(fits.length ? fits : CATS.filter(c => c.q !== me.lastQ))
+  me.lastQ = cat.q
   const members = shuffle([...cat.maj]).slice(0, Math.min(size - 1, cat.maj.length))
   const intruderE = pick(cat.intr.filter(e => !members.includes(e)))
   const items = shuffle([...members.map(e => ({ e, intruder: false })), { e: intruderE, intruder: true }])
@@ -190,7 +199,7 @@ export const intrus: GameDef = {
         <div class="int-basket" id="intBasket">${BASKET}</div>
       </div>`
     preloadSfx(['confirm', 'drop', 'pluck'])
-    const me: State = { tiles: [], round: 0, total: 6, score: 0, lock: false, intruder: -1 }
+    const me: State = { tiles: [], round: 0, total: 6, score: 0, lock: false, intruder: -1, lastQ: '' }
     intr = me
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {

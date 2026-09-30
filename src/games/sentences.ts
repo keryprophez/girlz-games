@@ -124,7 +124,7 @@ const KIND_SAY: Record<Kind, string> = {
   inj: 'phrase injonctive'
 }
 
-/** Les noms des points. Les trois de la leçon, plus deux en expert. */
+/** Les noms des points. Les trois de la leçon, plus deux à l'éclair et à la flamme. */
 const MARKS: { m: string; name: string; lvl: 1 | 3 }[] = [
   { m: '.', name: 'le point', lvl: 1 },
   { m: '?', name: 'le point d’interrogation', lvl: 1 },
@@ -266,16 +266,18 @@ function mailboxSVG(): string {
 
 /* ---------- Le pool de phrases, selon le niveau ET la performance ---------- */
 function kindsOfTier(): Kind[] {
-  // Fleur : on laisse l'injonctive de côté, elle se confond avec l'exclamative
-  return ctx.byTier<Kind[]>(['decl', 'inter', 'excl'], ['decl', 'inter', 'excl', 'inj'], ['decl', 'inter', 'excl', 'inj'])
+  // Les quatre types à tous les niveaux depuis le 30/09 (l'ancienne fleur,
+  // qui laissait l'injonctive de côté, est sortie avec le décalage d'un cran)
+  return ['decl', 'inter', 'excl', 'inj']
 }
 /** La rampe : un cran de longueur tous les trois succès, plafonné par le niveau. */
 function lvlCap(): 1 | 2 | 3 {
-  const base = ctx.byTier(1, 1, 2), cap = ctx.byTier(2, 3, 3)
-  return Math.min(cap, base + Math.floor((po?.done || 0) / 3)) as 1 | 2 | 3
+  // La flamme part tout de suite des plus longues (et sans la voix)
+  const base = ctx.byTier(1, 2, 3)
+  return Math.min(3, base + Math.floor((po?.done || 0) / 3)) as 1 | 2 | 3
 }
-const marksLvl = () => ctx.byTier(1, 1, 3)
-const readsAloud = () => ctx.byTier(true, true, false)
+const marksLvl = () => ctx.byTier(1, 3, 3)
+const readsAloud = () => ctx.byTier(true, false, false)
 
 function pickPhrase(): Phrase {
   const ks = kindsOfTier(), lv = lvlCap()

@@ -207,7 +207,7 @@ function judge(me: State) {
     }
   }
   // La rampe suit la performance : chaque bloc posé accélère un peu le balancier
-  me.swingSpeed = Math.min(me.swingSpeed * 1.035, ctx.byTier(1.05, 1.5, 1.9) * 1.8)
+  me.swingSpeed = Math.min(me.swingSpeed * 1.035, ctx.byTier(1.5, 1.9, 2.3) * 1.8)
   if (perfect) {
     // Le son monte avec le combo : la récompense sonore de l'adresse
     const c = me.game.s.combo
@@ -387,7 +387,7 @@ export const icetower: GameDef = {
 
       const game = arcade(c, {
         host: arena,
-        lives: c.byTier(5, 3, 2),
+        lives: c.byTier(3, 2, 2),
         scoreIcon: ICON.cube,
         // Le compteur affiché = le NOMBRE DE BLOCS posés, en permanence, sans
         // multiplicateur de combo (demande du 12/09) : on suit sa tour d'un
@@ -406,8 +406,8 @@ export const icetower: GameDef = {
         }),
         game, fx: particles(stage, 500), shake: camShake(stage),
         blocks: [], tower: [], perfectRun: 0, swing: null, placed: 0, topY: 0.3,
-        swingSpeed: c.byTier(1.05, 1.5, 1.9),
-        swingSpan: c.byTier(1.05, 1.35, 1.55),
+        swingSpeed: c.byTier(1.5, 1.9, 2.3),
+        swingSpan: c.byTier(1.35, 1.55, 1.75),
         busy: false, camY: 1.1, over: false, winter, dusk: 0
       }
       it = me

@@ -180,8 +180,12 @@ let ctx: GameContext
 
 const cellAt = (me: State, r: number, c: number) => me.cells[(r - 1) * N + (c - 1)]
 const emptyKept = (): Record<Fam, Map<string, number>> => ({ mul: new Map(), add: new Map() })
-const tables = () => ctx.byTier([2, 5, 10], [1, 2, 3, 4, 5], ALL)
-const addRows = () => ctx.byTier([1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6, 7, 8], ALL)
+// Décalé d'un cran le 30/09 : la fleur a les tables de l'ancien normal, l'éclair
+// toutes les tables, la flamme toutes les tables ET la réponse toujours au pavé,
+// sans plante ni contour pour aider (`sansAide`)
+const tables = () => ctx.byTier([1, 2, 3, 4, 5], ALL, ALL)
+const addRows = () => ctx.byTier([1, 2, 3, 4, 5, 6, 7, 8], ALL, ALL)
+const sansAide = () => ctx.tier === 'exp'
 
 /** Un rappel de partie qui ne tire que si la partie ET la question n'ont pas changé. */
 function later(me: State, ms: number, fn: () => void) {
@@ -624,7 +628,7 @@ function ask(me: State) {
   if (me.qi >= me.queue.length) { outro(me); return }
   const item = me.queue[me.qi]
   const [r, c] = orient(item.fact)
-  showHelp(me, newQ(me, item, item.fact.op, r, c, viewLevel(me.mem, item)))
+  showHelp(me, newQ(me, item, item.fact.op, r, c, sansAide() ? LV.heart : viewLevel(me.mem, item)))
 }
 
 /** L'aide du champ selon le niveau de la question, puis les réponses. */
@@ -872,7 +876,8 @@ function paintStages(me: State) {
   const p = me.path
   const el = $('pgStages')
   if (!p) { el.innerHTML = ''; return }
-  el.innerHTML = STAGE_ICON.map((ic, i) => `<i class="${i < p.stage ? 'done' : i === p.stage ? 'now' : ''}">${ic}</i>`).join('')
+  // À la flamme, l'étape des quatre choix se répond aussi au pavé : son icône le dit
+  el.innerHTML = STAGE_ICON.map((ic, i) => `<i class="${i < p.stage ? 'done' : i === p.stage ? 'now' : ''}">${i === 1 && sansAide() ? ICON.digits : ic}</i>`).join('')
 }
 
 function paintPathDots(me: State) {
@@ -946,7 +951,7 @@ function pathAsk(me: State) {
     return
   }
   // 1 : quatre réponses, avec le contour ; 2 : le pavé, le « ? » seul
-  showHelp(me, newQ(me, item, t.op, t.r, t.c, p.stage === 1 ? LV.outline : LV.heart))
+  showHelp(me, newQ(me, item, t.op, t.r, t.c, p.stage === 1 && !sansAide() ? LV.outline : LV.heart))
 }
 
 /** « Trouve la case » : elle touche une case de la grille. */

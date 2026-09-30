@@ -277,12 +277,14 @@ function nextQuestion(me: State) {
   const tier = ctx.tier
   let t: Target
   if (me.map === 'monde') {
-    const animal = tier === 'easy' ? true : tier === 'med' ? Math.random() < 0.5 : false
+    // Décalé d'un cran le 30/09 : la fleur mêle animaux et pays (l'ancien normal), l'éclair et la flamme ne demandent que des pays
+    const animal = tier === 'easy' ? Math.random() < 0.5 : false
     if (animal) t = { kind: 'animal', animal: pick(ANIMALS) }
     else t = { kind: 'pays', name: pick(Object.keys(COUNTRIES_FR).filter(n => me.countries.some(f => f.properties!.name === n))) }
   } else {
-    const city = tier === 'easy' ? true : tier === 'med' ? Math.random() < 0.5 : false
-    if (city) t = { kind: 'ville', city: pick(CITIES.filter(c => tier === 'easy' ? c.big : true)) }
+    // En France : villes et régions (fleur), les régions (éclair), rien que des villes, petites comprises (flamme)
+    const city = tier === 'easy' ? Math.random() < 0.5 : tier === 'exp'
+    if (city) t = { kind: 'ville', city: pick(CITIES) }
     else t = { kind: 'region', nom: pick(me.regions.map(r => (r.properties as { nom: string }).nom)) }
   }
   me.target = t
@@ -346,10 +348,10 @@ function tapped(me: State, hit: { kind: 'pays' | 'ville' | 'region'; name: strin
   const t = me.target
   if (me.mode === 'explore' || !t) {
     if (hit.kind === 'pays') {
-      // Sur le globe, en douce on nomme le continent, sinon le pays
-      const asCont = ctx.tier === 'easy' && !!CONTINENT_OF[hit.name]
-      selectCountry(me, hit.name, asCont)
-      showName(me, asCont ? CONTINENTS[CONTINENT_OF[hit.name]].fr : frCountry(hit.name))
+      // Sur le globe, on nomme le pays (nommer le continent à la place, c'était
+      // l'ancien niveau le plus doux, sorti le 30/09)
+      selectCountry(me, hit.name, false)
+      showName(me, frCountry(hit.name))
     } else if (hit.kind === 'region') { selectRegion(me, hit.name); pulseCity(me, null); showName(me, hit.name) }
     else { pulseCity(me, hit.city!); showName(me, hit.name) }
     sfx('pluck', { vol: 0.5 })
@@ -562,7 +564,7 @@ export const geoGame: GameDef = {
         stage, T, fx: particles(stage, 300), countries, regions: regionsFc.features,
         globe, earth, overlay: { canvas, g, tex: otex }, france, regionMeshes, cityPins,
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
-        selected: null, target: null, tries: 0, asked: 0, errors: 0, total: 8, busy: false, over: false,
+        selected: null, target: null, tries: 0, asked: 0, errors: 0, total: c.byTier(8, 8, 12), busy: false, over: false,
         ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, askText: ask.querySelector('.geo-asktext')!,
           say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl },
         lastName: null,

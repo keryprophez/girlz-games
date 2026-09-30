@@ -122,8 +122,8 @@ function fitPx(): number {
 }
 
 function build(img: string) {
-  const size = ctx.byTier(3, 3, 4)
-  const shuffleMoves = ctx.byTier(10, 45, 110)
+  const size = ctx.byTier(3, 4, 5)
+  const shuffleMoves = ctx.byTier(45, 110, 200)
   const boardPx = fitPx()
   const gap = 4, pad = 8
   const cell = (boardPx - pad * 2 - gap * (size - 1)) / size

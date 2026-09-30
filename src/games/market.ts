@@ -112,11 +112,12 @@ let mk: State | null = null
 let ctx: GameContext
 
 function bankDenoms(): number[] {
-  return ctx.byTier([100, 200, 500], [10, 20, 50, 100, 200, 500], [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000])
+  return ctx.byTier([10, 20, 50, 100, 200, 500], [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], ALL)
 }
 
 function makePrice(): number {
-  return ctx.byTier(rnd(1, 5) * 100, rnd(2, 19) * 50, rnd(35, 1450))
+  // Jusqu'à 19,95 € au plus haut : le client paie encore d'un seul billet (le plus grand est 20 €)
+  return ctx.byTier(rnd(2, 19) * 50, rnd(35, 1450), rnd(105, 1995))
 }
 
 function buildBank(me: State, denoms: number[]) {

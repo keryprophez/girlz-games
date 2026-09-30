@@ -768,8 +768,8 @@ export const pizza: GameDef = {
         crustMat, sideMat, crusts, kit,
         baseCols: new Map(), falling: [], cheeseBits: [], stack: new Map(), pieces: 0,
         bake: 0,
-        // La jauge doit rester JOUABLE : ~11 s de bout en bout en douce, 5 s en expert
-        bakeRate: 1 / ctx.byTier(11, 7, 5),
+        // La jauge doit rester JOUABLE : ~7 s de bout en bout à la fleur, 4 s à la flamme
+        bakeRate: 1 / ctx.byTier(7, 5, 4),
         perfect: false, tickT: 0, smokeT: 0, steamT: 0, lastDrop: 0, lastSquish: 0, cut: 0, eaten: 0, ended: false,
         fx: particles(stage, 300), flames, fireLight,
         cam: { pos: new T.Vector3(0, 1.42, 0.88), look: new T.Vector3(0, 0, 0.04), lookNow: new T.Vector3(0, 0, 0.04) },

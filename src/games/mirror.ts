@@ -15,7 +15,7 @@ import { some, visible } from '../core/hand'
    un miroir : la moitié gauche pivote sur l'axe et vient se poser sur la
    droite — on voit que c'est le même dessin retourné. État typé. */
 
-const COLORS = ['#FF6B81', '#4FB8E7', '#FFC94D']
+const COLORS = ['#FF6B81', '#4FB8E7', '#FFC94D', '#B08CF0']
 
 interface Conf { size: number; cells: number; colors: number }
 interface State {
@@ -202,7 +202,7 @@ export const mirror: GameDef = {
         <div class="tq-side"><div class="mem-dots mr-dots"></div></div>
       </div>`
     const me: State = {
-      conf: c.byTier({ size: 6, cells: 6, colors: 1 }, { size: 8, cells: 9, colors: 2 }, { size: 10, cells: 13, colors: 3 }),
+      conf: c.byTier({ size: 8, cells: 9, colors: 2 }, { size: 10, cells: 13, colors: 3 }, { size: 12, cells: 18, colors: 4 }),
       round: 0, rounds: 3, mistakes: 0, running: true, done: false, color: COLORS[0],
       target: {}, state: {}, cells: {}, root: c.root, stroke: null
     }

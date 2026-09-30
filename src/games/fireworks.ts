@@ -279,7 +279,7 @@ export const fireworks: GameDef = {
   hand: () => fw && fw.running && !fw.finale ? { tap: { fx: 0.5, fy: 0.32 } } : null,
   mount(c) {
     ctx = c
-    const need = c.byTier(8, 10, 12)
+    const need = c.byTier(10, 12, 15)
     c.root.innerHTML = `
       <div class="arena fw-arena" id="fwArena">
         <canvas id="fwSky" class="fw-layer"></canvas>

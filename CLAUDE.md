@@ -208,9 +208,13 @@ pause — ne plus utiliser `setTimeout` pour piloter un jeu). `finish()` accepte
 score. La **pause** est globale (`core/session.ts` : `setPaused`, `onPause`) :
 onglet caché, minuteur parental, bouton pause ; `createStage` fige sa boucle
 dessus tout seul. **La difficulté se choisit DANS le jeu** (10/09) : à l'ouverture, `GameHost`
-affiche trois boutons sans un mot — fleur (douce), éclair (normale), flamme
-(expert) — et ne monte le jeu qu'après le choix, qui alimente `ctx.tier` et
-`ctx.byTier`. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
+affiche trois boutons sans un mot — fleur, éclair, flamme — et ne monte le
+jeu qu'après le choix, qui alimente `ctx.tier` et `ctx.byTier(e, m, x)`.
+**Depuis le 30/09, tout est décalé d'un cran** (« le niveau le plus facile
+dégage ») : la fleur (`easy`) joue l'ancien normal, l'éclair (`med`)
+l'ancien expert, la flamme (`exp`) est un niveau NEUF, plus dur que tout ce
+qui existait. Un nouveau réglage part de là : jamais de retour aux valeurs
+de l'ancienne fleur. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
 et signalé d'un liseré ; un bouton de la barre en jeu rouvre le choix et
 relance la partie. Un jeu qui déclare `ops: true` (le Potager, 27/09) ouvre
 d'abord sur une étape « opérations » : quatre étiquettes + − × ÷ sans un mot,

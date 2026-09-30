@@ -21,11 +21,15 @@ import { some, visible } from '../core/hand'
 const WORDS = {
   easy: ['CHAT', 'VACHE', 'POULE', 'CHIEN'],
   med: ['LAPIN', 'CHEVAL', 'COCHON', 'CANARD', 'HIBOU'],
-  exp: ['GRENOUILLE', 'PERROQUET', 'PINGOUIN', 'ÉLÉPHANT', 'GIRAFE']
+  exp: ['GRENOUILLE', 'PERROQUET', 'PINGOUIN', 'ÉLÉPHANT', 'GIRAFE'],
+  // La flamme (30/09) : les longs mots qui ont leur photo
+  ultra: ['HIPPOPOTAME', 'CHAMPIGNON', 'CITROUILLE', 'KANGOUROU', 'PAPILLON', 'AUBERGINE', 'CONCOMBRE', 'HÉRISSON']
 }
 const PICS: Record<string, string> = {
   CHAT: 'cat', VACHE: 'cow', POULE: 'chicken', CHIEN: 'dog', LAPIN: 'rabbit', CHEVAL: 'horse', COCHON: 'pig',
-  CANARD: 'duck', HIBOU: 'owl', GRENOUILLE: 'frog', PERROQUET: 'parrot', PINGOUIN: 'penguin', ÉLÉPHANT: 'elephant', GIRAFE: 'giraffe'
+  CANARD: 'duck', HIBOU: 'owl', GRENOUILLE: 'frog', PERROQUET: 'parrot', PINGOUIN: 'penguin', ÉLÉPHANT: 'elephant', GIRAFE: 'giraffe',
+  HIPPOPOTAME: 'hippo', CHAMPIGNON: 'mushroom', CITROUILLE: 'pumpkin', KANGOUROU: 'kangaroo', PAPILLON: 'butterfly',
+  AUBERGINE: 'eggplant', CONCOMBRE: 'cucumber', HÉRISSON: 'hedgehog'
 }
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -75,7 +79,7 @@ function loadWord(me: State) {
   })
 
   // La grille : lettres du mot + intrus
-  const gridSize = ctx.byTier(Math.max(8, word.length + 3), Math.max(12, word.length + 5), Math.max(14, word.length + 6))
+  const gridSize = ctx.byTier(Math.max(12, word.length + 5), Math.max(14, word.length + 6), Math.max(16, word.length + 6))
   const decoys: string[] = []
   while (decoys.length < gridSize - word.length) decoys.push(pick(ALPHABET.split('')))
   const tiles = shuffle([...word.split(''), ...decoys])
@@ -186,7 +190,7 @@ export const letters: GameDef = {
         <div class="tq-side"><div class="mem-dots lg-dots"></div></div>
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
-    const tierWords = c.byTier(WORDS.easy, WORDS.med, WORDS.exp)
+    const tierWords = c.byTier(WORDS.med, WORDS.exp, WORDS.ultra)
     const me: State = {
       // Le prénom en premier mot, seulement si on sait qui joue
       words: c.playerName

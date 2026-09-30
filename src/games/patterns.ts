@@ -16,9 +16,10 @@ import { trainModel, trainParts, TRAIN_LOCO, type TrainParts } from '../core/tra
    vide, un anneau doré y brille. En bas, trois ou quatre animaux : on touche
    celui qui monte dans le wagon vide. Zéro lecture.
 
-   Motifs AB / AAB en douce, ABC / AABC / ABB en normale, ABCC / ABAC / ACBC
-   ou des animaux qui GRANDISSENT (petit, moyen, grand) en expert ; chaque
-   motif est montré au moins deux fois en entier.
+   Motifs ABC / AABC / ABB à la fleur, ABCC / ABAC / ACBC ou des animaux qui
+   GRANDISSENT (petit, moyen, grand) à l'éclair, ABCD / AABCD / ABCBD / ABBCC
+   ou deux animaux qui grandissent tour à tour à la flamme ; un motif court
+   est montré au moins deux fois en entier, un long une fois et demie.
 
    Apprendre SANS sanction : un mauvais animal tremble et s'efface, on
    réessaie ; au deuxième raté, le bon monte tout seul. Une suite trouvée :
@@ -38,29 +39,38 @@ const key = (it: Item) => it.kind + ':' + (it.size ?? 1)
 
 function makeRound(tier: string): { seq: Item[]; answer: Item; options: Item[]; period: number } {
   const kinds = shuffle([...KINDS])
+  // Décalé d'un cran le 30/09 : la fleur a les motifs de trois (l'ancien
+  // normal), l'éclair ceux de quatre et les tailles (l'ancien expert), la
+  // flamme des motifs de quatre et cinq animaux, ou deux animaux qui grandissent
   let motif: Item[]
   if (tier === 'easy') {
-    const [A, B] = [{ kind: kinds[0] }, { kind: kinds[1] }]
-    motif = Math.random() < 0.5 ? [A, B] : [A, A, B]
-  } else if (tier === 'med') {
     const [A, B, C] = [{ kind: kinds[0] }, { kind: kinds[1] }, { kind: kinds[2] }]
     motif = pick([[A, B, C], [A, A, B, C], [A, B, B]])
-  } else if (Math.random() < 0.4) {
+  } else if (tier === 'med' && Math.random() < 0.4) {
     // Le même animal, petit, moyen, grand… puis on recommence
     motif = GROW.map(size => ({ kind: kinds[0], size }))
-  } else {
+  } else if (tier === 'med') {
     const [A, B, C] = [{ kind: kinds[0] }, { kind: kinds[1] }, { kind: kinds[2] }]
     motif = pick([[A, B, C, C], [A, B, A, C], [A, C, B, C]])
+  } else if (Math.random() < 0.3) {
+    // Deux animaux qui grandissent l'un après l'autre
+    motif = GROW.flatMap(size => [{ kind: kinds[0], size }, { kind: kinds[1], size }])
+  } else {
+    const [A, B, C, D] = [{ kind: kinds[0] }, { kind: kinds[1] }, { kind: kinds[2] }, { kind: kinds[3] }]
+    motif = pick([[A, B, C, D], [A, A, B, C, D], [A, B, C, B, D], [A, B, B, C, C]])
   }
-  // Deux motifs entiers au moins, et un train qui tient à l'écran
+  // Deux motifs entiers au moins, et un train qui tient à l'écran (dix
+  // wagons au plus) : un motif de cinq ou six se montre une fois et demie
   const full: Item[] = []
   for (let r = 0; r < 3; r++) full.push(...motif)
-  const cut = motif.length * 2 + rnd(0, Math.min(1, motif.length - 1))
+  const cut = motif.length >= 5
+    ? motif.length + Math.ceil(motif.length / 2)
+    : motif.length * 2 + rnd(0, Math.min(1, motif.length - 1))
   const seq = full.slice(0, cut)
   const answer = full[cut]
   const options: Item[] = [answer]
   let guard = 0
-  while (options.length < (tier === 'easy' ? 3 : 4) && guard++ < 80) {
+  while (options.length < (tier === 'exp' ? 5 : 4) && guard++ < 80) {
     const o: Item = answer.size && Math.random() < 0.6
       ? { kind: answer.kind, size: pick(GROW.filter(s => s !== answer.size)) }
       : { kind: pick(KINDS), size: answer.size }

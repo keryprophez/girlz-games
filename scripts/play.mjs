@@ -272,8 +272,8 @@ await scenario('labyrinthe-virages-au-doigt', async () => {
   await page.waitForFunction(() => window.__mz.round >= 1, null, { timeout: 12000 })
 })
 
-/* 🖼 Taquin : résoudre par recherche en largeur (grille 3×3, mélange court
-   en douce), puis taper les tuiles dans l'ordre — l'écran de fin doit venir. */
+/* 🖼 Taquin : résoudre par recherche en largeur (grille 3×3 à la fleur :
+   181 440 positions au plus), puis taper les tuiles dans l'ordre — l'écran de fin doit venir. */
 await scenario('taquin-remis-en-ordre', async () => {
   await openGame('Taquin')
   await page.waitForFunction(() => window.__tq && window.__tq.cells, null, { timeout: 15000 })
@@ -342,14 +342,14 @@ await scenario('memory-toutes-les-paires', async () => {
 })
 
 /* 🎵 Le Chœur (l'ancien Simon, 25/09) : le bot lit la mélodie sur le crochet
-   et la rejoue jusqu'à la chanson complète (8 notes en douce), avec UNE
+   et la rejoue jusqu'à la chanson complète (10 notes à la fleur), avec UNE
    fausse note exprès au troisième tour : elle coûte un cœur, et la MÊME
    mélodie doit revenir. La fin est le concert, puis l'écran de fin. */
 await scenario('choeur-chanson-complete', async () => {
   await openGame('Le Chœur')
   await page.waitForFunction(() => window.__simon, null, { timeout: 15000 })
   const info = await page.evaluate(() => ({ pads: window.__simon.pads, goal: window.__simon.goal, lives: window.__simon.lives }))
-  if (info.pads !== 4 || info.goal !== 8) throw new Error(`en douce : ${info.pads} animaux, chanson de ${info.goal}`)
+  if (info.pads !== 5 || info.goal !== 10) throw new Error(`à la fleur : ${info.pads} animaux, chanson de ${info.goal}`)
   let fausse = false
   for (let tour = 0; tour < 30; tour++) {
     await page.waitForFunction(() => window.__simon.playerTurn || window.__simon.over, null, { timeout: 30000 })
@@ -369,7 +369,7 @@ await scenario('choeur-chanson-complete', async () => {
   if (!fausse) throw new Error('la fausse note exprès n\'a pas été jouée')
   await page.waitForSelector('.result-score', { timeout: 20000 })
   const fin = await page.evaluate(() => ({ best: window.__simon.best, txt: document.body.innerText }))
-  if (fin.best < 8 || !fin.txt.includes('Quel concert')) throw new Error(`fin sans la chanson complète (${fin.best} notes)`)
+  if (fin.best < 10 || !fin.txt.includes('Quel concert')) throw new Error(`fin sans la chanson complète (${fin.best} notes)`)
 })
 
 /* 🔴 Puissance 4 : contre la poule, le bot joue avec la même IA (profondeur 4)
@@ -743,9 +743,10 @@ const finDe = async (texte, ms = 9000) => {
    au four, sortie DANS la zone parfaite (une sortie trop tôt ne sort pas),
    la pizza se coupe, et on croque les six parts jusqu'à l'écran de fin. */
 await scenario('pizza-du-four-a-la-bouche', async () => {
-  // En expert, la cuisson dure 5 s simulées au lieu de 11 : sous swiftshader
-  // en CI (2 à 3 images/s, dt borné à 100 ms), la douce dépassait la minute
-  await openGame('La Pizzeria', '__pz', 'exp')
+  // À l'éclair, la cuisson dure 5 s simulées (7 à la fleur, 4 à la flamme) :
+  // sous swiftshader en CI (2 à 3 images/s, dt borné à 100 ms), une cuisson
+  // longue dépasse la minute, une trop courte laisse une fenêtre de 3 images
+  await openGame('La Pizzeria', '__pz', 'med')
   const cv = await page.locator('#pzArena canvas').first().boundingBox()
   const cx = cv.x + cv.width / 2, cy = cv.y + cv.height / 2
   await page.locator('.pz-bowl[data-t="cheese"]').click()

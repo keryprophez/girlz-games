@@ -35,26 +35,29 @@ const url = (n: string) => `${import.meta.env.BASE_URL}assets/fruits/${n}.webp`
 /* Réglages par niveau. T = durée de montée jusqu'au plus haut du ciel (s) :
    plus elle est longue, plus les fruits flottent. TOL = marge de la lame (px)
    autour d'un fruit — jamais autour du cactus. */
-const T_UP = { easy: 1.5, med: 1.3, exp: 1.12 }
-const TOL = { easy: 30, med: 20, exp: 12 }
+/* Depuis le 30/09, tout est décalé d'un cran (« le plus facile dégage ») :
+   la fleur joue l'ancien normal, l'éclair l'ancien expert, la flamme est
+   nouvelle — des fruits plus vifs, plus nombreux, plus de cactus. */
+const T_UP = { easy: 1.3, med: 1.12, exp: 1.0 }
+const TOL = { easy: 20, med: 12, exp: 8 }
 const WAVES = 5
 /** Volées par vague. */
-const VOLLEYS = { easy: [4, 5, 5, 6, 6], med: [4, 5, 6, 6, 7], exp: [5, 6, 6, 7, 8] }
+const VOLLEYS = { easy: [4, 5, 6, 6, 7], med: [5, 6, 6, 7, 8], exp: [6, 7, 7, 8, 9] }
 /** Fruits par volée [min, max], vague par vague. */
 const COUNT = {
-  easy: [[1, 1], [1, 2], [1, 2], [2, 2], [2, 3]],
-  med: [[1, 2], [2, 2], [2, 3], [2, 3], [3, 4]],
-  exp: [[2, 3], [2, 3], [3, 4], [3, 4], [3, 5]]
+  easy: [[1, 2], [2, 2], [2, 3], [2, 3], [3, 4]],
+  med: [[2, 3], [2, 3], [3, 4], [3, 4], [3, 5]],
+  exp: [[2, 3], [3, 4], [3, 5], [4, 5], [4, 6]]
 }
 /** Chance qu'une volée porte un cactus, vague par vague. */
-const BAD = { easy: [0, 0.2, 0.25, 0.3, 0.35], med: [0.2, 0.3, 0.35, 0.4, 0.45], exp: [0.3, 0.4, 0.45, 0.5, 0.55] }
+const BAD = { easy: [0.2, 0.3, 0.35, 0.4, 0.45], med: [0.3, 0.4, 0.45, 0.5, 0.55], exp: [0.4, 0.5, 0.55, 0.6, 0.65] }
 /** Écart entre deux volées (ms), de la première à la dernière vague. */
-const GAP = { easy: [1800, 1350], med: [1500, 1100], exp: [1300, 900] }
+const GAP = { easy: [1500, 1100], med: [1300, 900], exp: [1150, 780] }
 /** La pluie finale : durée, et un fruit tous les… (ms). */
 const RAIN_MS = 7000
-const RAIN_EVERY = { easy: 330, med: 270, exp: 220 }
+const RAIN_EVERY = { easy: 270, med: 220, exp: 185 }
 /** Barème : part des fruits tranchés pendant les vagues, pour 2 et 3 étoiles. */
-const STARS = { easy: [0.45, 0.7], med: [0.55, 0.78], exp: [0.6, 0.85] }
+const STARS = { easy: [0.55, 0.78], med: [0.6, 0.85], exp: [0.65, 0.88] }
 
 const fr = (a: number, b: number) => a + Math.random() * (b - a)
 
@@ -178,7 +181,7 @@ function volley(me: State) {
   const cactus = Math.random() < BAD[tier][wave]
   const r = Math.random()
   const shape = wave >= 1 && n >= 2 && r < 0.3 ? 'grappe'
-    : tier !== 'easy' && wave >= (tier === 'exp' ? 2 : 3) && r < 0.5 ? 'travers' : 'large'
+    : wave >= (tier === 'easy' ? 3 : tier === 'med' ? 2 : 1) && r < 0.5 ? 'travers' : 'large'
 
   if (shape === 'grappe') {
     // Les fruits partent ensemble et montent côte à côte : un seul trait les prend tous
@@ -545,10 +548,10 @@ export const ninja: GameDef = {
       const g = cv.getContext('2d')!
       const game = arcade(c, {
         host: arena,
-        lives: c.byTier(5, 3, 3) + (c.duo ? 1 : 0),
+        lives: c.byTier(3, 3, 2) + (c.duo ? 1 : 0),
         scoreIcon: ICON.blade,
         // La rampe suit la performance : tous les dix fruits, les volées se rapprochent
-        ramp: { every: c.byTier(10, 8, 8), max: 4 },
+        ramp: { every: c.byTier(8, 8, 6), max: 4 },
         onLevel: () => { me.pace = Math.max(0.78, me.pace * 0.94) },
         stars: () => starsOf(me)
       })

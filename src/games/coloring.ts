@@ -853,6 +853,10 @@ function tintIcons(me: State) {
     x.classList.toggle('sel', x.dataset.b === me.brush)
   })
   document.querySelectorAll<HTMLElement>('.at-size i').forEach(i => { i.style.background = me.brush === 'arcenciel' ? 'conic-gradient(#E8414F,#FFD43B,#2F9E44,#1C64C8,#9C6ADE,#E8414F)' : me.color })
+  // Le feutre arc-en-ciel s'allume dans les couleurs : c'est lui, ou une couleur
+  const rb = me.brush === 'arcenciel'
+  document.getElementById('atRainbow')?.classList.toggle('sel', rb)
+  document.querySelectorAll<HTMLElement>('.at-color').forEach(x => x.classList.toggle('sel', !rb && x.dataset.c === me.color))
 }
 
 /** La feuille est-elle encore vierge ? (échantillon grossier) */
@@ -1089,6 +1093,7 @@ export const coloring: GameDef = {
           </div>
           <div class="at-pal">
             ${PALETTE.map((p, i) => `<button class="at-color${i === 7 ? ' sel' : ''}" data-c="${p}" style="background:${p}" aria-label="Couleur"></button>`).join('')}
+            <button class="at-rainbow" id="atRainbow" aria-label="Arc-en-ciel"></button>
           </div>
           <div class="at-stamps">
             ${FARM.map((k, i) => `<button class="at-stamp${i === 0 ? ' sel' : ''}" data-k="${k}" aria-label="Tampon"></button>`).join('')}
@@ -1182,6 +1187,16 @@ export const coloring: GameDef = {
         sfx('click', { vol: 0.35, rate: 1.3 - me.size * 0.2 })
       }
     })
+    // Le feutre arc-en-ciel, à un toucher parmi les couleurs (30/09 : rangé
+    // dans le tiroir des pinceaux, on ne le trouvait plus — « un des trucs
+    // les plus jolis »)
+    ;(document.getElementById('atRainbow') as HTMLButtonElement).onclick = () => {
+      if (!me.running) return
+      if (me.tool !== 'brush') selectTool(me, 'brush')
+      me.brush = 'arcenciel'
+      tintIcons(me)
+      sfx('pluck', { vol: 0.45, rate: 1 + BRUSHES.indexOf(me.brush) * 0.05 })
+    }
     document.querySelectorAll<HTMLElement>('.at-color').forEach(b => {
       b.onclick = () => {
         if (!me.running) return

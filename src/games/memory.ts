@@ -21,8 +21,8 @@ import { some } from '../core/hand'
    vache, un vrai renard — jamais deux styles dans la même grille, sinon les
    paires se repèrent au dessin), imprimées sur la carte avec un liseré blanc.
 
-   L'aperçu du début ne vide pas le défi : long en douce, bref en normale,
-   absent en experte. Plus rien à lire : manches en pastilles, coups en
+   L'aperçu du début ne vide pas le défi : bref à la fleur, absent à
+   l'éclair et à la flamme. Plus rien à lire : manches en pastilles, coups en
    chiffre à côté d'une main. */
 
 const CW = 1          // côté d'une carte
@@ -237,8 +237,8 @@ async function loadRound(me: State) {
     return c
   })
   const dealt = 90 * deck.length + 500
-  // L'aperçu : long en douce, bref en normale, aucun en experte
-  const preview = ctx.byTier(Math.min(2600, 1100 + pairs * 230), 900, 0)
+  // L'aperçu : bref à la fleur, aucun ensuite (30/09 : tout a monté d'un cran)
+  const preview = ctx.byTier(900, 0, 0)
   ctx.after(dealt, () => {
     if (mem !== me) return
     if (!preview) { me.lock = false; return }
@@ -377,7 +377,7 @@ export const memory: GameDef = {
       const geo = buildGeo(T)
       const me: State = {
         stage, T,
-        rounds: c.byTier([3, 4, 6], [4, 6, 8], [6, 8, 10]), round: 0, moves: 0,
+        rounds: c.byTier([4, 6, 8], [6, 8, 10], [8, 10, 12]), round: 0, moves: 0,
         pairs: 0, found: 0, first: null, lock: true, deck: [], cards: [], dealt: 0,
         fx: particles(stage, 300), backTex: stage.keep(backTexture(T)), faceTex: new Map(),
         geo, bodyMat: new T.MeshStandardMaterial({ color: 0xFFFBF2, roughness: 0.6 }),

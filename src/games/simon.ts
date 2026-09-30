@@ -21,10 +21,10 @@ import { some } from '../core/hand'
    saute et des notes s'envolent.
 
    - Un enjeu visible : la mélodie à atteindre est une rangée de notes sur le
-     côté (8, 10 ou 12 selon le niveau), qui se remplit tour après tour ;
-   - la chorale grandit avec le niveau : 4 animaux en douce, 5 en normal
-     (le chat), 6 en expert (le cheval) ;
-   - une fausse note n'arrête pas tout : elle coûte un cœur (3, 2 ou 1), le
+     côté (10, 12 ou 14 selon le niveau), qui se remplit tour après tour ;
+   - la chorale grandit avec le niveau : 5 animaux à la fleur (avec le
+     chat), 6 à l'éclair et à la flamme (le cheval) ;
+   - une fausse note n'arrête pas tout : elle coûte un cœur (2, 1 ou 1), le
      bon animal chante, et la MÊME mélodie revient ; le « presque » (raté sur
      la dernière note) se voit ;
    - la fin est un CONCERT : toute la mélodie retenue rejouée d'un trait par
@@ -111,7 +111,7 @@ function press(me: State, i: number) {
       if (me.best >= me.goal) { ctx.after(600, () => concert(me, true)); return }
       me.seq.push(rnd(0, me.pads.length - 1))
       // Plus vite à chaque tour, jamais au point de couper les voix
-      me.playSpeed = Math.max(ctx.byTier(560, 480, 420), me.playSpeed * 0.95)
+      me.playSpeed = Math.max(ctx.byTier(480, 420, 360), me.playSpeed * 0.95)
       ctx.after(800, () => playSequence(me))
     }
     return
@@ -171,7 +171,7 @@ function concert(me: State, won: boolean) {
 
 function finish(me: State, won: boolean) {
   const best = me.best
-  const two = ctx.byTier(5, 6, 8)
+  const two = ctx.byTier(6, 8, 10)
   const stars = won ? 3 : best >= two ? 2 : 1
   ctx.finish({
     title: won ? 'Quel concert !' : best >= two ? 'Belle mélodie !' : 'Encore un petit air ?',
@@ -194,7 +194,7 @@ export const simonGame: GameDef = {
   },
   mount(c) {
     ctx = c
-    const pads = ALL.slice(0, c.byTier(4, 5, 6))
+    const pads = ALL.slice(0, c.byTier(5, 6, 6))
     c.root.innerHTML = `
       <div class="arena sm-wrap" id="simonArena">
         <div class="sm-scene" id="simonScene"></div>
@@ -207,14 +207,14 @@ export const simonGame: GameDef = {
       </div>`
     preloadSfx(['confirm', 'error'])
     preloadCries(pads.map(p => CRY[p.animal]!).filter(Boolean))
-    const lives = c.byTier(3, 2, 1)
+    const lives = c.byTier(2, 1, 1)
     const me: State = {
-      pads, seq: [], step: 0, playerTurn: false, best: 0, playSpeed: c.byTier(760, 640, 560),
-      lives, maxLives: lives, goal: c.byTier(8, 10, 12), over: false,
+      pads, seq: [], step: 0, playerTurn: false, best: 0, playSpeed: c.byTier(640, 560, 480),
+      lives, maxLives: lives, goal: c.byTier(10, 12, 14), over: false,
       stage: null, choir: null, fx: null, listening: true, concert: false
     }
     simon = me
-    for (let i = 0; i < c.byTier(1, 2, 3); i++) me.seq.push(rnd(0, pads.length - 1))
+    for (let i = 0; i < c.byTier(2, 3, 4); i++) me.seq.push(rnd(0, pads.length - 1))
     paintSide(me)
 
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod

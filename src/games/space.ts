@@ -43,6 +43,17 @@ const PLANETS: Info[] = [
   { id: 'uranus', tex: 'uranus.jpg', fact: 'Uranus ! Elle est couchée sur le côté et roule comme une bille. Brrr, c\'est une planète toute bleue et très très froide.' },
   { id: 'neptune', tex: 'neptune.jpg', fact: 'Neptune, la planète la plus loin du Soleil ! Elle est toute bleue, avec les vents les plus rapides de tout le système solaire.' }
 ]
+/** La flamme de Trouve (30/09) : une devinette par planète, sans son nom. */
+const RIDDLE: Record<string, string> = {
+  mercure: 'La plus petite planète, la plus proche du Soleil.',
+  venus: 'La planète la plus chaude, cachée sous ses gros nuages.',
+  terre: 'Notre planète à nous, avec de l\'eau bleue et des nuages blancs.',
+  mars: 'La planète rouge.',
+  jupiter: 'La plus grosse de toutes, avec sa grande tache rouge.',
+  saturne: 'Celle qui a de grands anneaux.',
+  uranus: 'La planète bleu clair, couchée sur le côté.',
+  neptune: 'La plus loin du Soleil, toute bleue.'
+}
 const BONUS: Info[] = [
   { id: 'soleil', tex: 'sun.jpg', fact: 'Le Soleil ! Une étoile géante toute brillante. Toutes les planètes tournent autour de lui.' },
   { id: 'pluton', tex: 'moon.jpg', fact: 'Pluton, une planète naine toute petite, si loin du Soleil qu\'il y fait glacial. Elle met deux cent quarante-huit ans à en faire le tour !' },
@@ -381,13 +392,15 @@ function nextQuestion(me: State) {
   if (q.i >= q.order.length) { quizEnd(me); return }
   const id = q.order[q.i]
   q.wanted = id
-  // En douce on MONTRE la planète cherchée (on la reconnaît à son allure) ;
-  // ensuite il faut la retrouver d'après son nom
-  me.ui.askImg.innerHTML = ctx.tier === 'easy' ? ballHTML(id, 'big') : ''
-  me.ui.askText.textContent = cap(me.cosmos.byId[id].name)
+  // On la retrouve d'après son nom ; à la flamme (30/09), d'après une
+  // devinette : ce qu'on sait d'elle, sans son nom (contenu, dit à la voix)
+  me.ui.askImg.innerHTML = ''
+  const ask = ctx.tier === 'exp' ? RIDDLE[id] : cap(me.cosmos.byId[id].name)
+  me.ui.askText.textContent = ask
+  me.ui.askText.classList.toggle('riddle', ctx.tier === 'exp')
   me.ui.ask.classList.remove('off')
   me.ui.dots.querySelectorAll('i').forEach((d, k) => d.classList.toggle('cur', k === q.i))
-  ctx.say(cap(me.cosmos.byId[id].name))
+  ctx.say(ask)
 }
 
 /** Après une visite de Trouve : on rentre, puis la question suivante. */
@@ -448,7 +461,7 @@ function setMode(me: State, m: Mode) {
   sPop()
   const dur = me.target !== SYSTEM ? travelTo(me, SYSTEM) : 0
   if (m === 'trouve') {
-    const n = ctx.byTier(5, 8, 8)
+    const n = PLANETS.length
     me.quiz = { order: shuffle(PLANETS.map(p => p.id)).slice(0, n), i: 0, tries: 0, errors: 0, wanted: null, lock: false }
     me.ui.dots.innerHTML = Array.from({ length: n }, () => '<i></i>').join('')
     ctx.after(dur * 1000 + 500, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
@@ -648,7 +661,8 @@ export const space: GameDef = {
       })
       card.querySelector<HTMLElement>('.sp3-home')!.onclick = () => { if (me.mode === 'explore') home(me) }
       card.querySelector<HTMLElement>('.sp3-again')!.onclick = () => { ctx.say(me.ui.cardText.textContent || '') }
-      ask.querySelector<HTMLElement>('.geo-say')!.onclick = () => { if (me.quiz.wanted) ctx.say(cap(cosmos.byId[me.quiz.wanted].name)) }
+      // Redit la question telle qu'elle est posée (à la flamme, la devinette : jamais le nom)
+      ask.querySelector<HTMLElement>('.geo-say')!.onclick = () => { if (me.quiz.wanted) ctx.say(me.ui.askText.textContent || '') }
       bar.addEventListener('click', e => {
         const b = (e.target as HTMLElement).closest<HTMLElement>('[data-mode]')
         if (b && !me.finaled) setMode(me, b.dataset.mode as Mode)

@@ -160,7 +160,7 @@ function facePx(): number {
 
 function faceOpts(me: State): FaceOpts {
   if (me.mode === 'minutes') return { minuteRing: me.showMin, fadeHour: true }
-  if (me.mode === 'quiz') return { minuteRing: me.showMin && ctx.tier !== 'exp' }
+  if (me.mode === 'quiz') return { minuteRing: me.showMin && ctx.tier === 'easy' }
   if (me.mode === 'hours') return {}
   return { minuteRing: me.showMin, grab: me.grab }
 }
@@ -299,7 +299,7 @@ function nextHours(me: State) {
 
 function nextMinutes(me: State) {
   me.total = 8
-  const mins = ctx.byTier([0, 15, 30, 45], [0, 5, 10, 15, 20, 30, 40, 45, 50], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
+  const mins = ctx.byTier([0, 5, 10, 15, 20, 30, 40, 45, 50], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], Array.from({ length: 59 }, (_, k) => k + 1).filter(m => m % 5 !== 0))
   me.h = rnd(1, 12); me.m = mins[rnd(0, mins.length - 1)]
   $('ckDigital').style.display = 'none'
   renderFace(me)
@@ -314,7 +314,7 @@ function nextMinutes(me: State) {
 
 function nextQuiz(me: State) {
   me.total = 8
-  const mins = ctx.byTier([0], [0, 30], [0, 15, 30, 45])
+  const mins = ctx.byTier([0, 30], [0, 15, 30, 45], [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
   me.h = rnd(1, 12); me.m = mins[rnd(0, mins.length - 1)]
   $('ckDigital').style.display = 'none'
   renderFace(me)
@@ -328,7 +328,7 @@ function nextQuiz(me: State) {
 /* ---- Règle l'horloge : elle déplace les aiguilles ---- */
 function nextSet(me: State) {
   me.total = 6
-  const mins = ctx.byTier([0], [0, 30], [0, 15, 30, 45])
+  const mins = ctx.byTier([0, 30], [0, 15, 30, 45], [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
   me.th = rnd(1, 12); me.tm = mins[rnd(0, mins.length - 1)]
   // Pas 12:00 au départ : les deux aiguilles l'une sur l'autre, on ne sait
   // pas laquelle on attrape. Une heure au hasard, jamais la réponse.

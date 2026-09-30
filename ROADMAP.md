@@ -930,6 +930,37 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   ombres, 0,75), sans jamais remonter à un niveau trop lent. **Reste :
   `?fps` sur la tablette** pour voir où elle se pose.
 
+- ✅ **La difficulté décalée d'un cran** (30/09 : « le niveau le plus facile
+  dégage, un nouveau plus dur, et tout décalé d'un cran » ; « go, tel
+  quel ») : dans les 20 jeux qui ont des niveaux, la fleur prend l'ancien
+  normal, l'éclair l'ancien expert, et la flamme est neuve — Intrus, douze
+  photos dès la première manche (familles agrandies : huit animaux
+  sauvages de plus, le poussin, le lait ; une grande grille ne tire que les
+  familles qui la remplissent) ; Miroir 12 × 12 à quatre couleurs ;
+  Chasse aux lettres, huit longs mots (hippopotame, champignon,
+  citrouille…) ; Labyrinthe de 18 à 22
+  cases (23 la nuit) ; Taquin 5 × 5 ; Memory jusqu'à 12 paires, sans
+  aperçu dès l'éclair ; Suites logiques, motifs de quatre ou cinq animaux et
+  cinq wagons à choisir ; Chœur, une mélodie de 14 notes et un seul cœur ;
+  Puissance 4 qui voit sept coups ; Horloge à la minute près ; Potager,
+  toutes les tables et la réponse toujours au pavé, sans aide ; Marché,
+  toute la monnaie et des prix jusqu'à 19,95 € (le client paie encore d'un
+  billet : le plus grand est 20 €) ; Tour du Monde, douze questions, les
+  petites villes de France ; Espace, la planète à trouver d'après une
+  **devinette** (« la planète rouge », « celle qui a de grands anneaux »)
+  au lieu de son nom — les lunes et Pluton, trop petites dans le système
+  vu de loin, n'étaient pas jouables ; la Poste, les plus longues phrases
+  tout de suite et sans la voix (le corpus n'a que trois longueurs) ; et
+  pour les jeux d'adresse (Ninja, Tour de Glace, Chenille, Pizzeria, Feu
+  d'artifice), plus vite, plus de cactus, moins de cœurs, des seuils
+  d'étoiles plus hauts.
+
+- ✅ **« Tu m'as enlevé le feutre multicolore de l'Atelier »** (30/09) : il
+  n'était pas parti, mais depuis le 27/09 il était rangé dans le tiroir des
+  pinceaux (8ᵉ sur 10) — introuvable. Il revient à un toucher : une
+  pastille arc-en-ciel au bout des couleurs (il reste aussi dans le
+  tiroir) ; une autre couleur ramène au feutre.
+
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute
 deux choses quand le temps va vite : les planètes tournent à leur vraie

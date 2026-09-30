@@ -205,7 +205,7 @@ function drop(me: State, col: number) {
     paintTurn(me)
     if (me.solo && me.turn === 1) {
       me.lock = true
-      const depth = ctx.byTier(2, 4, 6)
+      const depth = ctx.byTier(4, 6, 7)
       ctx.after(550, () => {
         if (c4 !== me) return
         me.lock = false
