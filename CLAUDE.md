@@ -278,11 +278,15 @@ textures non attachées à la scène). Puis **`core/scene3d.ts`** : `ground()`,
 les kits clairs), `particles()` (GPU, dans la scène — plus de divs au-dessus du
 canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()`.
 `stage.timeScale` fait les ralentis d'outro. **La qualité s'adapte seule**
-(28/09) dans la boucle de `createStage` : plus de 30 ms par image en moyenne →
-densité de rendu ×0,85 (plancher 0,75), puis ombres coupées ; moins de 17 ms →
-la densité remonte (jamais au-dessus du départ, les ombres ne reviennent pas).
-Rien les 3 premières secondes, ni avec `?hq` (captures, mesures), ni pour les
-bots (`__BOT`), ni pour un jeu à rendu propre ; `?fps` affiche l'état. Un jeu
+(28/09, reprise le 30/09 : « la Princesse est hyper saccadée ») dans la boucle
+de `createStage` : plus de 30 ms par image en moyenne → un cran toutes les
+1,5 s, du moins visible au plus visible : densité ramenée à 1, matériaux « de
+luxe » simplifiés (vernis, satin, irisé, transmission : les plus chers par
+pixel), ombres coupées, densité 0,85 puis 0,75 ; moins de 17 ms → la densité
+remonte, mais jamais jusqu'à un niveau qui était trop lent (sinon elle fait
+le va-et-vient, et chaque changement de taille est un à-coup). Rien les 2
+premières secondes, ni avec `?hq` (captures, mesures), ni pour les bots
+(`__BOT`), ni pour un jeu à rendu propre ; `?fps` affiche l'état. Un jeu
 n'a donc plus à faire sa propre baisse de qualité. Un jeu qui a son propre rendu
 (l'Espace : ciel à part, cible HDR, halo en sept étages, ACES écrit à la main)
 le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
@@ -363,6 +367,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Textures des `ShaderMaterial`** | `disposeTree` libère les cartes des matériaux standard (`map`, `normalMap`…), pas les textures rangées dans `uniforms` : chacune passe par `stage.keep()`, comme les cibles de rendu et le bruit 3D. |
 | **Attendre à chaque image sous charge** | `waitForFunction` sonde par défaut à chaque image : quand la page compile ses shaders ou calcule des vignettes 3D, les images s'espacent de plusieurs secondes et le bot rate un état pourtant atteint (la Princesse « jamais prête » alors qu'elle l'était en 60 s). Sonder par intervalle (`polling: 1000`), et cliquer en force quand la page est prise. |
 | **Tuer le serveur d'un autre** | Un `vite preview` resté ouvert n'est pas forcément orphelin : le smoke sert sur 4188, les bots (`play.mjs`) sur **4189**. Arrêté « parce qu'il traînait », celui des bots est tombé en pleine série (la Chenille en échec) et la suite a tourné contre un autre build. Un script de vérification lancé à côté prend **4187** (`scripts/posters.mjs` aussi), et on ne tue que ce qu'on a lancé. Et `spawn('npx', ['vite', …]).kill()` ne tue que `npx` : vite reste orphelin et garde le port, le script suivant (`--strictPort`) échoue à démarrer le sien et teste l'ANCIEN build sans le dire. Les scripts lancent `node_modules/.bin/vite` directement. |
+| **Travail de fond pendant le jeu** | La garde-robe de la Princesse rendait ses vignettes (une seconde princesse 3D) une par image, chacune encodée par `toDataURL` — une compression SYNCHRONE : à chaque habit changé, toutes les vignettes repartaient, et le jeu hoquetait plusieurs secondes (« hyper saccadé », 30/09). Un rendu d'arrière-plan s'encode par `toBlob` (hors du fil principal), attend 250 ms entre deux images, et se tait tant qu'un doigt touche l'écran. |
+| **Pas fixes qui s'emballent** | Les ressorts des cheveux avançaient par pas de 1/60 s, jusqu'à six par image : une image lente en rendait la suivante plus lente — le cercle vicieux sur une tablette moyenne. Deux pas au plus ; sous 30 images/s, la simulation prend un peu de retard sur le temps (invisible) plutôt que de tout ralentir. |
 | **Photographier une animation** | Sous la 3D logicielle, une capture prend 1,5 s : la démonstration de la main (2 s) est finie quand l'image est prise — « la main n'apparaît pas », alors qu'elle était là. Figer les animations avant la capture (`el.getAnimations().forEach(a => a.pause())`). Et un script sans `__BOT` a la qualité automatique : elle baisse la résolution sous swiftshader et la capture tombe sur une image effacée (un Memory tout bleu) — ajouter `?hq` à l'adresse. |
 | **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
@@ -379,7 +385,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 30 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 31 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

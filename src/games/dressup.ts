@@ -201,6 +201,26 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
   const queue: Job[] = []
   let busy = false
   let dead = false
+  /* Elles ne gênent jamais le jeu (30/09, « hyper saccadé ») : pas pendant
+     qu'un doigt touche l'écran, une toutes les 250 ms au plus, et l'image
+     s'encode en arrière-plan (`toBlob`) — `toDataURL` bloquait la page le
+     temps de compresser chaque vignette. */
+  let touching = 0
+  const down = () => { touching++ }
+  const up = () => { touching = Math.max(0, touching - 1) }
+  window.addEventListener('pointerdown', down, true)
+  window.addEventListener('pointerup', up, true)
+  window.addEventListener('pointercancel', up, true)
+  const pause = (ms: number) => new Promise<void>(res => { ctx.after(ms, () => res()) })
+  const encode = (cv: HTMLCanvasElement) => new Promise<string | null>(res => {
+    cv.toBlob(b => {
+      if (!b) { res(null); return }
+      const fr = new FileReader()
+      fr.onload = () => res(typeof fr.result === 'string' ? fr.result : null)
+      fr.onerror = () => res(null)
+      fr.readAsDataURL(b)
+    }, 'image/webp', 0.9)
+  })
   const frameCam = (f: Frame, kind: string) => {
     const at = (px: number, py: number, pz: number, lx: number, ly: number, lz: number, fov = 30) => {
       cam.fov = fov; cam.updateProjectionMatrix(); cam.position.set(px, py, pz); cam.lookAt(lx, ly, lz)
@@ -223,7 +243,11 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
     busy = true
     try {
       while (queue.length && !dead && alive()) {
-        const j = queue.shift()!
+        // Le doigt d'abord : on attend qu'il se lève
+        while (touching && !dead && alive()) await pause(150)
+        if (dead || !alive()) break
+        const j = queue.shift()
+        if (!j) break
         const hit = cache.get(j.key)
         if (hit) { j.done(hit); continue }
         if (j.frame === 'pet') {
@@ -259,13 +283,16 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
         frameCam(j.frame, j.look.pet)
         renderer.render(scene, cam)
         // WebP (transparence gardée) : quatre fois plus léger à garder que le PNG
-        const url = renderer.domElement.toDataURL('image/webp', 0.9)
-        cache.set(j.key, url)
-        void diskPut('vignette', VIGNETTE + j.key, url, 600)
+        const url = await encode(renderer.domElement)
+        if (dead || !alive()) break
         stats.rendered++
-        j.done(url)
-        // Laisser respirer la page entre deux vignettes
-        await new Promise(r => requestAnimationFrame(() => r(null)))
+        if (url) {
+          cache.set(j.key, url)
+          void diskPut('vignette', VIGNETTE + j.key, url, 600)
+          j.done(url)
+        }
+        // Laisser respirer le jeu entre deux vignettes
+        await pause(250)
       }
     } catch { /* WebGL perdu : les tuiles gardent leur icône */ }
     busy = false
@@ -291,6 +318,9 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
     dispose() {
       dead = true
       queue.length = 0
+      window.removeEventListener('pointerdown', down, true)
+      window.removeEventListener('pointerup', up, true)
+      window.removeEventListener('pointercancel', up, true)
       princess?.dispose(); pet?.dispose()
       env.dispose(); pm.dispose()
       room.traverse((o: Obj3) => {

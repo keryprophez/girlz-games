@@ -919,6 +919,17 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
 - **20. La Pâtisserie** (nouveau, Créer, 3D) : étages, crème au doigt,
   fruits, bougies qu'on souffle.
 
+- ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
+  correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses
+  vignettes avec une seconde princesse 3D, une par image, chacune compressée
+  en bloquant la page — et tout repartait à chaque habit changé ; elles
+  s'encodent maintenant en arrière-plan, une toutes les 250 ms, jamais
+  pendant qu'un doigt touche. Les ressorts des cheveux : deux pas au plus
+  par image (ils allaient jusqu'à six, un cercle vicieux). Et la qualité
+  automatique réagit en 1,5 s et par crans (densité 1, matériaux simples,
+  ombres, 0,75), sans jamais remonter à un niveau trop lent. **Reste :
+  `?fps` sur la tablette** pour voir où elle se pose.
+
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute
 deux choses quand le temps va vite : les planètes tournent à leur vraie

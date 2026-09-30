@@ -1691,8 +1691,13 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       vrm.lookAt?.update(dt)
       vrm.expressionManager?.update()
       vrm.nodeConstraintManager?.update()
-      const n = Math.min(6, Math.max(1, Math.ceil(dt * 60 - 0.01)))
-      for (let q = 0; q < n; q++) vrm.springBoneManager?.update(dt / n)
+      // Deux petits pas au plus (30/09) : jusqu'à six pas par image, une image
+      // lente en rendait la suivante plus lente encore — le cercle vicieux de
+      // la tablette. En dessous de 30 images/s, les cheveux vont un peu moins
+      // vite que le temps : ça ne se voit pas, et ils ne s'envolent jamais.
+      const sdt = Math.min(dt, 1 / 30)
+      const n = sdt > 1 / 60 + 0.001 ? 2 : 1
+      for (let q = 0; q < n; q++) vrm.springBoneManager?.update(sdt / n)
       vrm.materials?.forEach(m => (m as { update?: (d: number) => void }).update?.(dt))
       for (const list of fab.values()) list.forEach(f => f.update(dt))
     },

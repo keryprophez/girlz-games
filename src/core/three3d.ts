@@ -167,45 +167,80 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   let last = performance.now()
   let unPause: () => void = () => {}
 
-  /* LA QUALITÉ QUI S'ADAPTE (28/09), pour tous les jeux 3D, comme l'Espace :
-     si la tablette peine (plus de 30 ms par image en moyenne, soit moins de
-     ~33 images/s), on rend un peu moins de pixels (×0,85, jusqu'à 0,75) ;
-     au plancher, on coupe les ombres. Si elle respire (moins de 17 ms), on
-     rend les pixels, sans dépasser la densité de départ ; les ombres, elles,
-     ne reviennent pas (pas de va-et-vient). Rien pendant les 3 premières
-     secondes (chargement, shaders qui compilent), ni avec `?hq` (captures,
-     mesures), ni pour les bots, ni pour un jeu qui a son propre rendu
-     (l'Espace a le sien). La sonde `?fps` affiche l'état. */
+  /* LA QUALITÉ QUI S'ADAPTE (28/09, reprise le 30/09 : « la Princesse est
+     hyper saccadée »), pour tous les jeux 3D. Si la tablette peine (plus de
+     30 ms par image en moyenne, soit moins de ~33 images/s), on descend UN
+     CRAN toutes les 1,5 s, du moins visible au plus visible :
+       1. la densité de pixels ramenée à 1 (de 1,5 : −55 % de pixels) ;
+       2. les matériaux « de luxe » en finition normale — vernis (clearcoat),
+          satin (sheen), irisé, transmission : ce sont eux qui coûtent le plus
+          cher par pixel (le sol de marbre verni de la Princesse, ses rideaux
+          et sa robe satinés, les cristaux du lustre) ;
+       3. plus d'ombres ;
+       4. la densité à 0,85 puis 0,75.
+     Si elle respire (moins de 17 ms), la densité remonte d'un cran, mais
+     JAMAIS jusqu'à celle qui était trop lente : sinon elle montait, peinait,
+     redescendait… et chaque changement de taille est un à-coup. Le luxe et
+     les ombres ne reviennent pas. Rien pendant les 2 premières secondes
+     (chargement, shaders qui compilent), ni avec `?hq` (captures, mesures),
+     ni pour les bots, ni pour un jeu qui a son propre rendu (l'Espace a le
+     sien). La sonde `?fps` affiche l'état. */
   const maxPr = renderer.getPixelRatio()
-  const perf = { avg: 16, frames: 0, t0: 0, lastAdapt: 0 }
+  const perf = { avg: 16, frames: 0, t0: 0, lastAdapt: 0, ceil: Infinity, plain: false }
   const autoQuality = !new URLSearchParams(location.search).has('hq') &&
     !(window as unknown as { __BOT?: boolean }).__BOT
-  const tellQuality = () => probeQuality(`auto ×${renderer.getPixelRatio().toFixed(2)} · ombres ${renderer.shadowMap.enabled ? 'oui' : 'non'}`)
+  const tellQuality = () => probeQuality(`auto ×${renderer.getPixelRatio().toFixed(2)} · ombres ${renderer.shadowMap.enabled ? 'oui' : 'non'}${perf.plain ? ' · matériaux simples' : ''}`)
+  /** Les matériaux « de luxe » en finition normale (y compris ceux créés
+      après coup : une robe refaite, un décor changé). Renvoie s'il y en avait. */
+  const plainify = () => {
+    let found = false
+    scene.traverse(o => {
+      const m = (o as import('three').Mesh).material
+      if (!m) return
+      for (const x of Array.isArray(m) ? m : [m]) {
+        const ph = x as import('three').MeshPhysicalMaterial
+        if (!ph.isMeshPhysicalMaterial || ph.userData.plain) continue
+        ph.userData.plain = true
+        if (ph.clearcoat || ph.sheen || ph.iridescence || ph.transmission) {
+          ph.clearcoat = 0; ph.sheen = 0; ph.iridescence = 0; ph.transmission = 0
+          ph.needsUpdate = true
+          found = true
+        }
+      }
+    })
+    return found
+  }
+  const setPr = (pr: number) => { renderer.setPixelRatio(pr); onResize() }
+  /** Le cran « matériaux simples » ; faux s'il n'y avait rien à simplifier (on passe au suivant). */
+  const plainStep = () => { perf.plain = true; return plainify() }
   const adapt = (now: number, wallMs: number) => {
     if (!autoQuality || stage.render) return
     if (!perf.t0) { perf.t0 = now; tellQuality() }
-    perf.avg = perf.avg * 0.93 + Math.min(wallMs, 100) * 0.07
+    perf.avg = perf.avg * 0.9 + Math.min(wallMs, 100) * 0.1
     perf.frames++
-    if (now - perf.t0 < 3000 || now - perf.lastAdapt < 2500 || perf.frames < 12) return
+    if (now - perf.t0 < 2000 || now - perf.lastAdapt < 1500 || perf.frames < 12) return
+    // Les matériaux nés après la simplification sont simplifiés aussi
+    if (perf.plain) plainify()
     const pr = renderer.getPixelRatio()
     if (perf.avg > 30) {
-      if (pr > 0.8) {
-        renderer.setPixelRatio(Math.max(0.75, pr * 0.85))
-        onResize()
-      } else if (renderer.shadowMap.enabled) {
+      perf.ceil = Math.min(perf.ceil, pr)
+      if (pr > 1.01) setPr(1)
+      else if (!perf.plain && plainStep()) { /* le luxe s'en va */ }
+      else if (renderer.shadowMap.enabled) {
         renderer.shadowMap.enabled = false
         // Les matériaux se recompilent sans ombres
         scene.traverse(o => {
           const m = (o as import('three').Mesh).material
           if (m) (Array.isArray(m) ? m : [m]).forEach(x => { x.needsUpdate = true })
         })
-      } else return
-    } else if (perf.avg < 17 && pr < maxPr - 0.01) {
-      renderer.setPixelRatio(Math.min(maxPr, pr * 1.1))
-      onResize()
+      } else if (pr > 0.76) setPr(Math.max(0.75, pr * 0.85))
+      else return
+    } else if (perf.avg < 17 && pr < maxPr - 0.01 && pr * 1.1 < perf.ceil - 0.01) {
+      setPr(Math.min(maxPr, pr * 1.1))
     } else return
     perf.lastAdapt = now
     perf.frames = 0
+    perf.avg = 22 // la nouvelle mesure repart d'un point neutre
     tellQuality()
   }
 
