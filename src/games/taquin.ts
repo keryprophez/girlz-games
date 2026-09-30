@@ -207,10 +207,10 @@ export const taquin: GameDef = {
       <div class="arena tq-wrap" id="tqWrap">
         <div id="tqBoard"></div>
         <div class="tq-tools">
-          <button class="sn-tool tq-mode sel" data-m="image" aria-label="Image">${ICON.photo}</button>
-          <button class="sn-tool tq-mode" data-m="num" aria-label="Nombres">${ICON.digits}</button>
-          ${c.avatar ? `<button class="sn-tool" id="tqMe" aria-label="Ta tête">${ICON.camera}</button>` : ''}
-          <button class="sn-tool" id="tqFarm" aria-label="La ferme">${ICON.flower}</button>
+          <span class="tool-item"><button class="sn-tool tq-mode sel" data-m="image" aria-label="Image">${ICON.photo}</button><i class="tool-cap">Image</i></span>
+          <span class="tool-item"><button class="sn-tool tq-mode" data-m="num" aria-label="Nombres">${ICON.digits}</button><i class="tool-cap">Nombres</i></span>
+          ${c.avatar ? `<span class="tool-item"><button class="sn-tool" id="tqMe" aria-label="Ta tête">${ICON.camera}</button><i class="tool-cap">Ta tête</i></span>` : ''}
+          <span class="tool-item"><button class="sn-tool" id="tqFarm" aria-label="La ferme">${ICON.flower}</button><i class="tool-cap">La ferme</i></span>
         </div>
         <div class="tq-side">
           <div class="tq2-mini" id="tqMini"></div>

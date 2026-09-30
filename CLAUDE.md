@@ -235,7 +235,15 @@ En jeu, `body.playing` met la coquille en **plein écran** :
 l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
 barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
 carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
-jamais d'emoji. **Les tuiles de l'accueil sont des AFFICHES** (28/09) : une
+jamais d'emoji. **Chaque bouton de mode ou d'outil porte son petit nom
+dessous** (30/09 : « un label en plus du symbole, dans toute l'app ») :
+`<span class="tool-item">bouton<i class="tool-cap">Nom</i></span>` — la
+pastille s'allume seule quand le bouton a `.sel` ou `.on` (`:has`), le jeu
+n'a rien à suivre ; le choix de niveau dit Facile · Moyen · Difficile, et
+Seule / À deux. Le symbole reste le repère (une enfant de 6 ans ne lit pas) ;
+la barre ronde en jeu (maison, pause, son, rejouer) reste sans texte, pour ne
+pas couvrir le jeu. L'écran de fin a trois boutons : Rejouer, **Niveau** (le
+choix fleur / éclair / flamme revient, puis la partie) et Menu. **Les tuiles de l'accueil sont des AFFICHES** (28/09) : une
 image du jeu en train de se jouer (`public/assets/affiches/<id>.webp`, 4:3),
 prise dans le vrai jeu par `scripts/posters.mjs` — mise en scène par jeu
 (`STAGE` : attente, gestes, cadrage), barre, score et main cachés. La
@@ -288,8 +296,10 @@ de `createStage` : plus de 30 ms par image en moyenne → un cran toutes les
 luxe » simplifiés (vernis, satin, irisé, transmission : les plus chers par
 pixel), ombres coupées, densité 0,85 puis 0,75 ; moins de 17 ms → la densité
 remonte, mais jamais jusqu'à un niveau qui était trop lent (sinon elle fait
-le va-et-vient, et chaque changement de taille est un à-coup). Rien les 2
-premières secondes, ni avec `?hq` (captures, mesures), ni pour les bots
+le va-et-vient, et chaque changement de taille est un à-coup) ; remonter
+attend 4 s de fluidité. Les 2 premières secondes ne sont même pas MESURÉES
+(shaders, modèles : elles faisaient baisser la qualité à chaque ouverture),
+ni rien avec `?hq` (captures, mesures), ni pour les bots
 (`__BOT`), ni pour un jeu à rendu propre ; `?fps` affiche l'état. Un jeu
 n'a donc plus à faire sa propre baisse de qualité. Un jeu qui a son propre rendu
 (l'Espace : ciel à part, cible HDR, halo en sept étages, ACES écrit à la main)
@@ -375,6 +385,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Pas fixes qui s'emballent** | Les ressorts des cheveux avançaient par pas de 1/60 s, jusqu'à six par image : une image lente en rendait la suivante plus lente — le cercle vicieux sur une tablette moyenne. Deux pas au plus ; sous 30 images/s, la simulation prend un peu de retard sur le temps (invisible) plutôt que de tout ralentir. |
 | **Photographier une animation** | Sous la 3D logicielle, une capture prend 1,5 s : la démonstration de la main (2 s) est finie quand l'image est prise — « la main n'apparaît pas », alors qu'elle était là. Figer les animations avant la capture (`el.getAnimations().forEach(a => a.pause())`). Et un script sans `__BOT` a la qualité automatique : elle baisse la résolution sous swiftshader et la capture tombe sur une image effacée (un Memory tout bleu) — ajouter `?hq` à l'adresse. |
 | **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
+| **Canvas redimensionné = canvas effacé** | Changer la taille d'un canvas WebGL vide son image : si la prochaine image n'est dessinée qu'à l'image suivante, l'écran montre un canvas vide entre les deux — le « flash blanc » de la Pizzeria (30/09), à chaque cran de qualité automatique et quand la barre des bols se replie ; et le « blink » juste après le carton titre. `onResize` de `createStage` redessine donc tout de suite après `setSize`. |
+| **Une texture entière pour un coup de pinceau** | La sauce de la Pizzeria recomposait ses cinq couches (1024 × 1024) et renvoyait TOUTE la texture, au plus 20 fois par seconde : la sauce suivait le doigt par à-coups, et chaque envoi coûtait des images (« toujours pas fluide », 30/09). Pizza crue, la louche est peinte aussi sur la surface visible et seul son rectangle part, à chaque image : `renderer.copyTextureToTexture(petitCanvas, tex, null, new Vector2(x0, TEX − y1))` — la texture est retournée à l'envoi (`flipY`), d'où `TEX − y1`. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---

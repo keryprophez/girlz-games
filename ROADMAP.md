@@ -961,6 +961,34 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   pastille arc-en-ciel au bout des couleurs (il reste aussi dans le
   tiroir) ; une autre couleur ramène au feutre.
 
+- ✅ **Retours du 30/09, joués sur la tablette** (plan validé : « go » pour
+  la sauce, « modes + choix d'ouverture » pour les libellés) :
+  - **Les petits noms sous les boutons**, dans toute l'app : les modes du
+    Marché (Découvre · Paye · Monnaie), de Puissance 4 (À deux · Contre la
+    poule), du Taquin (Image · Nombres · La ferme), la vitesse de l'Espace
+    (Plus vite · Moins vite), les bols et le four de la Pizzeria, les
+    outils de l'Atelier (Pinceau · Pot · Gomme · Tampons · Miroir · Annuler
+    · Effacer ; Papier · Ranger · Dossier), les onglets et les boutons de la
+    Princesse ; et à l'ouverture, Facile · Moyen · Difficile, Seule / À
+    deux. La barre ronde en jeu reste sans texte.
+  - **Le compte bon reste affiché** 4 s au Marché (1,3 s avant : « ça part
+    trop vite ») : les pièces dans la caisse, le total en vert.
+  - **« Niveau » sur l'écran de fin**, entre Rejouer et Menu : le choix
+    fleur / éclair / flamme revient, puis la partie.
+  - **Le flash blanc de la Pizzeria** (et le « blink » après le carton
+    titre) : changer la taille du canvas l'efface, et l'image suivante
+    n'arrivait qu'à l'image d'après. La qualité automatique change la
+    taille (un cran), la barre des bols aussi en se repliant. Le canvas est
+    maintenant redessiné tout de suite ; les 2 premières secondes ne sont
+    plus mesurées (elles faisaient baisser la qualité à chaque ouverture) ;
+    remonter attend 4 s de fluidité.
+  - **La sauce fluide** : chaque louche partait avec TOUTE la surface de la
+    pizza (1024 × 1024, cinq couches recomposées), au plus 20 fois par
+    seconde. Pizza crue, la louche est peinte aussi sur la surface visible
+    et seul son rectangle (≈ 160 px) part à la carte graphique, à chaque
+    image. **À mesurer sur la tablette avec `?fps`.**
+  - L'Intrus est bien dans Apprendre (4ᵉ tuile).
+
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute
 deux choses quand le temps va vite : les planètes tournent à leur vraie

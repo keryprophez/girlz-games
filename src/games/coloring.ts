@@ -1061,16 +1061,16 @@ export const coloring: GameDef = {
     c.root.innerHTML = `
       <div class="arena at-arena">
         <div class="at-tools">
-          <button class="at-tool sel" data-t="brush" id="atBrush" aria-label="Pinceau"></button>
-          <button class="at-tool" data-t="bucket" aria-label="Pot de peinture"></button>
-          <button class="at-tool" data-t="eraser" aria-label="Gomme">${TOOL_ICON.eraser()}</button>
-          <button class="at-tool" data-t="stamp" aria-label="Tampons">${TOOL_ICON.stamp()}</button>
-          <button class="at-tool at-sym" id="atSym" aria-label="Miroir"></button>
+          <span class="tool-item"><button class="at-tool sel" data-t="brush" id="atBrush" aria-label="Pinceau"></button><i class="tool-cap">Pinceau</i></span>
+          <span class="tool-item"><button class="at-tool" data-t="bucket" aria-label="Pot de peinture"></button><i class="tool-cap">Pot</i></span>
+          <span class="tool-item"><button class="at-tool" data-t="eraser" aria-label="Gomme">${TOOL_ICON.eraser()}</button><i class="tool-cap">Gomme</i></span>
+          <span class="tool-item"><button class="at-tool" data-t="stamp" aria-label="Tampons">${TOOL_ICON.stamp()}</button><i class="tool-cap">Tampons</i></span>
+          <span class="tool-item"><button class="at-tool at-sym" id="atSym" aria-label="Miroir"></button><i class="tool-cap">Miroir</i></span>
           <div class="at-sizes">
             ${SIZES.map((_, i) => `<button class="at-size${i === 1 ? ' sel' : ''}" data-s="${i}" aria-label="Taille"><i style="width:${8 + i * 9}px;height:${8 + i * 9}px"></i></button>`).join('')}
           </div>
-          <button class="at-tool" id="atUndo" aria-label="Annuler">${TOOL_ICON.undo()}</button>
-          <button class="at-tool at-trash" id="atClear" aria-label="Tout effacer">${TOOL_ICON.trash()}</button>
+          <span class="tool-item"><button class="at-tool" id="atUndo" aria-label="Annuler">${TOOL_ICON.undo()}</button><i class="tool-cap">Annuler</i></span>
+          <span class="tool-item"><button class="at-tool at-trash" id="atClear" aria-label="Tout effacer">${TOOL_ICON.trash()}</button><i class="tool-cap">Effacer</i></span>
         </div>
         <div class="at-desk" id="atDesk">
           <div class="at-paper" id="atPaper">
@@ -1087,9 +1087,9 @@ export const coloring: GameDef = {
             <button class="at-page at-bookbtn" id="atBookBtn" aria-label="Coloriages"><img class="at-bookcover" alt=""></button>
           </div>
           <div class="at-row">
-            <button class="at-tool at-small" id="atPaperBtn" aria-label="Papier"></button>
-            <button class="at-tool at-small" id="atRanger" aria-label="Ranger">${TOOL_ICON.ranger()}</button>
-            <button class="at-tool at-small at-folderbtn" id="atFolderBtn" aria-label="Dossier">${TOOL_ICON.dossier()}<b id="atFolderN"></b></button>
+            <span class="tool-item"><button class="at-tool at-small" id="atPaperBtn" aria-label="Papier"></button><i class="tool-cap">Papier</i></span>
+            <span class="tool-item"><button class="at-tool at-small" id="atRanger" aria-label="Ranger">${TOOL_ICON.ranger()}</button><i class="tool-cap">Ranger</i></span>
+            <span class="tool-item"><button class="at-tool at-small at-folderbtn" id="atFolderBtn" aria-label="Dossier">${TOOL_ICON.dossier()}<b id="atFolderN"></b></button><i class="tool-cap">Dossier</i></span>
           </div>
           <div class="at-pal">
             ${PALETTE.map((p, i) => `<button class="at-color${i === 7 ? ' sel' : ''}" data-c="${p}" style="background:${p}" aria-label="Couleur"></button>`).join('')}

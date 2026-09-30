@@ -164,6 +164,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
 
   const extras: { dispose(): void }[] = []
   let raf = 0
+  let started = false // la boucle tourne (ou est en pause) : la scène est prête à rendre
   let last = performance.now()
   let unPause: () => void = () => {}
 
@@ -216,9 +217,14 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   const adapt = (now: number, wallMs: number) => {
     if (!autoQuality || stage.render) return
     if (!perf.t0) { perf.t0 = now; tellQuality() }
+    // Les deux premières secondes (shaders qui compilent, modèles qui
+    // arrivent) ne comptent PAS : mesurées, elles faisaient baisser la
+    // qualité à chaque ouverture de jeu, juste après le carton titre — le
+    // « blink » vu le 30/09
+    if (now - perf.t0 < 2000) return
     perf.avg = perf.avg * 0.9 + Math.min(wallMs, 100) * 0.1
     perf.frames++
-    if (now - perf.t0 < 2000 || now - perf.lastAdapt < 1500 || perf.frames < 12) return
+    if (now - perf.lastAdapt < 1500 || perf.frames < 12) return
     // Les matériaux nés après la simplification sont simplifiés aussi
     if (perf.plain) plainify()
     const pr = renderer.getPixelRatio()
@@ -235,7 +241,9 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
         })
       } else if (pr > 0.76) setPr(Math.max(0.75, pr * 0.85))
       else return
-    } else if (perf.avg < 17 && pr < maxPr - 0.01 && pr * 1.1 < perf.ceil - 0.01) {
+    } else if (perf.avg < 17 && pr < maxPr - 0.01 && pr * 1.1 < perf.ceil - 0.01 && now - perf.lastAdapt > 4000) {
+      // Remonter se fait sans hâte (4 s de fluidité) : la Pizzeria rame
+      // quand on étale, file quand on regarde — elle faisait le yo-yo
       setPr(Math.min(maxPr, pr * 1.1))
     } else return
     perf.lastAdapt = now
@@ -248,6 +256,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
     T, renderer, scene, camera, sun, arena, alive: true, timeScale: 1,
     keep(r) { extras.push(r); return r },
     start(update) {
+      started = true
       last = performance.now()
       const loop = () => {
         if (!stage.alive) return
@@ -297,6 +306,14 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
     camera.updateProjectionMatrix()
     renderer.setSize(w, h)
     stage.onResize?.()
+    // Changer la taille du canvas l'EFFACE : sans une image tout de suite,
+    // l'écran montrait un canvas vide jusqu'à l'image suivante — le flash
+    // blanc de la Pizzeria (30/09), à chaque cran de qualité ou quand la
+    // barre des bols se replie
+    if (started) {
+      if (stage.render) stage.render()
+      else renderer.render(scene, camera)
+    }
   }
   window.addEventListener('resize', onResize)
   /* L'arène change aussi de taille SANS que la fenêtre bouge : la barre d'outils

@@ -384,17 +384,19 @@ body.playing .g3-bar{max-width:820px;}
    ============================================================ */
 .at-arena{display:flex;align-items:stretch;padding:0;overflow:hidden;
   background:radial-gradient(ellipse at 50% 40%,#F3E6CF 0%,#E3CFAE 70%,#D6BE97 100%);}
-.at-tools,.at-side{display:flex;flex-direction:column;align-items:center;gap:min(10px,1.2vh);
-  padding:64px 10px 16px;background:rgba(255,255,255,.55);backdrop-filter:blur(8px);overflow-y:auto;z-index:2;}
+.at-tools,.at-side{display:flex;flex-direction:column;align-items:center;gap:min(8px,1vh);
+  padding:62px 10px 12px;background:rgba(255,255,255,.55);backdrop-filter:blur(8px);overflow-y:auto;z-index:2;}
 .at-tools{width:min(96px,11vw);}
 .at-side{width:min(176px,18vw);padding-bottom:96px;}
-.at-tool{width:min(64px,8vh);height:min(64px,8vh);flex:none;border-radius:18px;border:2px solid var(--line);background:#fff;
+.at-tools .tool-item,.at-row .tool-item{gap:2px;}
+.at-tools .tool-cap,.at-row .tool-cap{font-size:11px;padding:2px 6px;}
+.at-tool{width:min(52px,6.3vh);height:min(52px,6.3vh);flex:none;border-radius:18px;border:2px solid var(--line);background:#fff;
   cursor:pointer;display:grid;place-items:center;box-shadow:var(--e1);transition:transform .2s var(--spring),border-color .2s;}
 .at-tool svg{width:72%;height:72%;}
 .at-tool.sel{border-color:var(--mango);background:#FFF4D6;transform:scale(1.12);box-shadow:0 0 0 3px var(--mango),var(--e1);}
 .at-tool:active{transform:scale(.9);}
-.at-sizes{display:flex;flex-direction:column;gap:6px;padding:6px 0;}
-.at-size{width:min(52px,6.6vh);height:min(52px,6.6vh);border-radius:50%;border:2px solid transparent;background:#fff;cursor:pointer;
+.at-sizes{display:flex;flex-direction:column;gap:5px;padding:2px 0;}
+.at-size{width:min(46px,5.6vh);height:min(46px,5.6vh);border-radius:50%;border:2px solid transparent;background:#fff;cursor:pointer;
   display:grid;place-items:center;box-shadow:var(--e1);}
 .at-size i{display:block;border-radius:50%;}
 .at-size.sel{border-color:var(--mango);box-shadow:0 0 0 2px var(--mango),var(--e1);}
@@ -565,7 +567,13 @@ body.playing .g3-bar{max-width:820px;}
 .pr-disk:active,.pr-face:active{transform:scale(.92);}
 .pr-body{flex:1;display:flex;gap:10px;min-height:0;}
 .pr-tabs{display:flex;flex-direction:column;gap:8px;overflow:auto;}
-.pr-tab{width:66px;height:66px;flex:none;border-radius:20px;background:#fff;border:3px solid #F1D5E3;display:grid;place-items:center;cursor:pointer;
+.pr-tabs .tool-item{gap:2px;}
+.pr-tabs .tool-cap{font-size:11px;padding:2px 6px;}
+.pr-actions .tool-item{gap:3px;}
+.pr-ballitem{flex:1;align-items:stretch;}
+.pr-ballitem .pr-ballbtn{flex:none;width:100%;}
+.pr-ballitem .tool-cap{align-self:center;}
+.pr-tab{width:60px;height:60px;flex:none;border-radius:20px;background:#fff;border:3px solid #F1D5E3;display:grid;place-items:center;cursor:pointer;
   color:#B04A74;padding:0;}
 .pr-tab svg{width:38px;height:38px;}
 .pr-tab.on{background:#E06A93;border-color:#E06A93;color:#fff;}
@@ -904,6 +912,8 @@ body.playing .g3-bar{max-width:820px;}
   color:var(--ink-soft);background:rgba(255,255,255,.86);backdrop-filter:blur(6px);
   padding:3px 8px;border-radius:99px;box-shadow:var(--e1);white-space:nowrap;}
 .tool-item.sel .tool-cap{background:var(--mango);color:#fff;}
+/* Le bouton choisi allume son petit nom, sans que le jeu ait à le suivre */
+.tool-item:has(> .sel) .tool-cap,.tool-item:has(> .on) .tool-cap{background:var(--mango);color:#fff;}
 .mz-tools .tool-item,.tq-tools .tool-item{align-items:center;}
 .tq-side{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:6;}
 .tq2-mini{width:96px;height:96px;border-radius:18px;overflow:hidden;box-shadow:var(--e2);border:3px solid #fff;background:#fff;}
@@ -1090,6 +1100,11 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .duobtn.sel{background:linear-gradient(135deg,var(--lilac,#B197FC),#8F74E0);color:#fff;transform:scale(1.06);}
 .duobtn:active{transform:scale(.9);}
 .tierdots{display:flex;gap:5px;}
+/* Les petits noms (30/09) : sous chaque niveau, et dans Seule / À deux */
+.tier-item{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.tier-item .tool-cap{font-size:15px;padding:4px 12px;}
+.duobtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:auto;padding:0 16px;}
+.duobtn i{font-family:'Baloo 2';font-weight:700;font-style:normal;font-size:15px;white-space:nowrap;}
 .tierdots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.92);}
 /* Les opérations (jeux `ops`, 27/09) : étape 1 avant la difficulté — quatre
    étiquettes + − × ÷, allumées en violet (la couleur des choix, comme
@@ -1118,6 +1133,12 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .pbtn-tier.tier-easy{background:#5EC97B;}
 .pbtn-tier.tier-med{background:#FF9E5C;}
 .pbtn-tier.tier-exp{background:#E8574C;}
+/* « Niveau » sur l'écran de fin : la couleur du niveau joué, le choix revient */
+.bigbtn.rb-tier{display:inline-flex;align-items:center;gap:6px;}
+.bigbtn.rb-tier svg{width:22px;height:22px;}
+.bigbtn.rb-tier.tier-easy svg{color:#3FAE5E;}
+.bigbtn.rb-tier.tier-med svg{color:#F08A3C;}
+.bigbtn.rb-tier.tier-exp svg{color:#E8574C;}
 
 /* Pause : un voile et un gros bouton lecture */
 .pausewall{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;
@@ -1227,6 +1248,7 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .mk-arena{display:flex;align-items:stretch;gap:14px;padding:64px 16px 16px;overflow:hidden;
   background:linear-gradient(180deg,#CFEAF7 0%,#E9F5E4 55%,#CFE7B9 100%);}
 .mk-modes{display:flex;flex-direction:column;justify-content:center;gap:14px;}
+.mk-modes .tool-item{gap:8px;}
 .mk-mode{width:84px;height:84px;border-radius:24px;border:3px solid #fff;background:rgba(255,255,255,.85);cursor:pointer;
   display:grid;place-items:center;font-size:40px;color:var(--ink);box-shadow:var(--e2);transition:transform .2s var(--spring);}
 .mk-mode.sel{background:linear-gradient(135deg,var(--mango),var(--coral));color:#fff;transform:scale(1.08);}
@@ -1575,21 +1597,25 @@ body.playing .po-card{max-width:880px;}
 .pz-arena{background:#3B2A22;}
 /* Refaite le 23/09 : dix bols en deux colonnes de part et d'autre de la
    pizza, un gros bouton flamme pour enfourner, rien d'autre à l'écran */
-.pz-bowls{position:absolute;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;gap:min(10px,1.4vh);}
+.pz-bowls{position:absolute;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;gap:min(8px,1.1vh);}
+.pz-bowls .tool-item{gap:2px;}
+.pz-bowls .tool-cap{font-size:11px;padding:2px 7px;}
 .pz-bowls.left{left:14px;}
 .pz-bowls.right{right:14px;}
-.pz-bowl{width:min(96px,12vh);height:min(96px,12vh);border-radius:24px;border:3px solid rgba(255,255,255,.55);
+.pz-bowl{width:min(88px,10.4vh);height:min(88px,10.4vh);border-radius:24px;border:3px solid rgba(255,255,255,.55);
   background:rgba(255,248,236,.82);backdrop-filter:blur(6px);display:grid;place-items:center;cursor:pointer;padding:0;
   box-shadow:0 8px 18px rgba(0,0,0,.3);transition:transform .2s var(--spring),border-color .2s,background .2s;}
 .pz-bowl svg{width:84%;height:84%;}
 .pz-bowl.sel{border-color:#FFC857;background:#FFF4D6;transform:scale(1.12);box-shadow:0 0 0 4px rgba(255,200,87,.55),0 10px 22px rgba(0,0,0,.35);}
 .pz-bowl:active{transform:scale(.92);}
-.pz-oven{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;width:104px;height:104px;border-radius:50%;
+/* Le four et son petit nom : c'est l'ensemble qui se place */
+.pz-ovenitem{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;gap:6px;}
+.pz-oven{position:relative;width:96px;height:96px;border-radius:50%;
   border:4px solid #fff;background:linear-gradient(135deg,#FFB25C,#E8433C);color:#fff;font-size:56px;display:grid;place-items:center;
   cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.45);transition:transform .2s var(--spring);}
-.pz-oven:active{transform:translateX(-50%) scale(.9);}
+.pz-oven:active{transform:scale(.9);}
 .pz-done{position:absolute;right:18px;bottom:18px;z-index:6;width:80px;height:80px;font-size:40px;display:none;}
-.pz-arena:not(.garnir) .pz-bowls,.pz-arena:not(.garnir) .pz-oven{display:none;}
+.pz-arena:not(.garnir) .pz-bowls,.pz-arena:not(.garnir) .pz-ovenitem{display:none;}
 .pz-arena.servi .pz-done{display:grid;}
 .pz-gauge.pz-nope{animation:pzNope .4s ease;}
 @keyframes pzNope{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}

@@ -86,6 +86,11 @@ const BOWL: Record<ToolId, string> = {
   corn: bowl(Array.from({ length: 14 }, (_, i) =>
     `<circle cx="${17 + (i % 7) * 5 + (i > 6 ? 2 : 0)}" cy="${i > 6 ? 30 : 25}" r="2.6" fill="#F6C43B"/>`).join(''))
 }
+/** Le petit nom sous chaque bol (30/09) */
+const BOWL_CAP: Record<ToolId, string> = {
+  tomato: 'Tomate', cream: 'Crème', cheese: 'Fromage', ham: 'Jambon', slice: 'Saucisson',
+  mushroom: 'Champignon', olive: 'Olive', pepper: 'Poivron', basil: 'Basilic', corn: 'Maïs'
+}
 const LEFT: ToolId[] = ['tomato', 'cream', 'cheese', 'ham', 'slice']
 const RIGHT: ToolId[] = ['mushroom', 'olive', 'pepper', 'basil', 'corn']
 
@@ -108,6 +113,10 @@ interface State {
     out: CanvasRenderingContext2D; tex: import('three').CanvasTexture
     dough: HTMLCanvasElement; sauce: CanvasRenderingContext2D; cheese: CanvasRenderingContext2D
     gratin: CanvasRenderingContext2D; dirty: boolean; t: number
+    /** Le rectangle (pixels du canvas) que la sauce a touché depuis la dernière image */
+    rect: { x0: number; y0: number; x1: number; y1: number } | null
+    /** Le petit canvas qui porte ce rectangle jusqu'à la carte graphique */
+    patch: import('three').CanvasTexture
   }
   crustMat: StdMat
   sideMat: StdMat
@@ -163,11 +172,13 @@ const toTex = (x: number, z: number) => ({ px: (x / PR_IN + 1) / 2 * TEX, py: (z
 
 const SAUCE_R = 64
 
-/** Une louche, pas un tampon : quelques ronds qui se chevauchent. */
-function sauceBlob(g: CanvasRenderingContext2D, px: number, py: number, n: number) {
+/** Une louche, pas un tampon : quelques ronds qui se chevauchent — peints
+    à l'identique dans chacune des surfaces données. */
+function sauceBlob(gs: CanvasRenderingContext2D[], px: number, py: number, n: number) {
   for (let k = 0; k < n; k++) {
     const a = Math.random() * 7, d = Math.random() * SAUCE_R * 0.35
-    g.beginPath(); g.arc(px + Math.cos(a) * d, py + Math.sin(a) * d, SAUCE_R * (0.55 + Math.random() * 0.3), 0, 7); g.fill()
+    const x = px + Math.cos(a) * d, y = py + Math.sin(a) * d, r = SAUCE_R * (0.55 + Math.random() * 0.3)
+    for (const g of gs) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill() }
   }
 }
 
@@ -176,16 +187,51 @@ function sauceBlob(g: CanvasRenderingContext2D, px: number, py: number, n: numbe
     tablette (moins d'images par seconde, mouvements du doigt regroupés), un
     geste vif laissait des taches espacées et il fallait repasser dix fois. */
 function paintSauce(me: State, x: number, z: number, sauce: Sauce, from?: { x: number; z: number }) {
-  const g = me.layers.sauce
+  const L = me.layers
   const { px, py } = toTex(x, z)
-  g.fillStyle = SAUCE_COL[sauce]
+  // Pizza crue (la surface visible = pâte + sauce) : on peint AUSSI
+  // directement sur la surface visible, et seul le rectangle touché part à la
+  // carte graphique, à chaque image. Avant (30/09 : « la sauce, c'est
+  // toujours pas fluide ») : les cinq couches recomposées en 1024 × 1024 et
+  // renvoyées en entier, au plus 20 fois par seconde — la sauce suivait le
+  // doigt par à-coups, et chaque envoi coûtait des images
+  const direct = me.bake === 0
+  const gs = direct ? [L.sauce, L.out] : [L.sauce]
+  for (const g of gs) g.fillStyle = SAUCE_COL[sauce]
+  const a = from ? toTex(from.x, from.z) : { px, py }
   if (from) {
-    const a = toTex(from.x, from.z)
     const steps = Math.ceil(Math.hypot(px - a.px, py - a.py) / (SAUCE_R * 0.4))
-    for (let i = 1; i < steps; i++) sauceBlob(g, a.px + (px - a.px) * i / steps, a.py + (py - a.py) * i / steps, 3)
+    for (let i = 1; i < steps; i++) sauceBlob(gs, a.px + (px - a.px) * i / steps, a.py + (py - a.py) * i / steps, 3)
   }
-  sauceBlob(g, px, py, 5)
-  me.layers.dirty = true
+  sauceBlob(gs, px, py, 5)
+  if (!direct) { L.dirty = true; return }
+  // Un rond déborde de son centre d'au plus 0,35 + 0,85 rayon
+  const m = SAUCE_R * 1.25
+  const r = L.rect
+  const x0 = Math.min(px, a.px) - m, y0 = Math.min(py, a.py) - m, x1 = Math.max(px, a.px) + m, y1 = Math.max(py, a.py) + m
+  L.rect = r ? { x0: Math.min(r.x0, x0), y0: Math.min(r.y0, y0), x1: Math.max(r.x1, x1), y1: Math.max(r.y1, y1) } : { x0, y0, x1, y1 }
+}
+
+/** Envoie à la carte graphique le seul rectangle de surface que la sauce a
+    touché (une louche : 160 px de côté, contre 1024 pour toute la pizza). */
+function flushSauce(me: State) {
+  const L = me.layers, r = L.rect!
+  L.rect = null
+  const x0 = Math.max(0, Math.floor(r.x0)), y0 = Math.max(0, Math.floor(r.y0))
+  const x1 = Math.min(TEX, Math.ceil(r.x1)), y1 = Math.min(TEX, Math.ceil(r.y1))
+  const w = x1 - x0, h = y1 - y0
+  if (w <= 0 || h <= 0) return
+  // Un très grand trait (deux doigts d'un bord à l'autre) : autant tout envoyer
+  if (w * h > TEX * TEX * 0.4) { L.tex.needsUpdate = true; return }
+  const c = L.patch.image as HTMLCanvasElement
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h }
+  const g = c.getContext('2d')!
+  g.globalCompositeOperation = 'copy'
+  g.drawImage(L.out.canvas, x0, y0, w, h, 0, 0, w, h)
+  g.globalCompositeOperation = 'source-over'
+  // La texture est retournée à l'envoi (flipY) : la ligne y du canvas est la
+  // ligne TEX − 1 − y de la texture, le rectangle se pose donc en TEX − y1
+  me.stage.renderer.copyTextureToTexture(L.patch, L.tex, null, new me.stage.T.Vector2(x0, TEX - y1))
 }
 /** La nappe de mozzarella que dépose une pincée de fromage (visible en fondant). */
 function paintCheese(me: State, x: number, z: number) {
@@ -557,16 +603,16 @@ export const pizza: GameDef = {
   mount(c) {
     ctx = c
     let dead = false
-    const bowlBtn = (t: ToolId) => `<button class="pz-bowl${t === 'tomato' ? ' sel' : ''}" data-t="${t}" aria-label="${t}">${BOWL[t]}</button>`
+    const bowlBtn = (t: ToolId) => `<span class="tool-item"><button class="pz-bowl${t === 'tomato' ? ' sel' : ''}" data-t="${t}" aria-label="${BOWL_CAP[t]}">${BOWL[t]}</button><i class="tool-cap">${BOWL_CAP[t]}</i></span>`
     c.root.innerHTML = `
       <div class="arena g3-arena pz-arena garnir" id="pzArena">
         <div class="pz-bowls left">${LEFT.map(bowlBtn).join('')}</div>
         <div class="pz-bowls right">${RIGHT.map(bowlBtn).join('')}</div>
-        <button class="pz-oven" id="pzOven" aria-label="Au four">${ICON.flame}</button>
+        <span class="tool-item pz-ovenitem"><button class="pz-oven" id="pzOven" aria-label="Au four">${ICON.flame}</button><i class="tool-cap">Au four</i></span>
         <!-- LE mini-jeu de cuisson : la jauge, sa zone verte, le curseur -->
         <div class="pz-cook" id="pzCook">
           <div class="pz-gauge"><span class="pz-perfect"></span><b id="pzNeedle"></b></div>
-          <button class="sn-tool pz-pull" id="pzOut" aria-label="Sortir la pizza">${ICON.out}</button>
+          <span class="tool-item"><button class="sn-tool pz-pull" id="pzOut" aria-label="Sortir la pizza">${ICON.out}</button><i class="tool-cap">Sortir</i></span>
         </div>
         <button class="sn-tool go pz-done" id="pzDone" aria-label="Fini">${ICON.check}</button>
         <div class="pz-verdict" id="pzVerdict"></div>
@@ -763,7 +809,7 @@ export const pizza: GameDef = {
         layers: {
           out: outC.getContext('2d')!, tex, dough: doughBase(),
           sauce: sauceC.getContext('2d')!, cheese: cheeseC.getContext('2d')!, gratin: gratinC.getContext('2d')!,
-          dirty: true, t: 0
+          dirty: true, t: 0, rect: null, patch: stage.keep(new T.CanvasTexture(canvas2d(8)))
         },
         crustMat, sideMat, crusts, kit,
         baseCols: new Map(), falling: [], cheeseBits: [], stack: new Map(), pieces: 0,
@@ -915,7 +961,10 @@ export const pizza: GameDef = {
             }
           }
         }
-        // Recomposer la surface coûte un envoi de texture : au plus toutes les 50 ms
+        // La sauce du jour : son seul rectangle, à chaque image
+        if (me.layers.rect && !me.layers.dirty) flushSauce(me)
+        else me.layers.rect = null
+        // Recomposer toute la surface coûte un envoi de 1024 × 1024 : au plus toutes les 50 ms
         me.layers.t += me.phase === 'cuisson' ? 0 : dt
         if (me.layers.dirty && (me.phase !== 'garnir' || me.layers.t > 0.05)) { me.layers.t = 0; composite(me) }
 

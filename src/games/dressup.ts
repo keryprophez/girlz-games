@@ -53,6 +53,10 @@ type Obj3 = import('three').Object3D
 
 const TABS: Tab[] = ['face', 'hair', 'dress', 'dye', 'crown', 'magic', 'pet', 'decor']
 const DANCE: MoveId[] = ['spin', 'curtsy', 'jump', 'waltz', 'arms', 'twirl']
+/** Le petit nom sous chaque onglet (30/09 : « un label en plus du symbole ») */
+const TAB_CAP: Record<Tab, string> = {
+  face: 'Visage', hair: 'Cheveux', dress: 'Habits', dye: 'Teinture', crown: 'Bijoux', magic: 'Magie', pet: 'Animal', decor: 'Décor'
+}
 const BALL_STEPS = 6
 const CLIP_COLORS = ['#F2A0B8', '#F4F0EA', '#F2C84B', '#B79AE8', '#6FB6EA', '#E0607E']
 
@@ -1154,13 +1158,13 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
             ${(['jade', 'joyce'] as const).map(s => `<div class="pr-card" data-slot="${s}"><button class="pr-face" aria-label="Princesse"></button><b>${s === 'jade' ? 'Jade' : 'Joyce'}</b>${duo ? '' : `<button class="pr-disk" data-slot="${s}" aria-label="Garder">${icon('disk', '#FFFFFF', 2.8)}</button>`}</div>`).join('')}
           </div>
           <div class="pr-body">
-            <div class="pr-tabs">${TABS.map(t => `<button class="pr-tab" data-t="${t}" aria-label="Onglet">${icon(t)}</button>`).join('')}</div>
+            <div class="pr-tabs">${TABS.map(t => `<span class="tool-item"><button class="pr-tab" data-t="${t}" aria-label="${TAB_CAP[t]}">${icon(t)}</button><i class="tool-cap">${TAB_CAP[t]}</i></span>`).join('')}</div>
             <div class="pr-pane" id="prPane"></div>
           </div>
           <div class="pr-actions">
-            <button class="pr-btn" id="prDice" aria-label="Surprise">${icon('dice')}</button>
-            <button class="pr-btn" id="prPhoto" aria-label="Photo">${icon('camera')}</button>
-            <button class="pr-ballbtn" id="prBall" aria-label="Au bal">${icon('ball', '#FFFFFF', 2.6)}</button>
+            <span class="tool-item"><button class="pr-btn" id="prDice" aria-label="Surprise">${icon('dice')}</button><i class="tool-cap">Surprise</i></span>
+            <span class="tool-item"><button class="pr-btn" id="prPhoto" aria-label="Photo">${icon('camera')}</button><i class="tool-cap">Photo</i></span>
+            <span class="tool-item pr-ballitem"><button class="pr-ballbtn" id="prBall" aria-label="Au bal">${icon('ball', '#FFFFFF', 2.6)}</button><i class="tool-cap">Au bal</i></span>
           </div>
         </div>
       </div>`

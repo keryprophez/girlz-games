@@ -257,8 +257,8 @@ export const connect4: GameDef = {
       <div class="arena c4-wrap" id="c4Wrap">
         <div id="c4Board"></div>
         <div class="tq-tools">
-          <button class="sn-tool c4-mode sel" data-m="duo" aria-label="À deux">${ICON.versus}</button>
-          <button class="sn-tool c4-mode" data-m="solo" aria-label="Contre la poule">${ICON.hexagon}</button>
+          <span class="tool-item"><button class="sn-tool c4-mode sel" data-m="duo" aria-label="À deux">${ICON.versus}</button><i class="tool-cap">À deux</i></span>
+          <span class="tool-item"><button class="sn-tool c4-mode" data-m="solo" aria-label="Contre la poule">${ICON.hexagon}</button><i class="tool-cap">Contre la poule</i></span>
         </div>
         <div class="tq-side"><div class="c4-turn" id="c4Turn"></div></div>
       </div>`

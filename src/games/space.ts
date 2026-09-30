@@ -546,9 +546,9 @@ export const space: GameDef = {
       hint.innerHTML = HAND_SVG
       const time = document.createElement('div')
       time.className = 'sp3-time'
-      time.innerHTML = `<button class="sp3-tbtn" data-t="+1" aria-label="Plus vite">${ICON_HARE}</button>
+      time.innerHTML = `<span class="tool-item"><button class="sp3-tbtn" data-t="+1" aria-label="Plus vite">${ICON_HARE}</button><i class="tool-cap">Plus vite</i></span>
         <span class="sp3-ticks">${RATES.slice(1).map((_, k) => `<i class="sp3-tick${k < RATE0 ? ' on' : ''}"></i>`).join('')}</span>
-        <button class="sp3-tbtn" data-t="-1" aria-label="Moins vite">${ICON_TURTLE}</button>`
+        <span class="tool-item"><button class="sp3-tbtn" data-t="-1" aria-label="Moins vite">${ICON_TURTLE}</button><i class="tool-cap">Moins vite</i></span>`
       arena.append(bar, balls, card, ask, hint, time)
 
       const jd0 = Date.now() / 86400000 + 2440587.5

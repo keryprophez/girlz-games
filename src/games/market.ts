@@ -194,7 +194,9 @@ function success(me: State) {
   fxAt($('mkTray'), JUICE.green, 14)
   ctx.say(speak(me.goal))
   me.q++
-  ctx.after(1300, () => {
+  // Le compte bon reste sous les yeux (30/09 : « ça part trop vite ») : les
+  // pièces dans la caisse et le total en vert, quatre secondes
+  ctx.after(4000, () => {
     if (mk !== me || !me.running) return
     me.lock = false
     if (me.q >= me.totalQ) return finish(me)
@@ -267,9 +269,9 @@ export const market: GameDef = {
     c.root.innerHTML = `
       <div class="arena mk-arena explore" id="mkArena">
         <div class="mk-modes">
-          <button class="mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}</button>
-          <button class="mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}</button>
-          <button class="mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}</button>
+          <span class="tool-item"><button class="mk-mode sel" data-m="explore" aria-label="Découvre">${ICON.search}</button><i class="tool-cap">Découvre</i></span>
+          <span class="tool-item"><button class="mk-mode" data-m="pay" aria-label="Paye">${ICON.basket}</button><i class="tool-cap">Paye</i></span>
+          <span class="tool-item"><button class="mk-mode" data-m="change" aria-label="La monnaie">${ICON.coins}</button><i class="tool-cap">Monnaie</i></span>
         </div>
         <div class="mk-main">
           <div class="mk-stall">

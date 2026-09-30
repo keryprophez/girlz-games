@@ -26,6 +26,8 @@ const TITLE_CARD_MS = 1500
    choix est retenu par jeu et proposé en premier au coup d'après. */
 const TIERS: Tier[] = ['easy', 'med', 'exp']
 const TIER_ICON: Record<Tier, string> = { easy: ICON.flower, med: ICON.bolt, exp: ICON.flame }
+/** Le petit nom sous chaque niveau (30/09 : « un label en plus du symbole ») */
+const TIER_CAP: Record<Tier, string> = { easy: 'Facile', med: 'Moyen', exp: 'Difficile' }
 const tierKey = (gameId: string) => `ferme:niveau:${gameId}`
 function lastTier(gameId: string): Tier | null {
   try {
@@ -364,17 +366,20 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
           )}
           {game.duo && (
             <div className="duorow">
-              <button className={'duobtn' + (!duo ? ' sel' : '')} onClick={() => pickDuo(false)} aria-label="Seule"><Svg html={ICON.solo} /></button>
-              <button className={'duobtn' + (duo ? ' sel' : '')} onClick={() => pickDuo(true)} aria-label="À deux"><Svg html={ICON.duo} /></button>
+              <button className={'duobtn' + (!duo ? ' sel' : '')} onClick={() => pickDuo(false)} aria-label="Seule"><Svg html={ICON.solo} /><i>Seule</i></button>
+              <button className={'duobtn' + (duo ? ' sel' : '')} onClick={() => pickDuo(true)} aria-label="À deux"><Svg html={ICON.duo} /><i>À deux</i></button>
             </div>
           )}
           {(!game.ops || step === 2) && <div className="tierrow">
             {TIERS.map(t => (
-              <button key={t} className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
-                onClick={() => pickTier(t)} aria-label={t}>
-                <Svg html={TIER_ICON[t]} />
-                <span className="tierdots">{TIERS.slice(0, TIERS.indexOf(t) + 1).map((_, i) => <i key={i} />)}</span>
-              </button>
+              <span key={t} className="tier-item">
+                <button className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
+                  onClick={() => pickTier(t)} aria-label={TIER_CAP[t]}>
+                  <Svg html={TIER_ICON[t]} />
+                  <span className="tierdots">{TIERS.slice(0, TIERS.indexOf(t) + 1).map((_, i) => <i key={i} />)}</span>
+                </button>
+                <i className="tool-cap">{TIER_CAP[t]}</i>
+              </span>
             ))}
           </div>}
           {game.ops && step === 2 && <div className="opssteps"><i /><i className="on" /></div>}
@@ -422,6 +427,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             {!creative && <Svg className="stars" html={starsHTML(result.stars)} />}
             <div className="rbtns">
               <button className="bigbtn primary" onClick={replay}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
+              {/* Rejouer à un autre niveau (30/09) : le choix fleur / éclair / flamme revient */}
+              {tier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={askTier}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
               <button className="bigbtn ghost" onClick={goHome}><Svg html={ICON.home} /> Menu</button>
             </div>
             {game.cat === 'action' && <div className="retryhint">ou tape à côté pour rejouer</div>}
