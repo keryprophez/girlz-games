@@ -195,8 +195,11 @@ export interface Cosmos {
   light: import('three').PointLight
   /** Place tout au jour julien `jd` ; `spinJd` règle les rotations et les lunes. */
   setTime(jd: number, spinJd: number): void
-  /** Uniformes de l'image (Soleil animé, points lointains, orbites qui s'effacent). */
-  frame(dt: number): void
+  /** Uniformes de l'image (Soleil animé, points lointains, orbites qui
+      s'effacent). `dJ` : les jours balayés pendant une image (le flou de
+      rotation et les traînées) ; `tracked` : l'astre que suit la caméra (lui
+      reste net, les autres filent autour). */
+  frame(dt: number, dJ?: number, tracked?: string): void
   worldPos(id: string, out?: V3): V3
   radius(id: string): number
   /** Distance au Soleil (UA) d'une planète, ou de la planète d'une lune. */
@@ -345,7 +348,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
   function planetMaterial(b: BodyDef) {
     const defines: Record<string, number> = {}
     const uniforms: Record<string, { value: unknown }> = {
-      map: { value: tex(b.tex!) }, uSunI: { value: 1 },
+      map: { value: tex(b.tex!) }, uSunI: { value: 1 }, uBlur: { value: 0 },
       uTint: { value: new T.Vector3(...(b.tint || [1, 1, 1])) },
       uAtmo: { value: new T.Vector4(...(b.atmo || [0, 0, 0, 0])) }
     }
@@ -366,6 +369,29 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
       defines, uniforms, vertexShader: PLANET_VS,
       fragmentShader: `
       uniform sampler2D map; uniform float uSunI; uniform vec3 uTint; uniform vec4 uAtmo;
+      uniform float uBlur;
+      // L'obturateur : la texture moyennée sur les longitudes balayées pendant
+      // une image (étirée le long des longitudes seulement : les bandes et les
+      // latitudes restent nettes). Une variante du shader, allumée seulement
+      // quand le temps file : seize lectures par texture ne coûtent rien au
+      // repos (une condition ne suffit pas, certains GPU paient les deux côtés)
+      vec4 spun(sampler2D m, vec2 uv){
+      #ifdef BLUR
+        // De 4 à 16 lectures selon la longueur du flou (chacune pré-filtrée)
+        int n = int(clamp(ceil(uBlur * 400.0), 4.0, 16.0));
+        vec2 dx = dFdx(uv), dy = dFdy(uv);
+        float stepU = uBlur / float(n);
+        vec4 s = vec4(0.0);
+        for (int i = 0; i < 16; i++){
+          if (i >= n) break;
+          float f = (float(i) + 0.5) / float(n);
+          s += textureGrad(m, uv + vec2(uBlur * f, 0.0), vec2(max(abs(dx.x), stepU), dx.y), vec2(dy.x, dy.y));
+        }
+        return s / float(n);
+      #else
+        return texture2D(m, uv);
+      #endif
+      }
       #ifdef EARTH
       uniform sampler2D nightMap; uniform sampler2D specMap;
       #endif
@@ -379,7 +405,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
         vec3 V = normalize(cameraPosition - vW);
         float ndl = dot(N, L);
         float ndv = max(dot(N, V), 0.0);
-        vec3 alb = texture2D(map, vUv).rgb * uTint;
+        vec3 alb = spun(map, vUv).rgb * uTint;
         float wrap = uAtmo.w > 0.0 ? 0.06 : 0.0;
         float diff = clamp((ndl + wrap) / (1.0 + wrap), 0.0, 1.0);
       #ifdef GAS
@@ -403,10 +429,10 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
       #endif
         vec3 col = alb * diff * uSunI * vec3(1.0, 0.97, 0.92);
       #ifdef EARTH
-        float spec = texture2D(specMap, vUv).r;
+        float spec = spun(specMap, vUv).r;
         vec3 H = normalize(L + V);
         col += vec3(1.0, 0.92, 0.8) * pow(max(dot(N, H), 0.0), 70.0) * spec * 0.9 * smoothstep(0.0, 0.2, ndl) * uSunI;
-        vec3 city = texture2D(nightMap, vUv).rgb;
+        vec3 city = spun(nightMap, vUv).rgb;
         col += city * vec3(1.0, 0.78, 0.5) * 1.6 * smoothstep(0.05, -0.2, ndl);
       #endif
         // Perspective aérienne vers le bord, côté jour
@@ -449,6 +475,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
     orbitFrame?: Obj3
   }
   const nodes: Record<string, Node> = {}
+  const frameQ: Record<string, import('three').Quaternion> = {}
   const sphereGeo = new T.SphereGeometry(1, 128, 64)
   const sphereGeoLo = new T.SphereGeometry(1, 64, 32)
   for (const b of bodies) {
@@ -464,12 +491,31 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
     if (b.kind === 'earth') {
       const cl = new T.Mesh(sphereGeo, new T.ShaderMaterial({
         transparent: true, depthWrite: false,
-        uniforms: { map: { value: tex('earth_clouds.jpg') }, uSunI: { value: 1 } },
+        uniforms: { map: { value: tex('earth_clouds.jpg') }, uSunI: { value: 1 }, uBlur: { value: 0 } },
         vertexShader: PLANET_VS,
         fragmentShader: `uniform sampler2D map; uniform float uSunI; varying vec3 vN; varying vec3 vW; varying vec2 vUv;
+        uniform float uBlur;
+        // L'obturateur (voir le matériau des planètes)
+        vec4 spun(sampler2D m, vec2 uv){
+        #ifdef BLUR
+          // De 4 à 16 lectures selon la longueur du flou (chacune pré-filtrée)
+          int n = int(clamp(ceil(uBlur * 400.0), 4.0, 16.0));
+          vec2 dx = dFdx(uv), dy = dFdy(uv);
+          float stepU = uBlur / float(n);
+          vec4 s = vec4(0.0);
+          for (int i = 0; i < 16; i++){
+            if (i >= n) break;
+            float f = (float(i) + 0.5) / float(n);
+            s += textureGrad(m, uv + vec2(uBlur * f, 0.0), vec2(max(abs(dx.x), stepU), dx.y), vec2(dy.x, dy.y));
+          }
+          return s / float(n);
+        #else
+          return texture2D(m, uv);
+        #endif
+        }
         void main(){
           vec3 N = normalize(vN), L = normalize(-vW);
-          float a = texture2D(map, vUv).r;
+          float a = spun(map, vUv).r;
           a = smoothstep(0.08, 0.9, a);
           float d = clamp(dot(N, L) * 1.1 + 0.05, 0.0, 1.0);
           gl_FragColor = vec4(vec3(1.0, 0.99, 0.97) * d * uSunI, a * 0.95);
@@ -524,6 +570,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
       n.orbitFrame.rotation.x = (n.b.id === 'lune' ? n.b.inc! : p.b.tilt || 0) * D2R
       p.pos.add(n.orbitFrame)
       n.orbitFrame.add(n.pos)
+      frameQ[n.b.id] = new T.Quaternion().setFromEuler(n.orbitFrame.rotation)
     } else scene.add(n.pos)
   }
   // Les géométries partagées ne sont libérées qu'une fois
@@ -603,10 +650,45 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
   sprites.frustumCulled = false
   scene.add(sprites)
 
+  /* Les TRAÎNÉES (maquette du 30/09) : quand le temps file, un astre qui
+     parcourt plusieurs fois sa taille pendant une image devient un trait de
+     lumière — la pose longue d'un appareil photo. 80 disques par astre,
+     semés le long du chemin parcouru pendant l'image, vu depuis l'astre que
+     suit la caméra (lui reste net). */
+  const TRAIL_N = 80
+  const trailBodies = bodies.filter(b => b.id !== 'soleil')
+  const trailGeo = new T.BufferGeometry()
+  trailGeo.setAttribute('position', new T.BufferAttribute(new Float32Array(trailBodies.length * TRAIL_N * 3), 3))
+  trailGeo.setAttribute('aCol', new T.BufferAttribute(new Float32Array(trailBodies.length * TRAIL_N * 3), 3))
+  trailGeo.setAttribute('aRad', new T.BufferAttribute(new Float32Array(trailBodies.length * TRAIL_N), 1))
+  const trailMat = new T.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+    uniforms: { uProj: { value: 500 } },
+    vertexShader: `attribute vec3 aCol; attribute float aRad; uniform float uProj; varying vec3 vC;
+    void main(){
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      float px = mv.z < 0.0 ? 2.0 * aRad * uProj / -mv.z : 0.0;
+      // Un disque plus petit qu'un pixel : dessiné à 1,5 px, son énergie réduite d'autant
+      float e = 1.0;
+      if (px < 1.5){ e = px * px / 2.25; px = 1.5; }
+      gl_PointSize = min(px, 400.0);
+      vC = aCol * e;
+      gl_Position = projectionMatrix * mv;
+    }`,
+    fragmentShader: `varying vec3 vC; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = 1.0 - smoothstep(0.55, 1.0, d); gl_FragColor = vec4(vC * a, 1.0); }`
+  })
+  const trails = new T.Points(trailGeo, trailMat)
+  trails.frustumCulled = false
+  scene.add(trails)
+  const trailColor: Record<string, import('three').Color> = Object.fromEntries(trailBodies.map(b => [b.id, new T.Color(b.color)]))
+  const trailSamples = Array.from({ length: TRAIL_N }, () => new T.Vector3())
+
   /* --- Le temps : positions, rotations --- */
   const helioAU: Record<string, number> = {}
   const tmpV = new T.Vector3(), tmpV2 = new T.Vector3(), tmpQ = new T.Quaternion()
+  let curJd = 2451545
   function setTime(jd: number, spinJd: number) {
+    curJd = jd
     const Tc = (jd - 2451545) / 36525
     const d = spinJd - 2451545
     for (const id of Object.keys(EL)) {
@@ -619,7 +701,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
     for (const n of Object.values(nodes)) {
       const b = n.b
       if (b.parent) {
-        const ang = (b.id === 'lune' ? 218.316 + 13.176396 * d : (b.L0 || 0) + 360 * d / b.pDays!) * D2R
+        const ang = moonAngle(b, d)
         n.pos.position.set(Math.cos(ang) * b.orbitR, 0, -Math.sin(ang) * b.orbitR)
         n.spin.rotation.y = ang + Math.PI // toujours la même face vers sa planète
       } else if (b.id === 'terre') n.spin.rotation.y = gmst
@@ -631,6 +713,20 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
     if (orbitsT === null || Math.abs(Tc - orbitsT) > 0.05) buildOrbits(Tc)
   }
 
+  const moonAngle = (b: BodyDef, d: number) => (b.id === 'lune' ? 218.316 + 13.176396 * d : (b.L0 || 0) + 360 * d / b.pDays!) * D2R
+  const tmpM = new T.Vector3()
+  /** Où est `id` (scène) au jour julien `jdS` : sans toucher au graphe. */
+  function bodyAt(id: string, jdS: number, out: V3): V3 {
+    if (id === 'soleil' || !byId[id]) return out.set(0, 0, 0)
+    const b = byId[id]
+    if (!b.parent) return eclToScene(keplerEcl(EL[id], (jdS - 2451545) / 36525), out)
+    bodyAt(b.parent, jdS, out)
+    const a = moonAngle(b, jdS - 2451545)
+    tmpM.set(Math.cos(a) * b.orbitR, 0, -Math.sin(a) * b.orbitR).applyQuaternion(frameQ[id])
+    return out.add(tmpM)
+  }
+  const orbitDays = (b: BodyDef) => b.parent ? b.pDays! : 365.25 * Math.pow(EL[b.id][0], 1.5)
+
   const worldPos = (id: string, out: V3 = new T.Vector3()) =>
     id === 'soleil' || !nodes[id] ? out.set(0, 0, 0) : nodes[id].pos.getWorldPosition(out)
   const radius = (id: string) => byId[id]?.R ?? SUN_R
@@ -639,8 +735,69 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
 
   /* --- Chaque image : le Soleil qui bout, les points lointains, l'intensité
      du Soleil selon la distance, les orbites qui s'effacent de près --- */
+  const tgtNow = new T.Vector3(), tgtThen = new T.Vector3(), camTo = new T.Vector3(), toSun = new T.Vector3()
+  function updateTrails(dJ: number, tracked: string) {
+    const pos = trailGeo.attributes.position as import('three').BufferAttribute
+    const col = trailGeo.attributes.aCol as import('three').BufferAttribute
+    const rad = trailGeo.attributes.aRad as import('three').BufferAttribute
+    const follow = tracked !== 'soleil' && !!byId[tracked]
+    bodyAt(follow ? tracked : 'soleil', curJd, tgtNow)
+    trailBodies.forEach((b, bi) => {
+      const n = nodes[b.id]
+      const base = bi * TRAIL_N
+      // L'astre suivi par la caméra reste net
+      const span = b.id === tracked ? 0 : Math.min(dJ, orbitDays(b))
+      let S = 0
+      if (span > 0) {
+        for (let k = 0; k < TRAIL_N; k++) {
+          const t = curJd - span * k / (TRAIL_N - 1)
+          bodyAt(b.id, t, trailSamples[k])
+          if (follow) { bodyAt(tracked, t, tgtThen); trailSamples[k].sub(tgtThen).add(tgtNow) }
+          if (k > 0) S += trailSamples[k].distanceTo(trailSamples[k - 1])
+        }
+      }
+      const D = 2 * b.R
+      // Plus de quelques diamètres par image : la sphère nette disparaît, le trait la remplace
+      n.tilt.visible = S < D * 2.5
+      if (S <= D * 1.2) {
+        for (let k = 0; k < TRAIL_N; k++) { col.setXYZ(base + k, 0, 0, 0); rad.setX(base + k, 0) }
+        return
+      }
+      const spacing = S / (TRAIL_N - 1)
+      const rd = Math.max(b.R, 0.9 * spacing)
+      const sunI = (n.mesh.material as SMat).uniforms.uSunI.value as number
+      // Compensation d'exposition : étalé sur S, l'éclat est D/S ; la racine le garde lisible
+      const bright = Math.sqrt(Math.min(1, D / S)) * Math.min(1, spacing / (2 * rd)) * 2.2
+      const c = trailColor[b.id]
+      for (let k = 0; k < TRAIL_N; k++) {
+        const p = trailSamples[k]
+        toSun.copy(p).negate().normalize()
+        camTo.copy(camera.position).sub(p).normalize()
+        const phase = 0.12 + 0.88 * (0.5 + 0.5 * toSun.dot(camTo))
+        const fade = 0.55 + 0.45 * (1 - k / (TRAIL_N - 1))
+        const w = bright * phase * fade * sunI * 0.5
+        pos.setXYZ(base + k, p.x, p.y, p.z)
+        col.setXYZ(base + k, c.r * w, c.g * w, c.b * w)
+        rad.setX(base + k, rd)
+      }
+    })
+    pos.needsUpdate = true; col.needsUpdate = true; rad.needsUpdate = true
+    trailMat.uniforms.uProj.value = (rtScene ? rtScene.height : renderer.domElement.clientHeight) / (2 * Math.tan(camera.fov * D2R / 2))
+  }
+
+  /** Le flou allumé ou éteint : la variante du shader change (gardée en cache
+      par three.js : seule la première bascule compile). */
+  const setBlur = (m: SMat, blurU: number) => {
+    // Allumé au-delà d'un degré de longitude, éteint en deçà des deux tiers
+    // (sans battre à la limite)
+    const want = m.defines.BLUR ? blurU >= 0.002 : blurU >= 0.003
+    if (!!m.defines.BLUR === want) return
+    if (want) m.defines.BLUR = 1; else delete m.defines.BLUR
+    m.needsUpdate = true
+  }
+
   let simSec = 0
-  function frame(dt: number) {
+  function frame(dt: number, dJ = 0, tracked = 'soleil') {
     simSec += dt
     sunUniforms.uTime.value = simSec
     coronaMat.uniforms.uTime.value = simSec
@@ -658,8 +815,13 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
     spPos.needsUpdate = true; spVis.needsUpdate = true
     for (const n of Object.values(nodes)) {
       const sunI = 1.35 * Math.pow(1 / au(n.b.id), 0.3)
-      ;(n.mesh.material as SMat).uniforms.uSunI.value = sunI
-      if (n.clouds) (n.clouds.material as SMat).uniforms.uSunI.value = sunI
+      const mu = (n.mesh.material as SMat).uniforms
+      mu.uSunI.value = sunI
+      // Le flou de rotation : la part d'un tour faite pendant l'image
+      const blurU = Math.min(1, dJ / (n.b.parent ? n.b.pDays! : n.b.period! / 24))
+      mu.uBlur.value = blurU
+      setBlur(n.mesh.material as SMat, blurU)
+      if (n.clouds) { const cu = (n.clouds.material as SMat).uniforms; cu.uSunI.value = sunI; cu.uBlur.value = blurU; setBlur(n.clouds.material as SMat, blurU) }
       if (n.atmo) (n.atmo.material as SMat).uniforms.uSunI.value = sunI
       if (n.ring) {
         const rmu = (n.ring.material as SMat).uniforms
@@ -688,6 +850,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
     for (const b of bodies) near = Math.min(near, camera.position.distanceTo(worldPos(b.id, tmpV)) - b.R)
     camera.near = Math.max(0.0005, Math.min(20, near * 0.35))
     camera.updateProjectionMatrix()
+    updateTrails(dJ, tracked)
   }
 
   /* --- Le toucher : l'astre le plus proche du doigt à l'écran --- */
@@ -838,6 +1001,7 @@ export async function makeCosmos(stage: Stage, base: string): Promise<Cosmos> {
       rtScene?.dispose()
       mips.forEach(m => m.dispose())
       for (const o of orbitLines) { o.line.geometry.dispose(); (o.line.material as import('three').Material).dispose() }
+      trailGeo.dispose(); trailMat.dispose()
     }
   }
   return cosmos
