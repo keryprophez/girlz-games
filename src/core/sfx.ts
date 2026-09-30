@@ -131,7 +131,7 @@ export function preloadCries(vs: AnimalVoice[]) {
 let singing: { g: GainNode; src: AudioBufferSourceNode } | null = null
 
 /** Un animal chante. `max` (s) : la voix s'éteint en douceur au-delà (une
-    note de Simon, un temps de la Boîte à rythme) ; `solo` : la voix
+    note du Chœur, une touche du Piano) ; `solo` : la voix
     précédente se tait d'abord, une note à la fois. Renvoie false tant que
     le son n'est pas décodé (le jeu joue alors son secours). */
 export function cry(v: AnimalVoice, o: { vol?: number; rate?: number; max?: number; solo?: boolean; delay?: number } = {}): boolean {

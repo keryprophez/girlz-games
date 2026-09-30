@@ -89,7 +89,6 @@ const STAGE = {
   // Créer
   dressup: { ready: () => window.__pr && window.__pr.ready && window.__pr.pending === 0, wait: 3000, zoom: 1.45, cx: 0.29, cy: 0.5 },
   // Un air tout fait : la grille se remplit et les animaux chantent
-  beatbox: { wait: 3000, act: async p => { await p.locator('#bbP1').click() }, after: 2600 },
   // Une chanson en cours (la poule), la partition qui descend ; les dessins des chansons hors cadre
   piano: {
     wait: 3000, cx: 0.57,

@@ -141,21 +141,3 @@ export const sCrunch = () => {
 }
 /** Woosh d'objet lancé. */
 export const sWoosh = () => noiseBurst(0.26, 320, { vol: 0.16, type: 'bandpass', q: 0.8, sweepTo: 1700 })
-/** Meuh : basse en dents de scie avec glissando. */
-export const sMoo = () => {
-  if (!soundOn) return
-  const ac = getCtx()
-  if (!ac) return
-  try {
-    const o = ac.createOscillator(), g = ac.createGain()
-    o.type = 'sawtooth'
-    const t0 = ac.currentTime
-    o.frequency.setValueAtTime(140, t0)
-    o.frequency.exponentialRampToValueAtTime(85, t0 + 0.35)
-    o.frequency.exponentialRampToValueAtTime(70, t0 + 0.55)
-    g.gain.setValueAtTime(0.16, t0)
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6)
-    o.connect(g); g.connect(ac.destination)
-    o.start(t0); o.stop(t0 + 0.65)
-  } catch { /* rien */ }
-}

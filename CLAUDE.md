@@ -111,8 +111,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            GameHost) — taper, glisser, trancher, ou `choose`
                            (« l'un de ceux-là », sans appuyer : jamais la
                            réponse dans Apprendre)
-             barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, la
-                           Boîte à rythme, le coloriage) : `barnChoir`,
+             barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, le
+                           coloriage) : `barnChoir`,
                            `singOn`, `stepChoir`
              train3d.ts  ← le petit train (Suites logiques, coloriage)
              lineart.ts  ← le LIVRE DE COLORIAGES de l'Atelier (30/09) : les
@@ -137,7 +137,7 @@ de Wikimedia Commons** — tous ramenés au même moule (carré, 512 px) à l'im
 dans `photos/CREDITS.json` et `public/assets/CREDITS.md`. L'app est privée et
 sans usage commercial : les licences CC BY-NC sont acceptées, et créditées.
 **Règle du père : jamais deux styles.** Ce qui est PION ou DÉCOR (Simon,
-Puissance 4, la Boîte à rythme, l'image du Taquin) est fait des personnages
+Puissance 4, l'image du Taquin) est fait des personnages
 3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
 `critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
 WebGL jetable), `portraitImg(url, px)` les insère, `farmScene(kinds, px)` rend
@@ -275,7 +275,9 @@ là, jamais un `tone()` — depuis le 28/09, les dix ont leur personnage 3D
 Modèles : `icetower.ts` et, en 2D, `ninja.ts` (un canvas, les fruits Canva,
 ombres et lueurs précalculées une fois par image, vagues puis pluie finale).
 Poussin Volant et Tape-Trous sont sortis le 27/09 (« vire-les »), avec
-`core/runner.ts` (le socle des jeux qui défilent). Pour un jeu Apprendre
+`core/runner.ts` (le socle des jeux qui défilent) ; la Boîte à rythme le
+30/09 (« un peu nulle » pour les filles : des cris d'animaux coupés au temps
+sonnent mal, et le Piano tient déjà la musique dans Créer). Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
 `public/assets/geo/`, voix = noms de lieux uniquement).
 
@@ -401,7 +403,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 31 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 30 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`).
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans

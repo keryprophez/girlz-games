@@ -198,15 +198,6 @@ export const BADGE: Record<string, string> = {
     <circle cx="24" cy="13" r="1.7" fill="${C.cream}"/>
     <circle cx="24" cy="19" r="1.7" fill="${C.cream}"/>`),
 
-  beatbox: svg(`
-    <rect x="6" y="12" width="36" height="24" rx="5" fill="${C.lilacDark}"/>
-    <rect x="10" y="16" width="7" height="7" rx="2" fill="${C.coral}"/>
-    <rect x="20" y="16" width="7" height="7" rx="2" fill="${C.cream}"/>
-    <rect x="30" y="16" width="7" height="7" rx="2" fill="${C.sun}"/>
-    <rect x="10" y="26" width="7" height="7" rx="2" fill="${C.cream}"/>
-    <rect x="20" y="26" width="7" height="7" rx="2" fill="${C.sky}"/>
-    <rect x="30" y="26" width="7" height="7" rx="2" fill="${C.cream}"/>`),
-
   piano: svg(`
     <rect x="6" y="12" width="36" height="26" rx="4" fill="${C.cream}"/>
     <path d="M15 12v26M24 12v26M33 12v26" stroke="${C.woodDark}" stroke-width="1.6"/>

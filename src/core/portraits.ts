@@ -5,7 +5,7 @@ import { royalKey, type Royal } from './royal'
 import { diskGet, diskPut } from './diskcache'
 
 /* Les personnages 3D de la ferme, rendus en IMAGES pour les jeux en DOM
-   (Simon, Puissance 4, la Boîte à rythme, le Taquin). Ils remplacent les
+   (Simon, Puissance 4, le Taquin). Ils remplacent les
    pastilles rondes de la planche Kenney — « un sprite atroce digne d'un
    Minitel » — par les mêmes personnages que Tape-Trous : un seul style.
 

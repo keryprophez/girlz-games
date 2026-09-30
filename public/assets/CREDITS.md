@@ -73,7 +73,7 @@ planche des plantes en référence et ce texte de commande :
 
 Dix cris d'animaux enregistrés, pris sur **Wikimedia Commons** (licences
 libres), choisis à l'oreille par le père sur une page d'écoute le 25/09 pour
-le Chœur de la ferme et la Boîte à rythme. Chaque fichier est un court
+le Chœur de la ferme (et le Piano). Chaque fichier est un court
 extrait de l'enregistrement (secondes indiquées), ramené à un volume commun
 (normalisation -16 LUFS), en MP3 mono. Les extraits des fichiers CC BY-SA
 sont partagés sous la même licence.

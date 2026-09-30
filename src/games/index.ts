@@ -13,7 +13,6 @@ import { potager } from './potager'
 import { mirror } from './mirror'
 import { market } from './market'
 import { maze } from './maze'
-import { beatbox } from './beatbox'
 import { taquin } from './taquin'
 import { connect4 } from './connect4'
 import { pizza } from './pizza'
@@ -28,7 +27,7 @@ export const GAMES: GameDef[] = [
   icetower, ninja, caterpillar, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
-  dressup, beatbox, piano, fireworks, coloring, pizza
+  dressup, piano, fireworks, coloring, pizza
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -57,7 +56,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',
-    games: [dressup, beatbox, piano, fireworks, coloring, pizza]
+    games: [dressup, piano, fireworks, coloring, pizza]
   }
 ]
 

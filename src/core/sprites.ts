@@ -16,7 +16,7 @@
    Depuis le 12/09, **les imagiers n'utilisent plus que ça** : l'Intrus, Memory,
    la Chasse aux lettres et le Marché montrent des photos et rien d'autre — le
    père ne voulait pas voir deux styles. Ce qui est PION ou DÉCOR de jeu
-   (Puissance 4, Simon, Taquin, la Boîte à rythme) est fait des personnages 3D
+   (Puissance 4, Simon, Taquin) est fait des personnages 3D
    de la ferme ; le Tour du Monde montre aussi ses animaux en photo (22/09).
 
    Les animaux viennent d'iNaturalist (photos identifiées par l'espèce), le

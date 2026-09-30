@@ -885,7 +885,7 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   un petit navire, Une souris verte, Savez-vous planter les choux n'y
   tiennent pas (voir le piège dans CLAUDE.md). Les dix dessins sur deux
   colonnes.
-- ✅ **5. La Boîte à rythme sur scène** : la grange du Chœur (sortie dans
+- ✅ **5. La Boîte à rythme sur scène** (sortie le soir même, voir plus bas) : la grange du Chœur (sortie dans
   `core/barn3d.ts`) au-dessus de la grille, les six musiciens sur l'estrade
   sur un coussin de la couleur de leur ligne ; leur case joue, ils sautent
   sous le projecteur ; la guirlande bat la mesure ; on les touche aussi sur
@@ -997,6 +997,16 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   menu de partage (ordinateur), l'image est enregistrée. Rien ne quitte la
   tablette sans qu'on choisisse où l'envoyer. Les boutons de la vue ont
   leurs petits noms (Reprendre · Film · Partager · Enregistrer · Jeter).
+
+- ✅ **La Boîte à rythme sort** (30/09 : « les filles me disent que c'est
+  un peu nul… soit tu pivotes soit tu me dégages ce jeu » ; « la retirer »
+  plutôt que le pivot en « Orchestre de la ferme ») : des cris d'animaux
+  coupés au temps sonnent mal, et le Piano tient déjà la musique dans
+  Créer. Partis avec elle : sa vignette, son affiche, son bot, son CSS et le
+  « meuh » synthétique ; la grange reste (le Chœur, le livre de coloriages).
+  Au passage, le Piano nomme le mode choisi sous ses boutons (« Libre »,
+  « Au clair de la lune »…) : dix titres ne tiennent pas sous des boutons
+  de 58 px.
 
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute

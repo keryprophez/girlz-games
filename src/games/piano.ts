@@ -160,6 +160,9 @@ function setMode(me: State, song: number | null) {
   me.song = song === null ? null : SONGS[song]
   me.root.querySelectorAll<HTMLElement>('.pn-mode').forEach(b =>
     b.parentElement!.classList.toggle('sel', (b.dataset.s ?? '') === (song === null ? '' : String(song))))
+  // Le nom du mode choisi, sous les boutons (30/09 : « un label en plus du
+  // symbole » — dix titres de chanson ne tiennent pas sous des boutons de 58 px)
+  me.root.querySelector('.pn-now')!.textContent = song === null ? 'Libre' : SONGS[song].name
   me.root.querySelector('.pn-score')!.classList.remove('won')
   if (song === null) me.keys.forEach(k => k.classList.remove('pulse'))
   paintScore(me)
@@ -191,6 +194,7 @@ export const piano: GameDef = {
         <div class="tq-tools pn-tools">
           ${modeBtn('', ICON.sound, 'Libre', true)}
           ${SONGS.map((s, i) => modeBtn(String(i), s.icon, s.name)).join('')}
+          <i class="tool-cap pn-now">Libre</i>
         </div>
         <div class="pn-main">
           <div class="pn-score"></div>
@@ -206,7 +210,7 @@ export const piano: GameDef = {
             </div>
           </div>
         </div>
-        <button class="sn-tool go bb-done" id="pnDone" aria-label="Fini">${ICON.check}</button>
+        <button class="sn-tool go pn-done" id="pnDone" aria-label="Fini">${ICON.check}</button>
       </div>`
     preloadSfx(['confirm'])
     const me: State = {

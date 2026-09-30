@@ -1,8 +1,9 @@
 import { dotTex, type Stage, type T3 } from './three3d'
 import type { Critter, CritterKind, CritterKit } from './critters'
 
-/* 🎪 La scène de la grange — née avec le Chœur (28/09), partagée depuis le
-   30/09 avec la Boîte à rythme : un mur de planches rouges aux portes en
+/* 🎪 La scène de la grange — née avec le Chœur (28/09), partagée le 30/09
+   avec la Boîte à rythme (sortie le soir même), et le livre de coloriages
+   de l'Atelier : un mur de planches rouges aux portes en
    croix, des poutres, des bottes de foin, une guirlande d'ampoules, une
    estrade en bois, et la chorale dessus, chacun sur son coussin de couleur,
    sous son projecteur. Quand un animal chante, son projecteur s'allume, il

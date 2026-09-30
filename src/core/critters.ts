@@ -20,7 +20,7 @@ export type CritterKind = 'mole' | 'chick' | 'pig' | 'rabbit' | 'cactus'
     rythme et l'image du Taquin, rendus en portrait par `core/portraits.ts`. */
 export const FARM: CritterKind[] = ['cow', 'pig', 'hen', 'chick', 'duck', 'sheep', 'dog', 'rabbit']
 /** Et depuis le 28/09, ceux dont la voix attendait un personnage : le coq, la
-    chèvre, le cheval et le chat (le Chœur, le Piano, la Boîte à rythme). */
+    chèvre, le cheval et le chat (le Chœur, le Piano). */
 export const FARM_MORE: CritterKind[] = ['rooster', 'goat', 'horse', 'cat']
 
 type Obj = import('three').Object3D

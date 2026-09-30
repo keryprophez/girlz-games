@@ -3,7 +3,7 @@
    des barrières au poussin, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
    catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
-   Boîte à rythme, Feu d'artifice, l'Atelier et la Princesse compris.
+   Feu d'artifice, l'Atelier et la Princesse compris.
 
    Les jeux exposent leur état de pilotage seulement quand `window.__BOT` est
    posé avant le chargement — inerte en production.
@@ -865,17 +865,6 @@ await scenario('piano-une-chanson', async () => {
   }
   if (!(await page.locator('.pn-score.won').count())) throw new Error('la chanson ne s\'est pas finie')
   await finDe('Quelle musicienne')
-})
-
-/* 🥁 Boîte à rythme : un air tout fait, la tête de lecture tourne, les
-   animaux chantent, puis « fini ». */
-await scenario('rythme-un-air', async () => {
-  await openGame('Boîte à Rythme')
-  await page.locator('#bbP1').click()
-  await page.waitForFunction(() => document.querySelector('.bb-cell.now') && document.querySelector('.bb-head.on'), null, { timeout: 5000 })
-  await page.waitForFunction(() => document.querySelector('.bb-animal.sing'), null, { timeout: 5000 })
-  await page.locator('#bbDone').click()
-  await finDe('Quel orchestre')
 })
 
 /* ✏️ Le livre de coloriages de l'Atelier : la vache (un dessin au trait
