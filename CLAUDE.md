@@ -87,7 +87,12 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            maquette du père) : ciel et Voie lactée procéduraux,
                            Soleil qui bout, Terre jour/nuit/villes, atmosphères,
                            ombres des anneaux, lunes, vraies positions (JPL),
-                           rendu HDR + halo + ACES branché sur `stage.render`
+                           rendu HDR + halo + ACES branché sur `stage.render` ;
+                           depuis le 30/09 (sa maquette suivante), le flou de
+                           rotation et les traînées quand le temps file
+                           (`frame(dt, dJ, suivi)`) — le jeu, lui, reprend sa
+                           disposition : nom et fiche, date et vitesse, barre
+                           de tous les astres, noms des petits astres
              rocket3d.ts ← LA FUSÉE de l'Espace (28/09) : la fusée « A » choisie
                            dans Canva, reconstruite en vraie 3D (l'image sert de
                            modèle) — profil lissé, peinture vernie, joints et
@@ -279,7 +284,8 @@ Poussin Volant et Tape-Trous sont sortis le 27/09 (« vire-les »), avec
 30/09 (« un peu nulle » pour les filles : des cris d'animaux coupés au temps
 sonnent mal, et le Piano tient déjà la musique dans Créer). Pour un jeu Apprendre
 en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
-`public/assets/geo/`, voix = noms de lieux uniquement).
+`public/assets/geo/`, voix = noms de lieux uniquement ; depuis le 30/09, on
+pince pour zoomer sur le globe et sur la France, que le doigt fait glisser).
 
 **Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
 antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,
@@ -367,7 +373,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **La planche-contact ne ment pas** | 22/09, recherche iNaturalist par taxon : sur 5 « bisons », 4 antilopes ; sur 5 « tigres », un léopard, une lionne, un jaguar et une panthère — les observations sont identifiées au genre ou à la famille. Toujours regarder avant `garder`. |
 | **`import-assets.mjs` et CREDITS.md** | Le script réécrivait TOUT `public/assets/CREDITS.md` : relancé, il effaçait les crédits des photos et de l'Espace. Il ne remplace plus que sa section (jusqu'au premier `## `). |
 | **`pkill -f` qui se tue lui-même** | `pkill -f "vite preview"` dans une commande qui relance aussi `vite preview` tue le shell qui l'exécute (la ligne de commande contient le motif). Arrêter le serveur dans une commande à part. |
-| **Deux doigts, une seule lame** | Le Ninja gardait UN « dernier point » : un second doigt le faisait sauter d'un bout de l'écran à l'autre, et le segment tranchait tout entre les deux. Tout geste de glissé se suit **par `pointerId`** (une `Map`), même dans un jeu pensé pour un doigt. |
+| **Deux doigts, une seule lame** | Le Ninja gardait UN « dernier point » : un second doigt le faisait sauter d'un bout de l'écran à l'autre, et le segment tranchait tout entre les deux. Tout geste de glissé se suit **par `pointerId`** (une `Map`), même dans un jeu pensé pour un doigt. Même piège sur le globe du Tour du Monde (30/09, « il tourne à 1000 tours seconde ») : un deuxième doigt posé pour pincer faisait sauter le point de référence, et l'élan était compté comme si le doigt bougeait à 60 Hz. L'élan se mesure en temps réel (radians par seconde), borné, et s'éteint en une demi-seconde. |
+| **Un effet proportionnel au temps d'une image** | Le flou de rotation de l'Espace dépend du temps balayé pendant une image : sous une image lente, il s'allumait, et ses seize lectures de texture rendaient l'image suivante encore plus lente (11 s par image sous la 3D logicielle, contre 0,8). L'obturateur est plafonné à 1/30 s, et le flou est une VARIANTE du shader (`#define`, gardée en cache par three.js) : une condition sur un uniforme ne suffit pas, certains GPU paient les deux côtés. |
 | **Chalet Kenney en pièces** | Les pièces `cabin-*` du kit Holiday tiennent dans une case de 1 : un mur est posé sur le bord +z de sa case (on le tourne pour les autres bords), le coin est au coin (−x, +z), le toit et le pignon sont des DEMI-pièces dont le faîtage est en x = −0,5 — le côté gauche est la même pièce tournée de π (toit) ou en miroir `scale.x = −1` (pignon). Voir `cabin()` dans `core/winter.ts`. |
 | **Secteur de disque retourné** | Un `CircleGeometry(r, n, a0, da)` tourné de −π/2 sur X couvre les angles monde a0…a0+da ; tourné de **+π/2** (pour faire un dessous), il couvre −a0−da…−a0 : le dessous d'une part de pizza se retrouvait SOUS LA PART VOISINE, et la recouvrait dès qu'on la soulevait. Prendre `thetaStart = −a0 − da` pour la face retournée. |
 | **Répondre pendant une animation** | Dans le Potager, la rangée des nombres s'écrit case par case (`ctx.after`) : une réponse donnée avant la fin laissait des nombres apparaître APRÈS la bonne réponse. Tout ce qui répond (`success`, `showMiss`) change d'abord le jeton de question (`me.gen++`), et chaque rappel vérifie ce jeton. |

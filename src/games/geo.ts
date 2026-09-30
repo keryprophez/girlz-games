@@ -163,6 +163,9 @@ interface State {
   map: MapId
   mode: Mode
   spin: number; tilt: number; vSpin: number; vTilt: number
+  /** Le zoom (1 = vue d'ensemble, plus petit = plus près) et, sur la carte de
+      France, le déplacement du regard au doigt. */
+  zoom: number; tgtZoom: number; pan: { x: number; z: number }
   idle: number
   selected: string | null
   target: Target | null
@@ -179,6 +182,8 @@ interface State {
   camFrom: import('three').Vector3
   camTo: import('three').Vector3
   camLook: import('three').Vector3
+  tmpLook: import('three').Vector3
+  tmpCam: import('three').Vector3
 }
 
 let geo: State | null = null
@@ -564,11 +569,13 @@ export const geoGame: GameDef = {
         stage, T, fx: particles(stage, 300), countries, regions: regionsFc.features,
         globe, earth, overlay: { canvas, g, tex: otex }, france, regionMeshes, cityPins,
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
+        zoom: 1, tgtZoom: 1, pan: { x: 0, z: 0 },
         selected: null, target: null, tries: 0, asked: 0, errors: 0, total: c.byTier(8, 8, 12), busy: false, over: false,
         ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, askText: ask.querySelector('.geo-asktext')!,
           say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl },
         lastName: null,
-        camFrom: new T.Vector3(0, 0.6, 6.4), camTo: new T.Vector3(0, 0.6, 6.4), camLook: new T.Vector3(0, 0, 0)
+        camFrom: new T.Vector3(0, 0.6, 6.4), camTo: new T.Vector3(0, 0.6, 6.4), camLook: new T.Vector3(0, 0, 0),
+        tmpLook: new T.Vector3(), tmpCam: new T.Vector3()
       }
       me.ui.dots.innerHTML = Array.from({ length: me.total }, () => '<i></i>').join('')
       geo = me
@@ -581,6 +588,7 @@ export const geoGame: GameDef = {
         france.visible = m === 'france'
         me.camTo.set(...(m === 'monde' ? [0, 0.6, 6.4] : [0, 6.6, 3.9]) as [number, number, number])
         me.camLook.set(0, 0, m === 'monde' ? 0 : -0.2)
+        me.tgtZoom = 1; me.pan.x = me.pan.z = 0
         bar.querySelectorAll<HTMLElement>('[data-map]').forEach(b => {
           const on = b.dataset.map === m
           b.classList.toggle('on', on); b.parentElement?.classList.toggle('sel', on)
@@ -620,25 +628,79 @@ export const geoGame: GameDef = {
         ctx.finish({ title: 'Belle exploration !', msg: `Tu as exploré ${me.map === 'monde' ? 'le globe' : 'la France'}`, stars: 3 })
       })
 
-      /* --- Le doigt : glisser fait tourner le globe, un tap touche --- */
+      /* --- Le doigt (30/09 : « je veux pouvoir zoomer sur le globe, pas le
+         faire tourner accidentellement à 1000 tours seconde ») : un doigt
+         fait tourner le globe — le point touché suit le doigt —, deux doigts
+         pincent pour zoomer (la molette aussi), un tap touche. Chaque doigt
+         est suivi par son `pointerId` : un deuxième doigt ne fait plus
+         « sauter » le point de référence (c'était la rotation folle), et
+         l'élan se mesure en temps réel, borné, et s'éteint vite. --- */
       const pick3 = picker(stage)
-      let down: { x: number; y: number; t: number } | null = null
-      let lastMove: { x: number; y: number } | null = null
-      const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; lastMove = { x: e.clientX, y: e.clientY }; me.vSpin = 0; me.vTilt = 0 }
+      const el = stage.renderer.domElement
+      const pts = new Map<number, { x: number; y: number }>()
+      let tap: { x: number; y: number; t: number; multi: boolean; moved: number } | null = null
+      let pinch0 = 0, zoom0 = 1, lastT = 0
+      const ZOOM: Record<MapId, [number, number]> = { monde: [0.42, 1.1], france: [0.4, 1.15] }
+      const clampZoom = (z: number) => Math.max(ZOOM[me.map][0], Math.min(ZOOM[me.map][1], z))
+      /** Le rayon du globe à l'écran (pixels) : un pixel de doigt = 1/rayon radian. */
+      const radiusPx = () => {
+        const cam = stage.camera
+        const d = cam.position.distanceTo(me.camLook)
+        return R / (d * Math.tan(cam.fov * Math.PI / 360)) * el.clientHeight / 2
+      }
+      const onDown = (e: PointerEvent) => {
+        if (e.target !== el) return
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        me.vSpin = 0; me.vTilt = 0; me.idle = 0
+        lastT = performance.now()
+        if (pts.size === 1) tap = { x: e.clientX, y: e.clientY, t: lastT, multi: false, moved: 0 }
+        else if (tap) tap.multi = true
+        if (pts.size === 2) {
+          const [a, b] = [...pts.values()]
+          pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = me.tgtZoom
+        }
+      }
       const onMove = (e: PointerEvent) => {
-        if (!down || !lastMove || me.map !== 'monde') return
-        const dx = e.clientX - lastMove.x, dy = e.clientY - lastMove.y
-        me.spin += dx * 0.006; me.tilt = Math.max(-1.1, Math.min(1.1, me.tilt + dy * 0.006))
-        me.vSpin = dx * 0.006 * 60; me.vTilt = dy * 0.006 * 60
+        const p = pts.get(e.pointerId)
+        if (!p) return
+        const dx = e.clientX - p.x, dy = e.clientY - p.y
+        p.x = e.clientX; p.y = e.clientY
+        if (tap) tap.moved += Math.abs(dx) + Math.abs(dy)
         me.idle = 0
-        lastMove = { x: e.clientX, y: e.clientY }
+        if (pts.size === 1) {
+          const now = performance.now()
+          const dts = Math.max(8, now - lastT) / 1000
+          lastT = now
+          if (me.map === 'monde') {
+            const k = 1 / Math.max(80, radiusPx())
+            me.spin += dx * k; me.tilt = Math.max(-1.1, Math.min(1.1, me.tilt + dy * k))
+            // L'élan : la vitesse du doigt (radians par seconde), lissée et bornée
+            const MAXV = 2.2
+            me.vSpin = Math.max(-MAXV, Math.min(MAXV, me.vSpin * 0.5 + dx * k / dts * 0.5))
+            me.vTilt = Math.max(-MAXV, Math.min(MAXV, me.vTilt * 0.5 + dy * k / dts * 0.5))
+          } else if (me.tgtZoom < 0.98) {
+            // La carte de France agrandie : le doigt la fait glisser
+            const w = stage.camera.position.distanceTo(me.camLook) * 2 * Math.tan(stage.camera.fov * Math.PI / 360) / Math.max(1, el.clientHeight)
+            me.pan.x = Math.max(-2.4, Math.min(2.4, me.pan.x - dx * w))
+            me.pan.z = Math.max(-2.2, Math.min(2.2, me.pan.z - dy * w))
+          }
+        } else if (pts.size === 2 && pinch0 > 0) {
+          const [a, b] = [...pts.values()]
+          me.tgtZoom = clampZoom(zoom0 * pinch0 / Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)))
+          me.vSpin = me.vTilt = 0
+        }
       }
       const onUp = (e: PointerEvent) => {
-        if (!down) return
-        const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y)
-        const quick = performance.now() - down.t < 450
-        down = null; lastMove = null
-        if (moved > 12 || !quick) return
+        if (!pts.has(e.pointerId)) return
+        pts.delete(e.pointerId)
+        if (pts.size < 2) pinch0 = 0
+        if (pts.size > 0) { me.vSpin = me.vTilt = 0; lastT = performance.now(); return }
+        // Un doigt qui s'est arrêté avant de se lever ne lance rien
+        if (performance.now() - lastT > 90) me.vSpin = me.vTilt = 0
+        const t = tap
+        tap = null
+        if (e.type === 'pointercancel' || !t || t.multi || t.moved > 12 || performance.now() - t.t > 450) return
+        me.vSpin = me.vTilt = 0
         me.idle = 0
         if (me.map === 'monde') {
           const hits = pick3(e, [earth], false)
@@ -656,11 +718,16 @@ export const geoGame: GameDef = {
           sfx('drop', { vol: 0.2, rate: 0.7 })
         }
       }
-      const el = stage.renderer.domElement
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault()
+        me.tgtZoom = clampZoom(me.tgtZoom * Math.exp(e.deltaY * 0.0012))
+        me.idle = 0
+      }
       el.addEventListener('pointerdown', onDown)
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
-      window.addEventListener('pointercancel', () => { down = null; lastMove = null })
+      window.addEventListener('pointercancel', onUp)
+      el.addEventListener('wheel', onWheel, { passive: false })
 
       // Accroche pour les bots : quel pays à telle lon/lat, et l'état
       if ((window as unknown as { __BOT?: boolean }).__BOT) {
@@ -668,7 +735,7 @@ export const geoGame: GameDef = {
           pick: (lon: number, lat: number) => countries.find(c => inFeature(c, lon, lat))?.properties.name ?? null,
           continentOf: (n: string) => CONTINENT_OF[n] ?? null,
           unassigned: () => countries.filter(c => !CONTINENT_OF[c.properties.name]).map(c => c.properties.name),
-          state: () => ({ map: me.map, mode: me.mode, asked: me.asked, target: me.target, selected: me.selected }),
+          state: () => ({ map: me.map, mode: me.mode, asked: me.asked, target: me.target, selected: me.selected, zoom: me.zoom, spin: me.spin, vSpin: me.vSpin }),
           tapAt: (x: number, y: number) => {
             const hits = pick3({ clientX: x, clientY: y }, [earth], false)
             if (!hits.length) return null
@@ -683,11 +750,13 @@ export const geoGame: GameDef = {
         if (geo !== me) return
         me.idle += dt
         if (me.map === 'monde') {
-          if (!down) {
+          if (!pts.size) {
             me.spin += me.vSpin * dt; me.tilt += me.vTilt * dt
-            me.vSpin *= Math.pow(0.05, dt); me.vTilt *= Math.pow(0.05, dt)
+            // L'élan s'éteint en une demi-seconde environ
+            me.vSpin *= Math.pow(0.003, dt); me.vTilt *= Math.pow(0.003, dt)
             me.tilt = Math.max(-1.1, Math.min(1.1, me.tilt))
-            if (me.idle > 2.5 && Math.abs(me.vSpin) < 0.05) me.spin += 0.05 * dt // tourne tout seul quand on regarde
+            // tourne tout seul, doucement, quand on regarde de loin sans toucher
+            if (me.idle > 4 && me.zoom > 0.95 && Math.abs(me.vSpin) < 0.05) me.spin += 0.04 * dt
           }
           globe.rotation.set(me.tilt, me.spin, 0, 'XYZ')
         } else {
@@ -696,10 +765,13 @@ export const geoGame: GameDef = {
             if (u.pulse) p.grp.scale.setScalar(1.35 + Math.sin(performance.now() / 160) * 0.25)
           }
         }
-        // La caméra glisse entre le globe et la France
+        // La caméra glisse entre le globe et la France, et suit le zoom
         const cam = stage.camera
-        cam.position.lerp(me.camTo, Math.min(1, dt * 3.5))
-        cam.lookAt(me.camLook)
+        me.zoom += (me.tgtZoom - me.zoom) * Math.min(1, dt * 9)
+        const look = me.tmpLook.set(me.camLook.x + me.pan.x, me.camLook.y, me.camLook.z + me.pan.z)
+        const want = me.tmpCam.copy(me.camTo).sub(me.camLook).multiplyScalar(me.zoom).add(look)
+        cam.position.lerp(want, Math.min(1, dt * 5))
+        cam.lookAt(look)
         me.fx.update(dt)
       })
 
@@ -707,6 +779,8 @@ export const geoGame: GameDef = {
         el.removeEventListener('pointerdown', onDown)
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        el.removeEventListener('wheel', onWheel)
         bar.remove(); ask.remove(); done.remove()
         me.fx.dispose()
         starGeo.dispose(); pinGeo.dispose(); stickGeo.dispose(); hitGeo.dispose()

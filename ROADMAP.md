@@ -1023,6 +1023,27 @@ suivie reste nette). Plan présenté, **en attente du go**.
   L'Atelier et le Piano démarrent tout de suite ; la Princesse garde
   « seule / à deux » et une flèche pour jouer. Plus de bouton « Niveau »
   à la fin de ces jeux.
+- ✅ **L'Espace copie la maquette HTML du père** (« le jeu de l'espace n'a
+  pas changé ! Je veux qu'il copie mon html, avec navigation au doigt et au
+  pinch… là on voit rien, c'est injouable ») : on part de la Terre en grand ;
+  un doigt tourne autour, deux doigts (ou la molette) s'approchent, deux
+  petites tapes recadrent, taper un astre y emmène (taper le ciel ne fait
+  plus rien, plus de rotation toute seule). En haut à gauche le nom et la
+  fiche (rayon, distance), en haut à droite la date (un toucher : retour à
+  aujourd'hui) et la vitesse du temps de la pause à 1 an/s (la tortue, le
+  lièvre) ; en bas, la barre de TOUS les astres, lunes comprises, avec une
+  étoile d'or sur les planètes visitées ; les astres trop petits portent
+  leur nom. Quand le temps file : le flou de rotation et les traînées de
+  lumière (l'astre suivi reste net). La voix dit toujours la merveille de
+  chaque astre (un bouton la redit) ; Trouve cache la barre et les noms ; la
+  fusée vole toujours. Les huit planètes vues : la fête, puis la fin.
+- ✅ **Le Tour du Monde : on zoome sur le globe** (« je veux pouvoir zoomer
+  sur le globe !!! pas le faire tourner accidentellement à 1000 tours
+  seconde ») : deux doigts pincent (la molette aussi), sur le globe comme
+  sur la France (que le doigt fait alors glisser) ; le point touché suit le
+  doigt, chaque doigt est suivi à part (le deuxième doigt faisait tourner le
+  globe à toute vitesse), l'élan est mesuré en vrai, borné et bref ; il ne
+  tourne plus tout seul quand on est zoomé.
 - 🔨 En cours, un agent par chantier : le **Miroir devient les perles à
   repasser** (proposition 1 : le père attendait l'évolution et ne voyait
   « encore que l'ancien jeu miroir »), le **puzzle** (2), le **Feu
