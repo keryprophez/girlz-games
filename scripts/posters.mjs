@@ -90,7 +90,19 @@ const STAGE = {
   dressup: { ready: () => window.__pr && window.__pr.ready && window.__pr.pending === 0, wait: 3000, zoom: 1.45, cx: 0.29, cy: 0.5 },
   // Un air tout fait : la grille se remplit et les animaux chantent
   beatbox: { wait: 3000, act: async p => { await p.locator('#bbP1').click() }, after: 2600 },
-  piano: { wait: 4000 },
+  // Une chanson en cours (la poule), la partition qui descend ; les dessins des chansons hors cadre
+  piano: {
+    wait: 3000, cx: 0.57,
+    act: async p => {
+      await p.locator('.pn-mode[data-s="5"]').click()
+      for (let k = 0; k < 5; k++) {
+        const i = await p.evaluate(() => [...document.querySelectorAll('.pkey')].findIndex(x => x.classList.contains('pulse')))
+        await p.locator('.pkey').nth(i).dispatchEvent('pointerdown')
+        await p.waitForTimeout(260)
+      }
+    },
+    after: 300
+  },
   fireworks: { wait: 3000, act: async (p, box) => { for (let i = 0; i < 6; i++) { await p.mouse.click(box.x + box.width * (0.2 + 0.12 * i), box.y + box.height * (0.25 + 0.08 * (i % 3))); await p.waitForTimeout(250) } }, after: 900 },
   // Le papillon, deux ailes remplies au pot de peinture
   coloring: {
