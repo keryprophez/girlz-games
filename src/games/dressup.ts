@@ -1084,7 +1084,7 @@ function scoped(c: GameContext): { ctx: GameContext; end(): void } {
 }
 
 export const dressup: GameDef = {
-  id: 'dressup', name: 'La Princesse', icon: '👑', sq: 'sq-lilac', cat: 'creatif', music: 'palace', duo: true,
+  id: 'dressup', name: 'La Princesse', icon: '👑', sq: 'sq-lilac', cat: 'creatif', music: 'palace', duo: true, noTier: true,
   subtitle: 'Habille ta princesse, teins sa robe, coiffe-la… et au bal !',
   // La main : un habit glissé de la garde-robe sur la princesse ; au bal,
   // « l'un de ces pas-là » ; dans l'ancienne version, une case d'habit

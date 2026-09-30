@@ -14,7 +14,7 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-const PORT = 4189
+const PORT = Number(process.env.PORT || 4189)
 const URL = `http://localhost:${PORT}/girlz-games/`
 
 const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {
@@ -86,7 +86,8 @@ const openGame = async (name, hook, tier = 'easy', ops = null) => {
   await clickTile(name)
   // Un jeu à calculs (le Potager, 27/09) demande d'abord ses opérations :
   // on allume exactement celles voulues (sinon celles par défaut), on passe
-  await page.locator('.opsgo, .tierbtn.tier-' + tier).first().waitFor()
+  // (un jeu sans niveau, 30/09, démarre directement : on attend le jeu lui-même)
+  await page.locator('.opsgo, .tierbtn, .gameroot > *').first().waitFor()
   if (await page.locator('.opsgo').count()) {
     if (ops) {
       // Allumer d'abord (la dernière allumée ne s'éteint pas), puis éteindre
@@ -96,7 +97,7 @@ const openGame = async (name, hook, tier = 'easy', ops = null) => {
     await page.locator('.opsgo').click()
   }
   // Le niveau se choisit dans le jeu : les bots jouent en douce (sauf besoin)
-  await page.locator('.tierbtn.tier-' + tier).click()
+  if (await page.locator('.tierbtn').count()) await page.locator('.tierbtn.tier-' + tier).click()
   await page.waitForTimeout(3200)
   // Un jeu 3D n'installe son accroche qu'une fois ses modèles chargés : sur
   // un serveur d'intégration lent, 3,2 s ne suffisent pas toujours (la
@@ -833,8 +834,8 @@ await scenario('marche-quatre-paiements', async () => {
   await finDe('Le compte est bon')
 })
 
-/* 🚀 Voyage dans l'Espace : les huit planètes visitées par les billes, puis
-   la fête et l'écran de fin. */
+/* 🚀 Voyage dans l'Espace : les huit planètes visitées par la barre des
+   astres (on part de la Terre, déjà cochée), puis la fête et l'écran de fin. */
 await scenario('espace-huit-planetes', async () => {
   // Refait le 27/09 (textures, shaders, HDR) : son accroche `__sp` arrive
   // après le chargement ; chaque visite est un vol de caméra de 2 à 4 s
@@ -846,9 +847,8 @@ await scenario('espace-huit-planetes', async () => {
   await page.locator('.tierbtn.tier-easy').click()
   await page.waitForFunction(() => window.__sp, null, { timeout: 300000, polling: 1000 })
   for (const id of ['mercure', 'venus', 'terre', 'mars', 'jupiter', 'saturne', 'uranus', 'neptune']) {
-    await page.locator(`.sp3-pick[data-id="${id}"]`).click({ force: true })
-    await page.waitForFunction(i => window.__sp.target === i && !window.__sp.travelling && document.querySelector('.sp3-card:not(.off)'), id, { timeout: 180000, polling: 500 })
-    await page.locator('.sp3-home').click({ force: true })
+    await page.locator(`.sp3-b[data-id="${id}"]`).click({ force: true })
+    await page.waitForFunction(i => window.__sp.target === i && !window.__sp.travelling && window.__sp.arrived, id, { timeout: 180000, polling: 500 })
     await page.waitForTimeout(200)
   }
   await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Astronaute'), null, { timeout: 120000, polling: 500 })

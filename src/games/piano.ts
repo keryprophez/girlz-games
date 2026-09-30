@@ -177,7 +177,7 @@ function finish(me: State, songName?: string) {
 }
 
 export const piano: GameDef = {
-  id: 'piano', name: 'Petit Piano', icon: '🎹', sq: 'sq-sky', cat: 'creatif',
+  id: 'piano', name: 'Petit Piano', icon: '🎹', sq: 'sq-sky', cat: 'creatif', noTier: true,
   subtitle: 'Joue librement, ou suis les lumières pour jouer une vraie chanson',
   // La main : une touche (en chanson, celle qui brille : c'est le jeu)
   hand: root => {

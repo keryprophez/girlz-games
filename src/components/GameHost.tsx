@@ -112,8 +112,9 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const [result, setResult] = useState<FinishPayload | null>(null)
   const [runId, setRunId] = useState(0)
   const [crashed, setCrashed] = useState(false)
-  // Tant que la difficulté n'est pas choisie, le jeu n'est pas monté
-  const [tier, setTier] = useState<Tier | null>(null)
+  // Tant que la difficulté n'est pas choisie, le jeu n'est pas monté ; un
+  // jeu sans niveau (et sans « à deux ») démarre aussitôt
+  const [tier, setTier] = useState<Tier | null>(game.noTier && !game.duo ? 'easy' : null)
   const [duo, setDuo] = useState(() => lastDuo(gameId))
   // Lu au montage du jeu (l'effet ne dépend pas de `duo` : changer se fait
   // dans le choix du niveau, qui relance de toute façon la partie)
@@ -295,7 +296,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
 
   /** Choisir (ou changer) la difficulté : le jeu repart de zéro à ce niveau. */
   const pickTier = (t: Tier) => {
-    try { localStorage.setItem(tierKey(gameId), t) } catch { /* stockage refusé */ }
+    if (!game.noTier) try { localStorage.setItem(tierKey(gameId), t) } catch { /* stockage refusé */ }
     tone(520, 0.12, 'sine', 0.1)
     setPaused(false)
     setResult(null)
@@ -326,7 +327,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       <div className="playbar">
         <button className="pbtn" onClick={goHome} aria-label="Menu"><Svg html={ICON.home} /></button>
         <span className="playbar-right">
-          {tier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={askTier} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
+          {tier && !game.noTier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={askTier} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
+          {tier && game.noTier && game.duo && <button className="pbtn" onClick={askTier} aria-label="Seule ou à deux"><Svg html={duo ? ICON.duo : ICON.solo} /></button>}
           <button className="pbtn" onClick={() => {
             store.toggleSound()
             // `store.sound` est encore l'état d'AVANT : s'il était allumé, on
@@ -370,7 +372,14 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
               <button className={'duobtn' + (duo ? ' sel' : '')} onClick={() => pickDuo(true)} aria-label="À deux"><Svg html={ICON.duo} /><i>À deux</i></button>
             </div>
           )}
-          {(!game.ops || step === 2) && <div className="tierrow">
+          {/* Sans niveau : une seule flèche pour jouer (après « seule / à deux ») */}
+          {game.noTier && <div className="tierrow">
+            <span className="tier-item">
+              <button className="tierbtn tier-easy tier-go" onClick={() => pickTier('easy')} aria-label="Jouer"><Svg html={ICON.play} /></button>
+              <i className="tool-cap">Jouer</i>
+            </span>
+          </div>}
+          {!game.noTier && (!game.ops || step === 2) && <div className="tierrow">
             {TIERS.map(t => (
               <span key={t} className="tier-item">
                 <button className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
@@ -428,7 +437,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             <div className="rbtns">
               <button className="bigbtn primary" onClick={replay}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
               {/* Rejouer à un autre niveau (30/09) : le choix fleur / éclair / flamme revient */}
-              {tier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={askTier}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
+              {tier && !game.noTier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={askTier}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
               <button className="bigbtn ghost" onClick={goHome}><Svg html={ICON.home} /> Menu</button>
             </div>
             {game.cat === 'action' && <div className="retryhint">ou tape à côté pour rejouer</div>}

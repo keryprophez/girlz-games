@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-const PORT = 4188
+const PORT = Number(process.env.PORT || 4188)
 const URL = `http://localhost:${PORT}/girlz-games/`
 
 // Serveur de preview sur le build de production
@@ -63,10 +63,11 @@ for (let i = 0; i < games.length; i++) {
   await page.locator(TILE, { hasText: games[i].name }).first().click()
   // Un jeu à calculs (le Potager) demande d'abord ses opérations : on garde
   // celles par défaut et on passe (27/09)
-  await page.locator('.opsgo, .tierbtn.tier-easy').first().waitFor()
+  // (un jeu sans niveau, 30/09, démarre directement : on attend le jeu lui-même)
+  await page.locator('.opsgo, .tierbtn.tier-easy, .gameroot > *').first().waitFor()
   if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
   // La difficulté se choisit dans le jeu : on prend la douce (comme Jade)
-  await page.locator('.tierbtn.tier-easy').click()
+  if (await page.locator('.tierbtn').count()) await page.locator('.tierbtn.tier-easy').click()
   // Laisse le temps au jeu de se monter (la 3D charge three.js à la demande)
   await page.waitForTimeout(1600)
   const mounted = await page.$eval('.gameroot', el => el.children.length > 0).catch(() => false)

@@ -1077,7 +1077,7 @@ async function showDrawing(me: State, d: Drawing) {
 }
 
 export const coloring: GameDef = {
-  id: 'coloring', name: 'L\'Atelier', icon: '🎨', sq: 'sq-sun', cat: 'creatif', music: 'meadow',
+  id: 'coloring', name: 'L\'Atelier', icon: '🎨', sq: 'sq-sun', cat: 'creatif', noTier: true, music: 'meadow',
   subtitle: 'Dessine au doigt, remplis, tamponne',
   // La main : un trait sur la feuille (le seau et les tampons : un toucher)
   hand: root => {
