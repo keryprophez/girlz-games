@@ -640,7 +640,9 @@ export const geoGame: GameDef = {
       const pts = new Map<number, { x: number; y: number }>()
       let tap: { x: number; y: number; t: number; multi: boolean; moved: number } | null = null
       let pinch0 = 0, zoom0 = 1, lastT = 0
-      const ZOOM: Record<MapId, [number, number]> = { monde: [0.42, 1.1], france: [0.4, 1.15] }
+      // Pas plus près : la texture du globe (4096 px) et le calque des pays deviennent flous,
+      // et les épingles de la France prennent tout l'écran
+      const ZOOM: Record<MapId, [number, number]> = { monde: [0.6, 1.1], france: [0.58, 1.15] }
       const clampZoom = (z: number) => Math.max(ZOOM[me.map][0], Math.min(ZOOM[me.map][1], z))
       /** Le rayon du globe à l'écran (pixels) : un pixel de doigt = 1/rayon radian. */
       const radiusPx = () => {
