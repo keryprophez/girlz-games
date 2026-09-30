@@ -584,6 +584,8 @@ await scenario('intrus-six-manches', async () => {
 await scenario('ninja-partie-complete', async () => {
   await openGame('Ninja Verger', '__nj')
   const t0 = Date.now()
+  // Les cœurs du départ (3 à la fleur depuis le 30/09) : aucun ne doit partir
+  const lives0 = await page.evaluate(() => window.__nj.lives())
   await page.evaluate(() => {
     const segDist = (px, py, ax, ay, bx, by) => {
       const dx = bx - ax, dy = by - ay
@@ -625,7 +627,7 @@ await scenario('ninja-partie-complete', async () => {
   const n = await page.evaluate(() => ({ ...window.__nj.counts(), lives: window.__nj.lives(), over: window.__nj.over() }))
   if (!n.over) throw new Error('la partie n\'a pas fini en 200 s')
   if (!pluie) throw new Error('la pluie de fruits n\'est jamais venue')
-  if (n.lives !== 5) throw new Error(`un cœur perdu sans toucher de cactus (${n.lives}/5)`)
+  if (n.lives !== lives0) throw new Error(`un cœur perdu sans toucher de cactus (${n.lives}/${lives0})`)
   if (n.sliced < n.launched * 0.9) throw new Error(`seulement ${n.sliced} fruits tranchés sur ${n.launched}`)
   if (n.rain < 5) throw new Error(`pluie : ${n.rain} fruits tranchés seulement`)
   await page.waitForSelector('.result-score', { timeout: 15000 })
@@ -902,8 +904,9 @@ await scenario('atelier-livre', async () => {
 await scenario('feu-bouquet-final', async () => {
   await openGame("Feu d'Artifice")
   const box = await page.locator('#fwArena').boundingBox()
-  for (let i = 0; i < 8; i++) {
-    await page.mouse.click(box.x + box.width * (0.2 + 0.08 * i), box.y + box.height * 0.3)
+  // Dix fusées pour le bouquet à la fleur (30/09) : douze tirs, au cas où
+  for (let i = 0; i < 12; i++) {
+    await page.mouse.click(box.x + box.width * (0.18 + 0.055 * i), box.y + box.height * 0.3)
     await page.waitForTimeout(120)
   }
   // Le bouton du bouquet bat sans arrêt : Playwright ne le verrait jamais « stable »
