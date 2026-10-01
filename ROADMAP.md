@@ -927,8 +927,28 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   place. Bots : `taquin-remis-en-ordre` (passe par le mode Taquin) et
   `puzzle-complet` (une pièce au doigt, les autres par l'accroche).
   **Reste : la jouer sur la tablette** (`?fps` avec 48 pièces).
-- **3. Les cubes de l'alphabet** (la Chasse aux lettres) : cubes en bois 3D,
-  chaque cube posé dit son son, puis la syllabe, puis le mot (pour Jade).
+- ✅ **3. Les Cubes de l'alphabet** (la Chasse aux lettres, 30/09 ; « de
+  vrais cubes en bois 3D sous la photo. Chaque cube posé dit son son, puis
+  la syllabe, puis le mot », pour Jade) : en vraie 3D sur le socle — une
+  table d'enfant peinte, la photo du mot debout dans son support de noyer,
+  une réglette à cases, et des cubes de hêtre aux arêtes arrondies qui
+  tombent en vrac. Un cube = un GRAPHÈME (« ch », « ou », « on » sont un
+  cube), en minuscule d'imprimerie gravée et peinte — voyelles en rouge,
+  consonnes en bleu, lettres muettes en gris, la capitale sur les côtés. On
+  le touche ou on le glisse : il roule jusqu'à sa case, toc, sciure. La
+  voix dit son SON (« mmm », « peu », jamais « èm »), la syllabe complète
+  (un arc se dessine dessous, comme au CP), puis lit le mot syllabe par
+  syllabe — chacune s'allume et saute — et le mot entier. Mots découpés à
+  la main et testés (`core/phonics.ts`) : fleur, des mots réguliers
+  consonne + voyelle (lama, tomate, banane, patate, koala, vache, poule) ;
+  éclair, plus longs, avec sons complexes et lettres muettes (lapin,
+  cochon, canard, hibou, girafe…) ; flamme, les longs mots (hippopotame,
+  champignon, citrouille…, plus grenouille, perroquet, pingouin,
+  éléphant). Leurres : moins nombreux à la fleur ; dès l'éclair, des
+  pièges voisins (b/d/p/q, on/an/ou, m/n). Aucune sanction : un mauvais
+  cube revient à sa place, et après deux essais le bon se met à luire.
+  **Reste : écouter la voix sur la tablette** — les textes des sons sont
+  une table à régler en une ligne (`SOUNDS`).
 - ✅ **7. Le Feu d'artifice qu'on dessine** (30/09, plan validé par le
   père) : taper le ciel lance toujours la fusée d'avant ; un vrai tracé
   (plus de 28 px) est un DESSIN — le trait brille et scintille comme un

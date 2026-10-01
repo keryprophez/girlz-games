@@ -63,6 +63,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              facts.ts    ← LA MÉMOIRE DES CALCULS (phase 4) : niveaux d'aide,
                            récolte composée, révisions espacées, pièges voisins,
                            « presque », + − × ÷ — logique pure, testée
+             phonics.ts  ← LES SONS DES CUBES DE L'ALPHABET (30/09) : les mots
+                           découpés à la main en graphèmes (« ch », « ou » =
+                           un cube) et en syllabes écrites du CP, le SON de
+                           chaque graphème, ce que la voix prononce (`landing`,
+                           `reading`), les leurres — logique pure, testée
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
@@ -144,7 +149,7 @@ scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
 ```
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
-Memory, la Chasse aux lettres, le Marché — et depuis le 22/09 les animaux
+Memory, les Cubes de l'alphabet (ex-Chasse aux lettres), le Marché — et depuis le 22/09 les animaux
 des continents du Tour du Monde. 76 sujets dans
 `public/assets/photos/*.jpg`, réunis par `scripts/import-photos.mjs` —
 **animaux : iNaturalist** (recherche par taxon latin), **le reste : catégories
@@ -329,7 +334,9 @@ Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le pet
 `simon` (le Chœur sur scène, 28/09) · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
 `taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
-son second mode, le Taquin, reste en DOM). La Course,
+son second mode, le Taquin, reste en DOM) ·
+`letters` (les Cubes de l'alphabet, 30/09 : cubes de bois, la voix dit le
+son, la syllabe, puis le mot — les sons dans `core/phonics.ts`). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -412,6 +419,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Une texture entière pour un coup de pinceau** | La sauce de la Pizzeria recomposait ses cinq couches (1024 × 1024) et renvoyait TOUTE la texture, au plus 20 fois par seconde : la sauce suivait le doigt par à-coups, et chaque envoi coûtait des images (« toujours pas fluide », 30/09). Pizza crue, la louche est peinte aussi sur la surface visible et seul son rectangle part, à chaque image : `renderer.copyTextureToTexture(petitCanvas, tex, null, new Vector2(x0, TEX − y1))` — la texture est retournée à l'envoi (`flipY`), d'où `TEX − y1`. |
 | **`ExtrudeGeometry` : biseau et couvercles** | Le biseau (`bevelSize`) ÉLARGIT la forme : deux pièces de puzzle voisines se chevauchaient. `bevelOffset = −bevelSize` le fait rentrer dans la forme (les flancs tombent pile sur le contour, le dessus est un peu plus petit : le fin sillon entre deux pièces). L'épaisseur totale est `depth + 2 × bevelThickness`. Et le groupe 0 (les couvercles) contient le DESSOUS puis le DESSUS, à parts égales : pour plaquer l'image sur le seul dessus, refaire les groupes (`clearGroups`, puis la seconde moitié du groupe 0 en matériau 0, le groupe 1 — flancs et biseau — en carton). Voir `pieceGeo()` dans `games/jigsaw.ts`. |
 | **Modèles chargés un par un, image qui « bloque »** | L'image de la ferme du Puzzle attendait ses 33 modèles un `await` après l'autre : 65 s sous une machine chargée (0,2 s en `Promise.all`). Et le garde-fou de `loader()` (15 s, 60 s pour les bots) est fait pour la SCÈNE 3D : un rendu d'image (`core/pictures.ts`) a son attente à part (`pictureWait` dans `games/jigsaw.ts`, même vignette qui respire) et, s'il tarde plus de 2 min, une image de secours — la partie ne reste jamais figée, et pas d'écran « Oups » pour une image lente. |
+| **La voix lit le NOM des lettres** | Donnée à la synthèse, une lettre seule se dit par son nom (« m » → « èm », « p » → « pé »), et un bout de mot se devine mal (« com » → « comme », « fan » à l'anglaise, « in » aussi). Pour faire entendre un SON, on écrit ce qui se prononce juste : « mmm », « peu », « champ » pour « cham », « faon », « hein » — une table unique, `SOUNDS` dans `core/phonics.ts`, testée. Et `say()` coupe la phrase en cours : son, syllabe et mot passent par une FILE (`speak` dans `letters.ts`), un énoncé après l'autre. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -426,7 +434,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 30 scénarios, le Potager en a quatre, le Feu d'artifice deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 31 scénarios, le Potager en a quatre, le Feu d'artifice et le Puzzle deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

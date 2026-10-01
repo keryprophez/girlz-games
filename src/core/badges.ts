@@ -49,6 +49,15 @@ const iceBlock = (x: number, y: number, w: number, h: number) =>
    <rect x="${x}" y="${y}" width="${w}" height="${h - 2.5}" rx="2.5" fill="${C.ice}"/>
    <rect x="${x + 2}" y="${y + 1.6}" width="${w * 0.34}" height="2" rx="1" fill="${C.white}" opacity=".85"/>`
 
+/** Un cube de bois vu de trois quarts : face avant (x, y, côté w), dessus
+    clair, flanc droit sombre. */
+const woodCube = (x: number, y: number, w: number) => {
+  const d = w * 0.22
+  return `<path d="M${x} ${y}l${d} ${-d}h${w}l${-d} ${d}z" fill="${C.cream}"/>
+   <path d="M${x + w} ${y}l${d} ${-d}v${w}l${-d} ${d}z" fill="${C.woodDark}"/>
+   <rect x="${x}" y="${y}" width="${w}" height="${w}" rx="1.6" fill="${C.wood}"/>`
+}
+
 export const BADGE: Record<string, string> = {
   /* ---------- Jouer ---------- */
   icetower: svg(`
@@ -168,11 +177,18 @@ export const BADGE: Record<string, string> = {
     <path d="M26 12h14v10H26zM26 26h14v10H26z" fill="${C.ice}"/>
     <path d="M24 6v36" stroke="${C.mango}" stroke-width="2.6" stroke-dasharray="4 3" stroke-linecap="round"/>`),
 
+  /* Les Cubes de l'alphabet (30/09) : trois cubes de bois empilés, a b c en
+     minuscules d'imprimerie — la voyelle en rouge, les consonnes en bleu,
+     comme dans le jeu. */
   letters: svg(`
-    <rect x="5" y="13" width="20" height="22" rx="4" fill="${C.cream}"/>
-    <rect x="26" y="16" width="17" height="19" rx="4" fill="${C.meadow}"/>
-    <path d="M11 30l4-12 4 12M12.5 26h5" stroke="${C.coral}" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M31 30V20h4a3 3 0 0 1 0 6h-4h4.4a3 3 0 0 1 0 6z" fill="${C.cream}"/>`),
+    ${woodCube(5, 27, 15)}
+    ${woodCube(24, 27, 15)}
+    ${woodCube(14.5, 11.5, 15)}
+    <circle cx="11.6" cy="35.4" r="3" fill="none" stroke="${C.coralDark}" stroke-width="2.6"/>
+    <path d="M14.6 32v6.4" stroke="${C.coralDark}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M28.6 29.6v8.8" stroke="${C.skyDark}" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="31.6" cy="35.4" r="3" fill="none" stroke="${C.skyDark}" stroke-width="2.6"/>
+    <path d="M24.4 17.6a3.4 3.4 0 1 0 0 4.6" fill="none" stroke="${C.skyDark}" stroke-width="2.6" stroke-linecap="round"/>`),
 
   /* Une enveloppe et son tampon : le point d'exclamation dépasse du rabat. */
   sentences: svg(`
