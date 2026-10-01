@@ -1008,6 +1008,34 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   « Au clair de la lune »…) : dix titres ne tiennent pas sous des boutons
   de 58 px.
 
+- ✅ **Les Bijoux, un nouveau jeu dans Créer** (30/09, la demande de Jade ;
+  le père : « collier de perles », « oui, elle les porte », maquette
+  d'abord — montrée et validée). L'établi en vraie 3D, à la taille réelle :
+  la planche à collier en feutrine, le fil de soie tendu en U (fermoir doré
+  au départ, aiguille au bout) et le boîtier à douze compartiments — perles
+  nacrées irisées, verre, cristal taillé, cœurs, étoiles, fleurs,
+  intercalaires dorés, cubes (`core/bijoux3d.ts`). On touche une perle (ou
+  on la glisse) : elle vole jusqu'à l'aiguille, s'enfile avec un « tic » et
+  glisse le long du fil jusqu'aux autres. Annuler · Vider (deux touchers) ·
+  Fermer : le fil se referme en rond, le fermoir claque ; le collier se pose
+  sur un coussin de velours qui tourne sous une lumière de bijouterie (la
+  vraie réfraction du verre et du cristal est gardée pour cette vitrine) ;
+  la couronne fait venir la princesse qui le porte, au bal. Elle le porte
+  aussi dans **la Princesse** (`Royal.beads`, `neck: 'beads'`,
+  `wearNecklace`), et il rejoint les colliers de sa garde-robe. Aucune
+  note, pas de niveau. Vignette, affiche, main (une perle du boîtier ; le
+  fermoir quand le fil est garni), bot `bijoux-collier-de-perles` (dix
+  perles, une glissée, annuler, fermer, la princesse, puis la Princesse qui
+  le porte) : 31 scénarios. Piège payé en route : la géométrie des perles
+  de la maquette (661 000 triangles par image, voir `CLAUDE.md`). Sur elle,
+  le collier descend en U sur le corsage : au ras de l'encolure, il tombait
+  sur le **creux sombre entre son corsage et son cou** (le modèle n'a pas de
+  peau sous son haut d'origine) — ce creux, visible aussi sans collier, reste
+  à combler dans la Princesse.
+  **À venir** (une place est prévue dans la colonne d'outils, `MODES`) : les
+  perles à repasser (`core/hama3d.ts`, en cours ailleurs) et un pendentif à
+  accrocher au collier. **À mesurer sur la tablette avec `?fps`.**
+
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute
 deux choses quand le temps va vite : les planètes tournent à leur vraie

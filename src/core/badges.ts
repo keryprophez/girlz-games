@@ -198,6 +198,14 @@ export const BADGE: Record<string, string> = {
     <circle cx="24" cy="13" r="1.7" fill="${C.cream}"/>
     <circle cx="24" cy="19" r="1.7" fill="${C.cream}"/>`),
 
+  // Un collier de perles, un cœur en pendentif
+  bijoux: svg(`
+    <path d="M8 8c0 18 7 26 16 26s16-8 16-26" fill="none" stroke="${C.mango}" stroke-width="3" stroke-linecap="round"/>
+    ${([[9.5, 15, C.cream], [11.5, 21.5, C.lilac], [15, 27, C.cream], [19.5, 31, C.pink], [28.5, 31, C.pink], [33, 27, C.cream], [36.5, 21.5, C.lilac], [38.5, 15, C.cream]] as [number, number, string][])
+      .map(([x, y, f]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${f}"/>`).join('')}
+    <path d="M24 44c-6-4.2-8.5-7-8.5-10.2a4.2 4.2 0 0 1 8.5-1.6 4.2 4.2 0 0 1 8.5 1.6c0 3.2-2.5 6-8.5 10.2z" fill="${C.coral}"/>
+    <path d="M18.6 33.4a2.2 2.2 0 0 1 3.4-1" fill="none" stroke="${C.white}" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>`),
+
   piano: svg(`
     <rect x="6" y="12" width="36" height="26" rx="4" fill="${C.cream}"/>
     <path d="M15 12v26M24 12v26M33 12v26" stroke="${C.woodDark}" stroke-width="1.6"/>

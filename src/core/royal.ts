@@ -45,7 +45,10 @@ export type Skirt = 'ball' | 'short' | 'mermaid' | 'layers' | 'petals'
 export type Cape = 'none' | 'short' | 'royal'
 export type Wings = 'none' | 'fairy' | 'butterfly'
 export type Crown = 'none' | 'tiara' | 'crown' | 'flowers' | 'bow'
-export type Neck = 'none' | 'pearls' | 'heart'
+/** `beads` : le collier enfilé dans les Bijoux (30/09), fait perle par perle
+    (voir `Royal.beads`). Il n'est pas dans `NECKS` : il n'existe que s'il a
+    été fait. */
+export type Neck = 'none' | 'pearls' | 'heart' | 'beads'
 export type Glasses = 'none' | 'hearts' | 'stars'
 export type Shoes = 'flats' | 'boots'
 export type Held = 'none' | 'wand' | 'scepter' | 'bouquet' | 'fan'
@@ -56,11 +59,22 @@ export const SKIRTS: Skirt[] = ['ball', 'short', 'mermaid', 'layers', 'petals']
 export const CAPES: Cape[] = ['none', 'short', 'royal']
 export const WINGS: Wings[] = ['none', 'fairy', 'butterfly']
 export const CROWNS: Crown[] = ['none', 'tiara', 'crown', 'flowers', 'bow']
+/** Les colliers de la garde-robe (le collier de perles enfilé s'y ajoute
+    quand il existe). */
 export const NECKS: Neck[] = ['none', 'pearls', 'heart']
 export const GLASSES: Glasses[] = ['none', 'hearts', 'stars']
 export const SHOES: Shoes[] = ['flats', 'boots']
 export const HELDS: Held[] = ['none', 'wand', 'scepter', 'bouquet', 'fan']
 export const PETS: PetKind[] = ['none', 'unicorn', 'pony', 'kitten', 'puppy']
+
+/* ---- Le collier de perles des Bijoux (30/09) ----
+   Chaque perle enfilée : sa sorte (celle d'un compartiment du boîtier) et
+   sa couleur, dans l'ordre du fil — du fermoir vers l'aiguille. */
+export type BeadKind = 'pearl' | 'glass' | 'crystal' | 'heart' | 'star' | 'flower' | 'spacer' | 'cube'
+export const BEAD_KINDS: BeadKind[] = ['pearl', 'glass', 'crystal', 'heart', 'star', 'flower', 'spacer', 'cube']
+export interface Bead { k: BeadKind; c: string }
+/** Un fil plein d'intercalaires dorés en tient à peu près autant. */
+export const BEADS_MAX = 80
 
 export interface Royal {
   v: 2
@@ -80,6 +94,9 @@ export interface Royal {
   held: Held
   pet: PetKind
   paint: Record<Part, Paint>
+  /** Le collier enfilé dans les Bijoux (vide : il n'y en a pas encore).
+      Elle le porte quand `neck` vaut `beads`. */
+  beads: Bead[]
 }
 
 /* ---- Palettes (hexadécimaux sRGB ; le rendu les assombrit pour l'ACES) ---- */
@@ -112,7 +129,8 @@ export function defaultRoyal(): Royal {
       pbody: { c: '#F4F0EA', p: 'none' },
       pmane: { c: '#F2A0B8', p: 'none' },
       pbow: { c: '#B79AE8', p: 'none' }
-    }
+    },
+    beads: []
   }
 }
 
@@ -148,6 +166,13 @@ export function normalizeRoyal(x: unknown): Royal {
     const p = (paintIn[k] && typeof paintIn[k] === 'object' ? paintIn[k] : {}) as Record<string, unknown>
     paint[k] = { c: hex(p.c, d.paint[k].c), p: pick(PATTERNS, p.p, d.paint[k].p) }
   }
+  // Le collier enfilé : une perle abîmée (sorte inconnue) est jetée, pas remplacée
+  const beads = (Array.isArray(o.beads) ? o.beads : []).flatMap(b => {
+    if (!b || typeof b !== 'object') return []
+    const q = b as Record<string, unknown>
+    if (!BEAD_KINDS.includes(q.k as BeadKind)) return []
+    return [{ k: q.k as BeadKind, c: hex(q.c, '#F4F0EA') }]
+  }).slice(0, BEADS_MAX)
   return {
     v: 2,
     skin: hex(o.skin, d.skin),
@@ -170,13 +195,25 @@ export function normalizeRoyal(x: unknown): Royal {
     cape: pick(CAPES, o.cape, d.cape),
     wings: pick(WINGS, o.wings, d.wings),
     crown: pick(CROWNS, o.crown, d.crown),
-    neck: pick(NECKS, o.neck, d.neck),
+    // Porter le collier enfilé… à condition qu'il existe
+    neck: o.neck === 'beads' && beads.length ? 'beads' : pick(NECKS, o.neck, d.neck),
     glasses: pick(GLASSES, o.glasses, d.glasses),
     shoes: pick(SHOES, o.shoes, d.shoes),
     held: pick(HELDS, o.held, d.held),
     pet: pick(PETS, o.pet, d.pet),
-    paint
+    paint,
+    beads
   }
+}
+
+/** Le collier des Bijoux passé à son cou (une copie : `r` ne change pas).
+    Un fil vide le lui retire. */
+export function wearBeads(r: Royal, beads: Bead[]): Royal {
+  const out = cloneRoyal(r)
+  out.beads = normalizeRoyal({ beads }).beads
+  if (out.beads.length) out.neck = 'beads'
+  else if (out.neck === 'beads') out.neck = 'none'
+  return out
 }
 
 /** Une copie profonde (les jeux modifient leur princesse en place). */
@@ -205,7 +242,8 @@ export function randomRoyal(base: Royal, rnd: () => number = Math.random): Royal
   r.cape = rnd() < 0.25 ? any(['short', 'royal'] as Cape[]) : 'none'
   r.wings = rnd() < 0.3 ? any(['fairy', 'butterfly'] as Wings[]) : 'none'
   r.crown = any(CROWNS.slice(1))
-  r.neck = any(NECKS)
+  // Son collier de perles fait partie des surprises, s'il existe
+  r.neck = any(r.beads.length ? [...NECKS, 'beads'] as Neck[] : NECKS)
   r.glasses = rnd() < 0.12 ? any(['hearts', 'stars'] as Glasses[]) : 'none'
   r.shoes = any(SHOES)
   r.held = any(HELDS)

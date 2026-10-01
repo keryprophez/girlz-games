@@ -1,6 +1,7 @@
 import type { T3 } from './three3d'
 import type { Clip, Paint, Part, Pattern, Royal } from './royal'
 import { cloneRoyal } from './royal'
+import { beadKit, beadRun, orientQ, BEAD_LEN } from './bijoux3d'
 
 /* LA PRINCESSE en 3D (27/09, refaite le soir même) — la première, construite
    en formes rondes, faisait « pantin de bois de 1950 » : la tête était une
@@ -1390,7 +1391,85 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       const h = mesh(sg(s, new T.ExtrudeGeometry(sh, { depth: 0.005, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.002, bevelSegments: 2 })), gem(0xD02850), 'deco')
       h.position.set(0, ny - 0.035, rz + 0.012)
       s.group.add(h)
+    } else if (look.neck === 'beads' && look.beads.length) {
+      buildBeads(s, ny, rx, rz)
     }
+  }
+  /** Le collier enfilé dans les Bijoux (30/09) : ses perles dans l'ordre du
+      fil, centrées sur le devant, à son échelle à elle ; le fermoir derrière.
+      Plus il est long, plus il descend sur la poitrine — en passant PAR-DESSUS
+      le corsage (son profil mesuré, `bust`). Accroché au haut de son buste,
+      comme les autres colliers : il suit ses gestes. */
+  function buildBeads(s: Section, ny: number, rx0: number, rz0: number) {
+    s.group.name = 'collier'
+    const beads = look.beads
+    const S0 = 1.5 // elle mesure 1,1 m : des perles « vraies » seraient des grains
+    const rx = rx0 * 1.06 + 0.002, rz = rz0 * 1.14 + 0.002
+    const neckline = P.neck.y - 0.045 // le haut du corsage (buildTop)
+    const path = (D: number) => {
+      const pts: V3[] = []
+      for (let i = 0; i < 96; i++) {
+        // Du fermoir (dans le dos) au devant (u = 0,5), et retour
+        const a = Math.PI + (i / 96) * Math.PI * 2
+        const f = Math.max(0, Math.cos(a))
+        const y = ny + 0.004 - D * Math.pow(f, 1.6)
+        const x = Math.sin(a) * rx
+        let z = Math.cos(a) * rz
+        if (f > 0) {
+          // Posé sur ce qu'il y a dessous, plus le rayon d'une perle : la peau
+          // au ras du cou ; plus bas, la SURFACE du corsage (+ 9 mm) ou de son
+          // liseré doré (+ 18 mm), une coupe en ellipse mesurée sur son buste —
+          // un simple rayon enfonçait les côtés d'un long collier dans la robe
+          const b = bust(y)
+          if (y > neckline + 0.008) z = Math.cos(a) * Math.max(rz, b.zf + 0.007)
+          else {
+            const under = Math.abs(y - neckline) <= 0.008 ? 0.018 : 0.009
+            const X = b.x + under, Z = b.zf + under
+            z = Math.max(Math.cos(a) * rz, Z * Math.sqrt(Math.max(0, 1 - (x / X) ** 2)) + 0.007)
+          }
+        }
+        pts.push(V(x, y, z))
+      }
+      return new T.CatmullRomCurve3(pts, true)
+    }
+    // Il descend en U sur le corsage, comme un collier sur une robe (juste au
+    // ras du corsage, il tombait sur le creux sombre entre le corsage et son
+    // cou : on aurait dit un ras-de-cou noir). Assez de fil pour toutes ses
+    // perles : plus long, il descend encore ; au-delà, les perles rapetissent
+    const clasp = 0.014
+    const run0 = beadRun(beads, S0)
+    let D = 0.045
+    let curve = path(D), Lp = curve.getLength()
+    while (Lp < run0.total + clasp && D < 0.085) { D += 0.006; curve = path(D); Lp = curve.getLength() }
+    const S = Lp < run0.total + clasp ? S0 * (Lp - clasp) / run0.total : S0
+    const run = S === S0 ? run0 : beadRun(beads, S)
+    const start = Lp / 2 - run.total / 2
+    const kit = beadKit(T, { cheap: true })
+    const by = new Map<string, { geo: Geo; m: M4 }[]>()
+    const q = new T.Quaternion(), out = V(0, 0, 0), sc = V(S, S, S)
+    beads.forEach((b, i) => {
+      const u = (start + run.at[i] + BEAD_LEN[b.k] * S / 2) / Lp
+      const p = curve.getPointAt(u), tg = curve.getTangentAt(u)
+      out.set(p.x, 0, p.z).normalize()
+      orientQ(T, q, tg, out)
+      const key = b.k + b.c
+      const list = by.get(key) || []
+      list.push({ geo: kit.geo(b.k), m: new T.Matrix4().compose(p, q, sc) })
+      by.set(key, list)
+    })
+    for (const [key, list] of by) {
+      const b = beads.find(x => x.k + x.c === key)!
+      s.group.add(mesh(fuse(s, list), kit.mat(b.k, b.c), 'deco'))
+    }
+    s.mats.push(...kit.mats())
+    kit.disposeGeos()
+    // Le fil de soie rose, et le fermoir doré dans le dos
+    const silk = std({ color: 0xF4C6D6, roughness: 0.55 }, 0.85)
+    s.mats.push(silk)
+    s.group.add(mesh(sg(s, new T.TubeGeometry(curve, 160, 0.0011, 6, true)), silk, 'deco'))
+    const ring = mesh(sg(s, new T.TorusGeometry(0.0042, 0.0012, 8, 20)), gold, 'deco')
+    ring.position.copy(curve.getPointAt(0))
+    s.group.add(ring)
   }
   function buildGlasses() {
     const s = section('glasses', head)
@@ -1595,7 +1674,7 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     wings: r.wings,
     hair: JSON.stringify([r.hair.style, r.hair.len.toFixed(3), r.hair.curl.toFixed(3)]),
     crown: JSON.stringify([r.crown, r.hair.style, r.hair.len.toFixed(2), r.hair.clips]),
-    neck: r.neck,
+    neck: r.neck === 'beads' ? 'beads' + JSON.stringify(r.beads) : r.neck,
     glasses: r.glasses,
     held: r.held,
     colors: JSON.stringify([r.skin, r.eyes, r.freckles, r.paint.hair.c, r.paint.shoes.c])

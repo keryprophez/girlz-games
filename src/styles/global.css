@@ -1814,3 +1814,34 @@ body.playing .po-card{max-width:880px;}
 .pg-stages i.done{background:#E3F7E8;color:#3FA45E;}
 .pg-stages i.now{background:linear-gradient(135deg,#B197FC,#8F74E0);color:#fff;transform:scale(1.14);animation:pgres .5s var(--spring);}
 .pg-q .pg-find{color:#E8574C;font-size:.72em;display:inline-flex;align-self:center;margin-right:.1em;}
+
+/* ============================================================
+   LES BIJOUX (30/09) : l'établi, la vitrine, la princesse
+   ============================================================ */
+.bj-arena{background:#E9D9C4;touch-action:none;overflow:hidden;}
+.bj-arena canvas{display:block;width:100%;height:100%;}
+.bj-tools{gap:14px;}
+.bj-tools .sn-tool{width:66px;height:66px;}
+.bj-tools .sn-tool.off{opacity:.55;}
+.bj-sep{height:8px;}
+.bj-trash.arm{background:#E8574C;transform:scale(1.12);animation:atArm .5s ease-in-out infinite;
+  box-shadow:0 0 0 4px #E8574C,0 6px 18px rgba(232,87,76,.5);}
+.bj-trash.arm svg path,.bj-trash.arm svg rect{fill:#fff;}
+.bj-go{position:absolute;right:18px;bottom:14px;z-index:6;}
+.bj-go .sn-tool{width:86px;height:86px;}
+.bj-go .sn-tool .ico{font-size:44px;}
+.bj-go .tool-cap{font-size:14px;padding:4px 11px;}
+.bj-close{opacity:.6;}
+.bj-close.ready{opacity:1;}
+.bj-close.full{animation:bjPulse 1.5s ease-in-out infinite;}
+.bj-close.nudge{animation:tqnope .3s ease;}
+@keyframes bjPulse{50%{transform:scale(1.08);box-shadow:0 0 0 9px rgba(255,169,77,.35),var(--e2);}}
+.bj-princeitem{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:6;}
+.bj-prince{width:96px;height:96px;animation:bjPulse 1.8s ease-in-out infinite;}
+.bj-princeitem .tool-cap{font-size:15px;padding:4px 12px;}
+.bj-veil{position:absolute;inset:0;z-index:7;pointer-events:none;opacity:0;transition:opacity .5s ease;}
+.bj-veil.on{opacity:1;}
+/* Chaque étape montre ses boutons, et rien d'autre */
+.bj-arena .bj-tools,.bj-arena .bj-closeitem,.bj-arena .bj-princeitem,.bj-arena .bj-doneitem{display:none;}
+.bj-arena.ph-work .bj-tools,.bj-arena.ph-work .bj-closeitem,.bj-arena.ph-vitrine .bj-princeitem,
+.bj-arena.ph-princess .bj-doneitem{display:flex;}
