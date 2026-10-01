@@ -118,6 +118,16 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              lineart.ts  ← le LIVRE DE COLORIAGES de l'Atelier (30/09) : les
                            personnages 3D rendus en dessins au trait (une
                            couleur par pièce, on garde les bords), gardés
+             hama3d.ts   ← LES PERLES À REPASSER en 3D (30/09) : la plaque à
+                           picots (`pegboard`, en pas de plaque, perles et
+                           picots en `InstancedMesh`), la perle-tube et sa
+                           version FONDUE en morph par perle (`fuse`), les
+                           pots de perles, l'axe lumineux, le fer et le
+                           papier sulfurisé (`ironing`) — pour les Perles
+                           Miroir, et demain l'Atelier des bijoux
+             perles.ts   ← leurs dessins en petites grilles (papillon, fraise,
+                           cochon…), la palette des pots et les manches du
+                           Miroir (modèle, axe, reflet) — logique pure, testée
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -309,7 +319,7 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) ·
+`simon` (le Chœur sur scène, 28/09) · `mirror` (les Perles Miroir, 30/09) ·
 `caterpillar` · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour

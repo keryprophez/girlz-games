@@ -139,5 +139,10 @@ export const sCrunch = () => {
   noiseBurst(0.09, 950, { vol: 0.26, type: 'bandpass', q: 1.4, sweepTo: 480 })
   noiseBurst(0.05, 2400, { vol: 0.1, type: 'highpass', delay: 0.02 })
 }
+/** Pschitt de vapeur : le fer des Perles Miroir qui grésille sur le papier. */
+export const sSteam = (d = 0) => {
+  noiseBurst(0.42, 5200, { vol: 0.06, type: 'highpass', q: 0.5, sweepTo: 2400, delay: d })
+  noiseBurst(0.3, 900, { vol: 0.035, type: 'bandpass', q: 0.8, delay: d + 0.04 })
+}
 /** Woosh d'objet lancé. */
 export const sWoosh = () => noiseBurst(0.26, 320, { vol: 0.16, type: 'bandpass', q: 0.8, sweepTo: 1700 })

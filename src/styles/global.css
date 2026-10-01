@@ -1180,32 +1180,19 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
   padding:8px 12px;font-size:13px;margin-bottom:10px;}
 
 /* ============================================================
-   LE MIROIR (symétrie)
+   PERLES MIROIR (symétrie, perles à repasser)
    ============================================================ */
-/* Plein écran (22/09) : pots de couleur à gauche, grille aussi haute que
-   l'écran, pastilles à droite ; peindre en glissant, le reflet se replie */
-.mr-arena{background:#F2EEFB;display:flex;align-items:center;justify-content:center;gap:clamp(20px,4vw,50px);
-  padding-right:70px;}
-.mr-grid{position:relative;display:grid;gap:4px;width:min(88vw - 200px,calc(100vh - 110px));background:var(--card);
-  border:1px solid var(--line);border-radius:var(--r-lg);padding:12px;box-shadow:var(--e2);
-  transition:box-shadow .3s;touch-action:none;perspective:1400px;}
-.mr-grid.mr-win{box-shadow:0 0 0 5px var(--meadow), var(--e2);}
-.mr-cell{aspect-ratio:1;border:none;border-radius:8px;background:#F3EBDD;padding:0;
-  transition:transform .12s var(--spring), background .12s;}
-.mr-cell.mr-free{cursor:pointer;background:#EAF3FA;box-shadow:inset 0 0 0 1.5px #D6E6F2;}
-.mr-cell.mr-on{box-shadow:inset 0 -3px 6px rgba(69,54,42,.18);}
-.mr-cell.mr-wrong{animation:tqnope .3s ease;box-shadow:0 0 0 3px var(--coral);}
-.mr-cell.mr-axis{position:relative;}
-.mr-cell.mr-axis::after{content:"";position:absolute;top:-4px;bottom:-4px;right:-3.5px;
-  border-right:3px dashed var(--coral);opacity:.75;}
-.mr-leaf{position:absolute;display:grid;transform-origin:right center;pointer-events:none;z-index:3;
-  transition:transform 1s cubic-bezier(.5,0,.3,1),opacity .3s ease .9s;}
-.mr-leaf i{aspect-ratio:1;border-radius:8px;}
-.mr-leaf.go{transform:rotateY(-180deg);opacity:0;}
-.mr-pal{display:flex;flex-direction:column;gap:14px;}
-.mr-chip{width:64px;height:64px;border-radius:50%;border:4px solid #fff;cursor:pointer;
-  box-shadow:var(--e2);transition:transform .15s var(--spring);}
-.mr-chip.sel{transform:scale(1.18);box-shadow:0 0 0 4px var(--ink),var(--e2);}
+/* 30/09 : la plaque à picots en 3D plein écran ; les pots de perles sont en
+   3D, un bouton transparent posé sur chacun porte son petit nom dessous */
+.pl-arena{position:relative;padding:0;overflow:hidden;background:#E6D5BE;touch-action:none;}
+.pl-scene{position:absolute;inset:0;}
+.pl-scene canvas{display:block;width:100%;height:100%;}
+.pl-dots{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:3;}
+.pl-pots{position:absolute;inset:0;pointer-events:none;z-index:3;}
+.pl-pot{position:absolute;transform:translateX(-50%);gap:2px;}
+.pl-potbtn{display:block;border:none;padding:0;border-radius:50%;background:transparent;cursor:pointer;
+  pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.pl-pot .tool-cap{pointer-events:none;font-size:13px;}
 
 /* ============================================================
    LE MARCHÉ (euros)
