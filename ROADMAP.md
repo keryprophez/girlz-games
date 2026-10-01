@@ -906,8 +906,41 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   ferme, Espace), de 6 à 48 pièces ; le taquin reste en second mode.
 - **3. Les cubes de l'alphabet** (la Chasse aux lettres) : cubes en bois 3D,
   chaque cube posé dit son son, puis la syllabe, puis le mot (pour Jade).
-- **7. Le Feu d'artifice qu'on dessine** : la fusée éclate selon la forme
-  tracée au doigt ; un « grand final » en musique.
+- ✅ **7. Le Feu d'artifice qu'on dessine** (30/09, plan validé par le
+  père) : taper le ciel lance toujours la fusée d'avant ; un vrai tracé
+  (plus de 28 px) est un DESSIN — le trait brille et scintille comme un
+  cierge magique (paillettes le long du trait, étincelles au bout du doigt,
+  petites notes de clochette), se reflète dans le lac, puis une fusée part
+  du bas vers son centre et éclate : des centaines d'étincelles filent vers
+  les points du tracé, la forme brille, puis retombe en pluie scintillante
+  dans l'ordre du trait. Un trait qui commence tout près d'un dessin qui
+  attend encore sa fusée (0,45 s) le complète — les deux traits d'un A, les
+  yeux d'un bonhomme (un toucher y devient un point) ; deux doigts loin
+  l'un de l'autre font deux dessins (suivis par `pointerId`). Sept
+  pastilles de couleur sur le lac, sans nom (comme les couleurs de
+  l'Atelier) : arc-en-ciel (la teinte suit le trait), or, rose, rouge,
+  vert, bleu, violet — des encres FRANCHES, un pastel vire au blanc quand
+  des centaines d'étincelles s'additionnent. Le **bouquet final** est un
+  spectacle d'une vingtaine de secondes sur une petite mélodie écrite (Do
+  majeur, 108 à la noire, clochettes, harpe, basse, nappe, shaker :
+  `playNote` de `core/music.ts`) : l'ouverture en trois gerbes qui
+  illuminent le ciel, puis à chaque mesure une forme dessinée pendant la
+  partie qui revient éclater EN GRAND sur le premier temps (complétée par
+  un cœur, une étoile, une fleur, un bonhomme, une spirale si elle a peu
+  dessiné), une paire au troisième, des crépitements entre ; une montée
+  d'une fusée par croche ; puis la grande gerbe d'or qui retombe pendant
+  l'outro. Les salves éclatent SUR les temps (les fusées partent 0,8 s
+  avant, les boums sont sur l'horloge audio, la latence de sortie est
+  compensée) ; la pause arrête la partition. Le bouton du bouquet a son
+  petit nom ; la main dessine un cœur (nouveau geste `trace` de
+  `core/hand.ts`), puis montre un toucher, puis le bouquet quand il est
+  là. Étincelles en tableaux typés (2 600 au plus), halos précalculés dans
+  une seule planche, tout au temps et non plus à l'image (la tablette est
+  à 90 Hz) ; le décor suit la taille de l'arène. Bots : `feu-bouquet-final`
+  (le bouquet dure plus longtemps) et `feu-dessin` (un cœur qui doit
+  éclater sur son tracé, une étoile en or, le bouquet où les dessins
+  reviennent). L'affiche montre un cœur dessiné. **Reste : l'écouter et
+  la voir sur la tablette** (`?fps` pendant le bouquet).
 - **11. Le Flipper de la grange** (nouveau, Jouer, 3D) : deux batteurs, les
   animaux en bumpers ; à deux, un batteur chacune, un seul score.
 - **13. Cache-cache à la ferme** (nouveau, Jouer, 3D) : trouver les animaux

@@ -102,7 +102,27 @@ const STAGE = {
     },
     after: 300
   },
-  fireworks: { wait: 3000, act: async (p, box) => { for (let i = 0; i < 6; i++) { await p.mouse.click(box.x + box.width * (0.2 + 0.12 * i), box.y + box.height * (0.25 + 0.08 * (i % 3))); await p.waitForTimeout(250) } }, after: 900 },
+  // Un cœur arc-en-ciel dessiné au doigt qui éclate en forme (30/09), trois fusées autour
+  fireworks: {
+    wait: 3000,
+    act: async (p, box) => {
+      await p.addStyleTag({ content: '.fw-pal{display:none !important;}' })
+      const cx = box.x + box.width * 0.5, cy = box.y + box.height * 0.36, s = box.height * 0.0105
+      const heart = t => [cx + s * 16 * Math.sin(t) ** 3, cy - s * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]
+      await p.mouse.move(...heart(0)); await p.mouse.down()
+      for (let i = 1; i <= 48; i++) await p.mouse.move(...heart(i / 48 * Math.PI * 2))
+      await p.mouse.up()
+      await p.waitForTimeout(250)
+      for (const [fx, fy] of [[0.2, 0.3], [0.8, 0.26], [0.3, 0.14]]) { await p.mouse.click(box.x + box.width * fx, box.y + box.height * fy); await p.waitForTimeout(60) }
+      // Le cœur formé, les fusées en fleur : on fige (pause) au temps du JEU,
+      // une capture lente arriverait sinon après la fête
+      await p.waitForFunction(() => window.__fw?.drawn >= 1, null, { timeout: 60000, polling: 16 })
+      const t = await p.evaluate(() => window.__fw.time)
+      await p.waitForFunction(t0 => window.__fw.time >= t0 + 0.55, t, { timeout: 60000, polling: 16 })
+      await p.locator('.pbtn[aria-label="Pause"]').click({ force: true })
+    },
+    after: 300
+  },
   // Le papillon, deux ailes remplies au pot de peinture
   coloring: {
     wait: 3000,

@@ -14,8 +14,12 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-const PORT = 4189
+// PORT=… : un autre port quand 4189 est pris (plusieurs sessions en parallèle)
+const PORT = Number(process.env.PORT || 4189)
 const URL = `http://localhost:${PORT}/girlz-games/`
+
+// Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
+if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord, ou PORT=…`); process.exit(1) }
 
 const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {
   stdio: 'ignore', detached: false
@@ -889,7 +893,8 @@ await scenario('atelier-livre', async () => {
   await finDe('Chef-d', 20000)
 })
 
-/* 🎆 Feu d'artifice : huit fusées, puis le bouquet final jusqu'à la fin. */
+/* 🎆 Feu d'artifice : des touchers (la fusée d'avant), puis le bouquet final
+   jusqu'à la fin. */
 await scenario('feu-bouquet-final', async () => {
   await openGame("Feu d'Artifice")
   const box = await page.locator('#fwArena').boundingBox()
@@ -900,7 +905,65 @@ await scenario('feu-bouquet-final', async () => {
   }
   // Le bouton du bouquet bat sans arrêt : Playwright ne le verrait jamais « stable »
   await page.locator('#fwFinal').click({ force: true })
-  await finDe('Quel spectacle', 15000)
+  // Le bouquet est un spectacle sur sa musique (30/09) : une vingtaine de secondes
+  await finDe('Quel spectacle', 60000)
+})
+
+/* ✏️ Le feu d'artifice qu'on DESSINE (30/09) : un cœur tracé au doigt (de
+   vrais gestes appuyer / glisser / lever) éclate en forme LÀ OÙ il a été
+   dessiné et à sa taille ; une étoile en or (la pastille) ; puis des
+   touchers jusqu'au bouquet, où les dessins reviennent éclater en grand. */
+await scenario('feu-dessin', async () => {
+  await openGame("Feu d'Artifice", '__fw')
+  const box = await page.locator('#fwArena').boundingBox()
+  const trace = async pts => {
+    await page.mouse.move(pts[0][0], pts[0][1]); await page.mouse.down()
+    for (const [x, y] of pts.slice(1)) await page.mouse.move(x, y)
+    await page.mouse.up()
+  }
+  const hx = box.x + box.width * 0.42, hy = box.y + box.height * 0.34, s = box.height * 0.009
+  const heart = []
+  for (let i = 0; i <= 48; i++) {
+    const t = i / 48 * Math.PI * 2
+    heart.push([hx + s * 16 * Math.sin(t) ** 3, hy - s * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))])
+  }
+  await trace(heart)
+  await page.waitForFunction(() => window.__fw.drawn >= 1, null, { timeout: 20000, polling: 250 })
+  // Le cœur a éclaté à sa place : centre et taille du tracé (coordonnées de l'arène)
+  const xs = heart.map(p => p[0]), ys = heart.map(p => p[1])
+  const want = {
+    cx: (Math.min(...xs) + Math.max(...xs)) / 2 - box.x, cy: (Math.min(...ys) + Math.max(...ys)) / 2 - box.y,
+    w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys)
+  }
+  const got = await page.evaluate(() => window.__fw.last)
+  if (!got || Math.abs(got.cx - want.cx) > 12 || Math.abs(got.cy - want.cy) > 12 ||
+    Math.abs(got.w - want.w) > want.w * 0.15 || Math.abs(got.h - want.h) > want.h * 0.15) {
+    throw new Error(`le cœur n'éclate pas sur son tracé : ${JSON.stringify(got)} au lieu de ${JSON.stringify(want)}`)
+  }
+  if (got.n < 60) throw new Error(`trop peu d'étincelles pour dessiner le cœur (${got.n})`)
+  // Une étoile en or, d'un seul trait
+  await page.locator('.fw-ink[data-i="1"]').click()
+  const sx = box.x + box.width * 0.72, sy = box.y + box.height * 0.3, R = box.height * 0.12
+  const star = []
+  for (let i = 0; i < 5; i++) {
+    const a0 = -Math.PI / 2 + i * Math.PI * 4 / 5, a1 = a0 + Math.PI * 4 / 5
+    for (let q = 0; q < 8; q++) {
+      star.push([sx + Math.cos(a0) * R + (Math.cos(a1) - Math.cos(a0)) * R * q / 8, sy + Math.sin(a0) * R + (Math.sin(a1) - Math.sin(a0)) * R * q / 8])
+    }
+  }
+  await trace(star)
+  await page.waitForFunction(() => window.__fw.drawn >= 2, null, { timeout: 20000, polling: 250 })
+  if (await page.evaluate(() => window.__fw.last.ink) !== 1) throw new Error('l\'étoile n\'a pas pris la couleur choisie')
+  // Des touchers jusqu'au bouquet (les dessins comptent comme des fusées)
+  const need = await page.evaluate(() => window.__fw.need)
+  for (let i = 0; i < 20 && await page.evaluate(() => window.__fw.count) < need; i++) {
+    await page.mouse.click(box.x + box.width * (0.15 + 0.07 * (i % 10)), box.y + box.height * 0.22)
+    await page.waitForTimeout(120)
+  }
+  await page.locator('#fwFinal').click({ force: true })
+  // Les deux dessins reviennent éclater en grand pendant le bouquet
+  await page.waitForFunction(() => window.__fw.encore >= 2, null, { timeout: 40000, polling: 250 })
+  await finDe('Quel spectacle', 60000)
 })
 
 /* 🎨 L'Atelier (27/09) : un trait, un tampon, le pot de peinture et

@@ -250,6 +250,50 @@ export function playMusic(theme: string) {
   }, 200)
 }
 
+/* ---- Une partition écrite (30/09) ----
+   Le grand final du Feu d'artifice ne s'improvise pas : ses salves tombent
+   sur les temps d'une vraie petite mélodie. Le jeu joue ses notes lui-même,
+   au fil de sa chorégraphie, chacune programmée un instant à l'avance sur
+   l'horloge audio (une pause arrête donc la partition) et sur le bus de la
+   musique : quitter le jeu les éteint avec l'ambiance, et le fondu de
+   l'outro aussi. L'ambiance, elle, doit être arrêtée avant (`stopMusic`). */
+export type NoteVoice = 'bell' | 'harp' | 'bass' | 'pad' | 'hat'
+
+/** Clochette : une fondamentale ronde et un partiel inharmonique qui s'éteint vite. */
+function bell(ac: AudioContext, f: number, t: number, dur: number, vol: number) {
+  const g = ac.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.linearRampToValueAtTime(vol, t + 0.006)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+  const o1 = ac.createOscillator()
+  o1.type = 'sine'; o1.frequency.value = f
+  const o2 = ac.createOscillator()
+  o2.type = 'sine'; o2.frequency.value = f * 2.756 // le « ding » du glockenspiel
+  const g2 = ac.createGain()
+  g2.gain.setValueAtTime(0.28, t)
+  g2.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.35)
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(master!)
+  o1.start(t); o2.start(t)
+  o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05)
+}
+
+/** Une note (ou un accord) à l'instant `when` de l'horloge audio. */
+export function playNote(voice: NoteVoice, notes: number | readonly number[], when: number, dur: number, vol: number) {
+  if (!isSoundOn()) return
+  const ac = getCtx()
+  if (!ac) return
+  ensureMaster(ac)
+  const t = Math.max(when, ac.currentTime)
+  const ns = typeof notes === 'number' ? [notes] : notes
+  if (voice === 'pad') { padChord(ac, [...ns], t, dur, vol); return }
+  if (voice === 'hat') { hat(ac, t, vol); return }
+  for (const n of ns) {
+    if (voice === 'bell') bell(ac, m2f(n), t, dur, vol)
+    else if (voice === 'harp') pluck(ac, m2f(n), t, vol)
+    else bassNote(ac, n, t, dur, vol)
+  }
+}
+
 /** Fondu de sortie puis silence. */
 export function stopMusic(fade = 0.7) {
   clearInterval(timer)

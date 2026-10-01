@@ -7,8 +7,12 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-const PORT = 4188
+// PORT=… : un autre port quand 4188 est pris (plusieurs sessions en parallèle)
+const PORT = Number(process.env.PORT || 4188)
 const URL = `http://localhost:${PORT}/girlz-games/`
+
+// Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
+if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord, ou PORT=…`); process.exit(1) }
 
 // Serveur de preview sur le build de production
 const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {

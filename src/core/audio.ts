@@ -118,11 +118,12 @@ export const sSplash = () => {
   tone(300, 0.12, 'sine', 0.12, 0.06)
   tone(520, 0.1, 'sine', 0.09, 0.16)
 }
-/** Explosion charnue (ballon, boum). */
-export const sBoomReal = (d = 0) => {
-  noiseBurst(0.5, 2500, { vol: 0.4, sweepTo: 120, delay: d })
-  tone(65, 0.4, 'sine', 0.3, d)
-  tone(48, 0.35, 'sine', 0.2, d + 0.05)
+/** Explosion charnue (ballon, boum). `v` règle la force (le bouquet du Feu
+    d'artifice en tire trente sous sa mélodie : on les veut sous la musique). */
+export const sBoomReal = (d = 0, v = 1) => {
+  noiseBurst(0.5, 2500, { vol: 0.4 * v, sweepTo: 120, delay: d })
+  tone(65, 0.4, 'sine', 0.3 * v, d)
+  tone(48, 0.35, 'sine', 0.2 * v, d + 0.05)
 }
 /** Pop sec et satisfaisant (bulle, pop-corn). */
 export const sPopReal = (d = 0) => {

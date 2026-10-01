@@ -53,7 +53,8 @@ near-miss et outro (voir `AUDIT.md` §4 pour les huit manques communs).
 
 ```
 src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.ts
-             music.ts (générative) · voice.ts · juice.ts · fx.ts
+             music.ts (générative ; `playNote` pour une partition écrite,
+                       le bouquet du Feu d'artifice) · voice.ts · juice.ts · fx.ts
              three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
              sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
              portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
@@ -108,9 +109,10 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            (écrit par `scripts/posters.mjs`)
              hand.ts     ← LA MAIN QUI MONTRE (30/09) : le geste de chaque jeu
                            mimé par un gant blanc (`GameDef.hand`, lancé par
-                           GameHost) — taper, glisser, trancher, ou `choose`
-                           (« l'un de ceux-là », sans appuyer : jamais la
-                           réponse dans Apprendre)
+                           GameHost) — taper, glisser, trancher, tracer une
+                           forme (`trace`, le cœur du Feu d'artifice), ou
+                           `choose` (« l'un de ceux-là », sans appuyer :
+                           jamais la réponse dans Apprendre)
              barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, le
                            coloriage) : `barnChoir`,
                            `singOn`, `stepChoir`
@@ -357,6 +359,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Relire un canvas WebGL** | `preserveDrawingBuffer` est désactivé : `drawImage(canvas)` renvoie du noir. Pour mesurer un rendu, capturer l'élément avec Playwright et décoder le PNG **hors du navigateur**. |
 | **`Color.setHSL` linéaire** | three.js interprète `setHSL` dans l'espace de travail **linéaire** : une clarté de 0.45 ressort crème pastel à l'écran. Passer `T.SRGBColorSpace` en 4ᵉ argument (les hexadécimaux, eux, sont convertis automatiquement). |
 | **Couleurs vives + ACES** | Un matériau clair sous hemi+soleil+IBL cumule plus de 2× sa luminance : l'ACES l'écrase en blanc. Choisir des couleurs de matériaux **sombres** (la lumière les remonte), jamais l'inverse. |
+| **Étincelles additives en pastel** | Même famille en 2D : des centaines de halos en `lighter` le long d'un tracé (le Feu d'artifice qu'on dessine, 30/09) s'additionnent, et un rose pastel (`#FF7EB6`, trop de vert) vire au BLANC — le A rose sortait blanc. Des encres franches (peu de la composante opposée), une forme posée moins lumineuse que la fusée qui la dessine. |
 | **Smoke test = grille de l'accueil** | `scripts/smoke.mjs` et `scripts/play.mjs` touchent l'onglet de l'univers (`.hm-tab[data-w]`, un univers affiché à la fois depuis le 23/09), puis la tuile `.gc` (nom dans `.nm`, identifiant dans `data-id`), puis — jeu `ops` — la flèche des opérations (`.opsgo`, étiquettes `.opsbtn[data-op]`), puis le niveau (`.tierbtn.tier-easy`). Si tu changes l'accueil ou le sélecteur de niveau, mets-les à jour. |
 | **État de jeu en singleton de module** | `let x: any = null` + `setTimeout` qui relit `x` : si on quitte et relance en moins d'une seconde, le vieux timer pilote la nouvelle partie (crash vécu dans `piano.ts`). Capturer l'état dans une constante locale et tester `x === me` — ou attendre le jeton de partie de la phase 1. |
 | **Bot sur une valeur périmée** | Un crochet de test (`__towerX`) qui n'est écrit que quand l'objet existe garde sa dernière valeur : le bot de la Tour cliquait « au centre » pendant la chute du bloc précédent, un bloc sur trois manquait, trois déploiements ont échoué sans qu'on le voie. Écrire `NaN` quand il n'y a rien à piloter, et faire attendre le bot sur le score plutôt que sur une durée murale. |
@@ -403,9 +406,11 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 30 scénarios, le Potager en a quatre ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (30/09 : 31 scénarios, le Potager en a quatre, le Feu d'artifice deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
-   `window.__xx` (posée seulement si `window.__BOT`).
+   `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
+   parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre
+   port, et les deux scripts refusent de démarrer sur un port déjà servi.
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans
    `.gitignore` et ignorés par ESLint, par sécurité).
 6. Sur la vraie tablette, `?fps` dans l'adresse allume la sonde d'images par
