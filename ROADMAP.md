@@ -901,9 +901,32 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   l'app. Un bot : la tête de la vache au pot.
 - **1. Le Miroir en perles à repasser** : plaque à picots en 3D, on complète
   le reflet perle par perle ; le fer les fait fondre, l'objet se décolle.
-- **2. Le Taquin devient un vrai puzzle** : pièces aux vraies découpes, en
-  vrac sur la table, images tirées de leurs créations (princesse, Atelier,
-  ferme, Espace), de 6 à 48 pièces ; le taquin reste en second mode.
+- ✅ **2. Le Taquin devient un vrai puzzle** (30/09) — la tuile s'appelle
+  maintenant **Puzzle** (même identifiant `taquin2` : meilleure note, niveau
+  retenu et affiche suivent). Deux modes à gauche, Puzzle (par défaut) et
+  Taquin (l'ancien jeu, inchangé) ; les images à droite, en vignettes : la
+  ferme en 3D (neuf animaux, collines, nuages), leur princesse qui saute de
+  joie dans la salle de bal (les deux sœurs dès qu'elles ont gardé la
+  leur, et leur compagnon), l'Espace (Saturne et ses anneaux, la Terre, la
+  Lune et LEUR fusée, flamme allumée, sur des nébuleuses), et les deux
+  derniers dessins du dossier de l'Atelier (pas de dessin, pas de
+  vignette) ; le Taquin y ajoute les nombres. Les images sont des rendus 3D
+  faits une fois puis gardés sur la tablette (`core/pictures.ts`).
+  Le puzzle, en vraie 3D (`games/jigsaw.ts`) : une table en bois, un
+  plateau encadré où le fantôme très pâle de l'image guide, des pièces en
+  carton épais aux vraies découpes courbes (`core/jigsaw.ts`, testé : les
+  voisines s'emboîtent exactement, la somme des aires fait le rectangle),
+  en vrac autour du plateau, un peu tournées. On en attrape une au doigt
+  (elle se soulève, son ombre s'élargit, elle se remet droite), on la lâche
+  près de sa place et elle s'y aimante — clic, une note qui monte à chaque
+  pièce, étincelles ; ailleurs, elle reste où on la pose (sur une autre, elle
+  se pose dessus). Plusieurs doigts à la fois. 12 pièces à la fleur (et le
+  contour des pièces tracé sur le plateau), 24 à l'éclair, 48 à la flamme.
+  Pas de chrono : un puzzle fini, c'est trois étoiles — un reflet passe sur
+  l'image, la caméra s'approche. La main montre une pièce qui glisse à sa
+  place. Bots : `taquin-remis-en-ordre` (passe par le mode Taquin) et
+  `puzzle-complet` (une pièce au doigt, les autres par l'accroche).
+  **Reste : la jouer sur la tablette** (`?fps` avec 48 pièces).
 - **3. Les cubes de l'alphabet** (la Chasse aux lettres) : cubes en bois 3D,
   chaque cube posé dit son son, puis la syllabe, puis le mot (pour Jade).
 - ✅ **7. Le Feu d'artifice qu'on dessine** (30/09, plan validé par le

@@ -248,11 +248,14 @@ await scenario('labyrinthe-virages-au-doigt', async () => {
   await page.waitForFunction(() => window.__mz.round >= 1, null, { timeout: 12000 })
 })
 
-/* 🖼 Taquin : résoudre par recherche en largeur (grille 3×3 à la fleur :
-   181 440 positions au plus), puis taper les tuiles dans l'ordre — l'écran de fin doit venir. */
+/* 🖼 Taquin (le second mode du Puzzle depuis le 30/09) : résoudre par
+   recherche en largeur (grille 3×3 à la fleur : 181 440 positions au plus),
+   puis taper les tuiles dans l'ordre — l'écran de fin doit venir. */
 await scenario('taquin-remis-en-ordre', async () => {
-  await openGame('Taquin')
-  await page.waitForFunction(() => window.__tq && window.__tq.cells, null, { timeout: 15000 })
+  await openGame('Puzzle')
+  await page.locator('.tq-mode[data-m="taquin"]').click({ force: true, timeout: 120000 })
+  // L'image (un rendu 3D de la ferme) se calcule d'abord : sondé par intervalle
+  await page.waitForFunction(() => window.__tq && window.__tq.mode === 'taquin' && window.__tq.cells && window.__tq.running, null, { timeout: 180000, polling: 500 })
   await page.waitForTimeout(500)
   const { cells, size } = await page.evaluate(() => ({ cells: window.__tq.cells, size: window.__tq.size }))
   const n = size * size
@@ -284,6 +287,33 @@ await scenario('taquin-remis-en-ordre', async () => {
   await page.waitForTimeout(1500)
   const fini = await page.evaluate(() => document.body.innerText.includes('reconstituée'))
   if (!fini) throw new Error(`l'écran de fin n'est pas apparu après ${taps.length} coups`)
+})
+
+/* 🧩 Le Puzzle (30/09) : une pièce attrapée AU DOIGT (la souris), emmenée
+   au-dessus de sa place et lâchée — l'aimant doit la poser ; puis toutes les
+   autres posées par l'accroche `__pz2` — l'écran de fin doit venir. */
+await scenario('puzzle-complet', async () => {
+  await openGame('Puzzle')
+  if (!(await page.locator('.tq-mode[data-m="puzzle"].sel').count())) await page.locator('.tq-mode[data-m="puzzle"]').click({ force: true, timeout: 120000 })
+  // Le rendu de l'image passe avant les pièces : sondé par intervalle (page prise)
+  await page.waitForFunction(() => window.__pz2 && window.__pz2.ready, null, { timeout: 180000, polling: 1000 })
+  const n = await page.evaluate(() => window.__pz2.n)
+  if (n !== 12) throw new Error(`12 pièces attendues à la fleur, ${n} trouvées`)
+  const p = (await page.evaluate(() => window.__pz2.pieces())).find(x => !x.placed)
+  await page.mouse.move(p.at.x, p.at.y)
+  await page.mouse.down()
+  const held = await page.evaluate(() => window.__pz2.held)
+  if (held !== 1) { await page.mouse.up(); throw new Error('la pièce ne s\'attrape pas au doigt') }
+  for (let k = 1; k <= 8; k++) {
+    await page.mouse.move(p.at.x + (p.home.x - p.at.x) * k / 8, p.at.y + (p.home.y - p.at.y) * k / 8)
+    await page.waitForTimeout(60)
+  }
+  await page.mouse.up()
+  await page.waitForFunction(() => window.__pz2.placed >= 1, null, { timeout: 30000, polling: 250 })
+    .catch(() => { throw new Error('la pièce lâchée sur sa place ne s\'est pas posée') })
+  const rest = await page.evaluate(() => window.__pz2.pieces().filter(x => !x.placed && !x.busy).map(x => x.i))
+  for (const i of rest) await page.evaluate(k => window.__pz2.place(k), i)
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Puzzle terminé'), null, { timeout: 90000, polling: 500 })
 })
 
 /* 🃏 Memory : le bot connaît le paquet, il retourne les paires dans l'ordre
@@ -1129,11 +1159,11 @@ await scenario('princesse-ancienne-version', async () => {
     await prOpen(false)
     await page.locator('#prSwitch').click({ force: true, timeout: 120000 })
     await page.waitForFunction(() => window.__du && window.__du.ready && !window.__pr, null, { timeout: 120000, polling: 500 })
-    await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 60000 })
+    await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 120000 })
     await page.waitForFunction(() => window.__du.look.hat === 'crown', null, { timeout: 20000, polling: 250 })
     const kept = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('ferme:v2') || '{}').state; return s?.profiles?.find(p => p.id === s.currentId)?.look })
     if (!kept || kept.hat !== 'crown') throw new Error('le look de la petite fille n\'est pas gardé')
-    await page.locator('#duSwitch').click({ force: true, timeout: 60000 })
+    await page.locator('#duSwitch').click({ force: true, timeout: 120000 })
     await prWait(() => window.__pr && window.__pr.ready && !window.__du, 'retour à la princesse')
     if (errors.length) throw new Error('erreurs JS : ' + errors.join(' | '))
   } finally {

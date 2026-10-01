@@ -5,7 +5,7 @@ import { royalKey, type Royal } from './royal'
 import { diskGet, diskPut } from './diskcache'
 
 /* Les personnages 3D de la ferme, rendus en IMAGES pour les jeux en DOM
-   (Simon, Puissance 4, le Taquin). Ils remplacent les
+   (Simon, Puissance 4 ; les images du Puzzle sont dans `pictures.ts`). Ils remplacent les
    pastilles rondes de la planche Kenney — « un sprite atroce digne d'un
    Minitel » — par les mêmes personnages que Tape-Trous : un seul style.
 
@@ -200,88 +200,6 @@ async function renderPrincesses(looks: Royal[], poses: Pose[], px: number): Prom
 /** Une image prête à insérer dans du HTML. */
 export const portraitImg = (url: string | undefined, px: number, cls = '') =>
   url ? `<img class="portrait ${cls}" src="${url}" width="${px}" height="${px}" alt="" draggable="false">` : ''
-
-/** L'image du Taquin : un vrai pré en 3D (arbres, clôture, fleurs du kit
-    nature) avec quatre personnages de la ferme, rendue une fois en carré. */
-export async function farmScene(kinds: CritterKind[], px: number): Promise<string> {
-  const key = 'pre:' + kinds.join(',') + '@' + px
-  const hit = cache.get(key)
-  if (hit) return hit
-  const url = await withRenderer(px, px, async (T, renderer, env) => {
-    const scene = new T.Scene()
-    // Un ciel en dégradé, comme la Course
-    const sky = document.createElement('canvas')
-    sky.width = 2; sky.height = 256
-    const g = sky.getContext('2d')!
-    const grad = g.createLinearGradient(0, 0, 0, 256)
-    grad.addColorStop(0, '#5FB3E6'); grad.addColorStop(1, '#CFEAF8')
-    g.fillStyle = grad; g.fillRect(0, 0, 2, 256)
-    const skyTex = new T.CanvasTexture(sky)
-    skyTex.colorSpace = T.SRGBColorSpace
-    scene.background = skyTex
-    scene.fog = new T.Fog('#CFEAF8', 16, 34)
-    lights(T, scene, env)
-    const ground = new T.Mesh(new T.CircleGeometry(30, 48), new T.MeshStandardMaterial({ color: 0x4E8A3A, roughness: 1 }))
-    ground.rotation.x = -Math.PI / 2
-    ground.receiveShadow = true
-    scene.add(ground)
-    const kit = critterKit(T)
-    const loaded: import('three').Object3D[] = []
-    try {
-      const deco: [string, number, number, number, number][] = [
-        ['tree_oak', -3.2, -4.2, 2.6, 0.4], ['tree_default', 3.4, -4.8, 2.4, 1.2], ['tree_fat', 0.4, -6.5, 2.2, 2],
-        ['fence_simple', -3, -2.4, 1.3, 0], ['fence_simple', -1.5, -2.4, 1.3, 0], ['fence_simple', 0, -2.4, 1.3, 0],
-        ['fence_simple', 1.5, -2.4, 1.3, 0], ['fence_simple', 3, -2.4, 1.3, 0],
-        ['flower_redA', -2.3, 1.3, 0.45, 0], ['flower_yellowA', 2.4, 1.1, 0.45, 1], ['flower_purpleA', -0.2, 1.8, 0.4, 2],
-        ['flower_yellowA', -1.1, 2.2, 0.4, 0.5], ['flower_redA', 1.3, 2, 0.4, 2.2],
-        ['plant_bush', -3.4, -1.2, 0.7, 0], ['plant_bush', 3.6, -1.4, 0.6, 1]
-      ]
-      for (const [name, x, z, h, rot] of deco) {
-        try {
-          const m = await loadModel('nature', name)
-          fitModel(T, m, h)
-          m.traverse(o => {
-            const mesh = o as import('three').Mesh
-            if (!mesh.isMesh) return
-            mesh.castShadow = true
-            const mat = (mesh.material as import('three').MeshStandardMaterial).clone()
-            mat.color.multiplyScalar(0.62) // les kits clairs délavés par l'ACES
-            if (name.startsWith('tree') || name.startsWith('plant')) mat.color.multiply(new T.Color(0x9CCB6E)) // menthe → vert de pré
-            mesh.material = mat
-          })
-          const box = new T.Box3().setFromObject(m)
-          m.position.set(x, -box.min.y, z)
-          m.rotation.y = rot
-          scene.add(m)
-          loaded.push(m)
-        } catch { /* un modèle absent : le pré reste joli sans lui */ }
-      }
-      kinds.forEach((k, i) => {
-        const c = kit.make(k, 1.15)
-        const n = kinds.length
-        c.obj.position.set((i - (n - 1) / 2) * 1.08, 0, (i % 2) * 0.5 - 0.2)
-        c.obj.rotation.y = ((i - (n - 1) / 2) * -0.18)
-        c.obj.traverse(o => { o.castShadow = true })
-        scene.add(c.obj)
-      })
-      const cam = new T.PerspectiveCamera(40, 1, 0.1, 60)
-      cam.position.set(0, 2.2, 6.4)
-      cam.lookAt(0, 0.7, -0.6)
-      renderer.render(scene, cam)
-      return renderer.domElement.toDataURL('image/png')
-    } finally {
-      kit.dispose()
-      skyTex.dispose()
-      ground.geometry.dispose(); (ground.material as import('three').Material).dispose()
-      for (const m of loaded) m.traverse(o => {
-        const mesh = o as import('three').Mesh
-        if (mesh.isMesh) (mesh.material as import('three').Material).dispose()
-      })
-    }
-  }).catch(() => '')
-  if (url) cache.set(key, url)
-  return url
-}
 
 /** Le pré de l'accueil (23/09) : un panorama 3D large et bas, fond
     transparent — collines, haie d'arbres, clôture, fleurs, et les animaux

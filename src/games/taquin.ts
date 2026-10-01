@@ -1,28 +1,64 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick, shuffle } from '../core/utils'
+import { $, pick } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
-import { farmScene } from '../core/portraits'
-import { FARM } from '../core/critters'
-import { useFerme } from '../core/store'
+import { princessPortraits } from '../core/portraits'
+import { familyLooks, useFerme } from '../core/store'
+import { drawings } from '../core/atelierdb'
+import { drawingPicture } from './coloring'
+import { farmPicture, princessPicture, spacePicture, canvasPicture, squareUrl, PIC_W, PIC_H, type Picture } from '../core/pictures'
+import { mountJigsaw, pictureWait, pictureOrNull, type Jigsaw } from './jigsaw'
 
-/* Taquin — on fait glisser des morceaux de photo (sa tête, une photo
-   chargée, ou une image de la ferme) jusqu'à recomposer l'image ; ou des
-   nombres à remettre en ordre. L'image fantôme en fond guide, le modèle
-   miniature rappelle l'objectif.
+/* Le Puzzle — c'était le Taquin ; depuis le 30/09, deux modes (validé par
+   le père : « le Taquin devient un vrai puzzle ; le taquin actuel reste en
+   second mode ») :
+   - PUZZLE (par défaut, `jigsaw.ts`) : de vraies pièces en 3D, tenons et
+     mortaises, en vrac sur la table, à reposer sur le plateau ;
+   - TAQUIN : les morceaux qui glissent dans le cadre, tel qu'il était.
 
-   Polish du 7/09 (phase 2, jeux 2D) :
-   - plein écran : plateau carré sur toute la hauteur, colonne d'icônes,
-     modèle et compteur sur le côté — plus rien à lire ;
-   - taper une tuile alignée avec le trou fait glisser toute la rangée ;
-   - un coup impossible se sent (secousse, petit son) ;
-   - le par est la vraie distance à la solution (Manhattan), plus le nombre
-     de coups de mélange ;
-   - l'image de base est dessinée avec les vrais animaux de la ferme, plus
-     un SVG à emoji ; état typé. */
+   Les images viennent de LEURS créations (`core/pictures.ts`) : la ferme en
+   3D, leur princesse dans la salle de bal, l'Espace avec leur fusée, et
+   leurs dessins de l'Atelier (les deux plus récents du dossier — sans
+   dessin, pas de vignette). Une image se choisit en touchant sa vignette,
+   dans la colonne de droite ; le Taquin y ajoute les nombres. Le mode et
+   l'image sont retenus (`ferme:puzzle:mode`, `ferme:puzzle:img`).
 
-type Mode = 'image' | 'num'
+   Le Taquin (polish du 7/09, inchangé) : plateau carré sur toute la
+   hauteur, taper une tuile alignée avec le trou fait glisser toute la
+   rangée, un coup impossible se sent (secousse, petit son), le par est la
+   vraie distance à la solution (Manhattan). */
+
+type Mode = 'puzzle' | 'taquin'
+type Kind = 'image' | 'num'
+
+/** Une image au choix : sa vignette, son petit nom, et l'image elle-même. */
+interface Pic {
+  id: string
+  cap: string
+  /** L'image de la vignette (dès qu'elle est prête). */
+  thumb: string
+  /** Une classe de vignette (la princesse sur fond rose, les nombres…). */
+  cls?: string
+  /** L'image n'a pas de vignette à elle avant d'être calculée : on la prépare en fond. */
+  warm?: boolean
+  /** Une vignette à part (la princesse : son portrait, pas la salle de bal entière). */
+  prep?: () => Promise<string>
+  load(): Promise<Picture | null>
+}
+
+interface Shell {
+  mode: Mode
+  pic: string
+  pics: Pic[]
+  jig: Jigsaw | null
+  alive: boolean
+  /** Jeton : un changement de mode ou d'image annule ce qui était en route. */
+  gen: number
+  urls: string[]
+  fingers: number
+}
+
 interface State {
   size: number
   cells: number[]
@@ -36,18 +72,189 @@ interface State {
   running: boolean
 }
 
+let sh: Shell | null = null
 let tq: State | null = null
 let ctx: GameContext
-let mode: Mode = 'image'
+let kind: Kind = 'image'
+/** L'image du taquin en cours (un redimensionnement relance la partie avec elle). */
+let tqImg = ''
 const TQ_COLORS = ['#FF9C8F', '#FFC06B', '#7BD494', '#6FC2EE', '#C0A0F2', '#F58FB8', '#8FD7CE', '#F2B58F']
+const MODE_KEY = 'ferme:puzzle:mode'
+const PIC_KEY = 'ferme:puzzle:img'
 
-/** L'image de base : un vrai pré en 3D (arbres, clôture, fleurs) et quatre
-    personnages de la ferme — les mêmes que Tape-Trous et Simon, plus les
-    pastilles Kenney collées sur un dégradé (22/09). */
-function farmPicture(): Promise<string> {
-  return farmScene(shuffle([...FARM]).slice(0, 4), 512)
+const read = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
+const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* stockage refusé */ } }
+
+/* =====================================================================
+   Les images
+   ===================================================================== */
+
+/** Une photo (sa tête, une photo chargée) recadrée au format du plateau. */
+function photoCanvas(url: string): Promise<HTMLCanvasElement | null> {
+  return new Promise(res => {
+    const im = new Image()
+    im.onload = () => {
+      const cv = document.createElement('canvas')
+      cv.width = PIC_W; cv.height = PIC_H
+      const k = Math.max(PIC_W / im.width, PIC_H / im.height)
+      cv.getContext('2d')!.drawImage(im, (PIC_W - im.width * k) / 2, (PIC_H - im.height * k) / 2, im.width * k, im.height * k)
+      res(cv)
+    }
+    im.onerror = () => res(null)
+    im.src = url
+  })
 }
 
+function basePics(c: GameContext): Pic[] {
+  const st = useFerme.getState()
+  const looks = familyLooks(st.royals)
+  const pics: Pic[] = [
+    { id: 'ferme', cap: 'Ferme', thumb: '', warm: true, load: farmPicture },
+    {
+      id: 'princesse', cap: 'Princesse', thumb: '', cls: 'pz-royal', warm: true, load: () => princessPicture(looks),
+      // Son portrait de l'écran de fin (préparé sur l'accueil, gardé sur le disque)
+      prep: () => princessPortraits(looks, ['cheer', 'wave'], 200).then(r => r.cheer || '')
+    },
+    { id: 'espace', cap: 'Espace', thumb: '', warm: true, load: spacePicture }
+  ]
+  const custom = st.puzzleImgs[st.currentId]
+  if (custom) pics.push({ id: 'photo', cap: 'Ta photo', thumb: custom, load: () => canvasPicture('photo:' + custom.length, () => photoCanvas(custom)) })
+  if (c.avatar) {
+    const av = c.avatar
+    pics.push({ id: 'tete', cap: 'Ta tête', thumb: av, load: () => canvasPicture('tete:' + av.length, () => photoCanvas(av)) })
+  }
+  pics.push({ id: 'nombres', cap: 'Nombres', thumb: '', cls: 'pz-num', load: () => Promise.resolve(null) })
+  return pics
+}
+
+const picOf = (me: Shell) => me.pics.find(p => p.id === me.pic) || me.pics[0]
+const shown = (me: Shell) => me.pics.filter(p => me.mode === 'taquin' || p.id !== 'nombres')
+
+function thumbHtml(p: Pic): string {
+  if (p.id === 'nombres') return ICON.digits
+  if (p.thumb) return `<img src="${p.thumb}" alt="" draggable="false">`
+  return `<span class="pz-wait"><i></i><i></i><i></i></span>`
+}
+
+function renderPics(me: Shell) {
+  const host = document.getElementById('pzPics')
+  if (!host) return
+  host.innerHTML = shown(me).map(p =>
+    `<span class="tool-item"><button class="pz-pic ${p.cls || ''}${p.id === me.pic ? ' sel' : ''}" data-p="${p.id}" aria-label="${p.cap}">${thumbHtml(p)}</button><i class="tool-cap">${p.cap}</i></span>`
+  ).join('')
+  host.querySelectorAll<HTMLElement>('.pz-pic').forEach(b => { b.onclick = () => choose(me, b.dataset.p!) })
+}
+
+function paintThumb(me: Shell, p: Pic) {
+  const b = document.querySelector<HTMLElement>(`.pz-pic[data-p="${p.id}"]`)
+  if (b && sh === me) b.innerHTML = thumbHtml(p)
+}
+
+/** Les vignettes qui attendent leur image (la ferme, la princesse, l'Espace) : calculées
+    une à une, en fond, jamais pendant qu'un doigt tient une pièce. Gardées
+    ensuite sur le disque : la prochaine fois, rien à calculer. */
+function warm(me: Shell) {
+  const todo = me.pics.filter(p => p.warm && !p.thumb)
+  let i = 0
+  const next = () => {
+    if (sh !== me || !me.alive) return
+    const p = todo[i]
+    if (!p) return
+    // On attend que la partie soit prête (son image passe d'abord), et qu'aucun doigt ne joue
+    const settled = me.mode === 'puzzle' ? !!me.jig?.ready() : !!tq
+    if (!settled || me.fingers > 0 || me.jig?.busy()) { ctx.after(700, next); return }
+    i++
+    void (p.prep ? p.prep() : p.load().then(pic => pic?.url || '')).then(url => {
+      if (sh !== me || !me.alive) return
+      if (url && !p.thumb) { p.thumb = url; paintThumb(me, p) }
+      ctx.after(500, next)
+    })
+  }
+  ctx.after(2200, next)
+}
+
+function choose(me: Shell, id: string) {
+  if (id === me.pic || !me.alive) return
+  me.pic = id
+  write(PIC_KEY, id)
+  document.querySelectorAll<HTMLElement>('.pz-pic').forEach(b => b.classList.toggle('sel', b.dataset.p === id))
+  sfx('click', { vol: 0.4 })
+  const p = picOf(me)
+  if (me.mode === 'puzzle') me.jig?.setPicture(p.load().then(pic => { learnThumb(me, p, pic); return pic }))
+  else void startTaquin(me)
+}
+
+/** Une image calculée donne sa vignette à celles qui n'en avaient pas. */
+function learnThumb(me: Shell, p: Pic, pic: Picture | null) {
+  if (pic && !p.thumb && p.warm && !p.prep) { p.thumb = pic.url; paintThumb(me, p) }
+}
+
+/* =====================================================================
+   Les modes
+   ===================================================================== */
+function syncModes(me: Shell) {
+  document.querySelectorAll<HTMLElement>('.tq-mode').forEach(x => x.classList.toggle('sel', x.dataset.m === me.mode))
+  const wrap = document.getElementById('tqWrap')
+  wrap?.classList.toggle('pz-on', me.mode === 'puzzle')
+  const board = document.getElementById('tqBoard')
+  if (board) board.hidden = me.mode !== 'taquin'
+  const moves = document.getElementById('tqMoves')
+  if (moves) moves.hidden = me.mode !== 'taquin'
+}
+
+function setMode(me: Shell, mode: Mode) {
+  if (mode === me.mode || !me.alive) return
+  me.mode = mode
+  write(MODE_KEY, mode)
+  sfx('click', { vol: 0.4 })
+  enter(me)
+}
+
+function enter(me: Shell, listed?: Promise<unknown>) {
+  me.gen++
+  if (me.mode === 'puzzle') {
+    if (tq) { tq.running = false; tq = null }
+    const b = document.getElementById('tqBoard')
+    if (b) b.innerHTML = ''
+    if (me.pic === 'nombres') { me.pic = 'ferme'; write(PIC_KEY, me.pic) }
+    syncModes(me)
+    renderPics(me)
+    const holder = $('pz3d')
+    me.jig?.dispose()
+    const p = (listed || Promise.resolve()).then(() => {
+      const pc = picOf(me)
+      return pc.load().then(pic => { learnThumb(me, pc, pic); return pic })
+    })
+    me.jig = mountJigsaw(ctx, holder, p)
+  } else {
+    me.jig?.dispose()
+    me.jig = null
+    syncModes(me)
+    renderPics(me)
+    void (listed || Promise.resolve()).then(() => startTaquin(me))
+  }
+}
+
+async function startTaquin(me: Shell) {
+  const gen = ++me.gen
+  if (tq) { tq.running = false; tq = null }
+  const p = picOf(me)
+  if (p.id === 'nombres') { kind = 'num'; build(''); return }
+  kind = 'image'
+  const hide = pictureWait($('tqWrap'))
+  const pic = await pictureOrNull(ctx, p.load())
+  learnThumb(me, p, pic)
+  const url = pic ? await squareUrl(pic) : ''
+  hide()
+  if (sh !== me || !me.alive || gen !== me.gen || me.mode !== 'taquin') return
+  if (url) me.urls.push(url)
+  if (!url) kind = 'num' // pas d'image possible : les nombres, pour jouer quand même
+  build(url)
+}
+
+/* =====================================================================
+   Le Taquin (inchangé dans son jeu)
+   ===================================================================== */
 function render(me: State) {
   me.cells.forEach((v, i) => {
     if (v === 0) return
@@ -109,7 +316,7 @@ function slide(me: State, v: number) {
 function finish(me: State) {
   const stars = me.moves <= me.par * 1.8 ? 3 : me.moves <= me.par * 3.2 ? 2 : 1
   ctx.finish({
-    title: mode === 'image' ? 'Image reconstituée !' : 'Nombres remis en ordre !',
+    title: kind === 'image' ? 'Image reconstituée !' : 'Nombres remis en ordre !',
     msg: `Tu as réussi en ${me.moves} coup${me.moves > 1 ? 's' : ''}`,
     stars
   })
@@ -118,10 +325,11 @@ function finish(me: State) {
 /** Le plus grand carré qui tient dans l'arène, en laissant la place aux colonnes. */
 function fitPx(): number {
   const w = $('tqWrap')
-  return Math.max(240, Math.min(w.clientWidth - 260, w.clientHeight - 20))
+  return Math.max(240, Math.min(w.clientWidth - 280, w.clientHeight - 20))
 }
 
 function build(img: string) {
+  tqImg = img
   const size = ctx.byTier(3, 4, 5)
   const shuffleMoves = ctx.byTier(45, 110, 200)
   const boardPx = fitPx()
@@ -150,14 +358,12 @@ function build(img: string) {
   const me: State = { size, cells, blank, moves: 0, par: Math.max(1, manhattan(cells, size)), cell, gap, pad, tiles: {}, running: true }
   tq = me
   paintMoves(me)
-  $('tqMini').innerHTML = `<img src="${img}" alt="">`
 
   const board = $('tqBoard')
   board.classList.remove('done')
   board.style.width = boardPx + 'px'
   board.style.height = boardPx + 'px'
-  board.innerHTML = mode === 'image' ? `<div class="tq2-ghost" style="background-image:url('${img}')"></div>` : ''
-  $('tqMini').style.display = mode === 'image' ? '' : 'none'
+  board.innerHTML = kind === 'image' ? `<div class="tq2-ghost" style="background-image:url('${img}')"></div>` : ''
   const inner = boardPx - pad * 2
   cells.forEach(v => {
     if (v === 0) return
@@ -165,7 +371,7 @@ function build(img: string) {
     t.className = 'tq2-t'
     t.style.width = cell + 'px'
     t.style.height = cell + 'px'
-    if (mode === 'image') {
+    if (kind === 'image') {
       const sr = Math.floor((v - 1) / size), sc = (v - 1) % size
       t.style.backgroundImage = `url('${img}')`
       t.style.backgroundSize = `${inner}px ${inner}px`
@@ -183,11 +389,18 @@ function build(img: string) {
   render(me)
 }
 
+/* =====================================================================
+   Le jeu
+   ===================================================================== */
 export const taquin: GameDef = {
-  id: 'taquin2', name: 'Taquin', icon: '🖼', sq: 'sq-sky', cat: 'reflexion',
-  subtitle: 'Fais glisser les morceaux pour recomposer l\'image',
-  // La main : on touche un morceau à côté du trou, il glisse
+  id: 'taquin2', name: 'Puzzle', icon: '🧩', sq: 'sq-sky', cat: 'reflexion',
+  subtitle: 'Attrape les pièces et reconstruis l\'image',
   hand: () => {
+    const shell = sh
+    if (!shell) return null
+    // Le Puzzle : une pièce en vrac glisse jusqu'à sa place
+    if (shell.mode === 'puzzle') return shell.jig?.hand() ?? null
+    // Le Taquin : on touche un morceau à côté du trou, il glisse
     const me = tq
     if (!me || !me.running) return null
     const n = me.size, b = me.blank, br = Math.floor(b / n), bc = b % n
@@ -199,56 +412,78 @@ export const taquin: GameDef = {
   mount(c) {
     ctx = c
     const st = useFerme.getState()
-    const customImg = st.puzzleImgs[st.currentId] || null
-    let farm = ''
-    let img = customImg || c.avatar || ''
-    mode = 'image'
     c.root.innerHTML = `
       <div class="arena tq-wrap" id="tqWrap">
-        <div id="tqBoard"></div>
+        <div class="pz-3d" id="pz3d"></div>
+        <div id="tqBoard" hidden></div>
         <div class="tq-tools">
-          <span class="tool-item"><button class="sn-tool tq-mode sel" data-m="image" aria-label="Image">${ICON.photo}</button><i class="tool-cap">Image</i></span>
-          <span class="tool-item"><button class="sn-tool tq-mode" data-m="num" aria-label="Nombres">${ICON.digits}</button><i class="tool-cap">Nombres</i></span>
-          ${c.avatar ? `<span class="tool-item"><button class="sn-tool" id="tqMe" aria-label="Ta tête">${ICON.camera}</button><i class="tool-cap">Ta tête</i></span>` : ''}
-          <span class="tool-item"><button class="sn-tool" id="tqFarm" aria-label="La ferme">${ICON.flower}</button><i class="tool-cap">La ferme</i></span>
+          <span class="tool-item"><button class="sn-tool tq-mode" data-m="puzzle" aria-label="Puzzle">${ICON.piece}</button><i class="tool-cap">Puzzle</i></span>
+          <span class="tool-item"><button class="sn-tool tq-mode" data-m="taquin" aria-label="Taquin">${ICON.slide}</button><i class="tool-cap">Taquin</i></span>
+          <div class="tq-moves" id="tqMoves" hidden></div>
         </div>
-        <div class="tq-side">
-          <div class="tq2-mini" id="tqMini"></div>
-          <div class="tq-moves" id="tqMoves"></div>
-        </div>
+        <div class="pz-pics" id="pzPics"></div>
       </div>`
-    preloadSfx(['tick', 'drop', 'confirm'])
-    let alive = true
-    const rebuild = () => { if (tq) tq.running = false; build(img || farm) }
-    const syncModeChips = () => document.querySelectorAll<HTMLElement>('.tq-mode').forEach(x => x.classList.toggle('sel', x.dataset.m === mode))
+    preloadSfx(['tick', 'drop', 'confirm', 'click'])
+    const savedMode = read(MODE_KEY)
+    const me: Shell = {
+      mode: savedMode === 'taquin' ? 'taquin' : 'puzzle',
+      pic: read(PIC_KEY) || 'ferme',
+      pics: basePics(c), jig: null, alive: true, gen: 0, urls: [], fingers: 0
+    }
+    sh = me
     document.querySelectorAll<HTMLElement>('.tq-mode').forEach(b => {
-      b.onclick = () => { mode = b.dataset.m as Mode; syncModeChips(); sfx('click', { vol: 0.4 }); rebuild() }
+      b.onclick = () => setMode(me, b.dataset.m as Mode)
     })
-    const tqMe = document.getElementById('tqMe') as HTMLButtonElement | null
-    if (tqMe) tqMe.onclick = () => { img = c.avatar!; mode = 'image'; syncModeChips(); rebuild() }
-    ;($('tqFarm') as HTMLButtonElement).onclick = () => { img = farm; mode = 'image'; syncModeChips(); rebuild() }
-    const onResize = () => { if (alive && tq) rebuild() }
+    // Leurs dessins du dossier (les deux plus récents) : lus avant de choisir l'image
+    const listed = drawings(st.currentId).then(ds => {
+      if (sh !== me) return
+      const at = me.pics.findIndex(p => p.id === 'espace') + 1
+      const mine = ds.slice(0, 2).map((d, k): Pic => {
+        const url = URL.createObjectURL(d.thumb)
+        me.urls.push(url)
+        return { id: 'dessin' + k, cap: 'Dessin', thumb: url, cls: 'pz-draw', load: () => canvasPicture('dessin:' + d.id + ':' + d.at, () => drawingPicture(d, PIC_W, PIC_H)) }
+      })
+      me.pics.splice(at, 0, ...mine)
+    }).catch(() => { /* pas de dossier : pas de vignette */ }).then(() => {
+      if (sh !== me) return
+      if (!me.pics.some(p => p.id === me.pic)) me.pic = 'ferme'
+      renderPics(me)
+    })
+    renderPics(me)
+    enter(me, listed)
+    warm(me)
+
+    // Un doigt posé : le travail de fond attend (les vignettes)
+    const down = () => { me.fingers++ }
+    const up = () => { me.fingers = Math.max(0, me.fingers - 1) }
+    c.root.addEventListener('pointerdown', down)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    const onResize = () => { if (me.alive && me.mode === 'taquin' && tq) { tq.running = false; build(tqImg) } }
     window.addEventListener('resize', onResize)
 
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __tq: unknown }).__tq = {
         get cells() { return tq ? [...tq.cells] : null }, get size() { return tq?.size }, get running() { return !!tq?.running },
+        get mode() { return sh?.mode },
         tap: (v: number) => { if (tq) slide(tq, v) }
       }
     }
 
-    // L'image de la ferme est un rendu 3D : on la prépare d'abord, elle sert
-    // de base quand il n'y a ni photo ni tête
-    farmPicture().then(p => {
-      if (!alive) return
-      farm = p
-      build(img || farm)
-    })
     return () => {
-      alive = false
+      if (!me.alive) return
+      me.alive = false
+      c.root.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
       window.removeEventListener('resize', onResize)
+      me.jig?.dispose()
+      me.jig = null
       if (tq) { tq.running = false; tq = null }
+      me.urls.forEach(u => URL.revokeObjectURL(u))
+      if (sh === me) sh = null
+      delete (window as { __tq?: unknown }).__tq
     }
   }
 }
