@@ -21,12 +21,13 @@ import { geoGame } from './geo'
 import { fireworks } from './fireworks'
 import { icetower } from './icetower'
 import { sentences } from './sentences'
+import { bijoux } from './bijoux'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
-  dressup, piano, fireworks, coloring, pizza
+  dressup, bijoux, piano, fireworks, coloring, pizza
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -55,7 +56,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',
-    games: [dressup, piano, fireworks, coloring, pizza]
+    games: [dressup, bijoux, piano, fireworks, coloring, pizza]
   }
 ]
 

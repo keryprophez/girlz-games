@@ -149,6 +149,12 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              perles.ts   ← leurs dessins en petites grilles (papillon, fraise,
                            cochon…), la palette des pots et les manches du
                            Miroir (modèle, axe, reflet) — logique pure, testée
+             bijoux3d.ts ← LES PERLES des Bijoux (30/09) en vraie 3D, à leur
+                           taille réelle : nacrée irisée, verre, cristal
+                           taillé, cœur, étoile, fleur, intercalaire, cube ;
+                           un « kit » par scène (`beadKit` : `refract` pour
+                           la vitrine, `cheap` pour la princesse), `orientQ`
+                           (le trou sur Y, le long du fil), `instancedRun`
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -179,6 +185,12 @@ construites dans `core/princess3d.ts` à partir d'une `Royal`
 de fin, en promenade sur l'accueil et en tampons dans l'Atelier. Le store
 garde trois princesses (`royals.solo`, `.jade`, `.joyce`) ; `familyLooks()`
 donne celles à montrer (les deux sœurs dès qu'elles ont gardé la leur).
+Le collier enfilé dans les **Bijoux** (30/09) est à elles aussi : ses perles
+dans `Royal.beads` (sorte + couleur, dans l'ordre du fil), porté quand
+`neck` vaut `beads` ; `wearNecklace` (store) le met à la princesse qu'on
+habille seule et l'offre aux garde-robes de Jade et de Joyce ; `princess3d`
+le construit sur elle (groupe `collier`, accroché au haut du buste, plus
+long = plus bas sur la poitrine, par-dessus le corsage).
 Un petit bouton rond (la petite fille à couettes, en bas à gauche de la
 scène) ouvre l'**ancienne version**, Habille-toi (`games/doll.ts`, demandé
 le 28/09) ; une couronne y ramène, le dernier choix est retenu
@@ -341,7 +353,7 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) · `mirror` (les Perles Miroir, 30/09) · `dressup` ·
+`simon` (le Chœur sur scène, 28/09) · `mirror` (les Perles Miroir, 30/09) · `dressup` · `bijoux` (30/09) ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
 `taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
 son second mode, le Taquin, reste en DOM) ·
@@ -430,6 +442,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **`ExtrudeGeometry` : biseau et couvercles** | Le biseau (`bevelSize`) ÉLARGIT la forme : deux pièces de puzzle voisines se chevauchaient. `bevelOffset = −bevelSize` le fait rentrer dans la forme (les flancs tombent pile sur le contour, le dessus est un peu plus petit : le fin sillon entre deux pièces). L'épaisseur totale est `depth + 2 × bevelThickness`. Et le groupe 0 (les couvercles) contient le DESSOUS puis le DESSUS, à parts égales : pour plaquer l'image sur le seul dessus, refaire les groupes (`clearGroups`, puis la seconde moitié du groupe 0 en matériau 0, le groupe 1 — flancs et biseau — en carton). Voir `pieceGeo()` dans `games/jigsaw.ts`. |
 | **Modèles chargés un par un, image qui « bloque »** | L'image de la ferme du Puzzle attendait ses 33 modèles un `await` après l'autre : 65 s sous une machine chargée (0,2 s en `Promise.all`). Et le garde-fou de `loader()` (15 s, 60 s pour les bots) est fait pour la SCÈNE 3D : un rendu d'image (`core/pictures.ts`) a son attente à part (`pictureWait` dans `games/jigsaw.ts`, même vignette qui respire) et, s'il tarde plus de 2 min, une image de secours — la partie ne reste jamais figée, et pas d'écran « Oups » pour une image lente. |
 | **La voix lit le NOM des lettres** | Donnée à la synthèse, une lettre seule se dit par son nom (« m » → « èm », « p » → « pé »), et un bout de mot se devine mal (« com » → « comme », « fan » à l'anglaise, « in » aussi). Pour faire entendre un SON, on écrit ce qui se prononce juste : « mmm », « peu », « champ » pour « cham », « faon », « hein » — une table unique, `SOUNDS` dans `core/phonics.ts`, testée. Et `say()` coupe la phrase en cours : son, syllabe et mot passent par une FILE (`speak` dans `letters.ts`), un énoncé après l'autre. |
+| **Le creux sous son cou** | Le modèle VRM n'a PAS de peau sous son haut d'origine (caché) : entre le haut du corsage (`P.neck.y − 0,045`) et son cou, on voit ses cheveux derrière elle — une bande sombre. Un bijou posé là (le collier des Bijoux, 30/09, d'abord au ras du corsage) se lit de loin comme un ras-de-cou noir. Le collier descend donc en U SUR le corsage, en suivant sa surface (coupe en ellipse tirée de `bust(y)`, + 9 mm de tissu, + 18 mm sur le liseré). Le creux lui-même reste à combler. |
+| **Des centaines de petits objets trop fins** | Les perles du boîtier des Bijoux (30/09), reprises telles quelles de la maquette : cœurs, étoiles et fleurs extrudés à 24 segments par courbe, sphères 28 × 20 — 661 000 triangles par image, rendus trois fois (ombres, passe de réfraction, image) : 3 s par image sous la 3D logicielle, la page bloquée des minutes. Un objet de 25 px à l'écran se contente de 8 segments (145 000 triangles, 0,8 s). Et UN matériau à `transmission` fait rendre TOUTE la scène une fois de plus : la vraie réfraction reste pour les vues fixes (la vitrine) ; là où l'on joue, un verre « simulé » (transparent, vernis, un peu lumineux). Compter `renderer.info.render.triangles` avant de valider une scène. Et une scène presque toujours immobile (l'établi, tant qu'aucune perle ne bouge) ne se redessine qu'à la demande (`stage.render` qui ne rend que si quelque chose a bougé, retiré dès que tout s'anime) : sous la 3D logicielle, la page redevient disponible pour le doigt. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -444,7 +458,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 31 scénarios, le Potager en a quatre, le Feu d'artifice et le Puzzle deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 32 scénarios, le Potager en a quatre, le Feu d'artifice et le Puzzle deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

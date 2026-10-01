@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CLIPS_MAX, HAIR_LEN_MAX, PARTS, defaultRoyal, moodFor, normalizeRoyal, partsPresent, randomRoyal, royalKey
+  BEADS_MAX, CLIPS_MAX, HAIR_LEN_MAX, NECKS, PARTS, defaultRoyal, moodFor, normalizeRoyal, partsPresent, randomRoyal, royalKey,
+  wearBeads, type Bead
 } from './royal'
 
 /** Un hasard reproductible pour les tests. */
@@ -69,5 +70,47 @@ describe('partsPresent et moodFor', () => {
     expect(moodFor('glasses', 'hearts')).toBe('funny')
     expect(moodFor('crown', 'tiara')).toBe('wow')
     expect(['joy', 'love']).toContain(moodFor('skirt', 'short', seeded(1)))
+  })
+})
+
+describe('le collier enfilé des Bijoux', () => {
+  const fil: Bead[] = [{ k: 'pearl', c: '#F6EEF0' }, { k: 'heart', c: '#E8435F' }, { k: 'spacer', c: '#E2B657' }]
+  it('n\'existe pas tant qu\'aucun collier n\'a été fait', () => {
+    expect(defaultRoyal().beads).toEqual([])
+    expect(normalizeRoyal({ neck: 'beads' }).neck).toBe(defaultRoyal().neck)
+  })
+  it('garde les perles valides dans l\'ordre du fil et jette les abîmées', () => {
+    const r = normalizeRoyal({ neck: 'beads', beads: [fil[0], { k: 'caillou', c: '#000000' }, null, { k: 'star', c: 'jaune' }, fil[1]] })
+    expect(r.neck).toBe('beads')
+    expect(r.beads.map(b => b.k)).toEqual(['pearl', 'star', 'heart'])
+    expect(r.beads[1].c).toMatch(/^#[0-9a-fA-F]{6}$/)
+  })
+  it('ne dépasse pas la longueur du fil', () => {
+    const long = Array.from({ length: BEADS_MAX + 30 }, () => ({ k: 'spacer', c: '#E2B657' }))
+    expect(normalizeRoyal({ beads: long }).beads.length).toBe(BEADS_MAX)
+  })
+  it('le passe à son cou sans toucher à la princesse de départ, et un fil vide le retire', () => {
+    const base = defaultRoyal()
+    const before = royalKey(base)
+    const r = wearBeads(base, fil)
+    expect(r.neck).toBe('beads')
+    expect(r.beads).toEqual(fil)
+    expect(royalKey(base)).toBe(before)
+    expect(normalizeRoyal(JSON.parse(royalKey(r)))).toEqual(r)
+    const nu = wearBeads(r, [])
+    expect(nu.beads).toEqual([])
+    expect(nu.neck).toBe('none')
+  })
+  it('la surprise ne met le collier enfilé que s\'il existe', () => {
+    const rnd = seeded(5)
+    for (let i = 0; i < 200; i++) expect(NECKS).toContain(randomRoyal(defaultRoyal(), rnd).neck)
+    const avec = wearBeads(defaultRoyal(), fil)
+    const vus = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      const r = randomRoyal(avec, rnd)
+      vus.add(r.neck)
+      expect(r.beads).toEqual(fil)
+    }
+    expect(vus.has('beads')).toBe(true)
   })
 })

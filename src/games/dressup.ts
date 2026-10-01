@@ -343,8 +343,10 @@ async function makeThumbs(T: T3, alive: () => boolean): Promise<Thumbs> {
    ===================================================================== */
 interface TileDef { k: string; v: string; frame: Frame; with: (r: Royal) => void; preview?: (r: Royal) => void; icon?: string }
 
-/** Les habits d'un onglet, chacun avec la façon de l'essayer sur une copie. */
-function tilesFor(tab: Tab): { title: string; tiles: TileDef[] }[] {
+/** Les habits d'un onglet, chacun avec la façon de l'essayer sur une copie.
+    `r` : la princesse habillée (son collier de perles enfilé, s'il existe,
+    rejoint les colliers). */
+function tilesFor(tab: Tab, r?: Royal): { title: string; tiles: TileDef[] }[] {
   const t = (k: keyof Royal, v: string, frame: Frame, extra?: (r: Royal) => void, preview?: (r: Royal) => void): TileDef => ({
     k, v, frame, preview,
     icon: v === 'none' ? icon('none', '#C9A8B8') : undefined,
@@ -360,7 +362,7 @@ function tilesFor(tab: Tab): { title: string; tiles: TileDef[] }[] {
   if (tab === 'crown') return [
     { title: 'crown', tiles: CROWNS.map(v => t('crown', v, 'head')) },
     { title: 'glasses', tiles: GLASSES.map(v => t('glasses', v, 'head')) },
-    { title: 'neck', tiles: NECKS.map(v => t('neck', v, 'bust')) }
+    { title: 'neck', tiles: [...NECKS, ...(r?.beads.length ? ['beads' as const] : [])].map(v => t('neck', v, 'bust')) }
   ]
   if (tab === 'magic') return [
     { title: 'wings', tiles: WINGS.map(v => t('wings', v, 'back')) },
@@ -445,7 +447,7 @@ function renderPane(me: State) {
       <button class="pr-tile ico${me.decor?.night ? ' on' : ''}" data-night="1" aria-label="Nuit">${icon('moon', '#3F63C8', 2.6)}</button>
     </div>`
   } else {
-    tilesFor(me.tab).forEach((sec, si) => {
+    tilesFor(me.tab, r).forEach((sec, si) => {
       if (si) html += '<div class="pr-sep"></div>'
       html += `<div class="pr-row">${sec.tiles.map((td, i) => tileHtml(td, si, i)).join('')}</div>`
     })
@@ -467,7 +469,7 @@ function requestThumbs(me: State) {
   if (!me.thumbs) return
   me.thumbs.clear()
   const d = me.dolls[me.active]
-  const secs = me.tab === 'hair' || me.tab === 'dress' || me.tab === 'crown' || me.tab === 'magic' || me.tab === 'pet' ? tilesFor(me.tab) : []
+  const secs = me.tab === 'hair' || me.tab === 'dress' || me.tab === 'crown' || me.tab === 'magic' || me.tab === 'pet' ? tilesFor(me.tab, d.look) : []
   secs.forEach((sec, si) => sec.tiles.forEach((td, i) => {
     if (td.icon) return
     const r = cloneRoyal(d.look)
@@ -1225,7 +1227,7 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
     const onTileDown = (e: PointerEvent) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('.pr-tile[data-s]')
       if (!b || !me.running || me.ball) return
-      const secs = tilesFor(me.tab)
+      const secs = tilesFor(me.tab, me.dolls[me.active].look)
       const td = secs[+b.dataset.s!]?.tiles[+b.dataset.i!]
       if (!td) return
       hand = { td, x: e.clientX, y: e.clientY, ghost: null, id: e.pointerId, tile: b }
@@ -1426,6 +1428,14 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
         /** Où en est le chargement (le bot le cite quand il attend trop). */
         get dbg() { return { stage: !!me.stage, thumbs: !!me.thumbs, dolls: me.dolls.map(d => !!d.p), running: me.running } },
         get looks() { return me.dolls.map(d => cloneRoyal(d.look)) },
+        /** Les maillages du collier enfilé dans les Bijoux, porté par chacune. */
+        get collier() {
+          return me.dolls.map(d => {
+            let n = 0
+            d.p?.obj.getObjectByName('collier')?.traverse(o => { if ((o as import('three').Mesh).isMesh) n++ })
+            return n
+          })
+        },
         get active() { return me.active },
         get tab() { return me.tab },
         get tool() { return me.tool },

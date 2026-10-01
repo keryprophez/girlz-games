@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
-import { defaultRoyal, normalizeRoyal, type Royal } from './royal'
+import { defaultRoyal, normalizeRoyal, wearBeads, type Bead, type Royal } from './royal'
 import type { Look } from './character'
 import { setSound } from './audio'
 
@@ -62,6 +62,10 @@ interface FermeState {
       sauvegardes « Jade » et « Joyce » (null tant qu'on n'a rien gardé). */
   royals: Record<RoyalSlot, Royal | null>
   setRoyal(slot: RoyalSlot, r: Royal | null): void
+  /** Le collier enfilé dans les Bijoux (30/09) : la princesse qu'on habille
+      seule le met aussitôt ; celles de Jade et de Joyce, si elles existent,
+      le trouvent dans leur garde-robe (on ne leur retire rien). */
+  wearNecklace(beads: Bead[]): void
   /** Dernière photo choisie pour le Puzzle (indépendante de l'avatar). */
   puzzleImgs: Record<string, string>
   setPuzzleImg(id: string, img: string): void
@@ -113,6 +117,19 @@ export const useFerme = create<FermeState>()(
       royals: { solo: null, jade: null, joyce: null },
       setRoyal(slot, r) {
         set(s => ({ royals: { ...s.royals, [slot]: r ? normalizeRoyal(r) : null } }))
+      },
+      wearNecklace(beads) {
+        set(s => {
+          const solo = wearBeads(soloRoyal(s), beads)
+          // Les deux sœurs : le même collier dans la garde-robe, porté s'il l'était déjà
+          const offer = (r: Royal | null) => {
+            if (!r) return null
+            const w = wearBeads(r, solo.beads)
+            if (r.neck !== 'beads') w.neck = r.neck
+            return w
+          }
+          return { royals: { solo, jade: offer(s.royals.jade), joyce: offer(s.royals.joyce) } }
+        })
       },
       puzzleImgs: {},
       setPuzzleImg(id, img) {
