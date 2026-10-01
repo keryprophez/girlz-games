@@ -957,8 +957,9 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .hand-trail path{fill:none;stroke:#fff;stroke-linecap:round;opacity:0;filter:drop-shadow(0 2px 3px rgba(40,25,15,.4));}
 .hand-trail path.drag{stroke-width:9;}
 .hand-trail path.swipe{stroke-width:12;filter:drop-shadow(0 0 8px rgba(255,255,255,.95)) drop-shadow(0 0 3px rgba(120,200,255,.9));}
+.hand-trail path.trace{stroke-width:8;stroke-linejoin:round;stroke:#FFF6D8;filter:drop-shadow(0 0 7px rgba(255,214,110,.95)) drop-shadow(0 0 2px rgba(255,255,255,.9));}
 .hand-ghost{pointer-events:none;z-index:1;filter:drop-shadow(0 8px 12px rgba(0,0,0,.3));}
-@media(prefers-reduced-motion:reduce){.hand-trail path.swipe{filter:none;}}
+@media(prefers-reduced-motion:reduce){.hand-trail path.swipe,.hand-trail path.trace{filter:none;}}
 /* Invite gestuelle : une main qui tape, sans un mot ; disparaît au premier geste */
 .tap-hint{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);z-index:6;pointer-events:none;
   font-size:64px;color:#fff;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));animation:tapHint 1.1s ease-in-out infinite;transition:opacity .3s;}
@@ -1354,6 +1355,22 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .fw-arena{background:linear-gradient(180deg,#0E0A22,#241A4A 70%,#3A2C66);cursor:pointer;}
 .fw-arena canvas{position:absolute;inset:0;}
 .fw-final{animation:rbob 1s ease-in-out infinite;}
+/* Le feu d'artifice qu'on dessine (30/09) : les encres, au fil de l'eau */
+.fw-pal{position:absolute;left:50%;bottom:max(10px,2.2vh);transform:translateX(-50%);display:flex;align-items:center;
+  gap:clamp(8px,1.3vw,14px);padding:8px 14px;border-radius:99px;background:rgba(8,6,26,.45);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);z-index:5;transition:opacity .6s,transform .6s;}
+.fw-ink{width:clamp(36px,5.6vh,50px);height:clamp(36px,5.6vh,50px);flex:none;border-radius:50%;padding:0;cursor:pointer;
+  border:3px solid rgba(255,255,255,.92);background:var(--c);box-shadow:0 0 14px var(--c);
+  transition:transform .2s var(--spring),box-shadow .2s;touch-action:manipulation;}
+.fw-ink.sel{transform:scale(1.24);box-shadow:0 0 0 3px var(--mango),0 0 20px var(--c);}
+.fw-ink:active{transform:scale(.9);}
+.fw-rainbow{--c:rgba(255,255,255,.55);background:conic-gradient(#E8414F,#FF922B,#FFD43B,#51CF66,#1C7ED6,#9C6ADE,#E8414F);}
+.fw-side{transition:opacity .6s;}
+.fw-side .tool-cap{backdrop-filter:none;}
+/* Pendant le bouquet, le ciel est à lui seul */
+.fw-show .fw-pal{opacity:0;transform:translate(-50%,24px);pointer-events:none;}
+.fw-show .fw-side{opacity:0;pointer-events:none;}
+.fw-show{cursor:default;}
 
 
 #fwCanvas{position:absolute;inset:0;width:100%;height:100%;}

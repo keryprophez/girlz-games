@@ -44,7 +44,7 @@ de château qu'on touche ; une photo qui devient un coloriage de l'Atelier ; à
 deux, les princesses de Jade et de Joyce ; et pour finir, le bal — un petit
 bouton ouvre l'ancienne version, Habille-toi, la petite fille à couettes
 qu'on coiffe d'un chapeau et qui tient un ballon), Petit Piano (un piano laqué, la
-partition qui descend, les animaux qui chantent, dix chansons), Feu d'artifice (au-dessus du village, reflété dans le lac),
+partition qui descend, les animaux qui chantent, dix chansons), Feu d'artifice (au-dessus du village, reflété dans le lac ; on dessine une forme au doigt et la fusée éclate en la dessinant, et le bouquet final est un spectacle en musique où ses dessins reviennent en grand),
 l'Atelier (dix pinceaux — néon, paillettes, aquarelle, craie, spray, cœurs,
 étoiles, arc-en-ciel… —, le miroir et la rosace, des papiers de couleur, le
 pot de peinture, les tampons de la ferme et leurs princesses, les coloriages

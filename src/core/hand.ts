@@ -12,6 +12,8 @@ import type { GameContext } from './types'
      { tap: cible }            taper
      { drag: [de, vers] }      glisser (appuyer, emmener, lâcher)
      { swipe: [de, vers] }     trancher, d'un geste vif
+     { trace: [points] }       dessiner une forme au doigt (le cœur du Feu
+                               d'artifice) : le trait lumineux suit la main
      { choose: [cibles] }      « l'un de ceux-là » : la main survole sans
                                appuyer. C'est le geste des jeux Apprendre :
                                la main ne montre JAMAIS la réponse.
@@ -29,6 +31,7 @@ export type HandMove =
   | { tap: Spot }
   | { drag: [Spot, Spot]; ghost?: boolean }
   | { swipe: [Spot, Spot] }
+  | { trace: Spot[] }
   | { choose: Spot[] }
 export type HandSpec = (root: HTMLElement) => HandMove | null
 
@@ -202,6 +205,41 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
             { transform: at(b), opacity: 0 }
           ], { duration: 560 }).finished
           ghost?.remove(); ghost = null
+        }
+      } else if ('trace' in mv) {
+        // Une forme dessinée : la main pose le doigt, suit le chemin à vitesse
+        // constante, et le trait s'allume derrière elle
+        const pts = mv.trace.map(where).filter((p): p is P => !!p)
+        if (pts.length < 2) return
+        const cum = [0]
+        for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y))
+        const len = cum[cum.length - 1]
+        if (len < 4) return
+        const moveMs = Math.max(1300, Math.min(2600, len * 2.6))
+        for (let rep = 0; rep < 2 && showing; rep++) {
+          await anim(hand, [
+            { transform: at({ x: pts[0].x + 26, y: pts[0].y + 36 }), opacity: 0 },
+            { transform: at(pts[0]), opacity: 1 }
+          ], { duration: 360, easing: 'ease-out' }).finished
+          press(pts[0], 0)
+          await anim(hand, [{ transform: at(pts[0]) }, { transform: at(pts[0], 0.86) }], { duration: 160 }).finished
+          trail.setAttribute('d', 'M' + pts.map(p => `${p.x} ${p.y}`).join('L'))
+          trail.setAttribute('class', 'trace')
+          trail.style.strokeDasharray = `${len}`
+          const hold = moveMs / (moveMs + 420)
+          anim(trail, [
+            { strokeDashoffset: len, opacity: 1 },
+            { strokeDashoffset: 0, opacity: 1, offset: hold },
+            { strokeDashoffset: 0, opacity: 0 }
+          ], { duration: moveMs + 420, easing: 'linear' })
+          await anim(hand, pts.map((p, i) => ({ transform: at(p, 0.86), offset: cum[i] / len })),
+            { duration: moveMs, easing: 'linear' }).finished
+          const end = pts[pts.length - 1]
+          await anim(hand, [
+            { transform: at(end, 0.86), opacity: 1 },
+            { transform: at(end), opacity: 1, offset: 0.3 },
+            { transform: at(end), opacity: 0 }
+          ], { duration: 560 }).finished
         }
       } else {
         const pts = mv.choose.map(s => {
