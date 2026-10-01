@@ -14,7 +14,8 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-const PORT = 4189
+// PORT=4197 : à côté des bots d'une autre session (voir CLAUDE.md)
+const PORT = Number(process.env.PORT || 4189)
 const URL = `http://localhost:${PORT}/girlz-games/`
 
 const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {
@@ -786,18 +787,40 @@ await scenario('suites-six-manches', async () => {
   await finDe('Sacré sens logique')
 })
 
-/* 🔤 Chasse aux lettres : trois mots, lettre après lettre (la lettre vole). */
-await scenario('lettres-trois-mots', async () => {
-  await openGame('Chasse aux lettres', '__lg')
+/* 🔤 Les Cubes de l'alphabet (30/09) : trois mots, cube après cube — le
+   premier GLISSÉ jusqu'à sa case, les autres touchés — par de vrais clics
+   sur les cubes 3D. Et la voix : pour chaque mot, exactement le mot, puis
+   le son de chaque cube posé, chaque syllabe complète, et la lecture finale
+   (syllabes puis mot) — ce qui est passé à `ctx.say`, dans l'ordre. */
+await scenario('cubes-trois-mots', async () => {
+  await openGame('Cubes de l', '__lg')
   for (let r = 0; r < 3; r++) {
-    await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 15000 })
-    const word = await page.evaluate(() => window.__lg.word)
-    for (const ch of word) {
-      await page.locator(`.lg-tile:not(.used)[data-ch="${ch}"]`).first().click()
-      await page.waitForTimeout(120)
+    await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 90000, polling: 500 })
+    const { text, expected, said } = await page.evaluate(() => ({ text: window.__lg.text, expected: window.__lg.expected, said: window.__lg.said }))
+    const from = said.lastIndexOf(text)
+    if (from < 0) throw new Error(`le mot « ${text} » n'a pas été dit au début`)
+    for (let k = 0; ; k++) {
+      const st = await page.evaluate(() => ({ need: window.__lg.need, pos: window.__lg.pos, cubes: window.__lg.cubes() }))
+      if (!st.need) break
+      const c = st.cubes.find(x => x.t === st.need && x.state === 'rest')
+      if (!c) throw new Error(`aucun cube « ${st.need} » sur la table (${text})`)
+      if (r === 0 && k === 0) {
+        // Glissé : appuyer sur le cube, l'emmener jusqu'à sa case, lâcher
+        const sl = await page.evaluate(i => window.__lg.slot(i), st.pos)
+        await page.mouse.move(c.x, c.y); await page.mouse.down()
+        for (let i = 1; i <= 8; i++) { await page.mouse.move(c.x + (sl.x - c.x) * i / 8, c.y + (sl.y - c.y) * i / 8); await page.waitForTimeout(40) }
+        await page.mouse.up()
+      } else await page.mouse.click(c.x, c.y)
+      await page.waitForFunction(p => window.__lg.pos > p, st.pos, { timeout: 30000, polling: 250 })
+      // La voix finit de parler avant le cube suivant (sinon elle saute des sons)
+      await page.waitForFunction(() => window.__lg.idle || window.__lg.lock, null, { timeout: 60000, polling: 250 })
     }
+    // Toute la lecture finale est dite, dans l'ordre
+    await page.waitForFunction(n => window.__lg.said.length >= n, from + expected.length, { timeout: 90000, polling: 500 })
+    const got = (await page.evaluate(() => window.__lg.said)).slice(from, from + expected.length)
+    if (JSON.stringify(got) !== JSON.stringify(expected)) throw new Error(`voix de « ${text} » : ${JSON.stringify(got)} au lieu de ${JSON.stringify(expected)}`)
   }
-  await finDe('Tous les mots trouvés')
+  await finDe('Tous les mots écrits', 60000)
 })
 
 /* 🪞 Le Miroir : trois motifs peints au doigt (couleur choisie, puis case). */

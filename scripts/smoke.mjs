@@ -7,7 +7,8 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
-const PORT = 4188
+// PORT=4197 : à côté du smoke d'une autre session (voir CLAUDE.md)
+const PORT = Number(process.env.PORT || 4188)
 const URL = `http://localhost:${PORT}/girlz-games/`
 
 // Serveur de preview sur le build de production

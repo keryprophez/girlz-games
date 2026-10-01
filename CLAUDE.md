@@ -62,6 +62,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              facts.ts    ← LA MÉMOIRE DES CALCULS (phase 4) : niveaux d'aide,
                            récolte composée, révisions espacées, pièges voisins,
                            « presque », + − × ÷ — logique pure, testée
+             phonics.ts  ← LES SONS DES CUBES DE L'ALPHABET (30/09) : les mots
+                           découpés à la main en graphèmes (« ch », « ou » =
+                           un cube) et en syllabes écrites du CP, le SON de
+                           chaque graphème, ce que la voix prononce (`landing`,
+                           `reading`), les leurres — logique pure, testée
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
@@ -128,7 +133,7 @@ scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
 ```
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
-Memory, la Chasse aux lettres, le Marché — et depuis le 22/09 les animaux
+Memory, les Cubes de l'alphabet (ex-Chasse aux lettres), le Marché — et depuis le 22/09 les animaux
 des continents du Tour du Monde. 76 sujets dans
 `public/assets/photos/*.jpg`, réunis par `scripts/import-photos.mjs` —
 **animaux : iNaturalist** (recherche par taxon latin), **le reste : catégories
@@ -311,7 +316,9 @@ la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
 `simon` (le Chœur sur scène, 28/09) ·
 `caterpillar` · `dressup` ·
-`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
+`memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
+`letters` (les Cubes de l'alphabet, 30/09 : cubes de bois, la voix dit le
+son, la syllabe, puis le mot — les sons dans `core/phonics.ts`). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -389,6 +396,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
 | **Canvas redimensionné = canvas effacé** | Changer la taille d'un canvas WebGL vide son image : si la prochaine image n'est dessinée qu'à l'image suivante, l'écran montre un canvas vide entre les deux — le « flash blanc » de la Pizzeria (30/09), à chaque cran de qualité automatique et quand la barre des bols se replie ; et le « blink » juste après le carton titre. `onResize` de `createStage` redessine donc tout de suite après `setSize`. |
 | **Une texture entière pour un coup de pinceau** | La sauce de la Pizzeria recomposait ses cinq couches (1024 × 1024) et renvoyait TOUTE la texture, au plus 20 fois par seconde : la sauce suivait le doigt par à-coups, et chaque envoi coûtait des images (« toujours pas fluide », 30/09). Pizza crue, la louche est peinte aussi sur la surface visible et seul son rectangle part, à chaque image : `renderer.copyTextureToTexture(petitCanvas, tex, null, new Vector2(x0, TEX − y1))` — la texture est retournée à l'envoi (`flipY`), d'où `TEX − y1`. |
+| **La voix lit le NOM des lettres** | Donnée à la synthèse, une lettre seule se dit par son nom (« m » → « èm », « p » → « pé »), et un bout de mot se devine mal (« com » → « comme », « fan » à l'anglaise, « in » aussi). Pour faire entendre un SON, on écrit ce qui se prononce juste : « mmm », « peu », « champ » pour « cham », « faon », « hein » — une table unique, `SOUNDS` dans `core/phonics.ts`, testée. Et `say()` coupe la phrase en cours : son, syllabe et mot passent par une FILE (`speak` dans `letters.ts`), un énoncé après l'autre. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
