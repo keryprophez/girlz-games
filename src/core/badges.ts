@@ -85,12 +85,13 @@ export const BADGE: Record<string, string> = {
     <circle cx="24" cy="38" r="3.4" fill="${C.coral}"/>
     <circle cx="34" cy="24" r="2.6" fill="${C.meadow}"/>`),
 
+  // Le Puzzle (30/09) : deux pièces emboîtées sur le plateau, une troisième qui arrive
   taquin2: svg(`
-    <rect x="6" y="6" width="36" height="36" rx="6" fill="${C.woodDark}"/>
-    <rect x="10" y="10" width="13" height="13" rx="2.5" fill="${C.mango}"/>
-    <rect x="25" y="10" width="13" height="13" rx="2.5" fill="${C.sky}"/>
-    <rect x="10" y="25" width="13" height="13" rx="2.5" fill="${C.meadow}"/>
-    <rect x="27" y="27" width="9" height="9" rx="2" fill="${C.cream}" opacity=".45"/>`),
+    <rect x="4" y="7" width="40" height="34" rx="6" fill="${C.woodDark}"/>
+    <rect x="8" y="11" width="32" height="26" rx="3" fill="${C.cream}" opacity=".5"/>
+    <path d="M8 11h14v5.2a3.2 3.2 0 1 1 0 6.4V24H8z" fill="${C.sky}"/>
+    <path d="M22 11h11v13h-4.8a3.2 3.2 0 1 0-6.4 0H22v-1.4a3.2 3.2 0 1 0 0-6.4z" fill="${C.meadow}"/>
+    <path d="M24.5 26h5.2a3.2 3.2 0 1 1 6.4 0h5.4v14h-17z" fill="${C.mango}" transform="rotate(-9 33 33)"/>`),
 
   memory: svg(`
     <rect x="6" y="12" width="18" height="26" rx="4" fill="${C.lilacDark}" transform="rotate(-8 15 25)"/>

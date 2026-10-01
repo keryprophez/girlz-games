@@ -382,6 +382,33 @@ function composite(me: State, w: number, h: number): HTMLCanvasElement {
   return cv
 }
 
+/** Un dessin du dossier en entier — papier, peinture, traits du modèle —
+    ramené à `w × h` (l'image du Puzzle, 30/09) : la feuille 3:2 est posée au
+    centre, son papier comble les bords. Null si la peinture est illisible. */
+export async function drawingPicture(d: Drawing, w: number, h: number): Promise<HTMLCanvasElement | null> {
+  const paint = await blobImage(d.paint)
+  if (!paint) return null
+  const cv = document.createElement('canvas')
+  cv.width = w; cv.height = h
+  const g = cv.getContext('2d')!
+  const paper = d.paper || PAPERS[0]
+  g.fillStyle = paper
+  g.fillRect(0, 0, w, h)
+  const k = Math.min(w / W, h / H)
+  const dw = W * k, dh = H * k, dx = (w - dw) / 2, dy = (h - dh) / 2
+  g.drawImage(paint, dx, dy, dw, dh)
+  let p = await pageFor(d.page)
+  if (!p && d.page.startsWith('princesse:')) {
+    // Le coloriage d'une photo de princesse : son trait est dans IndexedDB
+    const blob = await idbGet<Blob>('pages', d.page + ':trait')
+    if (blob) { p = { id: d.page, svg: '', img: URL.createObjectURL(blob) }; EXTRA.push(p) }
+  }
+  if (p && (p.svg || p.img)) {
+    try { g.drawImage(await pageLines(p, paper), dx, dy, dw, dh) } catch { /* le trait manque : la peinture seule */ }
+  }
+  return cv
+}
+
 /* ---- Sauvegarde : une demi-seconde après le dernier geste ---- */
 function scheduleSave(me: State) {
   me.dirty = true

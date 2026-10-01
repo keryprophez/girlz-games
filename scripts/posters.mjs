@@ -31,7 +31,12 @@ const STAGE = {
   ninja: { tier: 'exp', wait: 8000, shots: 14, every: 600 },
   caterpillar: { wait: 6000, zoom: 1.3, cy: 0.55 },
   maze: { wait: 5000 },
-  taquin2: { wait: 4000 },
+  // Le Puzzle : la moitié des pièces posées (le haut et la gauche de l'image), les autres en vrac
+  taquin2: {
+    ready: () => window.__pz2 && window.__pz2.ready, wait: 1500,
+    act: async p => { await p.evaluate(() => [0, 1, 2, 3, 4, 8].forEach(i => window.__pz2.place(i))) },
+    after: 2500
+  },
   memory: { wait: 7000 },
   // Le Chœur sur scène : un choriste chante sous son projecteur
   simon: { tier: 'med', wait: 3000, act: async p => { await p.evaluate(() => window.__simon?.press?.(0)); await p.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 60000 }).catch(() => {}); await p.evaluate(() => window.__simon.press(window.__simon.seq[0])) }, after: 300 },
@@ -149,7 +154,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.pz-pics{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

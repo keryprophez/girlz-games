@@ -39,6 +39,10 @@ export const ICON = {
   /* Le Parcours du Potager (27/09) : un fanion d'arrivée, et les « 4 choix » */
   flag: wrap('<path d="M6 21.5V3" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M7 3.5h11.5l-2.8 4.3 2.8 4.3H7z" fill="currentColor"/>'),
   choices: wrap('<rect x="3" y="3" width="8" height="8" rx="2.2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2.2" fill="currentColor"/><rect x="3" y="13" width="8" height="8" rx="2.2" fill="currentColor"/><rect x="13" y="13" width="8" height="8" rx="2.2" fill="currentColor"/>'),
+  // Une pièce de puzzle : deux tenons (haut, droite) et une mortaise (gauche)
+  piece: wrap('<path d="M3.5 8.5h4.2a2.8 2.8 0 1 1 3.6 0h4.2v4.2a2.8 2.8 0 1 1 0 3.6v4.2h-12v-4.2a2.8 2.8 0 1 0 0-3.6z" fill="currentColor"/>'),
+  // Le taquin : trois carreaux et la case vide où l'un va glisser
+  slide: wrap('<rect x="3" y="3" width="8" height="8" rx="2.2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2.2" fill="currentColor"/><rect x="3" y="13" width="8" height="8" rx="2.2" fill="currentColor"/><rect x="13.8" y="13.8" width="6.4" height="6.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 2"/>'),
   pin: wrap('<path d="M12 22s-7-6.6-7-12a7 7 0 0 1 14 0c0 5.4-7 12-7 12z" fill="currentColor"/><circle cx="12" cy="10" r="2.8" fill="#fff"/>'),
   basket: wrap('<path d="M3 9.5h18l-1.8 9.2a2 2 0 0 1-2 1.6H6.8a2 2 0 0 1-2-1.6z" fill="currentColor"/><path d="M8 9.5 12 3l4 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13v4M12 13v4M15 13v4" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>'),
   apple: wrap('<path d="M12 7.5c2-2.2 5.5-2 7 .8 2 3.6-.6 9.7-3.4 12.2-1.2 1-2.4.5-3.6.5s-2.4.5-3.6-.5C5.6 18 3 11.9 5 8.3c1.5-2.8 5-3 7-.8z" fill="currentColor"/><path d="M12 7V4.5c0-1 .8-2 2.5-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),

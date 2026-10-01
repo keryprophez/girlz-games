@@ -118,6 +118,15 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              lineart.ts  ← le LIVRE DE COLORIAGES de l'Atelier (30/09) : les
                            personnages 3D rendus en dessins au trait (une
                            couleur par pièce, on garde les bords), gardés
+             jigsaw.ts   ← LES DÉCOUPES DU PUZZLE (30/09) : tenons et
+                           mortaises en courbes de Bézier, bords droits —
+                           logique pure, testée (`games/jigsaw.ts` en fait
+                           des pièces 3D)
+             pictures.ts ← LES IMAGES DU PUZZLE (30/09), en 4:3 : la ferme
+                           en 3D, leur princesse dans la salle de bal,
+                           l'Espace avec leur fusée — rendues une fois,
+                           gardées sur le disque (+ `drawingPicture` de
+                           `games/coloring.ts` pour un dessin du dossier)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -137,11 +146,11 @@ de Wikimedia Commons** — tous ramenés au même moule (carré, 512 px) à l'im
 dans `photos/CREDITS.json` et `public/assets/CREDITS.md`. L'app est privée et
 sans usage commercial : les licences CC BY-NC sont acceptées, et créditées.
 **Règle du père : jamais deux styles.** Ce qui est PION ou DÉCOR (Simon,
-Puissance 4, l'image du Taquin) est fait des personnages
+Puissance 4, les images du Puzzle) est fait des personnages
 3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
 `critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
-WebGL jetable), `portraitImg(url, px)` les insère, `farmScene(kinds, px)` rend
-un pré 3D entier. **Leurs princesses** (27/09) suivent la même règle :
+WebGL jetable), `portraitImg(url, px)` les insère ; `farmPicture()` de
+`core/pictures.ts` rend un pré 3D entier (4:3, gardé sur le disque). **Leurs princesses** (27/09) suivent la même règle :
 construites dans `core/princess3d.ts` à partir d'une `Royal`
 (`core/royal.ts`), en vraie 3D dans la Princesse, en images
 (`princessPortraits(looks, poses, px)`, une ou deux côte à côte) sur l'écran
@@ -311,7 +320,9 @@ la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
 `simon` (le Chœur sur scène, 28/09) ·
 `caterpillar` · `dressup` ·
-`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
+`memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
+`taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
+son second mode, le Taquin, reste en DOM). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -389,6 +400,8 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
 | **Canvas redimensionné = canvas effacé** | Changer la taille d'un canvas WebGL vide son image : si la prochaine image n'est dessinée qu'à l'image suivante, l'écran montre un canvas vide entre les deux — le « flash blanc » de la Pizzeria (30/09), à chaque cran de qualité automatique et quand la barre des bols se replie ; et le « blink » juste après le carton titre. `onResize` de `createStage` redessine donc tout de suite après `setSize`. |
 | **Une texture entière pour un coup de pinceau** | La sauce de la Pizzeria recomposait ses cinq couches (1024 × 1024) et renvoyait TOUTE la texture, au plus 20 fois par seconde : la sauce suivait le doigt par à-coups, et chaque envoi coûtait des images (« toujours pas fluide », 30/09). Pizza crue, la louche est peinte aussi sur la surface visible et seul son rectangle part, à chaque image : `renderer.copyTextureToTexture(petitCanvas, tex, null, new Vector2(x0, TEX − y1))` — la texture est retournée à l'envoi (`flipY`), d'où `TEX − y1`. |
+| **`ExtrudeGeometry` : biseau et couvercles** | Le biseau (`bevelSize`) ÉLARGIT la forme : deux pièces de puzzle voisines se chevauchaient. `bevelOffset = −bevelSize` le fait rentrer dans la forme (les flancs tombent pile sur le contour, le dessus est un peu plus petit : le fin sillon entre deux pièces). L'épaisseur totale est `depth + 2 × bevelThickness`. Et le groupe 0 (les couvercles) contient le DESSOUS puis le DESSUS, à parts égales : pour plaquer l'image sur le seul dessus, refaire les groupes (`clearGroups`, puis la seconde moitié du groupe 0 en matériau 0, le groupe 1 — flancs et biseau — en carton). Voir `pieceGeo()` dans `games/jigsaw.ts`. |
+| **Modèles chargés un par un, image qui « bloque »** | L'image de la ferme du Puzzle attendait ses 33 modèles un `await` après l'autre : 65 s sous une machine chargée (0,2 s en `Promise.all`). Et le garde-fou de `loader()` (15 s, 60 s pour les bots) est fait pour la SCÈNE 3D : un rendu d'image (`core/pictures.ts`) a son attente à part (`pictureWait` dans `games/jigsaw.ts`, même vignette qui respire) et, s'il tarde plus de 2 min, une image de secours — la partie ne reste jamais figée, et pas d'écran « Oups » pour une image lente. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
