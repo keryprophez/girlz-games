@@ -899,8 +899,27 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   l'encre), calculés à la première demande puis gardés. Le pot de peinture
   s'arrête sur le trait ; un dessin rangé se reprend même après avoir fermé
   l'app. Un bot : la tête de la vache au pot.
-- **1. Le Miroir en perles à repasser** : plaque à picots en 3D, on complète
-  le reflet perle par perle ; le fer les fait fondre, l'objet se décolle.
+- ✅ **1. Le Miroir devient les Perles Miroir** (30/09, « le Miroir devient
+  les perles à repasser… on apprend toujours la symétrie ») : une plaque à
+  picots translucide en 3D sur l'établi, vue de trois quarts ; la moitié du
+  dessin est posée (papillon, fraise, tête de cochon, cœur, poussin,
+  champignon, étoile, sapin, coccinelle, chat, fleur, couronne, fusée,
+  arc-en-ciel, poisson, flocon, rosace), une ficelle lumineuse tendue entre
+  deux épingles marque l'axe. On prend la couleur dans un pot (un vrai tas
+  de perles 3D, son petit nom dessous), on touche un picot — ou on glisse le
+  doigt sur une rangée : la perle tombe, rebondit, clic. Une perle fausse se
+  pose et clignote doucement ; un toucher la retire, sans pénalité. Le reflet
+  complet : les perles sautent par paires depuis l'axe, le papier sulfurisé
+  se pose, un petit fer bleu passe en S (la vapeur monte, chaque perle fond
+  quand la semelle passe : elle s'élargit, s'aplatit, son trou se referme),
+  puis l'objet se décolle et tourne dans les airs sous les confettis.
+  Fleur : plaque de 8, modèle à gauche ; éclair : plaque de 10, modèle à
+  gauche ou à droite, un pot de trop ; flamme : plaque de 12, quatre
+  couleurs, puis l'axe horizontal, puis les deux axes (un quart posé, trois
+  à compléter). La 3D est dans `core/hama3d.ts` (plaque, perles en
+  `InstancedMesh` avec leur fusion en morph, pots, axe, fer), prête pour
+  l'Atelier des bijoux ; les dessins et les manches dans `core/perles.ts`,
+  testés. **À jouer sur la tablette** (`?fps` : 144 perles, les ombres).
 - ✅ **2. Le Taquin devient un vrai puzzle** (30/09) — la tuile s'appelle
   maintenant **Puzzle** (même identifiant `taquin2` : meilleure note, niveau
   retenu et affiche suivent). Deux modes à gauche, Puzzle (par défaut) et

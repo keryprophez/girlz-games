@@ -2,7 +2,7 @@
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
    (régression du bug de coordonnées UV). Depuis le 22/09, chaque jeu du
-   catalogue a son bot : Suites, Lettres, Miroir, Marché, Espace, Piano,
+   catalogue a son bot : Suites, Lettres, Perles Miroir, Marché, Espace, Piano,
    Feu d'artifice, l'Atelier et la Princesse compris.
 
    Les jeux exposent leur état de pilotage seulement quand `window.__BOT` est
@@ -828,20 +828,56 @@ await scenario('cubes-trois-mots', async () => {
   await finDe('Tous les mots écrits', 60000)
 })
 
-/* 🪞 Le Miroir : trois motifs peints au doigt (couleur choisie, puis case). */
-await scenario('miroir-trois-motifs', async () => {
-  await openGame('Le Miroir', '__mr')
-  for (let r = 0; r < 3; r++) {
-    await page.waitForFunction(k => window.__mr.round === k && !window.__mr.done, r, { timeout: 15000 })
-    const need = await page.evaluate(() => window.__mr.need)
-    for (const { k, color } of need) {
-      await page.evaluate(c => window.__mr.pick(c), color)
-      await page.locator(`.mr-free[data-k="${k}"]`).click()
-      await page.waitForTimeout(60)
-    }
-    await page.waitForFunction(() => window.__mr.done || window.__mr.round > 0, null, { timeout: 5000 })
+/* 🪞 Les Perles Miroir (30/09) : trois reflets en perles à repasser, jusqu'à
+   l'écran de fin. Le bot touche les VRAIS picots de la plaque 3D (le point
+   d'écran de chaque case vient de l'accroche), prend la couleur dans les
+   pots, et vérifie qu'une perle fausse se pose, est signalée, puis se
+   retire d'un toucher (Apprendre : aucune sanction). Chaque manche finit
+   par le fer et l'envol : on attend la manche suivante sur l'accroche, pas
+   sur une durée. */
+await scenario('perles-miroir-trois-reflets', async () => {
+  await openGame('Perles Miroir', '__mi')
+  const touch = async (c, r) => {
+    const p = await page.evaluate(({ c, r }) => window.__mi.at(c, r), { c, r })
+    await page.mouse.click(p.x, p.y)
   }
-  await finDe('Miroir, joli miroir')
+  for (let r = 0; r < 3; r++) {
+    // Le fer et l'envol durent une dizaine de secondes simulées : sous la 3D
+    // logicielle (une ou deux images par seconde quand la machine est prise),
+    // plusieurs minutes. En cas d'échec, on dit où la partie en était.
+    try {
+      await page.waitForFunction(k => window.__mi.round === k && window.__mi.phase === 'play', r, { timeout: 240000, polling: 1000 })
+    } catch (e) {
+      const st = await page.evaluate(() => new Promise(ok => {
+        let n = 0
+        const t0 = performance.now()
+        const f = () => { if (++n < 6) requestAnimationFrame(f); else ok({ manche: window.__mi.round, phase: window.__mi.phase, msParImage: Math.round((performance.now() - t0) / 5) }) }
+        requestAnimationFrame(f)
+      }))
+      throw new Error(`manche ${r + 1} jamais prête : ${JSON.stringify(st)} — ${String(e).split('\n')[0]}`)
+    }
+    if (r === 0) {
+      const blank = await page.evaluate(() => window.__mi.blank)
+      const voir = async () => JSON.stringify(await page.evaluate(() => ({ phase: window.__mi.phase, fausses: window.__mi.wrong })))
+      await touch(blank.c, blank.r)
+      await page.waitForFunction(b => window.__mi.wrong.some(w => w.c === b.c && w.r === b.r), blank, { timeout: 30000, polling: 250 })
+        .catch(async () => { throw new Error(`la perle fausse en ${blank.c},${blank.r} ne s'est pas posée : ${await voir()}`) })
+      await touch(blank.c, blank.r)
+      await page.waitForFunction(() => window.__mi.wrong.length === 0, null, { timeout: 30000, polling: 250 })
+        .catch(async () => { throw new Error(`la perle fausse ne s'est pas retirée : ${await voir()}`) })
+    }
+    const need = await page.evaluate(() => window.__mi.need)
+    const byColor = {}
+    for (const n of need) (byColor[n.color] ||= []).push(n)
+    for (const [color, cells] of Object.entries(byColor)) {
+      await page.locator(`.pl-potbtn[data-c="${color}"]`).click({ force: true })
+      for (const { c, r: row } of cells) await touch(c, row)
+    }
+    const left = await page.evaluate(() => ({ need: window.__mi.need.length, wrong: window.__mi.wrong.length }))
+    if (left.need || left.wrong) throw new Error(`manche ${r + 1} : ${left.need} perle(s) manquante(s), ${left.wrong} fausse(s)`)
+    await page.waitForFunction(k => window.__mi.round > k || window.__mi.phase !== 'play', r, { timeout: 15000 })
+  }
+  await finDe('Quel joli reflet', 120000)
 })
 
 /* 💶 Le Marché : quatre paiements exacts, pièces choisies de la plus grosse

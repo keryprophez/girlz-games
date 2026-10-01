@@ -87,7 +87,25 @@ const STAGE = {
   space: { wait: 15000 },
   // Le petit train à quai, l'anneau doré sur le wagon vide
   patterns: { tier: 'easy', ready: () => window.__pt && !window.__pt.lock, wait: 1500, zoom: 1.12, cy: 0.5 },
-  mirror: { wait: 4000 },
+  // Les Perles Miroir : un papillon ou une tête de cochon à moitié reflété,
+  // les rangées du haut déjà posées, celles du bas encore à faire
+  mirror: {
+    tier: 'med', ready: () => window.__mi && window.__mi.phase === 'play', wait: 800,
+    accept: () => ['papillon', 'cochon'].includes(window.__mi?.motif),
+    act: async p => {
+      const need = await p.evaluate(() => window.__mi.need)
+      const byColor = {}
+      for (const n of need.slice(0, Math.ceil(need.length * 0.62))) (byColor[n.color] ||= []).push(n)
+      for (const [color, cells] of Object.entries(byColor)) {
+        await p.locator(`.pl-potbtn[data-c="${color}"]`).click({ force: true })
+        for (const { c, r } of cells) {
+          const q = await p.evaluate(({ c, r }) => window.__mi.at(c, r), { c, r })
+          await p.mouse.click(q.x, q.y)
+        }
+      }
+    },
+    after: 2500, cx: 0.44
+  },
   // Les Cubes de l'alphabet : le mot presque fini sur la réglette, ses arcs
   // de syllabes dessous, le dernier cube encore dans le vrac
   letters: {

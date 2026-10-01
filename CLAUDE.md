@@ -139,6 +139,16 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            l'Espace avec leur fusée — rendues une fois,
                            gardées sur le disque (+ `drawingPicture` de
                            `games/coloring.ts` pour un dessin du dossier)
+             hama3d.ts   ← LES PERLES À REPASSER en 3D (30/09) : la plaque à
+                           picots (`pegboard`, en pas de plaque, perles et
+                           picots en `InstancedMesh`), la perle-tube et sa
+                           version FONDUE en morph par perle (`fuse`), les
+                           pots de perles, l'axe lumineux, le fer et le
+                           papier sulfurisé (`ironing`) — pour les Perles
+                           Miroir, et demain l'Atelier des bijoux
+             perles.ts   ← leurs dessins en petites grilles (papillon, fraise,
+                           cochon…), la palette des pots et les manches du
+                           Miroir (modèle, axe, reflet) — logique pure, testée
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -331,7 +341,7 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) · `dressup` ·
+`simon` (le Chœur sur scène, 28/09) · `mirror` (les Perles Miroir, 30/09) · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
 `taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
 son second mode, le Taquin, reste en DOM) ·
