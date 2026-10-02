@@ -115,9 +115,17 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              hand.ts     ← LA MAIN QUI MONTRE (30/09) : le geste de chaque jeu
                            mimé par un gant blanc (`GameDef.hand`, lancé par
                            GameHost) — taper, glisser, trancher, tracer une
-                           forme (`trace`, le cœur du Feu d'artifice), ou
+                           forme (`trace`, le cœur du Feu d'artifice), taper
+                           ici puis là (`taps`, les deux pouces du Flipper), ou
                            `choose` (« l'un de ceux-là », sans appuyer :
                            jamais la réponse dans Apprendre)
+             pinball.ts  ← LA PHYSIQUE DU FLIPPER (1/10) : la bille dans le
+                           plan de la table, pas fixe de 1/480 s (un batteur ne
+                           se traverse jamais), batteurs en capsules qui
+                           tournent (ω × r donné à la bille), bumpers, foins,
+                           œufs, rampe en une dimension, chien gardien, et
+                           `autoPilot` (le pilote des tests et du bot) — pure,
+                           testée ; les grandes séries : `npm run sim:flipper`
              barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, le
                            coloriage) : `barnChoir`,
                            `singOn`, `stepChoir`
@@ -317,7 +325,8 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) · `dressup` ·
+`simon` (le Chœur sur scène, 28/09) · `pinball` (le Flipper de la grange, 1/10 :
+physique à nous dans `core/pinball.ts`, pas cannon-es) · `dressup` ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
@@ -399,6 +408,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
 | **Canvas redimensionné = canvas effacé** | Changer la taille d'un canvas WebGL vide son image : si la prochaine image n'est dessinée qu'à l'image suivante, l'écran montre un canvas vide entre les deux — le « flash blanc » de la Pizzeria (30/09), à chaque cran de qualité automatique et quand la barre des bols se replie ; et le « blink » juste après le carton titre. `onResize` de `createStage` redessine donc tout de suite après `setSize`. |
 | **Une texture entière pour un coup de pinceau** | La sauce de la Pizzeria recomposait ses cinq couches (1024 × 1024) et renvoyait TOUTE la texture, au plus 20 fois par seconde : la sauce suivait le doigt par à-coups, et chaque envoi coûtait des images (« toujours pas fluide », 30/09). Pizza crue, la louche est peinte aussi sur la surface visible et seul son rectangle part, à chaque image : `renderer.copyTextureToTexture(petitCanvas, tex, null, new Vector2(x0, TEX − y1))` — la texture est retournée à l'envoi (`flipY`), d'où `TEX − y1`. |
+| **Deux bottes de foin qui se renvoient la bille** | Dans le Flipper (1/10), le pilote des tests ne perdait JAMAIS : les deux « slingshots » renvoyaient la bille à 5,5 unités/s, pile à la hauteur de la botte d'en face — 325 allers-retours en 5 minutes, la série jamais retombée. À 4,4, elle redescend vers les batteurs. Et une bille posée entre le portillon du couloir et le fond du canal de la rampe y restait coincée (le fond était plus haut que le portillon) : tout ce qui peut porter une bille doit pencher vers le plateau. Les deux se sont vus dans les statistiques du pilote (`npm run sim:flipper`), pas en jouant. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -413,7 +423,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 30 scénarios, le Potager en a quatre, le Feu d'artifice deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 31 scénarios, le Potager en a quatre, le Feu d'artifice deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

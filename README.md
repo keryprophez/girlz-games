@@ -10,7 +10,9 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 ## ✨ Ce qu'il y a dedans
 
 **Jouer** — des jeux d'adresse en vraie 3D (Three.js + cannon-es) : la Tour de
-Glace ; Ninja Verger, en 2D, où l'on tranche des fruits illustrés
+Glace ; le Flipper de la grange, un pouce par batteur, la vache, le cochon et
+le mouton en bumpers qui crient, une rampe jusqu'au grenier et le multibille ;
+Ninja Verger, en 2D, où l'on tranche des fruits illustrés
 d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe
 en vraies haies 3D (classique, brouillard à la lanterne, glace), où le poussin
 rejoint sa maman poule — c'est au doigt de prendre chaque virage — en
@@ -57,7 +59,7 @@ Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se
 jouer), la difficulté choisie dans chaque jeu (fleur,
 éclair, flamme), une main fantôme qui montre le geste de chaque jeu (sans
-jamais donner la réponse), le Ninja et la Princesse à deux en équipe sur la même tablette,
+jamais donner la réponse), le Ninja, le Flipper et la Princesse à deux en équipe sur la même tablette,
 minuteur parental avec verrou « question de grand », voix de la famille
 enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
 quand le combo monte, vrais bruitages foley sur les chocs, mise à jour

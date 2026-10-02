@@ -66,7 +66,8 @@ export function planks(T: T3, base: string, joint: string, n: number, w = 512, h
   return t
 }
 
-function hayTex(T: T3) {
+/** La paille d'une botte de foin (et ses deux ficelles). */
+export function hayTex(T: T3) {
   const c = document.createElement('canvas')
   c.width = c.height = 256
   const g = c.getContext('2d')!

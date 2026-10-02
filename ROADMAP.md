@@ -941,8 +941,23 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   éclater sur son tracé, une étoile en or, le bouquet où les dessins
   reviennent). L'affiche montre un cœur dessiné. **Reste : l'écouter et
   la voir sur la tablette** (`?fps` pendant le bouquet).
-- **11. Le Flipper de la grange** (nouveau, Jouer, 3D) : deux batteurs, les
-  animaux en bumpers ; à deux, un batteur chacune, un seul score.
+- ✅ **11. Le Flipper de la grange** (1/10, `games/pinball.ts`, physique
+  dans `core/pinball.ts`) : une table en bois de grange vue depuis les
+  batteurs, la grange au bout. Moitié gauche de l'écran = batteur gauche,
+  moitié droite = droit (un doigt par `pointerId`, levé tant qu'il est
+  posé ; flèches ou Maj au clavier). La vache, le cochon et le mouton en
+  bumpers (ils sautent, s'allument, crient de leur vraie voix — deux voix
+  au plus, jamais la même deux fois de suite) ; les foins qui renvoient ;
+  les trois œufs de la poule (tous tombés : elle chante) ; la rampe jusqu'au
+  grenier (le coq chante), retour par la goulotte. La série allume quatre
+  lampes et la musique ; à la dernière, le multibille. Fleur : 3 billes,
+  bille lente, le chien qui renvoie parfois la bille ; éclair : plus vite ;
+  flamme : 2 billes, les animaux bougent. « Ouf » (ralenti + éclair) quand
+  une bille est rattrapée au bord de la sortie ; la dernière tombe au
+  ralenti, puis les animaux saluent. À deux : un batteur chacune (doré à
+  gauche, rose à droite), un seul score, « vous ». Étoiles réglées sur le
+  pilote en joueuse moyenne. Bot `flipper-partie-complete`. **Reste : le
+  jouer sur la tablette** (`?fps`, sons, taille des batteurs).
 - **13. Cache-cache à la ferme** (nouveau, Jouer, 3D) : trouver les animaux
   cachés dans la ferme qu'on fait tourner ; la nuit, à la lampe torche.
 - **18. La Ferme à construire** (nouveau, Créer, 3D) : poser bâtiments,

@@ -655,6 +655,71 @@ await scenario('ninja-a-deux', async () => {
   await page.evaluate(() => localStorage.removeItem('ferme:duo:ninja'))
 })
 
+/* 🎯 Le Flipper de la grange (1/10) : une partie ENTIÈRE, jusqu'à l'écran de
+   fin. Le lancer au vrai doigt (appuyer, le ressort se tend, relâcher) ; deux
+   doigts à la fois, chacun son batteur (pointerId : à gauche le gauche, à
+   droite le droit) ; le clavier aussi. Puis le pilote joue : il tourne DANS la
+   simulation, à chaque pas de physique, comme dans les tests vitest (où ce
+   même scénario est joué 1 200 fois, à trois cadences : 15 coups de batteur
+   et 6 animaux touchés en 11 s simulées au pire). `turbo` fait plusieurs pas
+   d'image par image — la 3D logicielle rend une image par seconde, la
+   physique à pas fixes donne le même jeu, plus vite. Enfin le pilote lâche,
+   les billes tombent, chaque nouvelle bille part au clavier. */
+await scenario('flipper-partie-complete', async () => {
+  await openGame('Le Flipper', '__pb')
+  await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 120000 })
+  const until = (fn, what, timeout = 180000) => page.waitForFunction(fn, null, { timeout, polling: 1000 })
+    .catch(() => { throw new Error('jamais vu : ' + what) })
+  await until(() => window.__pb.state().waiting, 'la bille sur le ressort')
+  const box = await page.locator('#pbArena').boundingBox()
+  // Le lancer au doigt
+  await page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.8)
+  await page.mouse.down()
+  await until(() => window.__pb.state().pull > 0.25, 'le ressort qui se tend')
+  await page.mouse.up()
+  await until(() => window.__pb.stats().launches === 1 && window.__pb.state().inPlay > 0, 'la bille lancée')
+  // Deux doigts, deux batteurs, et le clavier
+  const fingers = await page.evaluate(b => {
+    const el = document.querySelector('#pbArena')
+    const ev = (type, id, fx, target) => target.dispatchEvent(new PointerEvent(type, {
+      pointerId: id, pointerType: 'touch', isPrimary: id === 31, clientX: b.x + b.width * fx, clientY: b.y + b.height * 0.8, bubbles: true
+    }))
+    const f = () => window.__pb.state().flippers.map(Number).join('')
+    const out = [f()]
+    ev('pointerdown', 31, 0.15, el); out.push(f())
+    ev('pointerdown', 32, 0.85, el); out.push(f())
+    ev('pointerup', 31, 0.15, window); out.push(f())
+    ev('pointerup', 32, 0.85, window); out.push(f())
+    return out.join(' ')
+  }, box)
+  if (fingers !== '00 10 11 01 00') throw new Error('les batteurs ne suivent pas les doigts : ' + fingers)
+  await page.keyboard.down('ArrowLeft')
+  const keyL = await page.evaluate(() => window.__pb.state().flippers.map(Number).join(''))
+  await page.keyboard.up('ArrowLeft')
+  await page.keyboard.down('ArrowRight')
+  const keyR = await page.evaluate(() => window.__pb.state().flippers.map(Number).join(''))
+  await page.keyboard.up('ArrowRight')
+  if (keyL !== '10' || keyR !== '01') throw new Error(`le clavier : ${keyL} ${keyR}`)
+  // Le pilote joue
+  await page.evaluate(() => { window.__pb.auto(true); window.__pb.turbo(6) })
+  await until(() => { const s = window.__pb.stats(); return (s.flips >= 15 && s.bumpers >= 6) || window.__pb.state().t > 90 }, 'quinze coups de batteur')
+  const mid = await page.evaluate(() => ({ ...window.__pb.stats(), score: window.__pb.state().score }))
+  if (mid.flips < 15 || mid.bumpers < 6) throw new Error(`le pilote ne tient pas la bille : ${mid.flips} coups, ${mid.bumpers} animaux`)
+  if (!(mid.score > 0)) throw new Error('aucun point marqué')
+  // Il lâche : les billes tombent, chaque nouvelle part au clavier, jusqu'à la fin
+  await page.evaluate(() => window.__pb.auto(false))
+  for (let k = 0; k < 400; k++) {
+    const s = await page.evaluate(() => window.__pb.state())
+    if (s.over) break
+    if (s.waiting) { await page.keyboard.down('Space'); await page.waitForTimeout(250); await page.keyboard.up('Space') }
+    await page.waitForTimeout(1000)
+  }
+  if (!(await page.evaluate(() => window.__pb.state().over))) throw new Error('la partie ne finit pas')
+  await page.waitForSelector('.result-score', { timeout: 60000 })
+  const end = await page.evaluate(() => ({ ...window.__pb.stats(), score: window.__pb.state().score }))
+  console.log(`  (${end.score} points : ${end.flips} coups de batteur, ${end.bumpers} animaux, ${end.cries} cris, ${end.launches} lancers, ${end.saves} sauvés par le chien)`)
+})
+
 /* 🌍 Le Tour du Monde : les vrais pays répondent à la bonne longitude/latitude,
    tous ont un continent, et la question de Trouve se pose bien. */
 await scenario('tour-du-monde-vrais-pays', async () => {
