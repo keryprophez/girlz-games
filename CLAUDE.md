@@ -121,9 +121,17 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              hand.ts     ← LA MAIN QUI MONTRE (30/09) : le geste de chaque jeu
                            mimé par un gant blanc (`GameDef.hand`, lancé par
                            GameHost) — taper, glisser, trancher, tracer une
-                           forme (`trace`, le cœur du Feu d'artifice), ou
+                           forme (`trace`, le cœur du Feu d'artifice), taper
+                           ici puis là (`taps`, les deux pouces du Flipper), ou
                            `choose` (« l'un de ceux-là », sans appuyer :
                            jamais la réponse dans Apprendre)
+             pinball.ts  ← LA PHYSIQUE DU FLIPPER (1/10) : la bille dans le
+                           plan de la table, pas fixe de 1/480 s (un batteur ne
+                           se traverse jamais), batteurs en capsules qui
+                           tournent (ω × r donné à la bille), bumpers, foins,
+                           œufs, rampe en une dimension, chien gardien, et
+                           `autoPilot` (le pilote des tests et du bot) — pure,
+                           testée ; les grandes séries : `npm run sim:flipper`
              barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, le
                            coloriage) : `barnChoir`,
                            `singOn`, `stepChoir`
@@ -361,7 +369,8 @@ le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) · `mirror` (les Perles Miroir, 30/09) · `dressup` · `bijoux` (30/09) ·
+`simon` (le Chœur sur scène, 28/09) · `pinball` (le Flipper de la grange, 1/10 :
+physique à nous dans `core/pinball.ts`, pas cannon-es) · `mirror` (les Perles Miroir, 30/09) · `dressup` · `bijoux` (30/09) ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
 `taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
 son second mode, le Taquin, reste en DOM) ·
@@ -412,7 +421,7 @@ ligne quand on en paie un nouveau.
 4. `npm run test:smoke` et `npm run test:play` tournent en CI à chaque push
    sur `main` (environ 55 min, sur GitHub, sans coûter un token) et
    **bloquent la mise en ligne** s'ils échouent.
-   `npm run test:play` fait jouer **un bot par jeu** (2/10 : 34 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle et Cache-Cache deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (2/10 : 35 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle et Cache-Cache deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

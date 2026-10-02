@@ -29,6 +29,26 @@ const STAGE = {
   // Jouer
   icetower: { wait: 6000, act: async p => { await p.evaluate(() => window.__itStack?.(9)) }, after: 7000, zoom: 1.15, cy: 0.42 },
   ninja: { tier: 'exp', wait: 8000, shots: 14, every: 600 },
+  // Le Flipper : le multibille — une bille sur le batteur levé, une qui fait
+  // sauter la vache, une qui monte la rampe, une qui redescend de la grange
+  pinball: {
+    wait: 2500,
+    act: async p => {
+      await p.evaluate(() => {
+        const pb = window.__pb
+        pb.pose([
+          { x: -0.62, y: 1.78 },
+          { x: -1.42, y: 7.5, vx: -2, vy: -1 },
+          { x: 0.55, y: 4.3, vx: 1, vy: 3 },
+          { x: 0, y: 0, st: 'ramp', s: 3.6 },
+          { x: 0, y: 0, st: 'chute', s: 0.62 }
+        ], { flip: [true, false], glow: [0, 2], eggs: 2, party: 2 })
+        pb.glow(0)
+        pb.freeze(true)
+      })
+    },
+    after: 1500, zoom: 1.12, cy: 0.46
+  },
   maze: { wait: 5000 },
   // Le Puzzle : la moitié des pièces posées (le haut et la gauche de l'image), les autres en vrac
   taquin2: {

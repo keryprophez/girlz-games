@@ -134,6 +134,20 @@ export const BADGE: Record<string, string> = {
     <rect x="11" y="31" width="7" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="21" y="35" width="8" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
+  // Le Flipper : la table en bois vue de haut, deux animaux-bumpers, la bille, les deux batteurs
+  pinball: svg(`
+    <path d="M8 45V19a16 16 0 0 1 32 0v26z" fill="${C.woodDark}"/>
+    <path d="M11.5 43V19.5a12.5 12.5 0 0 1 25 0V43z" fill="${C.wood}"/>
+    <circle cx="19" cy="18" r="5" fill="${C.meadow}"/>
+    <circle cx="19" cy="18" r="2.4" fill="${C.cream}"/>
+    <circle cx="30" cy="22" r="5" fill="${C.pink}"/>
+    <circle cx="30" cy="22" r="2.4" fill="${C.cream}"/>
+    <rect x="12.5" y="34" width="11" height="4.6" rx="2.3" transform="rotate(24 12.5 36.3)" fill="${C.coral}"/>
+    <rect x="13.4" y="34.8" width="9" height="3" rx="1.5" transform="rotate(24 12.5 36.3)" fill="${C.cream}"/>
+    <rect x="24.5" y="38.5" width="11" height="4.6" rx="2.3" transform="rotate(-24 35.5 36.3)" fill="${C.coral}"/>
+    <rect x="25.6" y="39.3" width="9" height="3" rx="1.5" transform="rotate(-24 35.5 36.3)" fill="${C.cream}"/>
+    <circle cx="24" cy="30" r="3.6" fill="${C.iceDark}"/>
+    <circle cx="23.4" cy="29.4" r="3" fill="${C.white}"/>`),
 
   /* ---------- Apprendre ---------- */
   clock: svg(`

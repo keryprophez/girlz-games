@@ -10,6 +10,8 @@ import type { GameContext } from './types'
    `null` quand le jeu n'attend rien de l'enfant (chargement, écoute du
    Chœur, animation, manche qui change) :
      { tap: cible }            taper
+     { taps: [cibles] }        taper ici, puis là (les deux pouces du
+                               Flipper : à gauche, puis à droite)
      { drag: [de, vers] }      glisser (appuyer, emmener, lâcher)
      { swipe: [de, vers] }     trancher, d'un geste vif
      { trace: [points] }       dessiner une forme au doigt (le cœur du Feu
@@ -29,6 +31,7 @@ import type { GameContext } from './types'
 export type Spot = Element | { x: number; y: number } | { fx: number; fy: number } | null | undefined
 export type HandMove =
   | { tap: Spot }
+  | { taps: Spot[] }
   | { drag: [Spot, Spot]; ghost?: boolean }
   | { swipe: [Spot, Spot] }
   | { trace: Spot[] }
@@ -163,6 +166,26 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
             { transform: at(p), opacity: 1 }
           ], { duration: 1150, easing: 'ease-in-out' }).finished
           press(p, 0)
+        }
+      } else if ('taps' in mv) {
+        // Plusieurs touchers, l'un après l'autre : la main va de l'un à l'autre
+        const pts = mv.taps.map(where).filter((p): p is P => !!p)
+        if (!pts.length) return
+        let prev: P | null = null
+        for (let rep = 0; rep < 2 && showing; rep++) {
+          for (let i = 0; i < pts.length && showing; i++) {
+            const p = pts[i]
+            const from = prev ?? { x: p.x + 30, y: p.y + 40 }
+            await anim(hand, [
+              { transform: at(from), opacity: prev ? 1 : 0 },
+              { transform: at(p), opacity: 1, offset: 0.42 },
+              { transform: at(p, 0.84), opacity: 1, offset: 0.6 },
+              { transform: at(p), opacity: 1, offset: 0.78 },
+              { transform: at(p), opacity: 1 }
+            ], { duration: 1000, easing: 'ease-in-out' }).finished
+            press(p, 0)
+            prev = p
+          }
         }
       } else if ('drag' in mv || 'swipe' in mv) {
         const swipe = 'swipe' in mv
