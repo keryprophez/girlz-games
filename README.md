@@ -10,7 +10,9 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 ## ✨ Ce qu'il y a dedans
 
 **Jouer** — des jeux d'adresse en vraie 3D (Three.js + cannon-es) : la Tour de
-Glace ; Ninja Verger, en 2D, où l'on tranche des fruits illustrés
+Glace ; Cache-Cache, une petite ferme en 3D qu'on fait tourner au doigt pour
+trouver les animaux cachés (une queue qui dépasse de la meule, des oreilles
+au bord du puits), et la nuit, à la lampe torche ; Ninja Verger, en 2D, où l'on tranche des fruits illustrés
 d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe
 en vraies haies 3D (classique, brouillard à la lanterne, glace), où le poussin
 rejoint sa maman poule — c'est au doigt de prendre chaque virage — en

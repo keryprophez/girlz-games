@@ -32,6 +32,20 @@ const STAGE = {
   maze: { wait: 5000 },
   taquin2: { wait: 4000 },
   memory: { wait: 7000 },
+  // Cache-Cache : la ferme de jour, ce qui dépasse des cachettes, et un animal
+  // trouvé qui saute dehors dans ses étincelles (figé par la pause)
+  hideseek: {
+    ready: () => window.__cc && window.__cc.phase === 'seek', wait: 1200,
+    act: async p => {
+      const a = (await p.evaluate(() => window.__cc.animals())).find(x => x.x !== null && x.kind !== 'rabbit')
+      if (!a) return
+      await p.mouse.click(a.x, a.y)
+      await p.waitForFunction(() => window.__cc.found >= 1, null, { timeout: 20000, polling: 100 }).catch(() => {})
+      await p.waitForTimeout(500)
+      await p.locator('.pbtn[aria-label="Pause"]').click({ force: true })
+    },
+    after: 300, zoom: 1.3, cy: 0.46
+  },
   // Le Chœur sur scène : un choriste chante sous son projecteur
   simon: { tier: 'med', wait: 3000, act: async p => { await p.evaluate(() => window.__simon?.press?.(0)); await p.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 60000 }).catch(() => {}); await p.evaluate(() => window.__simon.press(window.__simon.seq[0])) }, after: 300 },
   // Une partie commencée contre la poule : quelques pions de chaque couleur
@@ -168,7 +182,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.cc-tray{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

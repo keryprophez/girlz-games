@@ -125,6 +125,13 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              lineart.ts  ← le LIVRE DE COLORIAGES de l'Atelier (30/09) : les
                            personnages 3D rendus en dessins au trait (une
                            couleur par pièce, on garde les bords), gardés
+             farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
+                           rond qu'on fait tourner, ses cachettes construites
+                           (grange, meule, puits, charrette, tracteur, niche,
+                           poulailler, mare, boue, potager…) et leurs PLACES
+                           (`FarmSlot` : 'top', 'face', 'rear', 'tree'), la
+                           nuit (lune, lucioles, lanternes) ; `bake()` fond ce
+                           qui ne bouge pas en un mesh par matériau
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -318,7 +325,9 @@ la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
 `simon` (le Chœur sur scène, 28/09) · `dressup` ·
-`memory` · `maze` (logique de grille inchangée, rendu en haies 3D). La Course,
+`memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
+`hideseek` (Cache-Cache, 1/10 : la ferme en diorama qu'on fait tourner au
+doigt, `core/farm3d.ts` ; la nuit, à la lampe torche). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -399,6 +408,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **Une mélodie qui ne tient pas au clavier** | Le Piano n'a que huit touches blanches (Do → Do). Une chanson qui a besoin d'un dièse, ou qui court de la quinte grave à la quinte aiguë avec la quarte (Il était un petit navire, Une souris verte, Savez-vous planter les choux, Sur le pont d'Avignon), n'y tient dans aucun ton : on ne la déforme pas, on en prend une autre. Relever la mélodie sur une partition (le `<score>` LilyPond des pages Wikipédia), jamais de mémoire. |
 | **Canvas redimensionné = canvas effacé** | Changer la taille d'un canvas WebGL vide son image : si la prochaine image n'est dessinée qu'à l'image suivante, l'écran montre un canvas vide entre les deux — le « flash blanc » de la Pizzeria (30/09), à chaque cran de qualité automatique et quand la barre des bols se replie ; et le « blink » juste après le carton titre. `onResize` de `createStage` redessine donc tout de suite après `setSize`. |
 | **Une texture entière pour un coup de pinceau** | La sauce de la Pizzeria recomposait ses cinq couches (1024 × 1024) et renvoyait TOUTE la texture, au plus 20 fois par seconde : la sauce suivait le doigt par à-coups, et chaque envoi coûtait des images (« toujours pas fluide », 30/09). Pizza crue, la louche est peinte aussi sur la surface visible et seul son rectangle part, à chaque image : `renderer.copyTextureToTexture(petitCanvas, tex, null, new Vector2(x0, TEX − y1))` — la texture est retournée à l'envoi (`flipY`), d'où `TEX − y1`. |
+| **Une ferme en 750 morceaux** | Le diorama de Cache-Cache (1/10) faisait 750 appels de dessin par image, ombres comprises : chaque planche, chaque rayon de roue, chaque boule d'un animal est un mesh. `bake()` de `core/farm3d.ts` fond ce qui ne bouge pas en un mesh par matériau (360 avec dix animaux, la nuit) ; ce qui bouge (oreilles, queues, yeux) reste à part. Les points d'où l'on voit un animal se prennent sur ses morceaux AVANT la fusion : la boîte d'un mesh fusionné a ses coins dans le vide. Compter `renderer.info.render.calls`. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -413,7 +423,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 30 scénarios, le Potager en a quatre, le Feu d'artifice deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 32 scénarios, le Potager en a quatre, le Feu d'artifice et Cache-Cache deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre
