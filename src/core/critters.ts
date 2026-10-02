@@ -11,7 +11,7 @@ import type { T3 } from './three3d'
    dix par partie ne coûte rien, et tout se libère d'un coup avec `dispose()`.
 
    Les couleurs sont volontairement SOMBRES : sous hemi + soleil + IBL,
-   l'ACES remonte tout (piège « couleurs vives + ACES » de CLAUDE.md). */
+   l'ACES remonte tout (piège « couleurs vives + ACES » de PIEGES.md). */
 
 export type CritterKind = 'mole' | 'chick' | 'pig' | 'rabbit' | 'cactus'
   | 'cow' | 'hen' | 'dog' | 'duck' | 'sheep'

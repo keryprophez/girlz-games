@@ -680,7 +680,7 @@ Itérations (maquettes au format tablette validées avant chacune) :
 - ✅ **« Ça crashe à la première ouverture du Potager, ensuite ça marche »** :
   ce n'était pas le Potager, c'était la mise à jour de la PWA, qui rechargeait
   la page en pleine partie (`autoUpdate`). Elle attend maintenant l'accueil
-  (piège consigné dans CLAUDE.md).
+  (piège consigné dans PIEGES.md).
 
 ## « Améliore encore 3 jeux » (25/09, plan validé)
 
@@ -883,7 +883,7 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   transposées pour ses huit touches — Une poule sur un mur, Meunier tu dors,
   Le bon roi Dagobert, Il court le furet, À la claire fontaine. Il était
   un petit navire, Une souris verte, Savez-vous planter les choux n'y
-  tiennent pas (voir le piège dans CLAUDE.md). Les dix dessins sur deux
+  tiennent pas (voir le piège dans PIEGES.md). Les dix dessins sur deux
   colonnes.
 - ✅ **5. La Boîte à rythme sur scène** (sortie le soir même, voir plus bas) : la grange du Chœur (sortie dans
   `core/barn3d.ts`) au-dessus de la grille, les six musiciens sur l'estrade
