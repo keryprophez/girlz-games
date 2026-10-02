@@ -1163,9 +1163,39 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   sur le **creux sombre entre son corsage et son cou** (le modèle n'a pas de
   peau sous son haut d'origine) — ce creux, visible aussi sans collier, reste
   à combler dans la Princesse.
-  **À venir** (une place est prévue dans la colonne d'outils, `MODES`) : les
-  perles à repasser (`core/hama3d.ts`, en cours ailleurs) et un pendentif à
-  accrocher au collier. **À mesurer sur la tablette avec `?fps`.**
+  **À mesurer sur la tablette avec `?fps`.**
+- ✅ **Les perles à repasser dans les Bijoux, et le pendentif au collier**
+  (1/10, le choix du père : « les perles à repasser dedans ») : un second
+  atelier dans la colonne d'outils (Collier · Perles à repasser, le dernier
+  choisi est retenu). Une plaque à picots en création LIBRE, au choix sous
+  la plaque comme les vraies plaques à formes : carré, cœur, rond (15 picots
+  de côté), étoile (17 : à 15 ses jambes se collaient) — chacune de son
+  plastique (bleu, rose, jaune, lilas), les masques et contours testés dans
+  `core/perles.ts`. Douze pots de perles 3D à droite, leur nom dessous. On
+  pose au toucher ou en glissant (un trait par doigt), un toucher sur une
+  perle posée la reprend, Vider en deux touchers ; changer de plaque garde
+  les perles qui tombent sur un picot de la nouvelle. Le fer (Repasser) : le
+  papier se pose, le fer passe en S, les perles fondent (`ironing` des
+  Perles Miroir), la création se décolle et monte vers nous en tournant,
+  sous les confettis ; puis deux choix : **Garder** (la vitrine des
+  créations : un plateau de velours bordé d'or, la nouvelle tombe dessus ;
+  gardée dans le store, 24 au plus ; on y revient par le bouton Vitrine) ou
+  **Au collier** (elle y est gardée aussi). Le **pendentif** : la création
+  fondue, réduite (3,6 cm au plus, 3 mm la perle), pendue au milieu du
+  collier par un petit anneau doré passé dans la perle du milieu (le creux
+  d'un cœur : il pend droit) ; sans perles enfilées, un fil de soie le
+  porte. Il se voit dans la vitrine du collier (couché sur le coussin), sur
+  la princesse au bal des Bijoux et dans la Princesse (`Royal.pendant`,
+  `wearPendant` ; une vieille sauvegarde n'a pas de pendentif, rien ne
+  change) — UNE géométrie aux couleurs dans ses sommets, un éclairage
+  simple. Dans la vitrine des créations, toucher une création la soulève :
+  « Au collier » paraît. Sur l'établi du collier, le pendentif attend au
+  milieu du U (l'affiche le montre). La main : un pot, puis un picot (nouveau geste
+  `taps`), puis le fer ; en l'air, l'un des deux choix. Bot
+  `bijoux-perles-a-repasser-pendentif` (six perles touchées, une rangée
+  glissée, une reprise, le fer, « Au collier », la princesse qui le porte,
+  puis la Princesse) : 33 scénarios. **À jouer sur la tablette** (`?fps`
+  avec une plaque pleine et les douze pots).
 
 **Et, arrivé le 30/09 : l'Espace d'après la NOUVELLE maquette du père**
 (« je veux ça dans leur app ») — son fichier `systeme-solaire.html` ajoute

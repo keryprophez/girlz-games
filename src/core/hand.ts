@@ -10,8 +10,8 @@ import type { GameContext } from './types'
    `null` quand le jeu n'attend rien de l'enfant (chargement, écoute du
    Chœur, animation, manche qui change) :
      { tap: cible }            taper
-     { taps: [cibles] }        taper ici, puis là (les deux pouces du
-                               Flipper : à gauche, puis à droite)
+     { taps: [cibles] }        taper l'une après l'autre (les deux pouces du
+                               Flipper, le pot puis le picot des Bijoux)
      { drag: [de, vers] }      glisser (appuyer, emmener, lâcher)
      { swipe: [de, vers] }     trancher, d'un geste vif
      { trace: [points] }       dessiner une forme au doigt (le cœur du Feu

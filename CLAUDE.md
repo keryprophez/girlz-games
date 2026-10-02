@@ -122,7 +122,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            mimé par un gant blanc (`GameDef.hand`, lancé par
                            GameHost) — taper, glisser, trancher, tracer une
                            forme (`trace`, le cœur du Feu d'artifice), taper
-                           ici puis là (`taps`, les deux pouces du Flipper), ou
+                           l'un après l'autre (`taps` : les deux pouces du
+                           Flipper, le pot puis le picot des Bijoux), ou
                            `choose` (« l'un de ceux-là », sans appuyer :
                            jamais la réponse dans Apprendre)
              pinball.ts  ← LA PHYSIQUE DU FLIPPER (1/10) : la bille dans le
@@ -154,10 +155,17 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            version FONDUE en morph par perle (`fuse`), les
                            pots de perles, l'axe lumineux, le fer et le
                            papier sulfurisé (`ironing`) — pour les Perles
-                           Miroir, et demain l'Atelier des bijoux
+                           Miroir et les Bijoux ; depuis le 1/10, les plaques
+                           à FORME (`outline` + `mask` : cœur, étoile, rond),
+                           et la création fondue en UNE géométrie aux
+                           couleurs dans ses sommets (`fusedPieceGeo`,
+                           `pendantGeos` : le pendentif et son anneau)
              perles.ts   ← leurs dessins en petites grilles (papillon, fraise,
                            cochon…), la palette des pots et les manches du
-                           Miroir (modèle, axe, reflet) — logique pure, testée
+                           Miroir (modèle, axe, reflet) ; les plaques à forme
+                           des Bijoux (`plateMask`, `plateOutline`) et une
+                           création en lignes de lettres (`pieceOf`,
+                           `pieceHook` : où passe l'anneau) — logique pure, testée
              bijoux3d.ts ← LES PERLES des Bijoux (30/09) en vraie 3D, à leur
                            taille réelle : nacrée irisée, verre, cristal
                            taillé, cœur, étoile, fleur, intercalaire, cube ;
@@ -206,7 +214,14 @@ dans `Royal.beads` (sorte + couleur, dans l'ordre du fil), porté quand
 `neck` vaut `beads` ; `wearNecklace` (store) le met à la princesse qu'on
 habille seule et l'offre aux garde-robes de Jade et de Joyce ; `princess3d`
 le construit sur elle (groupe `collier`, accroché au haut du buste, plus
-long = plus bas sur la poitrine, par-dessus le corsage).
+long = plus bas sur la poitrine, par-dessus le corsage). Son **pendentif**
+(1/10) : une création de perles à repasser des Bijoux, `Royal.pendant`
+(`Piece` : des lignes de lettres, recadrées ; `null` dans une vieille
+sauvegarde), accrochée au milieu du fil par un anneau doré (`wearPendant` ;
+sans perles enfilées, un fil de soie le porte : `hasNecklace`), construite
+en UNE géométrie (groupe `pendentif`, `MeshStandardMaterial` aux couleurs
+dans ses sommets), inclinée juste assez pour rester sur le corsage. La
+vitrine des créations est dans le store (`creations`, 24 au plus).
 Un petit bouton rond (la petite fille à couettes, en bas à gauche de la
 scène) ouvre l'**ancienne version**, Habille-toi (`games/doll.ts`, demandé
 le 28/09) ; une couronne y ramène, le dernier choix est retenu
@@ -421,7 +436,7 @@ ligne quand on en paie un nouveau.
 4. `npm run test:smoke` et `npm run test:play` tournent en CI à chaque push
    sur `main` (environ 55 min, sur GitHub, sans coûter un token) et
    **bloquent la mise en ligne** s'ils échouent.
-   `npm run test:play` fait jouer **un bot par jeu** (2/10 : 35 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle et Cache-Cache deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (2/10 : 36 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

@@ -163,6 +163,20 @@ const STAGE = {
   bijoux: {
     ready: () => window.__bj && window.__bj.phase === 'work', wait: 2500,
     act: async p => {
+      // Son pendentif de perles à repasser (un cœur) attend au milieu du U :
+      // gardé dans la princesse, la page rechargée pour qu'il y soit
+      await p.evaluate(rows => {
+        const s = JSON.parse(localStorage.getItem('ferme:v2') || '{"state":{},"version":0}')
+        s.state.royals = { solo: { pendant: { rows } }, jade: null, joyce: null }
+        localStorage.setItem('ferme:v2', JSON.stringify(s))
+      }, ['..RRR.....RRR..', '.RWWRR...RRRRR.', '.RWPPPR.RPPPRR.', 'RRPPPPPRPPPPPRR', '.RPPPPPPPPPPPR.', '.RRPPPPPPPPPRR.', '..RRPPPPPPPRR..', '...RRPPPPPRR...', '....RRPPPRR....', '.....RRPRR.....', '......RRR......', '.......R.......'])
+      await p.goto(p.url())
+      await p.locator('.hm-tab[data-w="creer"]').click()
+      await p.locator('.gc[data-id="bijoux"]').click({ force: true })
+      await p.waitForFunction(() => window.__bj && window.__bj.phase === 'work', null, { timeout: 300000, polling: 1000 })
+      // Le dernier atelier choisi est retenu : l'affiche part du collier
+      await p.locator('#bjMode-collier').click({ force: true })
+      await p.waitForFunction(() => window.__bj.mode === 'collier', null, { timeout: 60000, polling: 500 })
       for (const i of [0, 10, 2, 10, 0, 3, 8, 3, 1, 10, 6, 10, 7, 10, 1, 4, 9, 4, 0, 10, 2, 10, 0, 11, 7, 11, 0]) {
         const q = await p.evaluate(k => window.__bj.comp(k), i)
         await p.mouse.click(q.x, q.y)
@@ -253,7 +267,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

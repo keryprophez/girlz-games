@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
-import { defaultRoyal, normalizeRoyal, wearBeads, type Bead, type Royal } from './royal'
+import { defaultRoyal, normalizePiece, normalizeRoyal, wearBeads, wearPendant, type Bead, type Piece, type Royal } from './royal'
 import type { Look } from './character'
 import { setSound } from './audio'
 
@@ -23,6 +23,27 @@ export function familyLooks(r: Record<RoyalSlot, Royal | null>): Royal[] {
 
 /** La princesse qu'on habille seule (jamais nulle). */
 export const soloRoyal = (s: { royals: Record<RoyalSlot, Royal | null> }) => s.royals.solo || defaultRoyal()
+
+/** Le collier de la princesse qu'on habille seule, offert à la garde-robe
+    d'une sœur (perles et pendentif) : porté s'il l'était déjà, rien de retiré. */
+function offerNecklace(r: Royal | null, solo: Royal): Royal | null {
+  if (!r) return null
+  const w = wearPendant(wearBeads(r, solo.beads), solo.pendant)
+  if (r.neck !== 'beads') w.neck = r.neck
+  return w
+}
+
+/** Une création gardée dans la vitrine des Bijoux. */
+export interface Creation extends Piece { at: number }
+export const CREATIONS_MAX = 24
+/** Relit la vitrine : les créations abîmées sont jetées. */
+function normalizeCreations(x: unknown): Creation[] {
+  return (Array.isArray(x) ? x : []).flatMap(c => {
+    const p = normalizePiece(c)
+    const at = (c as { at?: unknown })?.at
+    return p ? [{ ...p, at: typeof at === 'number' && Number.isFinite(at) ? at : 0 }] : []
+  }).slice(0, CREATIONS_MAX)
+}
 
 /** L'ancien look d'Habille-toi (avant le 27/09) devient une princesse :
     on garde la couleur de la robe, celle des cheveux et la coiffure. */
@@ -66,6 +87,14 @@ interface FermeState {
       seule le met aussitôt ; celles de Jade et de Joyce, si elles existent,
       le trouvent dans leur garde-robe (on ne leur retire rien). */
   wearNecklace(beads: Bead[]): void
+  /** Le pendentif (1/10) : une création de perles à repasser, accrochée au
+      milieu du collier de la princesse qu'on habille seule — et offerte,
+      avec le même collier, aux garde-robes de Jade et de Joyce. */
+  wearPendant(p: Piece): void
+  /** La vitrine des créations de perles à repasser (les plus récentes
+      d'abord, `CREATIONS_MAX` au plus : la plus ancienne laisse sa place). */
+  creations: Creation[]
+  keepCreation(p: Piece): void
   /** Dernière photo choisie pour le Puzzle (indépendante de l'avatar). */
   puzzleImgs: Record<string, string>
   setPuzzleImg(id: string, img: string): void
@@ -121,15 +150,20 @@ export const useFerme = create<FermeState>()(
       wearNecklace(beads) {
         set(s => {
           const solo = wearBeads(soloRoyal(s), beads)
-          // Les deux sœurs : le même collier dans la garde-robe, porté s'il l'était déjà
-          const offer = (r: Royal | null) => {
-            if (!r) return null
-            const w = wearBeads(r, solo.beads)
-            if (r.neck !== 'beads') w.neck = r.neck
-            return w
-          }
-          return { royals: { solo, jade: offer(s.royals.jade), joyce: offer(s.royals.joyce) } }
+          return { royals: { solo, jade: offerNecklace(s.royals.jade, solo), joyce: offerNecklace(s.royals.joyce, solo) } }
         })
+      },
+      wearPendant(p) {
+        set(s => {
+          const solo = wearPendant(soloRoyal(s), p)
+          return { royals: { solo, jade: offerNecklace(s.royals.jade, solo), joyce: offerNecklace(s.royals.joyce, solo) } }
+        })
+      },
+      creations: [],
+      keepCreation(p) {
+        const piece = normalizePiece(p)
+        if (!piece) return
+        set(s => ({ creations: [{ ...piece, at: Date.now() }, ...s.creations].slice(0, CREATIONS_MAX) }))
       },
       puzzleImgs: {},
       setPuzzleImg(id, img) {
@@ -182,7 +216,8 @@ export const useFerme = create<FermeState>()(
           jade: rs.jade ? normalizeRoyal(rs.jade) : null,
           joyce: rs.joyce ? normalizeRoyal(rs.joyce) : null
         }
-        queueMicrotask(() => useFerme.setState({ royals }))
+        const creations = normalizeCreations(state.creations)
+        queueMicrotask(() => useFerme.setState({ royals, creations }))
       }
     }
   )
