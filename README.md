@@ -111,7 +111,9 @@ npm run test:smoke   # ouvre chaque jeu dans Chromium : 0 erreur JS, chargement 
 npm run test:play    # un bot par jeu joue sa partie jusqu'à l'écran de fin
 ```
 
-`test:smoke` et `test:play` **bloquent le déploiement** en CI.
+`test:smoke` (tous les jeux) et `test:play` (les bots des seuls jeux touchés
+depuis la dernière mise en ligne, choisis par `scripts/touched.mjs`)
+**bloquent le déploiement** en CI.
 
 Sur la tablette, ajouter `?fps` à l'adresse allume un petit compteur d'images
 par seconde (et le coût d'une image 3D) pour régler la 3D ; `?fps=0` l'éteint.

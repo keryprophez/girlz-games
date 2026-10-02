@@ -8,11 +8,17 @@ on:
     # s'annuler deux runs dans le groupe `pages` — 15/09.)
     branches: [main]
   workflow_dispatch:
+    inputs:
+      bots:
+        description: "Bots : vide = ceux des jeux touchés depuis la dernière mise en ligne, « tous » = tous"
+        required: false
+        default: ""
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read   # retrouver la dernière mise en ligne réussie (scripts/touched.mjs)
 
 concurrency:
   group: pages
@@ -23,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tout l'historique : comparer avec la dernière mise en ligne
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -31,9 +39,21 @@ jobs:
       - run: npm run build
       # Smoke test : chaque jeu doit se monter sans erreur avant de déployer
       - run: npm run test:smoke
-      # Bots de jeu : les parcours clés doivent être GAGNABLES avant de déployer
+      # Bots de jeu : seulement ceux des jeux TOUCHÉS depuis la dernière mise
+      # en ligne réussie (2/10 : « on ne valide via bot que les jeux que l'on
+      # touche »). Un module commun ne déclenche aucun bot : le smoke ci-dessus
+      # a déjà ouvert tous les jeux. Lancement manuel avec « tous » : tous.
+      - id: touched
+        run: node scripts/touched.mjs --ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          BOTS_FORCE: ${{ inputs.bots }}
       # (se saute tout seul si le runner n'a pas de WebGL utilisable)
-      - run: npm run test:play
+      - if: steps.touched.outputs.run == 'true'
+        run: npm run test:play
+        env:
+          BOTS: ${{ steps.touched.outputs.bots }}
       - uses: actions/configure-pages@v5
         with:
           enablement: true

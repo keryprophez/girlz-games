@@ -433,12 +433,20 @@ ligne quand on en paie un nouveau.
    Pour la 3D : `args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader']`.
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
-4. `npm run test:smoke` et `npm run test:play` tournent en CI à chaque push
-   sur `main` (environ 55 min, sur GitHub, sans coûter un token) et
-   **bloquent la mise en ligne** s'ils échouent.
-   `npm run test:play` fait jouer **un bot par jeu** (2/10 : 36 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
-   son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
-   `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
+4. En CI, à chaque push sur `main` (sur GitHub, sans coûter un token), le
+   smoke ouvre TOUS les jeux, puis **seuls les bots des jeux touchés**
+   jouent (2/10, le père : « on ne valide via bot que les jeux que l'on
+   touche spécifiquement ») ; l'un ou l'autre en échec **bloque la mise en
+   ligne**. `scripts/touched.mjs` compare avec la dernière mise en ligne
+   réussie : un fichier d'un jeu, un module qui ne sert qu'à lui (sa table
+   `OWN`) ou un scénario modifié de `play.mjs` → ses bots ; un module commun
+   → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
+   minutes. Tous les bots : lancement manuel du workflow avec « tous ».
+   `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
+   `npm run test:play` a **un bot par jeu** (2/10 : 36 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
+   `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
+   `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre
    port, et les deux scripts refusent de démarrer sur un port déjà servi.
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans
@@ -451,7 +459,7 @@ ligne quand on en paie un nouveau.
      sature, les tests expirent avant d'ouvrir un jeu et tout est refait ;
    - en local, **3 ou 4 captures** bien choisies (celles qui jugent le
      rendu), **un seul passage du bot du jeu touché**, pas de smoke complet :
-     la CI rejoue le smoke et tous les bots avant la mise en ligne ;
+     la CI rejoue le smoke et les bots des jeux touchés avant la mise en ligne ;
    - **une mise en ligne par lot**, pas une par jeu (un push sur `main`
      pendant un déploiement annule celui qui tourne) ;
    - lire `PIEGES.md` par domaine, et les gros fichiers par morceaux.
@@ -472,7 +480,8 @@ ligne quand on en paie un nouveau.
   git checkout main && git merge --ff-only <branche> && git push origin main
   git checkout <branche>
   ```
-- CI : `npm ci` → `npm run build` → `npm run test:smoke` → `test:play` → Pages.
+- CI : `npm ci` → `npm run build` → `npm run test:smoke` → `touched.mjs` →
+  `test:play` (les bots des jeux touchés, sauté s'il n'y en a pas) → Pages.
   Si un run est annulé, le relancer à la main : `workflow_dispatch` sur `main`.
   Si le déploiement est refusé par l'environnement `github-pages`, c'est sa
   règle de branches (Settings → Environments → github-pages) qui n'accepte
