@@ -117,6 +117,24 @@ export const BADGE: Record<string, string> = {
     <circle cx="24" cy="32" r="4.6" fill="${C.coral}"/>
     <circle cx="33" cy="32" r="4.6" fill="${C.sun}"/>`),
 
+  /* Cache-Cache : la meule de foin, d'où dépassent les oreilles et les yeux
+     du lapin — et la queue du chat sur le côté */
+  hideseek: svg(`
+    <ellipse cx="24" cy="42" rx="19" ry="3.4" fill="${C.meadowDark}"/>
+    <path d="M37 33c6-1 8.5-7 5.5-11.5" fill="none" stroke="${C.mangoDark}" stroke-width="3.6" stroke-linecap="round"/>
+    <rect x="14.5" y="4" width="6" height="17" rx="3" fill="${C.cream}" transform="rotate(-14 17.5 12.5)"/>
+    <rect x="16" y="6.5" width="3" height="11" rx="1.5" fill="${C.pink}" transform="rotate(-14 17.5 12.5)"/>
+    <rect x="25.5" y="4" width="6" height="17" rx="3" fill="${C.cream}" transform="rotate(12 28.5 12.5)"/>
+    <rect x="27" y="6.5" width="3" height="11" rx="1.5" fill="${C.pink}" transform="rotate(12 28.5 12.5)"/>
+    <path d="M14.5 24.5a8.5 7.5 0 0 1 17 0z" fill="${C.cream}"/>
+    <circle cx="19.6" cy="21.4" r="2.1" fill="${C.ink}"/><circle cx="26.4" cy="21.4" r="2.1" fill="${C.ink}"/>
+    <circle cx="20.2" cy="20.7" r=".7" fill="${C.white}"/><circle cx="27" cy="20.7" r=".7" fill="${C.white}"/>
+    <path d="M6 42C6 31 12 24.5 16.5 23.4l3.2 1.8 3.2-2 3.2 2 3.2-1.8 3.2 1.4C37 25.8 42 32 42 42z" fill="${C.mango}"/>
+    <path d="M32.5 24.8C37 25.8 42 32 42 42h-9c0-7.5-.6-12.8-.5-17.2z" fill="${C.mangoDark}"/>
+    <rect x="11" y="31" width="7" height="2.2" rx="1.1" fill="${C.sun}"/>
+    <rect x="21" y="35" width="8" height="2.2" rx="1.1" fill="${C.sun}"/>
+    <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
+
   /* ---------- Apprendre ---------- */
   clock: svg(`
     <circle cx="24" cy="24" r="17" fill="${C.cream}"/>

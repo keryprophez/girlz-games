@@ -1005,8 +1005,29 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   la voir sur la tablette** (`?fps` pendant le bouquet).
 - **11. Le Flipper de la grange** (nouveau, Jouer, 3D) : deux batteurs, les
   animaux en bumpers ; à deux, un batteur chacune, un seul score.
-- **13. Cache-cache à la ferme** (nouveau, Jouer, 3D) : trouver les animaux
-  cachés dans la ferme qu'on fait tourner ; la nuit, à la lampe torche.
+- ✅ **13. Cache-Cache à la ferme** (1/10, Jouer, 3D ; le père : « la queue
+  du chat dépasse d'une botte de foin, les oreilles du lapin sortent derrière
+  le puits… La nuit, on les cherche à la lampe torche. Idéal pour Jade ») :
+  la ferme est un diorama rond posé dans le ciel (`core/farm3d.ts`) qu'on
+  fait tourner au doigt (élan mesuré en vrai, deux doigts zooment). Au début
+  les animaux sont dans l'enclos ; deux mains cachent les yeux (trois tics ;
+  à la fleur on voit entre les doigts) et ils courent se cacher DANS les
+  cachettes : grange (par-dessus la porte d'écurie, à la lucarne), meule,
+  bottes, puits, charrette, godet du tracteur, niche, poulailler, tonneaux,
+  tas de bois, mare, boue, terriers du potager, buissons, pommier (la queue
+  du chat pend du feuillage). Un bout dépasse et bouge de temps en temps ;
+  on le touche (toucher généreux) : il sort d'un bond avec sa vraie voix et
+  file à l'enclos, sa silhouette se colorie en haut. Cachette vide : un
+  petit bruit doux ; tout près : il glousse, la cachette tremble (le
+  « presque »). Fleur 5 animaux bien visibles (dont le chat et le lapin) ;
+  éclair 8, les oreilles seulement, trois au moins visibles d'un seul côté ;
+  flamme : la nuit, 10 animaux, la lampe torche suit le doigt, leurs yeux
+  brillent. La rampe suit la joueuse (vite : ils bougent moins et, à
+  l'éclair et la nuit, l'un change de cachette en courant ; coincée : ils
+  bougent plus, l'un passe la tête en appelant). La fin : la fête dans
+  l'enclos, la ferme tourne. Bots `cache-cache-jour` et `cache-cache-nuit`
+  (passent aussi avec `THROTTLE=4`). **Reste : la tablette** (`?fps`, la
+  nuit surtout : une lampe à ombre portée).
 - **18. La Ferme à construire** (nouveau, Créer, 3D) : poser bâtiments,
   enclos, mare, arbres, chemins, puis les 14 animaux qui y vivent.
 - **19. L'animal qui répète** (nouveau, Créer) : il redit ce qu'on dit avec

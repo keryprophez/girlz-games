@@ -22,9 +22,10 @@ import { fireworks } from './fireworks'
 import { icetower } from './icetower'
 import { sentences } from './sentences'
 import { bijoux } from './bijoux'
+import { hideseek } from './hideseek'
 
 export const GAMES: GameDef[] = [
-  icetower, ninja, maze, taquin, memory, simonGame,
+  icetower, ninja, hideseek, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, bijoux, piano, fireworks, coloring, pizza
@@ -46,7 +47,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
-      icetower, ninja,
+      icetower, ninja, hideseek,
       maze, taquin, memory, simonGame, connect4
     ]
   },

@@ -156,6 +156,13 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            un « kit » par scène (`beadKit` : `refract` pour
                            la vitrine, `cheap` pour la princesse), `orientQ`
                            (le trou sur Y, le long du fil), `instancedRun`
+             farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
+                           rond qu'on fait tourner, ses cachettes construites
+                           (grange, meule, puits, charrette, tracteur, niche,
+                           poulailler, mare, boue, potager…) et leurs PLACES
+                           (`FarmSlot` : 'top', 'face', 'rear', 'tree'), la
+                           nuit (lune, lucioles, lanternes) ; `bake()` fond ce
+                           qui ne bouge pas en un mesh par matériau
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -359,7 +366,9 @@ Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le pet
 `taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
 son second mode, le Taquin, reste en DOM) ·
 `letters` (les Cubes de l'alphabet, 30/09 : cubes de bois, la voix dit le
-son, la syllabe, puis le mot — les sons dans `core/phonics.ts`). La Course,
+son, la syllabe, puis le mot — les sons dans `core/phonics.ts`) ·
+`hideseek` (Cache-Cache, 1/10 : la ferme en diorama qu'on fait tourner au
+doigt, `core/farm3d.ts` ; la nuit, à la lampe torche). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -403,7 +412,7 @@ ligne quand on en paie un nouveau.
 4. `npm run test:smoke` et `npm run test:play` tournent en CI à chaque push
    sur `main` (environ 55 min, sur GitHub, sans coûter un token) et
    **bloquent la mise en ligne** s'ils échouent.
-   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 32 scénarios, le Potager en a quatre, le Feu d'artifice et le Puzzle deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (2/10 : 34 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle et Cache-Cache deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

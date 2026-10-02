@@ -1271,6 +1271,50 @@ await scenario('princesse-ancienne-version', async () => {
   }
 })
 
+/* 🙈 Cache-Cache (1/10) : la ferme qu'on fait tourner. Le bot touche d'abord
+   une cachette vide (rien ne doit se passer), puis il cherche comme un enfant :
+   il touche un animal qu'il VOIT d'ici (le crochet ne rend que les points
+   qu'aucun décor ne cache), sinon il fait tourner la ferme d'un glissé et
+   attend qu'elle s'arrête. Tous trouvés : la fête, puis l'écran de fin. La
+   nuit (flamme), dix animaux à la lampe torche. */
+const cacheCache = async (tier, fin) => {
+  await openGame('Cache-Cache', '__cc', tier)
+  await page.waitForFunction(() => window.__cc.phase === 'seek', null, { timeout: 120000, polling: 500 })
+  const total = await page.evaluate(() => window.__cc.total)
+  const want = { easy: 5, med: 8, exp: 10 }[tier]
+  if (total !== want) throw new Error(`${total} animaux au lieu de ${want}`)
+  // Une cachette vide : un petit bruit doux, rien d'autre
+  const vide = await page.evaluate(() => window.__cc.emptySpot())
+  if (vide) {
+    await page.mouse.click(vide.x, vide.y)
+    await page.waitForTimeout(700)
+    if (await page.evaluate(() => window.__cc.found) !== 0) throw new Error(`la cachette vide ${vide.id} a trouvé un animal`)
+  }
+  const box = await page.locator('#ccWrap canvas').boundingBox()
+  let tours = 0, rates = 0
+  for (let i = 0; i < 160; i++) {
+    const st = await page.evaluate(() => ({ found: window.__cc.found, total: window.__cc.total, a: window.__cc.animals().filter(a => !a.found && a.x !== null && a.state === 'hidden') }))
+    if (st.found >= st.total) break
+    if (st.a.length) {
+      const a = st.a[0]
+      await page.mouse.click(a.x, a.y)
+      const ok = await page.waitForFunction(n => window.__cc.found > n, st.found, { timeout: 15000, polling: 250 }).then(() => true, () => false)
+      if (!ok && ++rates > 6) throw new Error(`le toucher ne trouve pas ${a.kind} (${a.slot})`)
+    } else {
+      // Rien de visible d'ici : on fait tourner la ferme
+      if (++tours > 40) throw new Error(`${st.total - st.found} animaux restent introuvables après ${tours} tours`)
+      await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.8)
+      await page.mouse.down()
+      for (let k = 1; k <= 6; k++) await page.mouse.move(box.x + box.width * (0.3 + k * 0.05), box.y + box.height * 0.8)
+      await page.mouse.up()
+      await page.waitForFunction(() => Math.abs(window.__cc.spin) < 0.02, null, { timeout: 30000, polling: 250 })
+    }
+  }
+  await page.waitForFunction(t => document.querySelector('#result.show') && document.body.innerText.includes(t), fin, { timeout: 90000, polling: 500 })
+}
+await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
+await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)
