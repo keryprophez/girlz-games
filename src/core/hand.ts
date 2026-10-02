@@ -10,6 +10,8 @@ import type { GameContext } from './types'
    `null` quand le jeu n'attend rien de l'enfant (chargement, écoute du
    Chœur, animation, manche qui change) :
      { tap: cible }            taper
+     { taps: [cibles] }        taper l'une après l'autre (le pot de perles,
+                               puis le picot des Bijoux)
      { drag: [de, vers] }      glisser (appuyer, emmener, lâcher)
      { swipe: [de, vers] }     trancher, d'un geste vif
      { trace: [points] }       dessiner une forme au doigt (le cœur du Feu
@@ -29,6 +31,7 @@ import type { GameContext } from './types'
 export type Spot = Element | { x: number; y: number } | { fx: number; fy: number } | null | undefined
 export type HandMove =
   | { tap: Spot }
+  | { taps: Spot[] }
   | { drag: [Spot, Spot]; ghost?: boolean }
   | { swipe: [Spot, Spot] }
   | { trace: Spot[] }
@@ -163,6 +166,26 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
             { transform: at(p), opacity: 1 }
           ], { duration: 1150, easing: 'ease-in-out' }).finished
           press(p, 0)
+        }
+      } else if ('taps' in mv) {
+        // Un toucher, puis le suivant : la main glisse de l'un à l'autre
+        const pts = mv.taps.map(where).filter((p): p is P => !!p)
+        if (!pts.length) return
+        for (let rep = 0; rep < 2 && showing; rep++) {
+          await anim(hand, [
+            { transform: at({ x: pts[0].x + 30, y: pts[0].y + 40 }), opacity: 0 },
+            { transform: at(pts[0]), opacity: 1 }
+          ], { duration: 380, easing: 'ease-out' }).finished
+          for (let i = 0; i < pts.length && showing; i++) {
+            const p = pts[i]
+            if (i) await anim(hand, [{ transform: at(pts[i - 1]) }, { transform: at(p) }], { duration: 620, easing: 'ease-in-out' }).finished
+            await anim(hand, [
+              { transform: at(p) }, { transform: at(p, 0.84), offset: 0.4 }, { transform: at(p) }
+            ], { duration: 420, easing: 'ease-in-out' }).finished
+            press(p, 0)
+            await anim(hand, [{ transform: at(p) }, { transform: at(p) }], { duration: 220 }).finished
+          }
+          await anim(hand, [{ transform: at(pts[pts.length - 1]), opacity: 1 }, { transform: at(pts[pts.length - 1]), opacity: 0 }], { duration: 320 }).finished
         }
       } else if ('drag' in mv || 'swipe' in mv) {
         const swipe = 'swipe' in mv

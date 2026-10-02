@@ -1123,13 +1123,16 @@ const prWait = async (fn, what, timeout = 300000) => {
    le collier (gardé : la princesse le porte), la vitrine, puis la princesse
    qui le porte au bal ; « Fini » mène à l'écran de fin. Enfin, dans la
    Princesse, elle le porte aussi (construit en 3D sur elle). */
+const bjWait = (fn, arg, what, timeout = 120000) => page.waitForFunction(fn, arg, { timeout, polling: 500 }).catch(async () => {
+  const st = await page.evaluate(() => window.__bj ? { phase: window.__bj.phase, mode: window.__bj.mode, count: window.__bj.count, moving: window.__bj.moving, hama: window.__bj.hama } : 'pas de __bj').catch(() => 'page perdue')
+  throw new Error(`${what} : délai dépassé (${JSON.stringify(st)}) ${[...errors, ...consoleErrs].slice(-4).join(' | ')}`)
+})
 await scenario('bijoux-collier-de-perles', async () => {
   await openGame('Les Bijoux', '__bj')
-  const bjWait = (fn, arg, what, timeout = 120000) => page.waitForFunction(fn, arg, { timeout, polling: 500 }).catch(async () => {
-    const st = await page.evaluate(() => window.__bj ? { phase: window.__bj.phase, count: window.__bj.count, moving: window.__bj.moving } : 'pas de __bj').catch(() => 'page perdue')
-    throw new Error(`${what} : délai dépassé (${JSON.stringify(st)}) ${[...errors, ...consoleErrs].slice(-4).join(' | ')}`)
-  })
   await bjWait(() => window.__bj.phase === 'work', null, 'établi')
+  // Le dernier atelier choisi est retenu : on repart du collier
+  await page.locator('#bjMode-collier').click({ force: true })
+  await bjWait(() => window.__bj.mode === 'collier', null, 'atelier du collier')
   // Dix compartiments touchés d'affilée (plusieurs perles volent à la fois) :
   // sous la 3D logicielle, attendre chacune coûterait des minutes
   const pts = await page.evaluate(() => Array.from({ length: 10 }, (_, k) => window.__bj.comp(k)))
@@ -1157,6 +1160,69 @@ await scenario('bijoux-collier-de-perles', async () => {
   await prOpen(false)
   const pr0 = await pr(() => ({ neck: window.__pr.looks[0].neck, beads: window.__pr.looks[0].beads.length, collier: window.__pr.collier[0] }))
   if (pr0.neck !== 'beads' || pr0.beads !== 10 || !pr0.collier) throw new Error(`la Princesse ne porte pas le collier : ${JSON.stringify(pr0)}`)
+})
+
+/* 📿 Les perles à repasser des Bijoux (1/10) : le second atelier, une
+   plaque en cœur ; des perles roses touchées une à une, une rangée GLISSÉE
+   en violet, une perle reprise d'un toucher (la gomme) ; le fer ; la
+   création fondue en l'air, « Au collier » : elle devient le PENDENTIF du
+   collier (gardé, dans la vitrine du collier), que la princesse porte au bal
+   — et dans la Princesse aussi. */
+await scenario('bijoux-perles-a-repasser-pendentif', async () => {
+  await openGame('Les Bijoux', '__bj')
+  await bjWait(() => window.__bj.phase === 'work', null, 'établi')
+  await page.locator('#bjMode-hama').click({ force: true })
+  await bjWait(() => window.__bj.mode === 'hama' && window.__bj.hama, null, 'les perles à repasser')
+  await page.locator('.bj-shape[data-s="coeur"]').click({ force: true })
+  await bjWait(() => window.__bj.hama.shape === 'coeur', null, 'la plaque en cœur')
+  // Six perles roses, touchées
+  await page.locator('.bj-potbtn[data-c="rose"]').click({ force: true })
+  await bjWait(() => window.__bj.hama.color === 'rose', null, 'le pot rose')
+  const pegs = await page.evaluate(() => window.__bj.freePegs(40))
+  for (const g of pegs.slice(0, 6)) {
+    const p = await page.evaluate(([c, r]) => window.__bj.peg(c, r), [g.c, g.r])
+    await page.mouse.click(p.x, p.y)
+  }
+  await bjWait(() => window.__bj.hama.placed === 6, null, 'six perles touchées')
+  // Une rangée glissée en violet : cinq picots libres côte à côte
+  await page.locator('.bj-potbtn[data-c="violet"]').click({ force: true })
+  await bjWait(() => window.__bj.hama.color === 'violet', null, 'le pot violet')
+  const row = await page.evaluate(() => {
+    const free = window.__bj.freePegs(400), set = new Set(free.map(f => f.c + ',' + f.r))
+    for (const f of free) if ([1, 2, 3, 4].every(k => set.has((f.c + k) + ',' + f.r))) return [0, 1, 2, 3, 4].map(k => window.__bj.peg(f.c + k, f.r))
+    return null
+  })
+  if (!row) throw new Error('pas de rangée libre de cinq picots')
+  await page.mouse.move(row[0].x, row[0].y)
+  await page.mouse.down()
+  for (let i = 1; i <= 16; i++) await page.mouse.move(row[0].x + (row[4].x - row[0].x) * i / 16, row[0].y + (row[4].y - row[0].y) * i / 16)
+  await page.mouse.up()
+  await bjWait(() => window.__bj.hama.placed === 11, null, 'la rangée glissée')
+  // La gomme : un toucher sur une perle posée la reprend
+  await page.mouse.click(row[4].x, row[4].y)
+  await bjWait(() => window.__bj.hama.placed === 10, null, 'une perle reprise')
+  // Le fer : papier, fer, fusion, l'envol ; puis « Au collier »
+  await bjWait(() => !window.__bj.hama.busy, null, 'les perles posées', 120000)
+  await page.locator('#bjIron').click({ force: true })
+  await bjWait(() => window.__bj.phase === 'iron', null, 'le fer')
+  await bjWait(() => window.__bj.phase === 'fly' && window.__bj.choose, null, 'la création en l\'air', 300000)
+  await page.locator('#bjCollar').click({ force: true })
+  await bjWait(() => window.__bj.phase === 'vitrine', null, 'la vitrine du collier', 180000)
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state)
+  const pend = kept?.royals?.solo?.pendant
+  const beads = (pend?.rows || []).join('').replace(/\./g, '').length
+  if (kept?.royals?.solo?.neck !== 'beads' || beads !== 10) throw new Error(`le pendentif n'est pas gardé : ${JSON.stringify(pend)}`)
+  if (!kept.creations?.length) throw new Error('la création n\'est pas dans la vitrine des créations')
+  if (!(await page.evaluate(() => window.__bj.vitrinePendant))) throw new Error('pas de pendentif dans la vitrine du collier')
+  await page.locator('#bjPrincess').click({ force: true, timeout: 120000 })
+  await bjWait(() => window.__bj.phase === 'princess', null, 'la princesse', 300000)
+  if (!(await page.evaluate(() => window.__bj.wornPendant))) throw new Error('la princesse ne porte pas le pendentif')
+  await page.locator('#bjDone').click({ force: true, timeout: 120000 })
+  await finDe('Quel joli collier', 60000)
+  // Dans la Princesse, elle le porte aussi
+  await prOpen(false)
+  const pr1 = await pr(() => ({ neck: window.__pr.looks[0].neck, pendant: !!window.__pr.looks[0].pendant, worn: window.__pr.pendentif[0] }))
+  if (pr1.neck !== 'beads' || !pr1.pendant || !pr1.worn) throw new Error(`la Princesse ne porte pas le pendentif : ${JSON.stringify(pr1)}`)
 })
 
 await scenario('princesse-habiller-teindre-bal', async () => {

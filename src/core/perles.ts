@@ -401,3 +401,173 @@ export function makeRounds(tier: Tier, rng: Rng = Math.random): Round[] {
     round(q, 'vh', 'corner', q.rows)
   ]
 }
+
+/* ---------- Les plaques à formes de l'Atelier des bijoux (1/10) ----------
+   Comme les vraies plaques à formes : carré, cœur, rond de 15 picots de
+   côté, l'étoile de 17 (à 15, ses jambes se collaient : elle faisait une
+   maison). Le contour est un polygone en PAS, centré, y vers le HAUT (la
+   rangée 0 est en haut, la colonne 0 à gauche) ; un picot existe là où son
+   centre est dans le contour, à au moins `PLATE_MARGIN` du bord : ce
+   rebord, c'est la plaque. Toutes symétriques gauche-droite (n impair : la
+   pointe du cœur et celle de l'étoile tombent sur la colonne du milieu). */
+export type PlateShape = 'carre' | 'coeur' | 'etoile' | 'rond'
+export const PLATE_SHAPES: PlateShape[] = ['carre', 'coeur', 'etoile', 'rond']
+/** Le côté de chaque plaque, en picots. */
+export const PLATE_SIZE: Record<PlateShape, number> = { carre: 15, coeur: 15, etoile: 17, rond: 15 }
+/** La plus grande : la caméra la cadre toujours (rien ne saute quand on change de plaque). */
+export const PLATE_MAX = 17
+export const PLATE_MARGIN = 0.42
+export type Pt = [number, number]
+
+/** Arrondit un polygone fermé (passes de Chaikin) : les pointes de l'étoile
+    deviennent douces, comme une plaque moulée. */
+function chaikin(pts: Pt[], passes: number): Pt[] {
+  let p = pts
+  for (let k = 0; k < passes; k++) {
+    const out: Pt[] = []
+    p.forEach((a, i) => {
+      const b = p[(i + 1) % p.length]
+      out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75])
+    })
+    p = out
+  }
+  return p
+}
+
+/** Recentre un polygone sur sa boîte, puis l'agrandit pour que sa plus
+    grande dimension fasse `size`. */
+function fitPoly(pts: Pt[], size: number): Pt[] {
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1])
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+  const k = size / Math.max(x1 - x0, y1 - y0)
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2
+  return pts.map(([x, y]) => [(x - cx) * k, (y - cy) * k])
+}
+
+/** Le contour d'une plaque, en pas. */
+export function plateOutline(shape: PlateShape, n = PLATE_SIZE[shape]): Pt[] {
+  const h = (n - 1) / 2 // le centre des picots du bord
+  const pts: Pt[] = []
+  if (shape === 'carre') {
+    // Un carré aux coins arrondis, un demi-pas de rebord autour des picots
+    const a = h + 0.5, r = 0.6
+    const corner = (cx: number, cy: number, a0: number) => {
+      for (let k = 0; k <= 6; k++) {
+        const t = a0 + (k / 6) * Math.PI / 2
+        pts.push([cx + Math.cos(t) * r, cy + Math.sin(t) * r])
+      }
+    }
+    corner(a - r, a - r, 0); corner(-a + r, a - r, Math.PI / 2)
+    corner(-a + r, -a + r, Math.PI); corner(a - r, -a + r, Math.PI * 1.5)
+    return pts
+  }
+  if (shape === 'rond') {
+    for (let k = 0; k < 72; k++) {
+      const t = (k / 72) * Math.PI * 2
+      pts.push([Math.cos(t) * (h + 0.5), Math.sin(t) * (h + 0.5)])
+    }
+    return pts
+  }
+  if (shape === 'coeur') {
+    // Le cœur classique (x = 16 sin³t, y = 13 cos t − 5 cos 2t − …) : deux
+    // bosses en haut, une pointe en bas, sur toute la largeur de la plaque
+    for (let k = 0; k < 96; k++) {
+      const t = (k / 96) * Math.PI * 2
+      pts.push([16 * Math.sin(t) ** 3, 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)])
+    }
+    return fitPoly(pts.reverse(), 2 * h + 1.1)
+  }
+  // L'étoile à cinq branches (le creux à 42 % de la pointe), une pointe en
+  // haut, les pointes arrondies d'une passe
+  for (let k = 0; k < 10; k++) {
+    const t = Math.PI / 2 + (k / 10) * Math.PI * 2, r = k % 2 ? 0.42 : 1
+    pts.push([Math.cos(t) * r, Math.sin(t) * r])
+  }
+  return fitPoly(chaikin(pts, 1), 2 * h + 1.8)
+}
+
+/** Le point est-il dans le polygone ? (lancer de rayon) */
+export function insidePoly(poly: Pt[], x: number, y: number): boolean {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j]
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
+
+/** La distance du point au bord du polygone. */
+export function edgeDistance(poly: Pt[], x: number, y: number): number {
+  let best = Infinity
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], [bx, by] = poly[i]
+    const dx = bx - ax, dy = by - ay
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)))
+    best = Math.min(best, Math.hypot(x - ax - t * dx, y - ay - t * dy))
+  }
+  return best
+}
+
+/** Le centre du picot (c, r), en pas (y vers le haut). */
+export const pegXY = (c: number, r: number, n: number): Pt => [c - (n - 1) / 2, (n - 1) / 2 - r]
+
+/** Les picots de la plaque : case r·n + c, vrai s'il y a un picot. */
+export function plateMask(shape: PlateShape, n = PLATE_SIZE[shape]): boolean[] {
+  const poly = plateOutline(shape, n)
+  const out: boolean[] = []
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const [x, y] = pegXY(c, r, n)
+    out.push(insidePoly(poly, x, y) && edgeDistance(poly, x, y) >= PLATE_MARGIN)
+  }
+  return out
+}
+
+/* ---------- Une création (perles posées, puis fondues) ----------
+   Elle se garde en lignes de lettres (celles de `LETTER`, `.` sans perle),
+   recadrée sur ses perles : c'est ce que la princesse porte en pendentif
+   (`Royal.pendant`) et ce que range la vitrine des créations (le store). */
+export const COLOR_LETTER = Object.fromEntries(Object.entries(LETTER).map(([l, c]) => [c, l])) as Record<ColorId, string>
+
+/** La plaque (n × n, une couleur ou rien par picot) recadrée sur ses perles ;
+    null si elle est vide. */
+export function pieceOf(grid: (ColorId | null)[], n: number): string[] | null {
+  let c0 = n, c1 = -1, r0 = n, r1 = -1
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    if (!grid[r * n + c]) continue
+    c0 = Math.min(c0, c); c1 = Math.max(c1, c); r0 = Math.min(r0, r); r1 = Math.max(r1, r)
+  }
+  if (c1 < 0) return null
+  const rows: string[] = []
+  for (let r = r0; r <= r1; r++) {
+    let s = ''
+    for (let c = c0; c <= c1; c++) { const col = grid[r * n + c]; s += col ? COLOR_LETTER[col] : '.' }
+    rows.push(s)
+  }
+  return rows
+}
+
+/** Les perles d'une création, centrées sur sa boîte (en pas, y vers le haut). */
+export function pieceBeads(rows: string[]): { x: number; y: number; color: ColorId }[] {
+  const h = rows.length, w = Math.max(0, ...rows.map(r => r.length))
+  const out: { x: number; y: number; color: ColorId }[] = []
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    const color = LETTER[ch]
+    if (color) out.push({ x: c - (w - 1) / 2, y: (h - 1) / 2 - r, color })
+  }))
+  return out
+}
+
+/** La perle où passe l'anneau du pendentif : celle du milieu si elle est
+    près du haut (le creux d'un cœur : il pend droit), sinon la plus haute,
+    la plus proche du milieu. `above` : de combien les perles les plus hautes
+    dépassent au-dessus d'elle (l'anneau grandit pour passer par-dessus). */
+export function pieceHook(rows: string[]): { x: number; y: number; above: number } {
+  const beads = pieceBeads(rows)
+  if (!beads.length) return { x: 0, y: 0, above: 0 }
+  const top = Math.max(...beads.map(b => b.y))
+  const mid = Math.min(...beads.map(b => Math.abs(b.x)))
+  const centre = beads.filter(b => Math.abs(Math.abs(b.x) - mid) < 1e-6).sort((a, b) => b.y - a.y || a.x - b.x)[0]
+  const hook = top - centre.y <= 2 ? centre
+    : beads.filter(b => b.y === top).sort((a, b) => Math.abs(a.x) - Math.abs(b.x) || a.x - b.x)[0]
+  return { x: hook.x, y: hook.y, above: top - hook.y }
+}

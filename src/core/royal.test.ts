@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BEADS_MAX, CLIPS_MAX, HAIR_LEN_MAX, NECKS, PARTS, defaultRoyal, moodFor, normalizeRoyal, partsPresent, randomRoyal, royalKey,
-  wearBeads, type Bead
+  BEADS_MAX, CLIPS_MAX, HAIR_LEN_MAX, NECKS, PARTS, PIECE_MAX, defaultRoyal, hasNecklace, moodFor, normalizePiece, normalizeRoyal,
+  partsPresent, pieceSize, randomRoyal, royalKey, wearBeads, wearPendant, type Bead, type Piece
 } from './royal'
 
 /** Un hasard reproductible pour les tests. */
@@ -110,6 +110,74 @@ describe('le collier enfilé des Bijoux', () => {
       const r = randomRoyal(avec, rnd)
       vus.add(r.neck)
       expect(r.beads).toEqual(fil)
+    }
+    expect(vus.has('beads')).toBe(true)
+  })
+})
+
+describe('le pendentif de perles à repasser', () => {
+  const coeur: Piece = { rows: ['.RR.RR.', 'RRPRPRR', '.RRRRR.', '..RRR..', '...R...'] }
+  const fil: Bead[] = [{ k: 'pearl', c: '#F6EEF0' }, { k: 'heart', c: '#E8435F' }]
+
+  it('une vieille sauvegarde, sans pendentif, se relit sans que rien ne change', () => {
+    // Une princesse gardée avant le 1/10 : pas de champ `pendant`
+    const old = JSON.parse(royalKey(wearBeads(randomRoyal(defaultRoyal(), seeded(9)), fil))) as Record<string, unknown>
+    delete old.pendant
+    const r = normalizeRoyal(old)
+    expect(r.pendant).toBe(null)
+    expect(r).toEqual({ ...old, pendant: null })
+    expect(normalizeRoyal({ ...old, pendant: 'un cœur' }).pendant).toBe(null)
+  })
+
+  it('garde une création valide, recadrée, et jette les abîmées', () => {
+    expect(normalizePiece(coeur)).toEqual(coeur)
+    expect(normalizePiece({ rows: ['.....', '..R..', '.PP..', '.....'] })).toEqual({ rows: ['.R', 'PP'] })
+    expect(normalizePiece({ rows: ['RR', 'R'] })).toBe(null) // lignes de longueurs différentes
+    expect(normalizePiece({ rows: ['RX'] })).toBe(null) // une couleur inconnue
+    expect(normalizePiece({ rows: ['...', '...'] })).toBe(null) // pas une perle
+    expect(normalizePiece({ rows: Array.from({ length: PIECE_MAX + 1 }, () => 'R') })).toBe(null)
+    expect(normalizePiece(null)).toBe(null)
+    expect(pieceSize(coeur)).toBe(20)
+  })
+
+  it('s\'accroche au collier sans toucher à la princesse de départ, et le collier le garde', () => {
+    const base = wearBeads(defaultRoyal(), fil)
+    const before = royalKey(base)
+    const r = wearPendant(base, coeur)
+    expect(r.pendant).toEqual(coeur)
+    expect(r.neck).toBe('beads')
+    expect(r.beads).toEqual(fil)
+    expect(royalKey(base)).toBe(before)
+    expect(normalizeRoyal(JSON.parse(royalKey(r)))).toEqual(r)
+    // Un nouveau collier enfilé garde son pendentif au milieu
+    expect(wearBeads(r, [fil[1]]).pendant).toEqual(coeur)
+    // Décroché : le collier de perles reste
+    const sans = wearPendant(r, null)
+    expect(sans.pendant).toBe(null)
+    expect(sans.neck).toBe('beads')
+  })
+
+  it('sans perles enfilées, un fil de soie le porte ; décroché, plus de collier', () => {
+    const r = wearPendant(defaultRoyal(), coeur)
+    expect(r.beads).toEqual([])
+    expect(r.neck).toBe('beads')
+    expect(hasNecklace(r)).toBe(true)
+    expect(normalizeRoyal(JSON.parse(royalKey(r))).neck).toBe('beads')
+    const nu = wearPendant(r, null)
+    expect(nu.neck).toBe('none')
+    expect(hasNecklace(nu)).toBe(false)
+    expect(wearBeads(r, []).neck).toBe('beads') // le fil vide garde le pendentif
+  })
+
+  it('la surprise peut lui mettre son collier à pendentif', () => {
+    const avec = wearPendant(defaultRoyal(), coeur)
+    const rnd = seeded(13)
+    const vus = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      const r = randomRoyal(avec, rnd)
+      vus.add(r.neck)
+      expect(r.pendant).toEqual(coeur)
+      expect(normalizeRoyal(r)).toEqual(r)
     }
     expect(vus.has('beads')).toBe(true)
   })

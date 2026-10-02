@@ -17,6 +17,7 @@
    cher pour la tablette) : la plaque est translucide par simple opacité. */
 
 import type { T3 } from './three3d'
+import { PALETTE, pieceBeads, pieceHook } from './perles'
 
 type V3 = import('three').Vector3
 type Group = import('three').Group
@@ -52,11 +53,12 @@ function ringProfile(T: T3, ro: number, ri: number, h: number, bo: number, bi: n
 }
 
 /** Une perle à repasser, posée sur y = 0 (le trou sur l'axe Y). `fine` pour
-    la plaque (avec sa cible de morph « fondue »), `lite` pour les tas des
-    pots (moins de facettes, jamais fondue). */
-export function hamaGeo(T: T3, detail: 'fine' | 'lite' = 'fine') {
-  const seg = detail === 'fine' ? 18 : 12
-  const arc = 2
+    la plaque (avec sa cible de morph « fondue »), `lite` ou `tiny` pour les
+    tas des pots (moins de facettes, jamais fondue). */
+export function hamaGeo(T: T3, detail: 'fine' | 'lite' | 'tiny' = 'fine') {
+  // `tiny` : les tas de douze pots à la fois (les Bijoux), 144 triangles la perle
+  const seg = detail === 'fine' ? 18 : detail === 'lite' ? 12 : 8
+  const arc = detail === 'tiny' ? 1 : 2
   const g = new T.LatheGeometry(ringProfile(T, BEAD.ro, BEAD.ri, BEAD.h, 0.1, 0.05, arc), seg)
   if (detail === 'fine') {
     const f = new T.LatheGeometry(ringProfile(T, FUSED.ro, FUSED.ri, FUSED.h, 0.15, 0.04, arc), seg)
@@ -103,6 +105,10 @@ export interface Pegboard {
   rows: number
   /** Hauteur du dessus de la plaque. */
   top: number
+  /** Y a-t-il un picot en (c, r) ? (une plaque à forme n'en a pas partout) */
+  has(c: number, r: number): boolean
+  /** Une perle tombe, saute ou clignote encore (la scène doit se redessiner). */
+  readonly busy: boolean
   /** Le pied du picot (c, r), au ras de la plaque, en coordonnées de la plaque. */
   at(c: number, r: number, out?: V3): V3
   /** Le même point, dans la scène. */
@@ -130,17 +136,28 @@ export interface Pegboard {
   dispose(): void
 }
 
-export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number; opacity?: number }): Pegboard {
+/** Une plaque. `outline` (en pas, centré, y vers le haut : la rangée 0 en
+    haut) en fait une plaque à forme — cœur, étoile, rond — et `mask`
+    (case r·cols + c) dit où sont ses picots : ailleurs, rien ne se pose. */
+export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number; opacity?: number; outline?: [number, number][]; mask?: boolean[] }): Pegboard {
   const { cols, rows } = o
   const N = cols * rows
+  const mask = o.mask && o.mask.length === N ? o.mask : null
+  const has = (c: number, r: number) => c >= 0 && c < cols && r >= 0 && r < rows && (!mask || mask[r * cols + c])
   const group = new T.Group()
   const piece = new T.Group()
   group.add(piece)
   const disposers: (() => void)[] = []
 
-  // La plaque : un carré aux coins ronds, translucide (sans transmission)
+  // La plaque : un carré aux coins ronds (ou sa forme), translucide (sans transmission)
   const W = cols + 0.9, D = rows + 0.9
-  const plateGeo = slab(T, roundedRect(T, W, D, 0.9), 0.2, 0.06)
+  let shape = roundedRect(T, W, D, 0.9)
+  if (o.outline && o.outline.length > 2) {
+    shape = new T.Shape()
+    o.outline.forEach(([x, y], i) => { if (i) shape.lineTo(x, y); else shape.moveTo(x, y) })
+    shape.closePath()
+  }
+  const plateGeo = slab(T, shape, 0.2, 0.06)
   const plateMat = new T.MeshPhysicalMaterial({
     color: o.plate ?? 0xC9E2F0, roughness: 0.2, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.15,
     transparent: true, opacity: o.opacity ?? 0.8
@@ -158,13 +175,17 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
   const pegGeo = new T.CylinderGeometry(0.13, 0.18, PEG_H, 10, 1)
   pegGeo.translate(0, PEG_H / 2, 0)
   const pegMat = new T.MeshStandardMaterial({ color: o.plate ?? 0xC9E2F0, roughness: 0.3, metalness: 0 })
-  const pegs = new T.InstancedMesh(pegGeo, pegMat, N)
+  const nPegs = mask ? mask.filter(Boolean).length : N
+  const pegs = new T.InstancedMesh(pegGeo, pegMat, Math.max(1, nPegs))
+  pegs.count = nPegs
   const m4 = new T.Matrix4()
   const v = new T.Vector3()
+  let k = 0
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    if (!has(c, r)) continue
     at(c, r, v)
     m4.makeTranslation(v.x, v.y, v.z)
-    pegs.setMatrixAt(r * cols + c, m4)
+    pegs.setMatrixAt(k++, m4)
   }
   pegs.castShadow = true
   pegs.receiveShadow = true
@@ -204,6 +225,10 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
     beads.setMorphAt(i, morph)
   }
   beads.instanceMatrix.needsUpdate = true
+  // On ne dessine que jusqu'à la dernière case garnie : une plaque vide ne
+  // coûte rien (une perle cachée à l'échelle 0 garde ses triangles à
+  // calculer). Après `setMorphAt`, qui taille sa texture sur `count`.
+  beads.count = 0
 
   const DROP_T = 0.26, BOUNCE_T = 0.17, POP_T = 0.24, HOP_T = 0.34
 
@@ -271,6 +296,8 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
 
   const board: Pegboard = {
     group, piece, beads, cols, rows, top,
+    has,
+    get busy() { return active.size > 0 },
     at,
     world(c, r, y = 0) {
       group.updateWorldMatrix(true, false)
@@ -286,7 +313,7 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
         if (t < 0) return null
         const x = lr.origin.x + lr.direction.x * t, z = lr.origin.z + lr.direction.z * t
         const c = Math.round(x + (cols - 1) / 2), r = Math.round(z + (rows - 1) / 2)
-        return c >= 0 && c < cols && r >= 0 && r < rows ? { c, r } : null
+        return has(c, r) ? { c, r } : null
       }
       const hit = cell(top + BEAD.h * 0.96)
       if (hit && color[hit.r * cols + hit.c] >= 0 && pop[hit.r * cols + hit.c] < 0) return hit
@@ -297,6 +324,7 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
       return color[i] >= 0 && pop[i] < 0 ? color[i] : null
     },
     put(c, r, hex, opt = {}) {
+      if (!has(c, r)) return
       const i = r * cols + c
       color[i] = hex
       pop[i] = -1
@@ -310,6 +338,7 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
       beads.setMorphAt(i, morph)
       if (beads.morphTexture) beads.morphTexture.needsUpdate = true
       if (dropH[i] <= 0) drop[i] = -1
+      if (i + 1 > beads.count) beads.count = i + 1
       tint(i)
       beads.instanceColor!.needsUpdate = true
       active.add(i)
@@ -330,6 +359,7 @@ export function pegboard(T: T3, o: { cols: number; rows: number; plate?: number;
         beads.setMorphAt(i, morph)
       }
       active.clear()
+      beads.count = 0
       beads.instanceMatrix.needsUpdate = true
       if (beads.morphTexture) beads.morphTexture.needsUpdate = true
     },
@@ -389,12 +419,16 @@ export interface BeadPot {
   /** Le pot se soulève un peu et son anneau s'allume (la couleur choisie). */
   select(on: boolean): void
   update(dt: number): void
+  /** Il monte ou descend encore (la scène doit se redessiner). */
+  readonly moving: boolean
   dispose(): void
 }
 
 /** Un petit bol blanc rempli d'un tas de perles d'une couleur. `radius` en
-    unités de la scène, `bead` = la taille d'une perle (celle de la plaque). */
-export function beadPot(T: T3, hex: number, o: { radius: number; bead: number }): BeadPot {
+    unités de la scène, `bead` = la taille d'une perle (celle de la plaque).
+    `count` : les perles du tas, au plus (70) ; `calm` : choisi, il reste
+    levé sans se balancer (une scène qui ne se redessine qu'à la demande). */
+export function beadPot(T: T3, hex: number, o: { radius: number; bead: number; count?: number; calm?: boolean; detail?: 'lite' | 'tiny' }): BeadPot {
   const R = o.radius
   const group = new T.Group()
   const lift = new T.Group()
@@ -418,16 +452,17 @@ export function beadPot(T: T3, hex: number, o: { radius: number; bead: number })
   const b = o.bead
   const inner = R - wall * 1.8 - b * 0.45
   const spots: import('three').Vector3[] = []
+  const most = o.count ?? 70
   for (let layer = 0; layer < 3; layer++) {
     const rad = inner * (1 - layer * 0.3)
     const y = wall + b * (0.28 + layer * 0.62)
-    for (let tries = 0; tries < 260 && spots.length < 70; tries++) {
+    for (let tries = 0; tries < 260 && spots.length < most; tries++) {
       const a = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * rad
       const cand = new T.Vector3(Math.cos(a) * rr, y + Math.random() * b * 0.18, Math.sin(a) * rr)
       if (spots.every(q => q.distanceToSquared(cand) > (b * 0.86) ** 2)) spots.push(cand)
     }
   }
-  const heapGeo = hamaGeo(T, 'lite')
+  const heapGeo = hamaGeo(T, o.detail ?? 'lite')
   heapGeo.translate(0, -BEAD.h / 2, 0) // tourner autour du milieu de la perle
   const heapMat = beadMaterial(T)
   heapMat.color.setHex(hex)
@@ -452,14 +487,18 @@ export function beadPot(T: T3, hex: number, o: { radius: number; bead: number })
   ring.position.y = H * 0.55
   lift.add(ring)
   let on = false, k = 0, t = Math.random() * 6
+  const calm = !!o.calm
   return {
     group,
     select(v) { on = v },
+    get moving() { return Math.abs((on ? 1 : 0) - k) > 0.004 },
     update(dt) {
       t += dt
       k += ((on ? 1 : 0) - k) * Math.min(1, dt * 9)
-      lift.position.y = k * R * 0.22 + (on ? Math.sin(t * 3) * R * 0.02 : 0)
-      ringMat.opacity = k * (0.85 + Math.sin(t * 4) * 0.15)
+      if (Math.abs((on ? 1 : 0) - k) <= 0.004) k = on ? 1 : 0
+      const sway = calm ? 0 : 1
+      lift.position.y = k * R * 0.22 + (on ? Math.sin(t * 3) * R * 0.02 * sway : 0)
+      ringMat.opacity = k * (0.85 + Math.sin(t * 4) * 0.15 * sway)
       ring.visible = k > 0.02
     },
     dispose() {
@@ -764,4 +803,100 @@ export function ironing(T: T3, board: Pegboard, o: {
       paper.removeFromParent()
     }
   }
+}
+
+/* ---------- Une création fondue, en UNE géométrie (1/10) ----------
+   Ce que les Bijoux gardent d'une plaque repassée : la vitrine des
+   créations et le pendentif du collier. Une seule géométrie, la couleur de
+   chaque perle dans ses sommets : un seul appel de dessin et un seul
+   matériau (`vertexColors`), quel que soit le nombre de perles. */
+
+/** Les perles fondues d'une création (`rows` : une lettre par perle), en
+    pas, couchées à plat (l'épaisseur sur Y, de 0 à FUSED.h), centrées sur
+    leur boîte ; le haut du dessin vers −z, comme sur la plaque. `seg` : les
+    facettes d'une perle ; `hole` : avec son trou presque refermé (de près),
+    sinon un palet plein (de loin : un pendentif de 4 cm). */
+export function fusedPieceGeo(T: T3, rows: string[], o: { seg?: number; hole?: boolean } = {}): import('three').BufferGeometry {
+  const seg = o.seg ?? 10
+  const prof = o.hole === false
+    ? [new T.Vector2(0, 0), new T.Vector2(FUSED.ro - 0.15, 0), new T.Vector2(FUSED.ro, 0.15), new T.Vector2(FUSED.ro, FUSED.h - 0.15),
+      new T.Vector2(FUSED.ro - 0.15, FUSED.h), new T.Vector2(0, FUSED.h)]
+    : ringProfile(T, FUSED.ro, FUSED.ri, FUSED.h, 0.15, 0.04, 1)
+  const base = new T.LatheGeometry(prof, seg)
+  const beads = pieceBeads(rows)
+  const pos = base.attributes.position, nor = base.attributes.normal, idx = base.index!
+  const nv = pos.count, ni = idx.count, nb = beads.length
+  const P = new Float32Array(nv * nb * 3), Nn = new Float32Array(nv * nb * 3), C = new Float32Array(nv * nb * 3)
+  const I = nv * nb > 65535 ? new Uint32Array(ni * nb) : new Uint16Array(ni * nb)
+  const col = new T.Color()
+  beads.forEach((b, k) => {
+    col.setHex(PALETTE[b.color].hex)
+    for (let i = 0; i < nv; i++) {
+      const j = (k * nv + i) * 3
+      P[j] = pos.getX(i) + b.x; P[j + 1] = pos.getY(i); P[j + 2] = pos.getZ(i) - b.y
+      Nn[j] = nor.getX(i); Nn[j + 1] = nor.getY(i); Nn[j + 2] = nor.getZ(i)
+      C[j] = col.r; C[j + 1] = col.g; C[j + 2] = col.b
+    }
+    for (let j = 0; j < ni; j++) I[k * ni + j] = idx.getX(j) + k * nv
+  })
+  base.dispose()
+  const g = new T.BufferGeometry()
+  g.setAttribute('position', new T.BufferAttribute(P, 3))
+  g.setAttribute('normal', new T.BufferAttribute(Nn, 3))
+  g.setAttribute('color', new T.BufferAttribute(C, 3))
+  g.setIndex(new T.BufferAttribute(I, 1))
+  g.computeBoundingBox()
+  g.computeBoundingSphere()
+  return g
+}
+
+/** Le plastique d'une création fondue : satiné (le fer l'a lissé), la
+    couleur de chaque perle dans ses sommets. `simple` : sans vernis (la
+    princesse : un éclairage simple pour un si petit bijou). */
+export function fusedMaterial(T: T3, simple = false): import('three').Material {
+  return simple
+    ? new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0 })
+    // Un peu sombre : sous la lumière de la vitrine, l'ACES délave le rose en blanc
+    : new T.MeshPhysicalMaterial({ color: 0xE2E2E2, vertexColors: true, roughness: 0.34, metalness: 0, clearcoat: 0.45, clearcoatRoughness: 0.3 })
+}
+
+/** La taille d'un pas pour un pendentif (m, à taille réelle) : réduit — un
+    pendentif ne fait pas plus de 3,6 cm, et ses perles pas plus de 3 mm. */
+export const pendantPitch = (rows: string[]) => Math.min(0.003, 0.036 / Math.max(rows.length, ...rows.map(r => r.length)))
+
+export interface PendantGeos {
+  /** La création fondue, debout, face à +z. */
+  piece: import('three').BufferGeometry
+  /** Le petit anneau doré (de biais : le fil, le long de X, passe dedans). */
+  ring: import('three').BufferGeometry
+  /** Jusqu'où il descend sous le point d'accroche, et sa largeur. */
+  drop: number
+  width: number
+  /** Son épaisseur (centrée sur z = 0). */
+  thick: number
+}
+
+/** Le pendentif : la création debout, face à +z, pendue à son anneau.
+    L'origine est le point d'accroche — le haut de l'anneau, où passe le fil ;
+    l'anneau traverse le trou de la perle choisie par `pieceHook` (le creux
+    d'un cœur : il pend droit). `pitch` = la taille d'un pas (m). */
+export function pendantGeos(T: T3, rows: string[], pitch: number, o: { seg?: number; hole?: boolean } = {}): PendantGeos {
+  const piece = fusedPieceGeo(T, rows, o)
+  const hook = pieceHook(rows)
+  // Debout : (x, y, z) → (x, −z, y) — le haut du dessin vers +y, l'épaisseur vers +z
+  piece.rotateX(Math.PI / 2)
+  piece.translate(0, 0, -FUSED.h / 2)
+  // L'anneau grandit pour passer au-dessus des perles qui dépassent (les bosses du cœur)
+  const R = Math.max(0.8, (hook.above + 1.05) / 2)
+  piece.translate(-hook.x, -2 * R - hook.y, 0)
+  piece.scale(pitch, pitch, pitch)
+  piece.computeBoundingBox()
+  piece.computeBoundingSphere()
+  const bb = piece.boundingBox!
+  // L'anneau : tourné de biais (0,6 rad) — le fil le traverse encore, et de
+  // face on le voit (dans le plan du fil, il n'était qu'un trait)
+  const ring = new T.TorusGeometry(R * pitch, 0.21 * pitch, 6, 20)
+  ring.rotateY(0.6)
+  ring.translate(0, -R * pitch, 0)
+  return { piece, ring, drop: -bb.min.y, width: bb.max.x - bb.min.x, thick: FUSED.h * pitch }
 }

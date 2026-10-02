@@ -1854,3 +1854,24 @@ body.playing .po-card{max-width:880px;}
 .bj-arena .bj-tools,.bj-arena .bj-closeitem,.bj-arena .bj-princeitem,.bj-arena .bj-doneitem{display:none;}
 .bj-arena.ph-work .bj-tools,.bj-arena.ph-work .bj-closeitem,.bj-arena.ph-vitrine .bj-princeitem,
 .bj-arena.ph-princess .bj-doneitem{display:flex;}
+/* Les deux ateliers (1/10) : le collier, les perles à repasser */
+.bj-modes{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.bj-modes .tool-cap{white-space:normal;max-width:92px;text-align:center;line-height:1.1;}
+.bj-arena.md-hama .bj-c,.bj-arena.md-collier .bj-h,.bj-arena .bj-none{display:none !important;}
+.bj-arena .bj-ironitem,.bj-arena .bj-shapes,.bj-arena .bj-pots,.bj-arena .bj-choices,.bj-arena .bj-galbar{display:none;}
+.bj-arena.md-hama .bj-closeitem{display:none;}
+.bj-arena.ph-work.md-hama .bj-ironitem,.bj-arena.ph-work.md-hama .bj-shapes{display:flex;}
+.bj-arena.ph-work.md-hama .bj-pots{display:block;}
+.bj-pots{position:absolute;inset:0;pointer-events:none;z-index:3;}
+.bj-shapes{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);gap:14px;z-index:6;}
+.bj-shapes .sn-tool.sel{background:linear-gradient(135deg,var(--mango),var(--coral));}
+/* La création fondue en l'air : deux grands choix, qui arrivent après l'envol */
+.bj-arena.ph-fly.choose .bj-choices,.bj-arena.ph-gallery .bj-galbar{display:flex;}
+.bj-choices,.bj-galbar{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);gap:34px;z-index:6;
+  animation:bjIn .45s var(--spring) both;}
+.bj-big{width:92px;height:92px;}
+.bj-choices .tool-cap,.bj-galbar .tool-cap{font-size:15px;padding:4px 12px;}
+.bj-arena .bj-galcollar{display:none;}
+.bj-arena.ph-gallery.gsel .bj-galcollar{display:flex;}
+.bj-galcollar .sn-tool{animation:bjPulse 1.6s ease-in-out infinite;}
+@keyframes bjIn{from{opacity:0;transform:translate(-50%,24px) scale(.9);}to{opacity:1;transform:translate(-50%,0) scale(1);}}

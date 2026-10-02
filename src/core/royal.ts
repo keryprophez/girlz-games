@@ -9,6 +9,7 @@
    Tout est disponible dès le début : rien ne se débloque (règle 1). Le rendu
    3D est dans `core/princess3d.ts` et `core/pet3d.ts` ; ici, rien que des
    données, testées (`royal.test.ts`). */
+import { LETTER } from './perles'
 
 export type Pattern = 'none' | 'stars' | 'hearts' | 'flowers' | 'dots' | 'sparkle'
 export const PATTERNS: Pattern[] = ['none', 'stars', 'hearts', 'flowers', 'dots', 'sparkle']
@@ -76,6 +77,16 @@ export interface Bead { k: BeadKind; c: string }
 /** Un fil plein d'intercalaires dorés en tient à peu près autant. */
 export const BEADS_MAX = 80
 
+/* ---- Le pendentif (1/10) : une création de perles à repasser ----
+   Posée sur une plaque à picots des Bijoux, fondue au fer, elle se garde
+   en lignes, une lettre par perle (les pots de `perles.ts` : R rouge, P rose…,
+   `.` sans perle), recadrée sur ses perles. Accrochée au milieu du collier
+   par un petit anneau doré ; la même forme range la vitrine des créations. */
+export interface Piece { rows: string[] }
+/** La plus grande plaque fait 17 picots ; de la marge pour une plaque à venir. */
+export const PIECE_MAX = 29
+const INKS = new Set(Object.keys(LETTER))
+
 export interface Royal {
   v: 2
   skin: string
@@ -97,6 +108,9 @@ export interface Royal {
   /** Le collier enfilé dans les Bijoux (vide : il n'y en a pas encore).
       Elle le porte quand `neck` vaut `beads`. */
   beads: Bead[]
+  /** Son pendentif, au milieu du collier (null : pas de pendentif). Avec un
+      pendentif et sans perles, c'est un simple fil de soie qui le porte. */
+  pendant: Piece | null
 }
 
 /* ---- Palettes (hexadécimaux sRGB ; le rendu les assombrit pour l'ACES) ---- */
@@ -130,7 +144,8 @@ export function defaultRoyal(): Royal {
       pmane: { c: '#F2A0B8', p: 'none' },
       pbow: { c: '#B79AE8', p: 'none' }
     },
-    beads: []
+    beads: [],
+    pendant: null
   }
 }
 
@@ -151,6 +166,37 @@ const pick = <T>(list: readonly T[], v: unknown, d: T): T => (list.includes(v as
 const num = (v: unknown, lo: number, hi: number, d: number) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d
 const hex = (v: unknown, d: string) => (typeof v === 'string' && HEX.test(v) ? v : d)
+
+/** Relit une création de perles à repasser : des lignes de même longueur,
+    des lettres de pots connues, au moins une perle, recadrée sur ses perles.
+    Tout le reste (abîmé, vide, trop grand) : null. */
+export function normalizePiece(x: unknown): Piece | null {
+  if (!x || typeof x !== 'object') return null
+  const rows = (x as Record<string, unknown>).rows
+  if (!Array.isArray(rows) || !rows.length || rows.length > PIECE_MAX) return null
+  const w = typeof rows[0] === 'string' ? rows[0].length : 0
+  if (!w || w > PIECE_MAX) return null
+  for (const row of rows) {
+    if (typeof row !== 'string' || row.length !== w) return null
+    for (const ch of row) if (ch !== '.' && !INKS.has(ch)) return null
+  }
+  const lines = rows as string[]
+  const full = (s: string) => /[^.]/.test(s)
+  const col = (c: number) => lines.some(l => l[c] !== '.')
+  let r0 = 0, r1 = lines.length - 1, c0 = 0, c1 = w - 1
+  while (r0 <= r1 && !full(lines[r0])) r0++
+  if (r0 > r1) return null
+  while (!full(lines[r1])) r1--
+  while (!col(c0)) c0++
+  while (!col(c1)) c1--
+  return { rows: lines.slice(r0, r1 + 1).map(l => l.slice(c0, c1 + 1)) }
+}
+
+/** Le nombre de perles d'une création. */
+export const pieceSize = (p: Piece) => p.rows.reduce((n, l) => n + l.replace(/\./g, '').length, 0)
+
+/** A-t-elle un collier des Bijoux (des perles enfilées, ou un pendentif) ? */
+export const hasNecklace = (r: Pick<Royal, 'beads' | 'pendant'>) => r.beads.length > 0 || !!r.pendant
 
 /** Relit une princesse venue du stockage : tout champ absent, inconnu ou
     abîmé reprend sa valeur par défaut (une vieille sauvegarde ne casse rien). */
@@ -173,6 +219,8 @@ export function normalizeRoyal(x: unknown): Royal {
     if (!BEAD_KINDS.includes(q.k as BeadKind)) return []
     return [{ k: q.k as BeadKind, c: hex(q.c, '#F4F0EA') }]
   }).slice(0, BEADS_MAX)
+  // Le pendentif (1/10) : une vieille sauvegarde n'en a pas, rien ne change
+  const pendant = normalizePiece(o.pendant)
   return {
     v: 2,
     skin: hex(o.skin, d.skin),
@@ -196,22 +244,34 @@ export function normalizeRoyal(x: unknown): Royal {
     wings: pick(WINGS, o.wings, d.wings),
     crown: pick(CROWNS, o.crown, d.crown),
     // Porter le collier enfilé… à condition qu'il existe
-    neck: o.neck === 'beads' && beads.length ? 'beads' : pick(NECKS, o.neck, d.neck),
+    neck: o.neck === 'beads' && hasNecklace({ beads, pendant }) ? 'beads' : pick(NECKS, o.neck, d.neck),
     glasses: pick(GLASSES, o.glasses, d.glasses),
     shoes: pick(SHOES, o.shoes, d.shoes),
     held: pick(HELDS, o.held, d.held),
     pet: pick(PETS, o.pet, d.pet),
     paint,
-    beads
+    beads,
+    pendant
   }
 }
 
 /** Le collier des Bijoux passé à son cou (une copie : `r` ne change pas).
-    Un fil vide le lui retire. */
+    Son pendentif, s'il en a un, reste au milieu du nouveau fil. Un fil vide
+    sans pendentif le lui retire. */
 export function wearBeads(r: Royal, beads: Bead[]): Royal {
   const out = cloneRoyal(r)
   out.beads = normalizeRoyal({ beads }).beads
-  if (out.beads.length) out.neck = 'beads'
+  if (hasNecklace(out)) out.neck = 'beads'
+  else if (out.neck === 'beads') out.neck = 'none'
+  return out
+}
+
+/** Le pendentif accroché au milieu de son collier (une copie). Sans perles
+    enfilées, un fil de soie le porte ; `null` le décroche. */
+export function wearPendant(r: Royal, p: Piece | null): Royal {
+  const out = cloneRoyal(r)
+  out.pendant = normalizePiece(p)
+  if (hasNecklace(out)) out.neck = 'beads'
   else if (out.neck === 'beads') out.neck = 'none'
   return out
 }
@@ -243,7 +303,7 @@ export function randomRoyal(base: Royal, rnd: () => number = Math.random): Royal
   r.wings = rnd() < 0.3 ? any(['fairy', 'butterfly'] as Wings[]) : 'none'
   r.crown = any(CROWNS.slice(1))
   // Son collier de perles fait partie des surprises, s'il existe
-  r.neck = any(r.beads.length ? [...NECKS, 'beads'] as Neck[] : NECKS)
+  r.neck = any(hasNecklace(r) ? [...NECKS, 'beads'] as Neck[] : NECKS)
   r.glasses = rnd() < 0.12 ? any(['hearts', 'stars'] as Glasses[]) : 'none'
   r.shoes = any(SHOES)
   r.held = any(HELDS)

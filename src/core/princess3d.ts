@@ -2,6 +2,7 @@ import type { T3 } from './three3d'
 import type { Clip, Paint, Part, Pattern, Royal } from './royal'
 import { cloneRoyal } from './royal'
 import { beadKit, beadRun, orientQ, BEAD_LEN } from './bijoux3d'
+import { pendantGeos, pendantPitch } from './hama3d'
 
 /* LA PRINCESSE en 3D (27/09, refaite le soir même) — la première, construite
    en formes rondes, faisait « pantin de bois de 1950 » : la tête était une
@@ -1391,7 +1392,7 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       const h = mesh(sg(s, new T.ExtrudeGeometry(sh, { depth: 0.005, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.002, bevelSegments: 2 })), gem(0xD02850), 'deco')
       h.position.set(0, ny - 0.035, rz + 0.012)
       s.group.add(h)
-    } else if (look.neck === 'beads' && look.beads.length) {
+    } else if (look.neck === 'beads' && (look.beads.length || look.pendant)) {
       buildBeads(s, ny, rx, rz)
     }
   }
@@ -1435,20 +1436,30 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     // Il descend en U sur le corsage, comme un collier sur une robe (juste au
     // ras du corsage, il tombait sur le creux sombre entre le corsage et son
     // cou : on aurait dit un ras-de-cou noir). Assez de fil pour toutes ses
-    // perles : plus long, il descend encore ; au-delà, les perles rapetissent
+    // perles : plus long, il descend encore ; au-delà, les perles rapetissent.
+    // Son pendentif (1/10) : au milieu du fil, un peu de place pour son anneau
+    const pend = look.pendant
+    // À son échelle : un bijou qu'on voit de loin (6 cm au plus)
+    const pitchP = pend ? pendantPitch(pend.rows) * 1.7 : 0
+    const G = pend ? Math.max(0.003, pitchP * 0.9) : 0
     const clasp = 0.014
     const run0 = beadRun(beads, S0)
     let D = 0.045
     let curve = path(D), Lp = curve.getLength()
-    while (Lp < run0.total + clasp && D < 0.085) { D += 0.006; curve = path(D); Lp = curve.getLength() }
-    const S = Lp < run0.total + clasp ? S0 * (Lp - clasp) / run0.total : S0
+    while (Lp < run0.total + G + clasp && D < 0.085) { D += 0.006; curve = path(D); Lp = curve.getLength() }
+    const S = run0.total && Lp < run0.total + G + clasp ? S0 * (Lp - clasp - G) / run0.total : S0
     const run = S === S0 ? run0 : beadRun(beads, S)
-    const start = Lp / 2 - run.total / 2
+    // Les perles de part et d'autre du pendentif (la moitié « gauche » en a
+    // une de plus quand elles sont en nombre impair) ; sans pendentif, centrées
+    const half = pend ? Math.ceil(beads.length / 2) : beads.length
+    const gapAt = half > 0 ? run.at[half - 1] + BEAD_LEN[beads[half - 1].k] * S : 0
+    const start = pend ? Lp / 2 - gapAt - G / 2 : Lp / 2 - run.total / 2
     const kit = beadKit(T, { cheap: true })
     const by = new Map<string, { geo: Geo; m: M4 }[]>()
     const q = new T.Quaternion(), out = V(0, 0, 0), sc = V(S, S, S)
     beads.forEach((b, i) => {
-      const u = (start + run.at[i] + BEAD_LEN[b.k] * S / 2) / Lp
+      const u0 = (start + run.at[i] + (i >= half ? G : 0) + BEAD_LEN[b.k] * S / 2) / Lp
+      const u = ((u0 % 1) + 1) % 1 // le fil est fermé
       const p = curve.getPointAt(u), tg = curve.getTangentAt(u)
       out.set(p.x, 0, p.z).normalize()
       orientQ(T, q, tg, out)
@@ -1470,6 +1481,32 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     const ring = mesh(sg(s, new T.TorusGeometry(0.0042, 0.0012, 8, 20)), gold, 'deco')
     ring.position.copy(curve.getPointAt(0))
     s.group.add(ring)
+    if (pend) buildPendant(s, curve, pend.rows, pitchP)
+  }
+  /** Son pendentif (1/10) : la création de perles à repasser, fondue, UNE
+      géométrie aux couleurs dans ses sommets (un seul appel de dessin pour
+      toutes ses perles, un éclairage simple), pendue au milieu du fil par
+      son petit anneau doré. Il pend droit, et s'incline juste assez pour
+      rester posé SUR le corsage (son profil mesuré, `bust`). */
+  function buildPendant(s: Section, curve: import('three').CatmullRomCurve3, rows: string[], pitch: number) {
+    const pg = pendantGeos(T, rows, pitch, { seg: 8, hole: false })
+    const mat = std({ vertexColors: true, roughness: 0.38, metalness: 0 }, 0.92)
+    s.mats.push(mat)
+    const grp = new T.Group()
+    grp.name = 'pendentif'
+    grp.add(mesh(sg(s, pg.piece), mat, 'deco'), mesh(sg(s, pg.ring), gold, 'deco'))
+    const top = curve.getPointAt(0.5)
+    grp.position.copy(top)
+    // Le corsage est 9 mm au-dessus de son buste mesuré : le dos du pendentif
+    // reste devant lui, à chaque hauteur
+    let tilt = 0
+    for (let k = 1; k <= 8; k++) {
+      const d = (pg.drop * k) / 8
+      const need = bust(top.y - d).zf + 0.009 + pg.thick / 2 + 0.002
+      if (need > top.z) tilt = Math.max(tilt, Math.atan2(need - top.z, d))
+    }
+    grp.rotation.x = -Math.min(0.9, tilt)
+    s.group.add(grp)
   }
   function buildGlasses() {
     const s = section('glasses', head)
@@ -1674,7 +1711,7 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     wings: r.wings,
     hair: JSON.stringify([r.hair.style, r.hair.len.toFixed(3), r.hair.curl.toFixed(3)]),
     crown: JSON.stringify([r.crown, r.hair.style, r.hair.len.toFixed(2), r.hair.clips]),
-    neck: r.neck === 'beads' ? 'beads' + JSON.stringify(r.beads) : r.neck,
+    neck: r.neck === 'beads' ? 'beads' + JSON.stringify(r.beads) + JSON.stringify(r.pendant) : r.neck,
     glasses: r.glasses,
     held: r.held,
     colors: JSON.stringify([r.skin, r.eyes, r.freckles, r.paint.hair.c, r.paint.shoes.c])

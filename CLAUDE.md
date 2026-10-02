@@ -120,7 +120,9 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              hand.ts     ← LA MAIN QUI MONTRE (30/09) : le geste de chaque jeu
                            mimé par un gant blanc (`GameDef.hand`, lancé par
                            GameHost) — taper, glisser, trancher, tracer une
-                           forme (`trace`, le cœur du Feu d'artifice), ou
+                           forme (`trace`, le cœur du Feu d'artifice), taper
+                           l'un après l'autre (`taps`, le pot puis le picot
+                           des Bijoux), ou
                            `choose` (« l'un de ceux-là », sans appuyer :
                            jamais la réponse dans Apprendre)
              barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, le
@@ -145,10 +147,17 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            version FONDUE en morph par perle (`fuse`), les
                            pots de perles, l'axe lumineux, le fer et le
                            papier sulfurisé (`ironing`) — pour les Perles
-                           Miroir, et demain l'Atelier des bijoux
+                           Miroir et les Bijoux ; depuis le 1/10, les plaques
+                           à FORME (`outline` + `mask` : cœur, étoile, rond),
+                           et la création fondue en UNE géométrie aux
+                           couleurs dans ses sommets (`fusedPieceGeo`,
+                           `pendantGeos` : le pendentif et son anneau)
              perles.ts   ← leurs dessins en petites grilles (papillon, fraise,
                            cochon…), la palette des pots et les manches du
-                           Miroir (modèle, axe, reflet) — logique pure, testée
+                           Miroir (modèle, axe, reflet) ; les plaques à forme
+                           des Bijoux (`plateMask`, `plateOutline`) et une
+                           création en lignes de lettres (`pieceOf`,
+                           `pieceHook` : où passe l'anneau) — logique pure, testée
              bijoux3d.ts ← LES PERLES des Bijoux (30/09) en vraie 3D, à leur
                            taille réelle : nacrée irisée, verre, cristal
                            taillé, cœur, étoile, fleur, intercalaire, cube ;
@@ -190,7 +199,14 @@ dans `Royal.beads` (sorte + couleur, dans l'ordre du fil), porté quand
 `neck` vaut `beads` ; `wearNecklace` (store) le met à la princesse qu'on
 habille seule et l'offre aux garde-robes de Jade et de Joyce ; `princess3d`
 le construit sur elle (groupe `collier`, accroché au haut du buste, plus
-long = plus bas sur la poitrine, par-dessus le corsage).
+long = plus bas sur la poitrine, par-dessus le corsage). Son **pendentif**
+(1/10) : une création de perles à repasser des Bijoux, `Royal.pendant`
+(`Piece` : des lignes de lettres, recadrées ; `null` dans une vieille
+sauvegarde), accrochée au milieu du fil par un anneau doré (`wearPendant` ;
+sans perles enfilées, un fil de soie le porte : `hasNecklace`), construite
+en UNE géométrie (groupe `pendentif`, `MeshStandardMaterial` aux couleurs
+dans ses sommets), inclinée juste assez pour rester sur le corsage. La
+vitrine des créations est dans le store (`creations`, 24 au plus).
 Un petit bouton rond (la petite fille à couettes, en bas à gauche de la
 scène) ouvre l'**ancienne version**, Habille-toi (`games/doll.ts`, demandé
 le 28/09) ; une couronne y ramène, le dernier choix est retenu
@@ -444,6 +460,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 | **La voix lit le NOM des lettres** | Donnée à la synthèse, une lettre seule se dit par son nom (« m » → « èm », « p » → « pé »), et un bout de mot se devine mal (« com » → « comme », « fan » à l'anglaise, « in » aussi). Pour faire entendre un SON, on écrit ce qui se prononce juste : « mmm », « peu », « champ » pour « cham », « faon », « hein » — une table unique, `SOUNDS` dans `core/phonics.ts`, testée. Et `say()` coupe la phrase en cours : son, syllabe et mot passent par une FILE (`speak` dans `letters.ts`), un énoncé après l'autre. |
 | **Le creux sous son cou** | Le modèle VRM n'a PAS de peau sous son haut d'origine (caché) : entre le haut du corsage (`P.neck.y − 0,045`) et son cou, on voit ses cheveux derrière elle — une bande sombre. Un bijou posé là (le collier des Bijoux, 30/09, d'abord au ras du corsage) se lit de loin comme un ras-de-cou noir. Le collier descend donc en U SUR le corsage, en suivant sa surface (coupe en ellipse tirée de `bust(y)`, + 9 mm de tissu, + 18 mm sur le liseré). Le creux lui-même reste à combler. |
 | **Des centaines de petits objets trop fins** | Les perles du boîtier des Bijoux (30/09), reprises telles quelles de la maquette : cœurs, étoiles et fleurs extrudés à 24 segments par courbe, sphères 28 × 20 — 661 000 triangles par image, rendus trois fois (ombres, passe de réfraction, image) : 3 s par image sous la 3D logicielle, la page bloquée des minutes. Un objet de 25 px à l'écran se contente de 8 segments (145 000 triangles, 0,8 s). Et UN matériau à `transmission` fait rendre TOUTE la scène une fois de plus : la vraie réfraction reste pour les vues fixes (la vitrine) ; là où l'on joue, un verre « simulé » (transparent, vernis, un peu lumineux). Compter `renderer.info.render.triangles` avant de valider une scène. Et une scène presque toujours immobile (l'établi, tant qu'aucune perle ne bouge) ne se redessine qu'à la demande (`stage.render` qui ne rend que si quelque chose a bougé, retiré dès que tout s'anime) : sous la 3D logicielle, la page redevient disponible pour le doigt. |
+| **`InstancedMesh` : `count` et `setMorphAt`** | `setMorphAt` taille sa texture de morph sur `count` LA PREMIÈRE FOIS : mis à 0 avant (pour ne dessiner que les cases garnies d'une plaque), elle naît vide et le premier `setMorphAt` lève — la plaque ne se construisait plus, sans un message hors de la console. On remplit d'abord (matrices, couleurs, morphs), on baisse `count` ensuite (`pegboard` dans `core/hama3d.ts`). Et une instance cachée à l'échelle 0 garde ses triangles à calculer : 225 perles vides comptaient 105 000 triangles par passe. |
 | **Ports « interdits » de fetch** | `fetch()` de Node refuse le port 4190 (liste des bad ports). Les scripts de vérification utilisent 4188/4189 ; ne pas prendre 4190 ni 6000. |
 
 ---
@@ -458,7 +475,7 @@ modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
 4. `npm run test:smoke` avant tout commit — il **bloque le déploiement** en CI.
-   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 32 scénarios, le Potager en a quatre, le Feu d'artifice et le Puzzle deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` fait jouer **un bot par jeu** (1/10 : 33 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot et son accroche
    `window.__xx` (posée seulement si `window.__BOT`). Plusieurs sessions en
    parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre

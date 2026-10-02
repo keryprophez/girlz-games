@@ -15,7 +15,7 @@ import { addPrincessPage, idbPut } from '../core/atelierdb'
 import { mountDoll } from './doll'
 import {
   CAPES, CLIP_KINDS, CLIPS_MAX, CROWNS, DYES, EYES, GLASSES, HAIR_LEN_MAX, HAIR_STYLES, HAIRS, HELDS, NECKS, PATTERNS, PETS,
-  SHOES, SKINS, SKIRTS, TOPS, WINGS, cloneRoyal, moodFor, partsPresent, randomRoyal, royalKey, secondRoyal,
+  SHOES, SKINS, SKIRTS, TOPS, WINGS, cloneRoyal, hasNecklace, moodFor, partsPresent, randomRoyal, royalKey, secondRoyal,
   type ClipKind, type Paint, type Part, type Pattern, type Royal
 } from '../core/royal'
 import { some, visible } from '../core/hand'
@@ -362,7 +362,7 @@ function tilesFor(tab: Tab, r?: Royal): { title: string; tiles: TileDef[] }[] {
   if (tab === 'crown') return [
     { title: 'crown', tiles: CROWNS.map(v => t('crown', v, 'head')) },
     { title: 'glasses', tiles: GLASSES.map(v => t('glasses', v, 'head')) },
-    { title: 'neck', tiles: [...NECKS, ...(r?.beads.length ? ['beads' as const] : [])].map(v => t('neck', v, 'bust')) }
+    { title: 'neck', tiles: [...NECKS, ...(r && hasNecklace(r) ? ['beads' as const] : [])].map(v => t('neck', v, 'bust')) }
   ]
   if (tab === 'magic') return [
     { title: 'wings', tiles: WINGS.map(v => t('wings', v, 'back')) },
@@ -1436,6 +1436,8 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
             return n
           })
         },
+        /** Le pendentif de perles à repasser, porté par chacune (construit en 3D sur elle). */
+        get pendentif() { return me.dolls.map(d => !!d.p?.obj.getObjectByName('pendentif')) },
         get active() { return me.active },
         get tab() { return me.tab },
         get tool() { return me.tool },
