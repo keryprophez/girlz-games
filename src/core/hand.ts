@@ -182,7 +182,15 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
             if (!ghost && 'drag' in mv && mv.ghost && sa instanceof HTMLElement) {
               const r = sa.getBoundingClientRect()
               ghost = sa.cloneNode(true) as HTMLElement
-              ghost.removeAttribute('id')
+              // Une copie pour l'œil seulement : sans son id ni ses repères
+              // `data-*`, sinon elle passe pour un second bouton (un bot qui
+              // cherchait LA tuile en trouvait deux, 1/10)
+              for (const el of [ghost, ...ghost.querySelectorAll<HTMLElement>('*')]) {
+                el.removeAttribute('id')
+                for (const a of [...el.attributes]) if (a.name.startsWith('data-')) el.removeAttribute(a.name)
+              }
+              ghost.setAttribute('aria-hidden', 'true')
+              ghost.inert = true
               ghost.classList.add('hand-ghost')
               Object.assign(ghost.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', margin: '0' })
               layer.insertBefore(ghost, hand)
