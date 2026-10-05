@@ -67,7 +67,11 @@ Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque),
 et l'Animal qui répète (un animal de la ferme sur sa botte de foin redit ce
 qu'on lui dit avec sa voix à lui — poussin accéléré, cochon qui finit en
 grognant, vache grave, mouton qui chevrote, canard, chat —, ou à l'envers ;
-rien n'est gardé, le son ne quitte pas la tablette).
+rien n'est gardé, le son ne quitte pas la tablette), et la Ferme à
+construire (on glisse grange, poulailler, pommier, mare, tracteur… et les
+douze animaux sur un plateau vide, on trace chemins et clôtures au doigt ;
+les animaux vont à leur place — le canard à la mare, le cochon dans la
+boue — ; de jour ou de nuit, et la ferme se garde).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

@@ -135,6 +135,16 @@ export const BADGE: Record<string, string> = {
     <rect x="21" y="35" width="8" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
   // Le Flipper : la table en bois vue de haut, deux animaux-bumpers, la bille, les deux batteurs
+  // La Ferme à construire : la grange rouge sur son pré, une clôture, une étincelle
+  farmbuild: svg(`
+    <ellipse cx="24" cy="40" rx="20" ry="5" fill="${C.meadow}"/>
+    <path d="M9 39V22l11-9 11 9v17z" fill="${C.coral}"/>
+    <path d="M6 23 20 11l14 12" fill="none" stroke="${C.coralDark}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="15" y="27" width="10" height="12" fill="${C.cream}"/>
+    <path d="M15 27l10 12M25 27 15 39" stroke="${C.coral}" stroke-width="1.8"/>
+    <g fill="${C.woodDark}"><rect x="33" y="29" width="2.6" height="11" rx=".8"/><rect x="40" y="29" width="2.6" height="11" rx=".8"/><rect x="31.5" y="31.5" width="12.5" height="2.2"/><rect x="31.5" y="36" width="12.5" height="2.2"/></g>
+    <path d="M38 8l1.6 4.4L44 14l-4.4 1.6L38 20l-1.6-4.4L32 14l4.4-1.6z" fill="${C.sun}"/>
+  `),
   // L'Animal qui répète : le cochon qui parle, bouche ouverte, ses ondes
   parrot: svg(`
     <path d="M9.5 17 12 6.5l8.5 6.5z" fill="${C.pink}"/>

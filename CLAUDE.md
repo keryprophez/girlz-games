@@ -188,7 +188,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            (`FarmSlot` : 'top', 'face', 'rear', 'tree'), la
                            nuit (lune, lucioles, lanternes) ; `bake()` fond ce
                            qui ne bouge pas en un mesh par matériau ;
-                           `bale()` : une botte de foin de plus
+                           `bale()` : une botte de foin de plus ; depuis le
+                           5/10, `{ empty: true }` (le plateau seul) et
+                           `make(id)` : une pièce qu'on pose où l'on veut
+                           (`PieceId`, la Ferme à construire ; ses vignettes :
+                           `piecePortraits` de `core/portraits.ts`)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -407,7 +411,11 @@ qui répète, 5/10 : un animal sur sa botte de foin dans l'enclos de cette
 ferme, `critterKit(T, { fine: true })` pour les gros plans ; le micro ne
 s'ouvre que là, se coupe en pause et en sortant, et n'écoute pas pendant
 qu'il parle ; son bot parle par un faux micro, un WAV que `play.mjs`
-génère et que Chromium lit en boucle). La Course,
+génère et que Chromium lit en boucle) · `farmbuild` (la Ferme à
+construire, 5/10 : le plateau de Cache-Cache vide, les pièces glissées du
+tiroir — par `pointerId`, écouté sur `window` —, chemins et clôtures au
+doigt, les animaux qui vont à leur place ; la ferme se garde dans
+`ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -458,7 +466,7 @@ ligne quand on en paie un nouveau.
    → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
    minutes. Tous les bots : lancement manuel du workflow avec « tous ».
    `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
-   `npm run test:play` a **un bot par jeu** (5/10 : 37 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (5/10 : 38 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

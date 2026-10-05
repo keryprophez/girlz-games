@@ -1499,6 +1499,67 @@ await scenario('animal-qui-repete', async () => {
     .catch(async () => { throw new Error(`en sortant, le micro reste ouvert (${await etat()})`) })
 })
 
+/* 🏡 La Ferme à construire : glisser la grange du tiroir, toucher la mare,
+   deux animaux (la vache se promène), la grange au panier, un chemin et une
+   clôture au doigt, la gomme ; on sort, on revient : la ferme est gardée ;
+   puis la nuit. */
+await scenario('ferme-a-construire', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.evaluate(() => localStorage.removeItem('ferme:construire'))
+  await openGame('La Ferme à construire', '__fb')
+  await page.waitForFunction(() => window.__fb.ready, null, { timeout: 120000, polling: 500 })
+  const etat = () => page.evaluate(() => JSON.stringify({ p: window.__fb.pieces.map(x => x.id), a: window.__fb.animals.map(x => x.id), ch: window.__fb.paths, cl: window.__fb.fences, n: window.__fb.night }))
+  const cv = await page.locator('.fb-wrap canvas').boundingBox()
+  const glisse = async (from, to, steps = 14) => {
+    await page.mouse.move(from.x, from.y); await page.mouse.down()
+    for (let i = 1; i <= steps; i++) await page.mouse.move(from.x + (to.x - from.x) * i / steps, from.y + (to.y - from.y) * i / steps)
+    await page.mouse.up()
+  }
+  const centre = async sel => { const b = await page.locator(sel).first().boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 } }
+  // La grange, glissée du tiroir sur la ferme
+  await glisse(await centre('.fb-item[data-id="barn"]'), { x: cv.x + cv.width * 0.4, y: cv.y + cv.height * 0.4 })
+  await page.waitForFunction(() => window.__fb.pieces.length === 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la grange n'est pas posée (${await etat()})`) })
+  // La mare, juste touchée
+  await page.locator('.fb-tab[data-tab="nature"]').click()
+  await page.locator('.fb-item[data-id="pond"]').click()
+  await page.waitForFunction(() => window.__fb.pieces.length === 2, null, { timeout: 10000 })
+  // Deux animaux ; la vache se promène
+  await page.locator('.fb-tab[data-tab="animaux"]').click()
+  await page.locator('.fb-item[data-id="cow"]').click()
+  await page.locator('.fb-item[data-id="duck"]').click()
+  await page.waitForFunction(() => window.__fb.animals.length === 2, null, { timeout: 10000 })
+  const v0 = await page.evaluate(() => window.__fb.animals[0])
+  await page.waitForFunction(v => { const a = window.__fb.animals[0]; return Math.hypot(a.x - v.x, a.z - v.z) > 0.3 }, v0, { timeout: 30000, polling: 250 })
+    .catch(async () => { throw new Error(`la vache ne bouge pas (${await etat()})`) })
+  // La grange au panier
+  await glisse(await page.evaluate(() => window.__fb.at(0)), await centre('#fbTrash'), 18)
+  await page.waitForFunction(() => window.__fb.pieces.length === 1 && window.__fb.pieces[0].id === 'pond', null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la grange n'est pas au panier (${await etat()})`) })
+  // Un chemin, une clôture, puis la gomme sur le chemin
+  const trait = async (y) => glisse({ x: cv.x + cv.width * 0.25, y: cv.y + cv.height * y }, { x: cv.x + cv.width * 0.7, y: cv.y + cv.height * (y + 0.05) }, 20)
+  await page.locator('.fb-tool[data-tool="path"]').click()
+  await trait(0.55)
+  await page.locator('.fb-tool[data-tool="fence"]').click()
+  await trait(0.3)
+  await page.waitForFunction(() => window.__fb.paths === 1 && window.__fb.fences === 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`chemin ou clôture manquant (${await etat()})`) })
+  await page.locator('.fb-tool[data-tool="erase"]').click()
+  await trait(0.55)
+  await page.waitForFunction(() => window.__fb.paths === 0 && window.__fb.fences === 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la gomme n'a pas effacé le chemin (${await etat()})`) })
+  // On sort, on revient : la ferme est gardée
+  await page.locator('.pbtn[aria-label="Menu"]').click()
+  await openGame('La Ferme à construire', '__fb')
+  await page.waitForFunction(() => window.__fb.ready && window.__fb.pieces.length === 1 && window.__fb.animals.length === 2 && window.__fb.fences === 1, null, { timeout: 120000, polling: 500 })
+    .catch(async () => { throw new Error(`la ferme n'est pas gardée (${await etat()})`) })
+  // La nuit
+  await page.locator('#fbNight').click()
+  await page.waitForFunction(() => window.__fb.ready && window.__fb.night && window.__fb.pieces.length === 1, null, { timeout: 120000, polling: 500 })
+    .catch(async () => { throw new Error(`la nuit ne vient pas (${await etat()})`) })
+  await page.evaluate(() => localStorage.removeItem('ferme:construire'))
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 

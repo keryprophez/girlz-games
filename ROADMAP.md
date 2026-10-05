@@ -1043,8 +1043,20 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   l'enclos, la ferme tourne. Bots `cache-cache-jour` et `cache-cache-nuit`
   (passent aussi avec `THROTTLE=4`). **Reste : la tablette** (`?fps`, la
   nuit surtout : une lampe à ombre portée).
-- **18. La Ferme à construire** (nouveau, Créer, 3D) : poser bâtiments,
-  enclos, mare, arbres, chemins, puis les 14 animaux qui y vivent.
+- ✅ **18. La Ferme à construire** (5/10, Créer, 3D ; plan validé « go »,
+  maquette « oui ») : le plateau de Cache-Cache, vide ; en bas un tiroir à
+  quatre onglets (Bâtiments, Nature, Objets, Animaux — leurs vignettes
+  rendues une fois et gardées), et les outils Chemin, Clôture, Gomme,
+  Panier. On glisse une pièce sur la ferme (ou on la touche : elle tombe
+  devant, à une place libre), on la reprend pour la déplacer, on la touche
+  pour un quart de tour, on la jette au panier ; deux doigts pincent, un
+  doigt fait tourner la ferme. Les douze animaux se promènent et filent à
+  leur place (canard → mare, cochon → boue, poule, coq et poussin →
+  poulailler, chien → niche, cheval et vache → grange, lapin → potager…),
+  répondent de leur vraie voix. Jour / nuit (la lanterne de la grange). La
+  ferme se garde (`ferme:construire`, une pour la famille). Bot
+  `ferme-a-construire`. **Reste : la tablette** (`?fps` avec une ferme
+  pleine : 36 pièces, 20 animaux au plus).
 - ✅ **19. L'Animal qui répète** (5/10, Créer, 3D ; « GO », maquette
   validée « oui ») : un animal de la ferme assis sur une botte de foin au
   milieu de l'enclos de Cache-Cache (le pommier, la meule, le tas de bois

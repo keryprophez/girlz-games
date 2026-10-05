@@ -47,6 +47,7 @@ const OWN = {
     'src/core/pet3d.ts', 'src/core/castle3d.ts', 'src/core/doll3d.ts', 'src/core/character.ts'],
   'cache-cache': ['src/games/hideseek.ts', 'src/core/farm3d.ts'],
   'animal-qui-repete': ['src/games/parrot.ts', 'src/core/voicefx.ts', 'src/core/mic.ts'],
+  'ferme-a-construire': ['src/games/farmbuild.ts', 'src/core/farm3d.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux
 const NO_BOT = new Set(['src/games/sentences.ts', 'src/games/index.ts'])
