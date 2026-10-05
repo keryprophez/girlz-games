@@ -86,6 +86,8 @@ export interface FarmSpot {
 export interface Farm {
   /** Le plateau qui tourne : tout ce qui est sur la ferme en est l'enfant. */
   root: Group
+  /** Le rayon du plateau. */
+  r: number
   spots: FarmSpot[]
   /** Tout ce qui cache la vue (toucher, visibilité). */
   occ: Mesh[]
@@ -116,6 +118,8 @@ export interface Piece {
 }
 
 export const PLATEAU_R = 8
+/** Le rayon de la grande ferme (Cache-Cache à l'éclair et à la flamme, 6/10). */
+export const BIG_R = 13
 
 /* ---------- Peindre au canvas ---------- */
 function paint(w: number, h = w) {
@@ -362,6 +366,28 @@ function soilTex(T: T3) {
   return tex(T, c, 1)
 }
 
+/** La tôle ondulée du silo : des bandes verticales claires et sombres, des rivets, un peu de rouille. */
+function siloTex(T: T3) {
+  const W = 256, H = 128
+  const { c, g } = paint(W, H)
+  for (let x = 0; x < W; x++) {
+    const v = 0.5 + 0.5 * Math.sin(x / W * Math.PI * 2 * 16)
+    const l = Math.round(150 + v * 70)
+    g.fillStyle = `rgb(${l},${l + 4},${l + 10})`; g.fillRect(x, 0, 1, H)
+  }
+  // Les joints des tôles et leurs rivets
+  for (let y = 0; y < H; y += 32) {
+    g.fillStyle = 'rgba(40,44,52,.35)'; g.fillRect(0, y, W, 2)
+    g.fillStyle = 'rgba(30,32,40,.45)'
+    for (let x = 4; x < W; x += 16) { g.beginPath(); g.arc(x, y + 5, 1.3, 0, 7); g.fill() }
+  }
+  for (let i = 0; i < 30; i++) {
+    g.fillStyle = `rgba(${120 + Math.random() * 40},${70 + Math.random() * 20},40,${0.08 + Math.random() * 0.12})`
+    g.fillRect(Math.random() * W, Math.random() * H, 2 + Math.random() * 6, 6 + Math.random() * 24)
+  }
+  return tex(T, c, 3, 3)
+}
+
 function skyTex(T: T3, top: string, mid: string, bottom: string) {
   const { c, g } = paint(2, 256)
   const gr = g.createLinearGradient(0, 0, 0, 256)
@@ -490,7 +516,15 @@ function mats(T: T3, stage: Stage) {
     yard: S({ map: yardTex(T), transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }),
     rope: S({ color: 0x8A7048, roughness: 0.9 }),
     cloth: S({ color: 0x3A5E9A, roughness: 0.8 }),
-    shirt: S({ color: 0x9A3A2A, roughness: 0.8 })
+    shirt: S({ color: 0x9A3A2A, roughness: 0.8 }),
+    // La grande ferme (6/10) : le maïs, le silo, le moulin, les citrouilles
+    corn: S({ vertexColors: true, roughness: 0.82, side: T.DoubleSide }),
+    cob: S({ color: 0xE8BE3A, roughness: 0.55 }),
+    silo: S({ map: k(siloTex(T)), roughness: 0.42, metalness: 0.55 }),
+    siloTop: S({ color: 0x8E949C, roughness: 0.35, metalness: 0.6 }),
+    sail: S({ color: 0xEDE3CC, roughness: 0.9, side: T.DoubleSide }),
+    pumpkin: S({ color: 0xE0741A, roughness: 0.55 }),
+    burlap: S({ color: 0xC8A870, roughness: 1 })
   }
 }
 
@@ -1160,6 +1194,315 @@ function woodpile(K: Kit): Built {
   }
 }
 
+/* ---------- La grande ferme (6/10, Cache-Cache pour Joyce) ----------
+   Autour de la cour, un second cercle : le champ de maïs et son épouvantail,
+   le silo, le moulin, le ruisseau et son petit pont, le verger, les
+   citrouilles. Même style que le reste : formes pleines, matières peintes. */
+
+/** Teint une géométrie d'une couleur (pour fondre des morceaux de couleurs différentes). */
+function tint(T: T3, g: Geo, hex: number, dark = 0) {
+  const c = new T.Color(hex), pos = g.attributes.position
+  g.computeBoundingBox()
+  const bb = g.boundingBox!
+  const col = new Float32Array(pos.count * 3)
+  for (let i = 0; i < pos.count; i++) {
+    const k = 1 - dark + dark * (pos.getY(i) - bb.min.y) / Math.max(0.01, bb.max.y - bb.min.y)
+    col[i * 3] = c.r * k; col[i * 3 + 1] = c.g * k; col[i * 3 + 2] = c.b * k
+  }
+  g.setAttribute('color', new T.BufferAttribute(col, 3))
+  return g
+}
+
+/** Un pied de maïs : la tige, six feuilles qui retombent en spirale, la fleur en haut (hauteur 1). */
+function cornStalk(K: Kit): Geo {
+  const { T, U } = K
+  const parts: Geo[] = []
+  const stem = new T.CylinderGeometry(0.02, 0.03, 1, 6)
+  stem.translate(0, 0.5, 0)
+  parts.push(tint(T, stem, 0x6E9A3A, 0.3))
+  for (let k = 0; k < 6; k++) {
+    const L = 0.42 + 0.12 * ((k * 7) % 3)
+    const leaf = new T.PlaneGeometry(0.075, L, 1, 6)
+    const p = leaf.attributes.position
+    for (let i = 0; i < p.count; i++) {
+      const t = (p.getY(i) + L / 2) / L
+      // Elle part vers le haut, s'écarte, puis retombe ; elle s'effile au bout
+      p.setXYZ(i, p.getX(i) * (1 - t * 0.8), Math.sin(t * 1.5) * L * 0.42 - t * t * L * 0.3, t * L * 0.86)
+    }
+    leaf.rotateY(k * 2.4)
+    leaf.translate(0, 0.22 + k * 0.12, 0)
+    parts.push(tint(T, leaf, k % 2 ? 0x5E9438 : 0x6EA440, 0.35))
+  }
+  // La fleur du haut : quelques brins fins qui s'écartent
+  for (let k = 0; k < 5; k++) {
+    const br = new T.ConeGeometry(0.008, 0.2, 4)
+    br.translate(0, 0.1, 0)
+    br.rotateZ(k ? 0.45 : 0)
+    br.rotateY(k * 1.26)
+    br.translate(0, 1.0, 0)
+    parts.push(tint(T, br, 0xC8A050))
+  }
+  const g = U.mergeGeometries(parts.map(x => x.toNonIndexed()))!
+  parts.forEach(x => x.dispose())
+  g.computeVertexNormals()
+  return g
+}
+
+function cornfield(K: Kit): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const W = 3.6, D = 2.8, rows = 8, per = 8
+  // La terre labourée, ses sillons
+  const bed = mk(T, K.box, M.soil, [0, 0.025, 0], [W + 0.3, 0.05, D + 0.3])
+  bed.castShadow = false
+  g.add(bed)
+  // Les pieds, en rangs (des trous : on s'y faufile)
+  const holes = new Set(['2,3', '5,2', '3,6', '6,5'])
+  const stalks: { p: number[]; s: number[]; r: number[] }[] = []
+  const cobs: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let i = 0; i < rows; i++) for (let j = 0; j < per; j++) {
+    if (holes.has(`${i},${j}`)) continue
+    const x = -W / 2 + (i + 0.5) * W / rows + (Math.random() - 0.5) * 0.08
+    const z = -D / 2 + (j + 0.5) * D / per + (Math.random() - 0.5) * 0.1
+    const h = 1.55 + Math.random() * 0.4
+    const ry = Math.random() * 6.28
+    stalks.push({ p: [x, 0.04, z], s: [1.1, h, 1.1], r: [(Math.random() - 0.5) * 0.08, ry, (Math.random() - 0.5) * 0.08] })
+    if ((i + j) % 2 === 0) cobs.push({ p: [x + Math.cos(ry) * 0.06, 0.04 + h * 0.5, z + Math.sin(ry) * 0.06], s: [1, 1, 1], r: [0.35 * Math.cos(ry), 0, 0.35 * Math.sin(ry)] })
+  }
+  g.add(many(K, cornStalk(K), M.corn, stalks))
+  const cob = new T.CapsuleGeometry(0.045, 0.14, 3, 8)
+  g.add(many(K, cob, M.cob, cobs))
+  const husk = new T.ConeGeometry(0.055, 0.2, 6, 1, true)
+  husk.translate(0, -0.05, 0)
+  const hk = many(K, husk, M.sprout, cobs)
+  hk.userData.noOcc = true
+  g.add(hk)
+  // L'épouvantail, devant le champ
+  const sc = scarecrow(K)
+  sc.position.set(-W / 2 - 0.2, 0, D / 2 + 0.45)
+  sc.rotation.y = 0.5
+  g.add(sc)
+  const slot = (id: string, i: number, j: number): FarmSlot => ({
+    id, type: 'top', at: [-W / 2 + (i + 0.5) * W / rows, 0.04, -D / 2 + (j + 0.5) * D / per], rim: 0.55, w: 0.6, sizes: ['s', 'm'], group: 'mais-' + id
+  })
+  return {
+    g, matter: 'feuilles', aim: [0, 1.0, D / 2], foot: 2.4, sway: 1,
+    slots: [slot('mais-1', 2, 3), slot('mais-2', 5, 2), slot('mais-3', 3, 6), slot('mais-4', 6, 5)]
+  }
+}
+
+/** L'épouvantail : un piquet, une chemise rapiécée, un chapeau de paille, de la paille qui dépasse. */
+function scarecrow(K: Kit): Group {
+  const { T, M } = K
+  const g = new T.Group()
+  g.add(mk(T, K.cyl, M.woodDark, [0, 0.95, 0], [0.04, 1.9, 0.04]))
+  g.add(mk(T, K.box, M.woodDark, [0, 1.42, 0], [1.1, 0.06, 0.06]))
+  g.add(mk(T, K.box, M.shirt, [0, 1.25, 0], [0.42, 0.52, 0.24]))
+  for (const s of [-1, 1]) {
+    g.add(mk(T, K.box, M.shirt, [s * 0.36, 1.4, 0], [0.34, 0.16, 0.18]))
+    g.add(mk(T, new T.ConeGeometry(0.07, 0.18, 6), M.straw, [s * 0.6, 1.4, 0], 1, [0, 0, s * Math.PI / 2]))
+  }
+  g.add(mk(T, K.box, M.cloth, [0, 0.9, 0], [0.4, 0.22, 0.22]))
+  g.add(mk(T, K.box, M.cloth, [0.06, 1.3, 0.125], [0.12, 0.12, 0.01]))
+  g.add(mk(T, K.sph, M.burlap, [0, 1.72, 0], [0.17, 0.19, 0.17]))
+  for (const s of [-1, 1]) g.add(mk(T, K.sph, M.dark, [s * 0.06, 1.75, 0.15], 0.022))
+  g.add(mk(T, K.cyl, M.straw, [0, 1.86, 0], [0.32, 0.025, 0.32]))
+  g.add(mk(T, K.cyl, M.straw, [0, 1.95, 0], [0.15, 0.18, 0.15]))
+  g.add(mk(T, K.cyl, M.shirt, [0, 1.9, 0], [0.155, 0.04, 0.155]))
+  return g
+}
+
+function silo(K: Kit): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const r = 0.85, h = 3.7
+  g.add(mk(T, K.cyl, M.stoneCap, [0, 0.12, 0], [r + 0.08, 0.24, r + 0.08]))
+  g.add(mk(T, new T.CylinderGeometry(r, r, h, 32, 1, true), M.silo, [0, h / 2 + 0.2, 0]))
+  g.add(mk(T, new T.SphereGeometry(r * 1.03, 32, 10, 0, Math.PI * 2, 0, Math.PI / 2), M.siloTop, [0, h + 0.2, 0], [1, 0.55, 1]))
+  g.add(mk(T, K.cyl, M.siloTop, [0, h + 0.2 + r * 0.55, 0], [0.16, 0.14, 0.16]))
+  // Les cerclages
+  for (const y of [0.9, 1.9, 2.9, 3.7]) g.add(mk(T, new T.TorusGeometry(r + 0.01, 0.025, 6, 40), M.metal, [0, y, 0], 1, [Math.PI / 2, 0, 0]))
+  // L'échelle, devant
+  for (const s of [-1, 1]) g.add(mk(T, K.box, M.metal, [s * 0.16, h / 2 + 0.4, r + 0.08], [0.035, h - 0.1, 0.035]))
+  const rungs: { p: number[] }[] = []
+  for (let y = 0.6; y < h + 0.2; y += 0.26) rungs.push({ p: [0, y, r + 0.08] })
+  g.add(many(K, new T.BoxGeometry(0.32, 0.025, 0.025), M.metal, rungs))
+  // La trappe du bas, entrouverte
+  g.add(mk(T, K.box, M.dark, [0.42, 0.55, r * 0.92], [0.42, 0.5, 0.04], [0, 0.5, 0]))
+  g.add(mk(T, K.box, M.siloTop, [0.68, 0.55, r * 0.92 + 0.14], [0.04, 0.5, 0.3], [0, 0.5, 0]))
+  return {
+    g, matter: 'metal', aim: [0, 1.2, r], foot: 1.2, sway: 0.25,
+    slots: [
+      { id: 'silo-trappe', type: 'face', at: [0.42, 0.3, r * 0.5], out: [0.48, 0.88], plane: 0.36, open: 0.8, w: 0.5, sizes: ['s'], side: true, group: 'silo' },
+      { id: 'silo-dos', type: 'rear', at: [0, 0, 0], out: [-1, 0], plane: r + 0.05, w: 0.8, sizes: ['s', 'm', 'l'], side: true, group: 'silo' }
+    ]
+  }
+}
+
+function windmill(K: Kit): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const H = 3.3
+  const prof = [[1.08, 0], [1.04, 0.3], [0.86, H - 0.3], [0.84, H]].map(([r, y]) => new T.Vector2(r, y))
+  g.add(mk(T, new T.LatheGeometry(prof, 30), M.stone))
+  g.add(mk(T, new T.CylinderGeometry(0.92, 0.92, 0.12, 30), M.woodDark, [0, H + 0.04, 0]))
+  g.add(mk(T, new T.ConeGeometry(1.02, 1.0, 30), M.roofS, [0, H + 0.6, 0]))
+  // La porte en arc (noire : on y voit l'intérieur), son cadre, deux fenêtres
+  const door = new T.Shape()
+  door.moveTo(-0.32, 0); door.lineTo(0.32, 0); door.lineTo(0.32, 0.75); door.absarc(0, 0.75, 0.32, 0, Math.PI, false); door.closePath()
+  g.add(mk(T, new T.ShapeGeometry(door, 10), M.dark, [0, 0.02, 1.045], 1, [-0.035, 0, 0]))
+  g.add(mk(T, new T.TorusGeometry(0.34, 0.035, 6, 16, Math.PI), M.woodDark, [0, 0.79, 1.045]))
+  for (const s of [-1, 1]) g.add(mk(T, K.box, M.woodDark, [s * 0.34, 0.39, 1.05], [0.06, 0.78, 0.06]))
+  for (const y of [1.65, 2.5]) g.add(mk(T, K.box, M.dark, [0, y, 1.06 - (y / H) * 0.2], [0.26, 0.34, 0.04]))
+  // Les ailes, qui tournent (`userData.spin`)
+  const sails = new T.Group()
+  sails.position.set(0, H - 0.1, 1.0)
+  sails.add(mk(T, K.cyl, M.woodDark, [0, 0, 0.05], [0.13, 0.22, 0.13], [Math.PI / 2, 0, 0]))
+  for (let k = 0; k < 4; k++) {
+    const arm = new T.Group()
+    arm.rotation.z = k * Math.PI / 2 + 0.3
+    arm.add(mk(T, K.box, M.woodDark, [0, 1.0, 0.12], [0.07, 2.0, 0.07]))
+    arm.add(mk(T, new T.PlaneGeometry(0.46, 1.5), M.sail, [0.26, 1.15, 0.13]))
+    for (const y of [0.55, 1.05, 1.55]) arm.add(mk(T, K.box, M.woodDark, [0.26, y, 0.14], [0.5, 0.025, 0.025]))
+    sails.add(arm)
+  }
+  g.add(sails)
+  g.userData.spin = sails
+  return {
+    g, matter: 'pierre', aim: [0, 0.6, 1.1], foot: 1.3, sway: 0.25,
+    slots: [
+      { id: 'moulin-porte', type: 'face', at: [0, 0, 0.62], out: [0, 1], plane: 0.42, open: 1.05, w: 0.62, sizes: ['s', 'm'], group: 'moulin' },
+      { id: 'moulin-dos', type: 'rear', at: [0, 0, 0], out: [1, 0], plane: 1.05, w: 0.8, sizes: ['s', 'm'], side: true, group: 'moulin' }
+    ]
+  }
+}
+
+/** Une citrouille à côtes (rayon 1, aplatie). */
+function pumpkinGeo(K: Kit): Geo {
+  const { T } = K
+  const g = new T.SphereGeometry(1, 28, 16)
+  const p = g.attributes.position
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i)
+    const a = Math.atan2(z, x), k = 1 - 0.09 * Math.pow(Math.abs(Math.cos(a * 4)), 0.6)
+    const dent = 1 - 0.35 * Math.pow(Math.abs(y), 6)
+    p.setXYZ(i, x * k * dent, y * 0.72, z * k * dent)
+  }
+  g.computeVertexNormals()
+  return g
+}
+
+function pumpkins(K: Kit): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const bed = mk(T, new T.CircleGeometry(1.5, 28), M.soil, [0, 0.012, 0], [1, 0.8, 1], [-Math.PI / 2, 0, 0])
+  bed.castShadow = false
+  g.add(bed)
+  const pg = pumpkinGeo(K)
+  const list: { p: number[]; s: number[]; r: number[] }[] = []
+  const stems: { p: number[]; r: number[] }[] = []
+  for (const [x, z, r] of [[-0.8, -0.3, 0.36], [-0.2, -0.6, 0.48], [0.55, -0.35, 0.4], [0.95, 0.35, 0.3], [-0.45, 0.45, 0.42], [0.25, 0.55, 0.28], [-1.05, 0.5, 0.24], [0.05, 0.05, 0.22]]) {
+    list.push({ p: [x, r * 0.68, z], s: [r, r, r], r: [0, Math.random() * 6, (Math.random() - 0.5) * 0.2] })
+    stems.push({ p: [x, r * 1.4, z], r: [(Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.5] })
+  }
+  g.add(many(K, pg, M.pumpkin, list))
+  g.add(many(K, new T.CylinderGeometry(0.03, 0.045, 0.14, 6), M.woodDark, stems))
+  // Les grandes feuilles et les tiges qui courent
+  const leaves: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random() * 6.28, d = 0.4 + Math.random() * 1.0
+    leaves.push({ p: [Math.cos(a) * d * 1.1, 0.07, Math.sin(a) * d * 0.85], s: [0.28, 0.07, 0.24], r: [0, Math.random() * 6, 0] })
+  }
+  g.add(many(K, K.sph, M.leafBush, leaves))
+  for (let i = 0; i < 4; i++) {
+    const pts = Array.from({ length: 5 }, (_, k) => new T.Vector3(Math.cos(i * 1.6 + k * 0.5) * (0.3 + k * 0.28), 0.05, Math.sin(i * 1.6 + k * 0.5) * (0.25 + k * 0.22)))
+    g.add(mk(T, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 20, 0.018, 5), M.sprout))
+  }
+  return {
+    g, matter: 'feuilles', aim: [0, 0.4, 0.6], foot: 1.5, sway: 0.5,
+    slots: [
+      { id: 'citrouilles-1', type: 'top', at: [0.35, 0, 0.05], rim: 0.3, w: 0.55, sizes: ['s'], group: 'citrouilles' },
+      { id: 'citrouilles-2', type: 'rear', at: [-0.2, 0, -0.6], out: [0, -1], plane: 0.5, w: 0.6, sizes: ['s'], side: true }
+    ]
+  }
+}
+
+/** Le ruisseau : de la source dans les rochers à sa petite vasque, et le pont de bois qui l'enjambe. */
+function stream(K: Kit): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const curve = new T.CatmullRomCurve3([[-3.3, -1.3], [-2.2, -0.2], [-0.8, 0.45], [0.6, 0.35], [1.9, -0.3], [3.0, -0.9]].map(([x, z]) => new T.Vector3(x, 0, z)))
+  const N = 90
+  const ribbon = (half: (t: number) => number, y: number) => {
+    const pos: number[] = [], idx: number[] = []
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p = curve.getPointAt(t), d = curve.getTangentAt(t)
+      const nx = -d.z, nz = d.x, w = half(t)
+      pos.push(p.x + nx * w, y, p.z + nz * w, p.x - nx * w, y, p.z - nz * w)
+      if (i) { const a = (i - 1) * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3) }
+    }
+    const geo = new T.BufferGeometry()
+    geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3))
+    geo.setIndex(idx)
+    geo.computeVertexNormals()
+    return geo
+  }
+  const wid = (t: number) => 0.36 + Math.sin(t * 9) * 0.05 + (t > 0.9 ? (t - 0.9) * 4 : 0)
+  g.add(mk(T, ribbon(t => wid(t) + 0.2, 0.01), M.shore))
+  const water = mk(T, ribbon(wid, 0.022), M.water)
+  water.castShadow = false
+  g.add(water)
+  // La vasque au bout, la source dans les rochers au début
+  g.add(mk(T, new T.CircleGeometry(0.75, 24), M.shore, [3.15, 0.012, -1.0], 1, [-Math.PI / 2, 0, 0]))
+  g.add(mk(T, new T.CircleGeometry(0.6, 24), M.water, [3.15, 0.024, -1.0], 1, [-Math.PI / 2, 0, 0]))
+  const rocks: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let i = 0; i < 7; i++) rocks.push({ p: [-3.4 + Math.cos(i) * 0.4, 0.12, -1.45 + Math.sin(i * 1.7) * 0.35], s: [0.22 + Math.random() * 0.18, 0.16 + Math.random() * 0.16, 0.2 + Math.random() * 0.15], r: [0, Math.random() * 6, 0] })
+  g.add(many(K, K.sph, M.stone, rocks))
+  // Les roseaux et des galets le long des berges
+  const reeds: { p: number[]; s: number[]; r: number[] }[] = []
+  const peb: { p: number[]; s: number[] }[] = []
+  for (let i = 0; i < 70; i++) {
+    const t = Math.random(), p = curve.getPointAt(t), d = curve.getTangentAt(t)
+    if (Math.abs(t - 0.5) < 0.08) continue // pas sous le pont
+    const side = Math.random() < 0.5 ? -1 : 1, off = wid(t) + 0.12 + Math.random() * 0.2
+    const x = p.x - d.z * off * side, z = p.z + d.x * off * side
+    if (i % 3) { const h = 0.55 + Math.random() * 0.4; reeds.push({ p: [x, h / 2, z], s: [1, h, 1], r: [(Math.random() - 0.5) * 0.3, 0, (Math.random() - 0.5) * 0.3] }) }
+    else peb.push({ p: [x, 0.03, z], s: [0.08 + Math.random() * 0.06, 0.04, 0.07] })
+  }
+  g.add(many(K, new T.ConeGeometry(0.028, 1, 5), M.reed, reeds))
+  g.add(many(K, K.sph, M.pebble, peb))
+  // Le pont : des planches en arc d'une berge à l'autre, deux garde-fous
+  const mid = curve.getPointAt(0.5), dir = curve.getTangentAt(0.5)
+  const bridge = new T.Group()
+  bridge.position.set(mid.x, 0, mid.z)
+  bridge.rotation.y = Math.atan2(dir.x, dir.z)
+  const span = 1.5, rise = 0.32
+  const arcY = (x: number) => 0.06 + rise * (1 - Math.pow(x / (span / 2), 2))
+  const planks: { p: number[]; r: number[] }[] = []
+  for (let i = 0; i < 11; i++) {
+    const x = -span / 2 + (i + 0.5) * span / 11
+    const slope = -2 * rise * x / Math.pow(span / 2, 2)
+    planks.push({ p: [x, arcY(x), 0], r: [0, 0, Math.atan(slope)] })
+  }
+  bridge.add(many(K, new T.BoxGeometry(span / 11 - 0.012, 0.05, 0.7), M.wood, planks))
+  for (const s of [-1, 1]) {
+    bridge.add(mk(T, new T.TubeGeometry(new T.CatmullRomCurve3(Array.from({ length: 9 }, (_, k) => { const x = -span / 2 + k * span / 8; return new T.Vector3(x, arcY(x) + 0.42, s * 0.33) })), 16, 0.025, 6), M.woodDark))
+    for (const x of [-span / 2 + 0.05, 0, span / 2 - 0.05]) bridge.add(mk(T, K.box, M.woodDark, [x, arcY(x) + 0.2, s * 0.33], [0.05, 0.42, 0.05]))
+  }
+  // Le dessous du pont, dans l'ombre
+  bridge.add(mk(T, new T.PlaneGeometry(span * 0.8, 0.6), M.dark, [0, 0.04, 0], 1, [-Math.PI / 2, 0, 0]))
+  g.add(bridge)
+  const bx = mid.x, bz = mid.z
+  return {
+    g, matter: 'eau', aim: [bx, 0.3, bz + 0.4], foot: 3.4, sway: 0.3,
+    slots: [
+      { id: 'pont', type: 'rear', at: [bx, 0, bz], out: [dir.x, dir.z], plane: 0.45, w: 0.6, sizes: ['s'], side: true },
+      { id: 'roseaux', type: 'top', at: [-1.8, 0, 0.2], rim: 0.4, w: 0.6, sizes: ['s'], only: ['duck', 'hen', 'rooster', 'rabbit', 'cat'] },
+      { id: 'vasque', type: 'top', at: [3.15, 0, -1.0], rim: 0.024, w: 0.8, sizes: ['s'], only: ['duck'] }
+    ]
+  }
+}
+
 /* ---------- La ferme entière ---------- */
 type Builder = (K: Kit) => Built
 const BUILDERS: Record<PieceId, Builder> = {
@@ -1196,21 +1539,33 @@ const LAYOUT: [Builder, number, number][] = [
   [veggie, 272, 5.3], [coop, 302, 5.7], [K => bush(K, 3), 328, 6.6],
   [woodpile, 24, 3.5], [well, 112, 4.0], [mud, 200, 3.8], [barrels, 290, 4.0], [bales, 330, 3.9]
 ]
+/** La grande ferme (6/10) : un second cercle autour du premier. */
+const BIG_LAYOUT: [Builder, number, number][] = [
+  [cornfield, 14, 10.4], [silo, 58, 10.9], [windmill, 98, 10.7], [stream, 150, 10.1],
+  [appleTree, 198, 10.6], [appleTree, 211, 11.7], [appleTree, 224, 10.4], [pumpkins, 262, 10.6],
+  [haystack, 298, 10.9], [K => bush(K, 4), 328, 11.3], [K => bush(K, 5), 40, 11.9],
+  [K => bush(K, 6), 176, 8.3], [K => bush(K, 7), 252, 8.1], [K => bush(K, 8), 80, 8.2], [barrels, 122, 8.4], [bales, 352, 8.6]
+]
 
 /** `empty` (la Ferme à construire, 5/10) : le plateau seul — l'herbe, la
     cour, la barrière du tour —, sans enclos ni cachettes ; les fleurs ne
     poussent qu'au bord, le reste est à construire (`make`). */
-export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean }): Promise<Farm> {
+export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean; big?: boolean }): Promise<Farm> {
   const { T, scene } = stage
   const K = await kitOf(T, stage)
   const { U, M } = K
-  const R = PLATEAU_R
+  const R = o.big ? BIG_R : PLATEAU_R
+  // Ce qui se sème (fleurs, touffes, cailloux) suit la surface
+  const area = (R / PLATEAU_R) ** 2
   const root = new T.Group()
   scene.add(root)
 
   /* Le plateau : l'herbe, le flanc de terre, l'herbe qui roule au bord, la
      roche qui s'effile dessous comme une île flottante */
-  const top = mk(T, new T.CircleGeometry(R, 96), M.grass, [0, 0, 0], 1, [-Math.PI / 2, 0, 0])
+  const topGeo = new T.CircleGeometry(R, 96)
+  // L'herbe garde la taille de ses brins, quelle que soit la ferme
+  if (o.big) { const uv = topGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * R / PLATEAU_R + 0.5, (uv.getY(i) - 0.5) * R / PLATEAU_R + 0.5) }
+  const top = mk(T, topGeo, M.grass, [0, 0, 0], 1, [-Math.PI / 2, 0, 0])
   top.castShadow = false
   root.add(top)
   const side = mk(T, new T.CylinderGeometry(R, R * 0.97, 1.0, 96, 1, true), M.earth, [0, -0.5, 0])
@@ -1265,20 +1620,22 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
   /* La barrière du tour de la ferme */
   const rim: { p: number[]; r: number[] }[] = []
   const RF = R - 0.42
-  const nPost = 58
+  const nPost = Math.round(58 * R / PLATEAU_R)
   for (let i = 0; i < nPost; i++) { const a = i / nPost * Math.PI * 2; rim.push({ p: [Math.sin(a) * RF, 0.27, Math.cos(a) * RF], r: [0, a, 0] }) }
   root.add(many(K, new T.BoxGeometry(0.08, 0.54, 0.08), M.woodDark, rim))
   for (const y of [0.24, 0.44]) root.add(mk(T, new T.TorusGeometry(RF, 0.028, 6, 160), M.wood, [0, y, 0], 1, [Math.PI / 2, 0, 0]))
 
   /* Les cachettes */
   const spots: FarmSpot[] = []
-  for (const [build, deg, r] of o.empty ? [] : LAYOUT) {
+  for (const [build, deg, r] of o.empty ? [] : o.big ? [...LAYOUT, ...BIG_LAYOUT] : LAYOUT) {
     const b = build(K)
     const a = deg * Math.PI / 180
     b.g.position.set(Math.sin(a) * r, 0, Math.cos(a) * r)
     b.g.rotation.y = a + Math.PI
     root.add(b.g)
-    bake(T, U, b.g)
+    // Les ailes du moulin tournent : elles restent à part
+    const spin = b.g.userData.spin as Group | undefined
+    bake(T, U, b.g, m => { for (let x: import('three').Object3D | null = m; x; x = x.parent) if (x === spin) return true; return false })
     const idx = spots.length
     const occ: Mesh[] = []
     b.g.traverse(ob => {
@@ -1315,7 +1672,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
       return s
     }))!
     const cols = [0xE8E2D2, 0xD8506E, 0xE0B01E, 0x9A6AD0, 0xE07A2E]
-    const pts = sow(80, 0.15)
+    const pts = sow(Math.round(80 * area), 0.15)
     root.add(many(K, petal, M.flower, pts.map(([x, z], i) => ({ p: [x, 0.09, z], r: [0, Math.random() * 6, 0], s: [1, 1, 1], c: cols[i % cols.length] })), false))
     root.add(many(K, new T.SphereGeometry(0.03, 6, 5), M.yellow, pts.map(([x, z]) => ({ p: [x, 0.1, z] })), false))
     root.add(many(K, new T.CylinderGeometry(0.008, 0.008, 0.09, 4), M.sprout, pts.map(([x, z]) => ({ p: [x, 0.045, z] })), false))
@@ -1324,8 +1681,8 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
       c.translate(0, 0.1, 0); c.rotateZ(k * 0.4); c.translate(k * 0.03, 0, 0)
       return c
     }))!
-    root.add(many(K, tuft, M.tuft, sow(140, 0.05).map(([x, z]) => ({ p: [x, 0, z], r: [0, Math.random() * 6, 0], s: [1, 0.7 + Math.random() * 0.8, 1] })), false))
-    root.add(many(K, K.sph, M.pebble, sow(14, 0.2).map(([x, z]) => ({ p: [x, 0.02, z], s: [0.12 + Math.random() * 0.12, 0.07, 0.1 + Math.random() * 0.08] }))))
+    root.add(many(K, tuft, M.tuft, sow(Math.round(140 * area), 0.05).map(([x, z]) => ({ p: [x, 0, z], r: [0, Math.random() * 6, 0], s: [1, 0.7 + Math.random() * 0.8, 1] })), false))
+    root.add(many(K, K.sph, M.pebble, sow(Math.round(14 * area), 0.2).map(([x, z]) => ({ p: [x, 0.02, z], s: [0.12 + Math.random() * 0.12, 0.07, 0.1 + Math.random() * 0.08] }))))
   }
 
   /* Ce qui cache la vue : le plateau, les cachettes, l'enclos, la barrière */
@@ -1416,7 +1773,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
   const baleGeo = new K.RB(0.92, 0.46, 0.5, 2, 0.05)
   stage.keep(baleGeo)
   return {
-    root, spots, occ, top, pen, night: o.night,
+    root, r: R, spots, occ, top, pen, night: o.night,
     bale: () => mk(T, baleGeo, M.bale),
     make: id => makePiece(K, id),
     party(k) {
@@ -1429,6 +1786,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
       const rn = M.water.normalMap
       if (rn) { rn.offset.x = t * 0.02; rn.offset.y = Math.sin(t * 0.3) * 0.02 }
       for (const c of clouds) { c.position.x += dt * 0.6; if (c.position.x > 75) c.position.x = -75 }
+      for (const s of spots) { const sp = s.g.userData.spin as Group | undefined; if (sp) sp.rotation.z -= dt * 0.45 }
       // Les cachettes tremblent (un toucher tout près d'un animal caché)
       for (const s of spots) {
         if (s.shake <= 0) { if (s.g.rotation.z !== 0) { s.g.rotation.z = 0; s.g.scale.set(1, 1, 1) } continue }
