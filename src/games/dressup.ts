@@ -1439,6 +1439,11 @@ function mountPrincess(c: GameContext, toDoll: () => void): () => void {
         /** Le pendentif de perles à repasser, porté par chacune (construit en 3D sur elle). */
         get pendentif() { return me.dolls.map(d => !!d.p?.obj.getObjectByName('pendentif')) },
         get active() { return me.active },
+        /** La scène et les princesses en 3D : les vérifications cadrent la caméra où elles veulent. */
+        get stage() { return me.stage },
+        get princesses() { return me.dolls.map(d => d.p ?? null) },
+        /** La tourne et l'y laisse (sans doigt, elle se remet de face au bout de 3 s). */
+        turn(i: number, yaw: number) { const d = me.dolls[i]; d.yaw = yaw; d.spin = 0; d.touchedAt = Infinity },
         get tab() { return me.tab },
         get tool() { return me.tool },
         get pending() { return me.thumbs?.pending() ?? 0 },

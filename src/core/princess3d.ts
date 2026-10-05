@@ -1013,6 +1013,57 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     return geo
   }
 
+  /* ---- Le haut de son buste, en peau (5/10). Le modèle n'en a pas sous
+     son haut d'origine (caché) : entre le bord du corsage et le bas de la
+     peau de son cou, on voyait l'intérieur — une bande sombre. Un anneau de
+     peau monte de sous le liseré jusque sous la peau du cou ; même matériau
+     que son corps (il suit la couleur de peau choisie), lié à son squelette. ---- */
+  /** Le tour de son cou (mesuré) : les perles et la chaîne du cœur s'y posent. */
+  let neckRing: { x: number; zf: number; zb: number } | null = null
+  ;(() => {
+    const m0 = skinBody[0]?.material
+    const mat = (Array.isArray(m0) ? m0[0] : m0) as Mat | undefined
+    if (!mat) return
+    const pts: V3[] = [], uvs: [number, number][] = []
+    for (const m of skinBody) {
+      const p = m.geometry.attributes.position as import('three').BufferAttribute
+      const uv = m.geometry.attributes.uv as import('three').BufferAttribute | undefined
+      for (let i = 0; i < p.count; i++) {
+        const v = new T.Vector3().fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld)
+        if (Math.abs(v.x) > 0.13 || v.y < 0.7 || v.y > 1) continue
+        pts.push(v); uvs.push(uv ? [uv.getX(i), uv.getY(i)] : [0, 0])
+      }
+    }
+    // Le bas de la peau du cou, devant (sa couleur : on la reprend)
+    let yS = Infinity, uv0: [number, number] = [0, 0]
+    pts.forEach((v, i) => { if (Math.abs(v.x) < 0.03 && v.z > 0 && v.y > P.neck.y - 0.08 && v.y < yS) { yS = v.y; uv0 = uvs[i] } })
+    // Le tour du cou, là où il n'y a plus que lui (les épaules sont plus bas)
+    const yN = P.neck.y + 0.012, b = { x: 0, zf: 0, zb: 0 }
+    for (const v of pts) if (Math.abs(v.y - yN) < 0.004 && Math.abs(v.x) < 0.05) {
+      b.x = Math.max(b.x, Math.abs(v.x)); if (v.z > 0) b.zf = Math.max(b.zf, v.z); else b.zb = Math.max(b.zb, -v.z)
+    }
+    if (!isFinite(yS) || !b.x || !b.zf || !b.zb) return
+    neckRing = b
+    const top = P.neck.y - 0.045, a = bust(top)
+    const rings: { y: number; x: number; zf: number; zb: number }[] = []
+    // Sous le corsage (+9 mm de tissu) : caché ; puis la pente des épaules, qui
+    // rentre vite au début et monte droit à la fin, sous la peau du cou
+    rings.push({ y: top - 0.012, x: a.x + 0.006, zf: a.zf + 0.006, zb: a.zb + 0.006 })
+    const lo = { x: a.x + 0.004, zf: a.zf + 0.004, zb: a.zb + 0.004 }
+    const hi = { x: b.x - 0.003, zf: b.zf - 0.003, zb: b.zb - 0.003 }
+    const n = 8
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, e = Math.sin(t * Math.PI / 2)
+      rings.push({ y: top + (yN - top) * t, x: lo.x + (hi.x - lo.x) * e, zf: lo.zf + (hi.zf - lo.zf) * e, zb: lo.zb + (hi.zb - lo.zb) * e })
+    }
+    const geo = g(tube(rings))
+    const uvA = geo.attributes.uv as import('three').BufferAttribute
+    for (let i = 0; i < uvA.count; i++) uvA.setXY(i, uv0[0], uv0[1])
+    const m = skinned(geo, mat, 'skin')
+    m.name = 'decollete'
+    root.parent!.add(m)
+  })()
+
   /* ---- Le haut : un corsage moulé sur elle, et les manches ---- */
   function buildTop() {
     const s = section('top', root.parent!)
@@ -1373,16 +1424,21 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
     const ny = P.neck.y - 0.02
     const b = bust(ny)
     const rx = Math.max(0.032, b.x * 0.55), rz = Math.max(0.028, b.zf * 0.9)
+    /* Les perles et la chaîne du cœur : posées sur son cou (5/10). Avant,
+       elles flottaient au-dessus du creux, que la peau comble maintenant. */
+    const nk = neckRing ?? { x: rx - 0.007, zf: rz - 0.007, zb: rz - 0.007 }
+    const cy = P.neck.y - 0.004
     if (look.neck === 'pearls') {
       const list: { geo: Geo; m: M4 }[] = []
       for (let i = 0; i < 24; i++) {
-        const a = (i / 24) * Math.PI * 2
-        list.push({ geo: sphere, m: M(Math.sin(a) * rx, ny - Math.max(0, Math.cos(a)) * 0.025, Math.cos(a) * rz, 0.0058) })
+        const a = (i / 24) * Math.PI * 2, c = Math.cos(a)
+        list.push({ geo: sphere, m: M(Math.sin(a) * (nk.x + 0.006), cy - Math.max(0, c) * 0.01, c * ((c > 0 ? nk.zf : nk.zb) + 0.006), 0.0058) })
       }
       s.group.add(mesh(fuse(s, list), pearl, 'deco'))
     } else if (look.neck === 'heart') {
-      const chain = mesh(sg(s, new T.TorusGeometry(1, 0.0025 / rx, 6, 40)), gold, 'deco')
-      chain.rotation.x = Math.PI / 2 + 0.5; chain.position.set(0, ny, 0); chain.scale.set(rx, rz * 0.9, rx)
+      const cx = nk.x + 0.004, cz = nk.zf + 0.004
+      const chain = mesh(sg(s, new T.TorusGeometry(1, 0.0025 / cx, 6, 40)), gold, 'deco')
+      chain.rotation.x = Math.PI / 2 + 0.2; chain.position.set(0, cy, 0); chain.scale.set(cx, cz, cx)
       s.group.add(chain)
       const sh = new T.Shape()
       const r = 0.015
@@ -1390,7 +1446,7 @@ export async function makePrincess(T: T3, look0: Royal, o: PrincessOpts = {}): P
       sh.bezierCurveTo(-r * 1.4, r * 0.2, -r * 0.6, r * 1.2, 0, r * 0.4)
       sh.bezierCurveTo(r * 0.6, r * 1.2, r * 1.4, r * 0.2, 0, -r * 0.9)
       const h = mesh(sg(s, new T.ExtrudeGeometry(sh, { depth: 0.005, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.002, bevelSegments: 2 })), gem(0xD02850), 'deco')
-      h.position.set(0, ny - 0.035, rz + 0.012)
+      h.position.set(0, cy - 0.024, cz + 0.008)
       s.group.add(h)
     } else if (look.neck === 'beads' && (look.beads.length || look.pendant)) {
       buildBeads(s, ny, rx, rz)

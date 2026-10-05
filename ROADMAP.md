@@ -1161,8 +1161,8 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   de la maquette (661 000 triangles par image, voir `CLAUDE.md`). Sur elle,
   le collier descend en U sur le corsage : au ras de l'encolure, il tombait
   sur le **creux sombre entre son corsage et son cou** (le modèle n'a pas de
-  peau sous son haut d'origine) — ce creux, visible aussi sans collier, reste
-  à combler dans la Princesse.
+  peau sous son haut d'origine) — ce creux, visible aussi sans collier, est
+  comblé depuis le 5/10 (voir plus bas).
   **À mesurer sur la tablette avec `?fps`.**
 - ✅ **Les perles à repasser dans les Bijoux, et le pendentif au collier**
   (1/10, le choix du père : « les perles à repasser dedans ») : un second
