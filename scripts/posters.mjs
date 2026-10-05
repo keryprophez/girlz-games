@@ -158,25 +158,10 @@ const STAGE = {
     },
     after: 2500, cx: 0.44
   },
-  // Les Cubes de l'alphabet : le mot presque fini sur la réglette, ses arcs
-  // de syllabes dessous, le dernier cube encore dans le vrac
-  letters: {
-    ready: () => window.__lg && !window.__lg.peeking, wait: 1500,
-    act: async p => {
-      for (let k = 0; k < 12; k++) {
-        const st = await p.evaluate(() => ({ need: window.__lg.need, pos: window.__lg.pos, size: window.__lg.size, cubes: window.__lg.cubes() }))
-        if (!st.need || st.pos >= st.size - 1) break
-        const c = st.cubes.find(x => x.t === st.need && x.state === 'rest')
-        if (!c) break
-        await p.mouse.click(c.x, c.y)
-        await p.waitForFunction(q => window.__lg.pos > q && window.__lg.idle, st.pos, { timeout: 120000, polling: 500 })
-      }
-    },
-    after: 800
-  },
+  letters: { wait: 4000 },
   sentences: { wait: 4000 },
   // Créer
-  dressup: { ready: () => window.__pr && window.__pr.ready && window.__pr.pending === 0, wait: 3000, zoom: 1.45, cx: 0.29, cy: 0.5 },
+  dressup: { ready: () => window.__du && window.__du.ready, wait: 2500, zoom: 1.5, cx: 0.335, cy: 0.56 },
   // Un collier bien commencé sur le fil (le motif de la maquette), le boîtier à côté
   bijoux: {
     ready: () => window.__bj && window.__bj.phase === 'work', wait: 2500,
@@ -285,7 +270,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

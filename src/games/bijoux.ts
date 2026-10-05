@@ -3,12 +3,9 @@ import { createStage, loader, woodTex, type Stage, type T3 } from '../core/three
 import { particles, toScreen, type Particles } from '../core/scene3d'
 import { sfx, preloadSfx } from '../core/sfx'
 import { tone, sSteam, sWin } from '../core/audio'
-import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
 import { visible } from '../core/hand'
 import { useFerme, soloRoyal } from '../core/store'
-import { makePrincess, posePrincess, MOVES, type Princess, type Pose } from '../core/princess3d'
-import { makeDecor, type Decor } from '../core/castle3d'
 import { beadKit, beadRun, instancedRun, orientQ, BEAD_GAP, BEAD_HALF, BEAD_LEN, type BeadKit } from '../core/bijoux3d'
 import { BEADS_MAX, type Bead, type BeadKind, type Piece } from '../core/royal'
 import {
@@ -18,8 +15,7 @@ import {
 import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateOutline, pieceOf, type ColorId, type PlateShape } from '../core/perles'
 
 /* LES BIJOUX (30/09) — la demande de Jade : un collier de perles enfilé
-   perle par perle, que sa princesse porte ensuite (le père : « collier de
-   perles », « oui, elle les porte » ; maquette validée).
+   perle par perle (le père : « collier de perles » ; maquette validée).
    1. L'établi : la planche à collier en feutrine, le fil de soie tendu en U
       — le fermoir doré au départ, l'aiguille au bout — et le boîtier à douze
       compartiments. On TOUCHE une perle (ou on la glisse) : elle vole jusqu'à
@@ -30,8 +26,9 @@ import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateO
       rond et le fermoir claque.
    3. La vitrine : le collier sur un coussin de velours qui tourne doucement
       sous une lumière de bijouterie.
-   4. La princesse (le bouton à la couronne) le porte, dans la salle de bal —
-      et désormais aussi dans la Princesse (`royal.beads`, `wearNecklace`).
+   4. « Fini ». (La princesse VRM qui le portait dans la salle de bal est
+      partie le 6/10 avec son modèle : « ça rame trop ». Le collier reste
+      gardé dans `royal.beads`, `wearNecklace`.)
    Le second mode (1/10, « les perles à repasser dedans ») : une plaque à
    picots en création LIBRE — carré, cœur, étoile ou rond, comme les vraies
    plaques à formes —, douze pots de perles (leur nom dessous) ; on pose au
@@ -40,8 +37,7 @@ import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateO
    perles fondent, l'objet se décolle et tourne dans les airs. Puis « Garder »
    (la vitrine des créations, gardée sur la tablette) ou « Au collier » : il
    devient le PENDENTIF du collier, pendu au milieu par un petit anneau doré
-   (`royal.pendant`, `wearPendant`), dans la vitrine, sur la princesse ici
-   et dans la Princesse.
+   (`royal.pendant`, `wearPendant`), dans la vitrine.
    Rien à lire, aucune note (Créer). */
 
 type V3 = import('three').Vector3
@@ -100,7 +96,6 @@ const IC = {
   fermer: svg(`<circle cx="24" cy="25" r="13" fill="none" stroke="#fff" stroke-width="2.2" opacity=".8"/>
     ${[0, 1, 2, 3, 4, 5, 6].map(i => { const a = Math.PI / 2 + (i - 3) * 0.72; return `<circle cx="${(24 + Math.cos(a) * 13).toFixed(1)}" cy="${(25 + Math.sin(a) * 13).toFixed(1)}" r="4" fill="#fff"/>` }).join('')}
     <circle cx="24" cy="12" r="3.4" fill="none" stroke="#FFE08A" stroke-width="2.6"/>`, 52),
-  couronne: svg('<path d="M9 34 12 16l7 9 5-13 5 13 7-9 3 18z" fill="#FFC94D"/><rect x="9" y="35" width="30" height="5" rx="2" fill="#E0A23A"/><circle cx="24" cy="10" r="2.8" fill="#FF6B81"/><circle cx="12" cy="14" r="2.2" fill="#7FD3E0"/><circle cx="36" cy="14" r="2.2" fill="#7FD3E0"/>', 54),
   // La plaque à picots, un petit cœur de perles posé dessus
   hama: svg(`<rect x="6" y="6" width="36" height="36" rx="7" fill="#CFE6F4" stroke="#9CC6E0" stroke-width="1.5"/>
     ${[0, 1, 2, 3, 4].flatMap(r => [0, 1, 2, 3, 4].map(c => `<circle cx="${11.6 + c * 6.2}" cy="${11.6 + r * 6.2}" r="1.3" fill="#9CC6E0"/>`)).join('')}
@@ -139,7 +134,7 @@ const tool = (id: string, icon: string, cap: string, cls = '') =>
 /* ---- L'état de la partie ---- */
 /** `iron` : le fer passe ; `fly` : la création fondue tourne dans les airs
     (Garder · Au collier) ; `gallery` : la vitrine des créations. */
-type Phase = 'load' | 'work' | 'closing' | 'vitrine' | 'loading' | 'princess' | 'end' | 'iron' | 'fly' | 'gallery'
+type Phase = 'load' | 'work' | 'closing' | 'vitrine' | 'loading' | 'end' | 'iron' | 'fly' | 'gallery'
 
 /** Les perles à repasser : la plaque, ses perles, les pots. */
 interface Hama {
@@ -238,19 +233,11 @@ interface State {
   ims: IM[]
   vitrine: import('three').Group | null
   spin: import('three').Group | null
-  decor: Decor | null
-  princess: Princess | null
-  pose: Pose
-  poseT: number
-  poseDur: number
-  camFrom: [V3, V3] | null
-  camTo: [V3, V3] | null
-  camT: number
   t: number
   clearArmed: boolean
   clearId: number
   ids: number[]
-  /** Le chargement de la princesse en cours (retiré au démontage). */
+  /** Un chargement en cours (retiré au démontage). */
   hideLoad: (() => void) | null
   /** Images encore à dessiner sur l'établi (rendu à la demande). */
   dirty: number
@@ -744,7 +731,7 @@ function close(me: State) {
   for (const b of me.beads) { b.st = 'rest'; b.bump = 0; restPose(me, b); draw(me, b) }
   for (const b of me.leaving) unpool(me, b)
   me.leaving.length = 0
-  // Le collier est à elle : sa princesse le porte, ici et dans la Princesse
+  // Le collier est gardé (`royal.beads`)
   useFerme.getState().wearNecklace(me.beads.map(b => ({ ...b.bead })))
   sfx('cloth', { vol: 0.35, rate: 1.3 })
   me.morph = 0.0001
@@ -1526,103 +1513,6 @@ function toVitrine(me: State) {
   })
 }
 
-/* =====================================================================
-   La princesse le porte
-   ===================================================================== */
-async function toPrincess(me: State) {
-  if (me.phase !== 'vitrine') return
-  me.phase = 'loading'
-  setPhaseClass(me)
-  sfx('confirm', { vol: 0.45 })
-  const veil = document.getElementById('bjVeil')
-  if (veil) { veil.style.background = '#F3E4EA'; veil.classList.add('on') }
-  const arena = document.getElementById('bjArena')!
-  const hideL = loader(arena, 'bijoux', 45000)
-  const hide = () => { hideL(); me.hideLoad = null }
-  me.hideLoad = hide
-  try {
-    const T = me.T
-    const look = soloRoyal(useFerme.getState())
-    await new Promise<void>(res => { later(me, 500, res) })
-    if (!me.alive) return
-    if (me.vitrine) me.vitrine.visible = false
-    light(me, 'bal')
-    me.decor = makeDecor(me.stage, 'bal', me.fx)
-    const p = await makePrincess(T, look)
-    if (!me.alive || S !== me) { p.dispose(); return }
-    me.princess = p
-    const fy = me.decor.floorY
-    p.obj.position.set(0, fy, 0)
-    p.obj.rotation.y = -0.22
-    me.stage.scene.add(p.obj)
-    posePrincess(p, 'idle', 0)
-    p.update(0.016)
-    p.obj.updateWorldMatrix(true, true)
-    // La caméra : de pied en cap, puis tout près du collier
-    const cam = me.stage.camera
-    cam.fov = 30; cam.updateProjectionMatrix()
-    const c = neckCenter(me) || new T.Vector3(0, fy + p.headY - 0.17, 0.03)
-    me.camFrom = [new T.Vector3(0.15, fy + 1.05, 3.1), new T.Vector3(0.05, fy + 0.66, 0)]
-    // Le collier au centre de l'image, son visage au-dessus
-    me.camTo = [c.clone().add(new T.Vector3(0.14, 0.08, 0.82)), c.clone().add(new T.Vector3(0.02, 0.05, 0))]
-    me.camT = -0.9
-    cam.position.copy(me.camFrom[0]); cam.lookAt(me.camFrom[1])
-    hide()
-    me.phase = 'princess'
-    setPhaseClass(me)
-    veil?.classList.remove('on')
-    doPose(me, 'cheer', 1.4)
-    p.face.expr('joy', 1.6)
-    later(me, 1600, () => { me.princess?.face.expr('love', 4) })
-    confetti()
-    ;[784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.3, 'sine', 0.05, i * 0.1))
-  } catch (e) {
-    hide()
-    console.error(e)
-    me.c.toast('La princesse n\'a pas pu venir')
-    finish(me)
-  }
-}
-
-/** Le centre de son collier, dans la scène. */
-function neckCenter(me: State): V3 | null {
-  const g = me.princess?.obj.getObjectByName('collier')
-  if (!g) return null
-  const box = new me.T.Box3().setFromObject(g)
-  return box.isEmpty() ? null : box.getCenter(new me.T.Vector3())
-}
-
-function doPose(me: State, pose: Pose, dur: number) {
-  me.pose = pose; me.poseT = 0; me.poseDur = dur
-}
-
-function stepPrincess(me: State, dt: number) {
-  const p = me.princess
-  if (!p) return
-  me.poseT += dt
-  if (me.pose !== 'idle' && me.poseT > me.poseDur) doPose(me, 'idle', 0)
-  const yaw = posePrincess(p, me.pose, me.pose === 'idle' ? me.t : me.poseT)
-  p.obj.rotation.y = -0.22 + yaw
-  p.face.lookAt(me.stage.camera.position)
-  p.update(dt)
-  me.decor?.update(dt)
-  // La caméra glisse vers le collier
-  if (me.camFrom && me.camTo) {
-    me.camT += dt / 2.6
-    const k = ease(clamp01(me.camT))
-    const cam = me.stage.camera
-    cam.position.lerpVectors(me.camFrom[0], me.camTo[0], k)
-    const tg = new me.T.Vector3().lerpVectors(me.camFrom[1], me.camTo[1], k)
-    cam.lookAt(tg)
-  }
-  // Des étincelles sur les perles
-  if (Math.random() < dt * 5) {
-    const c = neckCenter(me)
-    if (c) me.fx.burst({ x: c.x + (Math.random() - 0.5) * 0.12, y: c.y + (Math.random() - 0.5) * 0.04, z: c.z + 0.03 },
-      { count: 2, color: [0xFFFFFF, 0xFFE9A8, 0xFFD1E3], speed: 0.03, spread: 1, life: 0.9, size: 0.012, gravity: 0 })
-  }
-}
-
 function finish(me: State) {
   if (me.phase === 'end') return
   const gallery = me.phase === 'gallery'
@@ -1631,7 +1521,7 @@ function finish(me: State) {
   sfx('confirm', { vol: 0.5 })
   me.c.finish(gallery
     ? { title: 'Quelle jolie vitrine !', msg: 'Tes créations y sont rangées', stars: 3 }
-    : { title: 'Quel joli collier !', msg: 'Ta princesse le porte aussi au château', stars: 3 })
+    : { title: 'Quel joli collier !', msg: 'Tu l\u2019as enfilé perle par perle', stars: 3 })
 }
 
 /* =====================================================================
@@ -1653,9 +1543,9 @@ function dropHeld(me: State) {
 
 export const bijoux: GameDef = {
   id: 'bijoux', name: 'Les Bijoux', icon: '📿', sq: 'sq-pink', cat: 'creatif', music: 'palace', noTier: true,
-  subtitle: 'Enfile des perles, ferme le collier… et ta princesse le porte !',
+  subtitle: 'Enfile des perles, ferme le collier, fais des perles à repasser',
   // La main : une perle du boîtier ; le fil bien garni (ou plein), le
-  // fermoir ; à la vitrine, la couronne ; chez la princesse, « Fini ».
+  // fermoir ; à la vitrine, « Fini ».
   // Les perles à repasser : un pot, puis un picot libre ; la plaque bien
   // garnie, le fer ; la création en l'air, « Garder » ou « Au collier »
   hand: root => {
@@ -1687,8 +1577,7 @@ export const bijoux: GameDef = {
     }
     if (me.phase === 'fly' && me.choose) return { choose: visible(root, '#bjKeep, #bjCollar') }
     if (me.phase === 'gallery') return { choose: visible(root, '#bjAgain, #bjGalCollar, #bjGalDone') }
-    if (me.phase === 'vitrine') return { tap: root.querySelector('#bjPrincess') }
-    if (me.phase === 'princess') return { tap: root.querySelector('#bjDone') }
+    if (me.phase === 'vitrine') return { tap: root.querySelector('#bjFini') }
     return null
   },
   mount(c) {
@@ -1715,8 +1604,7 @@ export const bijoux: GameDef = {
           <span class="tool-item bj-galcollar"><button class="sn-tool go bj-big" id="bjGalCollar" aria-label="Au collier">${IC.pendentif}</button><i class="tool-cap">Au collier</i></span>
           <span class="tool-item"><button class="sn-tool go bj-big" id="bjGalDone" aria-label="Fini">${ICON.check}</button><i class="tool-cap">Fini</i></span>
         </div>
-        <span class="tool-item bj-princeitem"><button class="sn-tool bj-prince" id="bjPrincess" aria-label="La princesse">${IC.couronne}</button><i class="tool-cap">La princesse</i></span>
-        <span class="tool-item bj-go bj-doneitem"><button class="sn-tool go" id="bjDone" aria-label="Fini">${ICON.check}</button><i class="tool-cap">Fini</i></span>
+        <span class="tool-item bj-princeitem"><button class="sn-tool go bj-prince" id="bjFini" aria-label="Fini">${ICON.check}</button><i class="tool-cap">Fini</i></span>
         <div class="bj-veil" id="bjVeil"></div>
       </div>`
     document.getElementById('bjClear')!.classList.add('bj-trash')
@@ -1752,8 +1640,7 @@ export const bijoux: GameDef = {
         needle: null as unknown as import('three').Mesh, clasp: new T.Group(),
         tip: new T.Vector3(), te: new T.Vector3(), needleQ: new T.Quaternion(), needleAt: new T.Vector3(), up: new T.Vector3(0, 1, 0),
         shake: 0, morph: 0, lift: 0, ims: [],
-        vitrine: null, spin: null, decor: null, princess: null, pose: 'idle', poseT: 0, poseDur: 0,
-        camFrom: null, camTo: null, camT: 0, t: 0, clearArmed: false, clearId: 0, ids: [], hideLoad: null, dirty: 3,
+        vitrine: null, spin: null, t: 0, clearArmed: false, clearId: 0, ids: [], hideLoad: null, dirty: 3,
         lazy: () => {}, alive: true, mode: 'collier', hama: null, gallery: null, choose: false
       }
       me = st
@@ -1789,16 +1676,6 @@ export const bijoux: GameDef = {
       /* --- Le doigt : un seul objet en main, suivi sur la fenêtre --- */
       const cv = stage.renderer.domElement
       const onDown = (e: PointerEvent) => {
-        if (st.phase === 'princess' && st.princess) {
-          // Toucher la princesse : elle tourne sur elle-même et rit
-          if (st.pose === 'idle') {
-            doPose(st, 'twirl', MOVES.twirl)
-            st.princess.face.expr('laugh', 1.4)
-            sfx('cloth', { vol: 0.4, rate: 1.2 })
-            tone(1175, 0.16, 'sine', 0.05); tone(1568, 0.2, 'sine', 0.04, 0.1)
-          }
-          return
-        }
         if (st.phase === 'gallery') { galleryTap(st, e); return }
         if (st.phase === 'work' && st.mode === 'hama') { hamaDown(st, e); return }
         if (st.phase !== 'work' || st.held) return
@@ -1861,8 +1738,7 @@ export const bijoux: GameDef = {
       document.getElementById('bjUndo')!.onclick = () => { if (st.phase === 'work') undo(st) }
       document.getElementById('bjClear')!.onclick = () => { if (st.phase === 'work') clearAll(st) }
       document.getElementById('bjClose')!.onclick = () => close(st)
-      document.getElementById('bjPrincess')!.onclick = () => { void toPrincess(st) }
-      document.getElementById('bjDone')!.onclick = () => { if (st.phase === 'princess') finish(st) }
+      document.getElementById('bjFini')!.onclick = () => { if (st.phase === 'vitrine') finish(st) }
       // Les perles à repasser
       for (const m of MODES) document.getElementById('bjMode-' + m.id)!.onclick = () => setMode(st, m.id)
       document.querySelectorAll<HTMLElement>('.bj-shape').forEach(b => { b.onclick = () => setShape(st, b.dataset.s as PlateShape) })
@@ -1893,12 +1769,6 @@ export const bijoux: GameDef = {
           /** Le milieu de la planche (où lâcher une perle glissée). */
           board: () => scr(BX, TOP, BZ),
           get beads() { return st.beads.map(b => b.bead.k) },
-          /** Les perles que la princesse porte (maillages de son collier). */
-          get worn() {
-            let n = 0
-            st.princess?.obj.getObjectByName('collier')?.traverse(o => { if ((o as import('three').Mesh).isMesh) n++ })
-            return n
-          },
           /* Les perles à repasser (1/10) */
           get mode() { return st.mode },
           get choose() { return st.choose },
@@ -1934,10 +1804,9 @@ export const bijoux: GameDef = {
             st.dirty = 2
             refreshHamaUi(st)
           },
-          /** Le pendentif gardé (ses lignes), dans la vitrine du collier, sur la princesse. */
+          /** Le pendentif gardé (ses lignes), dans la vitrine du collier. */
           get pendant() { return soloRoyal(useFerme.getState()).pendant?.rows || null },
           get vitrinePendant() { return !!st.vitrine?.getObjectByName('pendentif') },
-          get wornPendant() { return !!st.princess?.obj.getObjectByName('pendentif') },
           get creations() { return useFerme.getState().creations.length },
           get gallery() { return st.gallery ? { count: st.gallery.items.length, sel: st.gallery.sel } : null },
           /** Une création de la vitrine, à l'écran. */
@@ -1985,7 +1854,6 @@ export const bijoux: GameDef = {
               { count: 1, color: [0xFFFFFF, 0xFFE9A8, 0xFFD1E3], speed: 0.01, spread: 0.01, life: 1.2, size: 0.006, gravity: 0.004 })
           }
         }
-        if (st.phase === 'princess' || st.phase === 'end') stepPrincess(st, dt)
         st.fx.update(dt)
       })
     })().catch(err => {
@@ -2004,8 +1872,6 @@ export const bijoux: GameDef = {
         st.alive = false
         st.hideLoad?.()
         st.ids.forEach(id => c.cancel(id))
-        st.princess?.dispose()
-        st.decor?.dispose()
         st.ims.forEach(im => im.dispose())
         st.kit.dispose()
         st.gems?.dispose()

@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { loudStorage, STORE_KEY } from './backup'
 import type { Profile, Progress, Tier } from './types'
 import { defaultRoyal, normalizePiece, normalizeRoyal, wearBeads, wearPendant, type Bead, type Piece, type Royal } from './royal'
-import type { Look } from './character'
+import { normalizeLook, type Look } from './character'
 import { setSound } from './audio'
 
 /* Le choix de joueuse est MASQUÉ pour l'instant (demande du 10/09) : l'accueil
@@ -20,6 +20,12 @@ export function familyLooks(r: Record<RoyalSlot, Royal | null>): Royal[] {
   const both = [r.jade, r.joyce].filter((x): x is Royal => !!x)
   return both.length ? both : [r.solo || defaultRoyal()]
 }
+
+/** La petite fille d'Habille-toi à montrer (accueil, écran de fin, Atelier,
+    Taquin) : celle du profil en cours — le choix de joueuse est masqué.
+    (Les princesses VRM, `familyLooks`, sont parties le 6/10.) */
+export const familyDoll = (s: { profiles: Profile[]; currentId: string }): Look =>
+  normalizeLook((s.profiles.find(p => p.id === s.currentId) ?? s.profiles[0])?.look)
 
 /** La princesse qu'on habille seule (jamais nulle). */
 export const soloRoyal = (s: { royals: Record<RoyalSlot, Royal | null> }) => s.royals.solo || defaultRoyal()

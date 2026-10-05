@@ -43,26 +43,19 @@ de cochon, puis le fer les fait fondre et l'objet s'envole), Chasse
 aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).
 
-**Créer** — sans score : la Princesse (une vraie princesse en
-3D — un visage expressif, des yeux qui suivent le doigt, des cheveux qui
-ondulent — qu'on habille pièce par pièce en glissant les habits de la garde-robe, qu'on teint
-au doigt, qu'on coiffe — peigne, ciseaux, fer, barrettes —, avec son
-compagnon — licorne, poney, chaton, chiot — dans une salle de bal ou un jardin
-de château qu'on touche ; une photo qui devient un coloriage de l'Atelier ; à
-deux, les princesses de Jade et de Joyce ; et pour finir, le bal — un petit
-bouton ouvre l'ancienne version, Habille-toi, la petite fille à couettes
-qu'on coiffe d'un chapeau et qui tient un ballon), les Bijoux (un collier
+**Créer** — sans score : Habille-toi (la petite fille à couettes en 3D,
+qu'on habille — robe ou tee-shirt, couleurs, coiffure, chapeau, lunettes —
+et qui tient un ballon, une baguette ou une glace ; elle se promène ensuite
+sur l'accueil et saute de joie sur l'écran de fin), les Bijoux (un collier
 enfilé perle par perle — nacrées, verre, cristal, cœurs, étoiles — sur un
-fil tendu en U, fermé, présenté en vitrine sur un coussin de velours… puis
-porté par la princesse, au bal et dans la Princesse ; et les perles à
+fil tendu en U, fermé, présenté en vitrine sur un coussin de velours ; et les perles à
 repasser : une plaque en cœur, en étoile, ronde ou carrée, douze pots, le
 fer qui les fait fondre — la création se garde dans une vitrine, ou devient
 le pendentif du collier), Petit Piano (un piano laqué, la
 partition qui descend, les animaux qui chantent, dix chansons), Feu d'artifice (au-dessus du village, reflété dans le lac ; on dessine une forme au doigt et la fusée éclate en la dessinant, et le bouquet final est un spectacle en musique où ses dessins reviennent en grand),
 l'Atelier (dix pinceaux — néon, paillettes, aquarelle, craie, spray, cœurs,
 étoiles, arc-en-ciel… —, le miroir et la rosace, des papiers de couleur, le
-pot de peinture, les tampons de la ferme et leurs princesses, les coloriages
-tirés des photos de la Princesse, et un livre de coloriages : les animaux de
+pot de peinture, les tampons de la ferme et de la petite fille, et un livre de coloriages : les animaux de
 la ferme de face et de profil, le petit train, la fusée, la grange ; un dossier où ranger ses dessins,
 les reprendre, revoir leur film ou les enregistrer dans la tablette), la
 Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque),
@@ -84,7 +77,7 @@ part par part, à la petite fourchette).
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se
 jouer), la difficulté choisie dans chaque jeu (fleur,
 éclair, flamme), une main fantôme qui montre le geste de chaque jeu (sans
-jamais donner la réponse), le Ninja, le Flipper et la Princesse à deux en équipe sur la même tablette,
+jamais donner la réponse), le Ninja et le Flipper à deux en équipe sur la même tablette,
 minuteur parental avec verrou « question de grand », voix de la famille
 enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
 quand le combo monte, vrais bruitages foley sur les chocs, mise à jour

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { critterPortraits, meadowBanner, princessPortraits } from '../core/portraits'
-import { familyLooks, useFerme } from '../core/store'
-import { normalizeRoyal, royalKey } from '../core/royal'
+import { critterPortraits, meadowBanner, dollPortraits } from '../core/portraits'
+import { familyDoll, useFerme } from '../core/store'
 
 /* Le décor de l'accueil : des halos de couleur qui respirent, un pré en 3D
    au bas de l'écran (23/09 : collines, arbres, clôture, les animaux de la
-   ferme qui paissent), et LEURS princesses qui s'y promènent (les deux sœurs
-   dès qu'elles ont gardé la leur, 27/09), suivies de la poule et du poussin — les mêmes personnages 3D que dans les jeux. Tout est rendu
+   ferme qui paissent), et LEUR petite fille d'Habille-toi qui s'y promène
+   (revenue le 6/10 à la place des princesses VRM), suivie de la poule et du poussin — les mêmes personnages 3D que dans les jeux. Tout est rendu
    en images, une seule fois, un peu après l'ouverture : l'accueil s'affiche
    d'abord, le décor arrive ensuite (un rendu 3D logiciel peut prendre
    plusieurs secondes sur une machine sans carte graphique). */
@@ -14,7 +13,7 @@ export function Ambient() {
   const [img, setImg] = useState<Record<string, string>>({})
   const [dolls, setDolls] = useState<Record<string, string>[]>([])
   const [pre, setPre] = useState('')
-  const lookKey = useFerme(s => JSON.stringify(familyLooks(s.royals).map(royalKey)))
+  const lookKey = useFerme(s => JSON.stringify(familyDoll(s)))
   useEffect(() => {
     let on = true
     const t = window.setTimeout(async () => {
@@ -29,12 +28,11 @@ export function Ambient() {
   useEffect(() => {
     let on = true
     const t = window.setTimeout(() => {
-      const looks = (JSON.parse(lookKey) as string[]).map(k => normalizeRoyal(JSON.parse(k)))
-      Promise.all(looks.map(l => princessPortraits([l], ['walk', 'stride'], 96))).then(r => {
-        if (on) setDolls(r)
-        // Puis, toujours au calme, celles de l'écran de fin des jeux (une
-        // seule fois par tenue : elles sont gardées)
-        if (on) void princessPortraits(familyLooks(useFerme.getState().royals), ['cheer', 'wave'], 200)
+      const look = familyDoll(useFerme.getState())
+      dollPortraits([look], ['walk', 'stride'], 96).then(r => {
+        if (on) setDolls([r])
+        // Puis, toujours au calme, celles de l'écran de fin des jeux
+        if (on) void dollPortraits([look], ['cheer', 'wave'], 200)
       })
     }, 2500) // seulement si l'on reste sur l'accueil : un jeu lancé tout de suite n'attend personne
     return () => { on = false; clearTimeout(t) }

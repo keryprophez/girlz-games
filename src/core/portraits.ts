@@ -1,7 +1,7 @@
 import { loadThree, loadModel, fitModel, dotTex, type T3 } from './three3d'
 import { critterKit, type CritterKind } from './critters'
-import { makePrincess, posePrincess, type Pose } from './princess3d'
-import { royalKey, type Royal } from './royal'
+import { makeDoll, poseDoll, type DollPose } from './doll3d'
+import type { Look } from './character'
 import { diskGet, diskPut } from './diskcache'
 
 /* Les personnages 3D de la ferme, rendus en IMAGES pour les jeux en DOM
@@ -17,10 +17,6 @@ import { diskGet, diskPut } from './diskcache'
 
 const cache = new Map<string, string>()
 
-/* Les portraits de princesses coûtent cher (le personnage VRM : 6 Mo à lire,
-   ses matériaux à compiler, dans un contexte 3D de plus) : ils sont GARDÉS
-   (`core/diskcache.ts`) et ne se recalculent que pour une tenue nouvelle.
-   Les 48 plus récents restent. */
 
 type Renderer = import('three').WebGLRenderer
 
@@ -123,74 +119,65 @@ function renderPortraits(T: T3, renderer: Renderer, env: import('three').Texture
   }
 }
 
-/** LEURS princesses (la Princesse) rendues en images, une par pose : qui
-    saute de joie, qui fait coucou, qui marche. Une ou deux princesses côte à
-    côte dans la même image (les deux sœurs sur l'écran de fin). Cache par
-    tenue. L'image fait `px` de haut ; sa largeur suit le nombre de princesses. */
+/** La petite fille d'Habille-toi rendue en images, une par pose : qui
+    saute de joie, qui fait coucou, qui marche. Une ou deux côte à côte dans
+    la même image. Cache par look. L'image fait `px` de haut ; sa largeur
+    suit le nombre de personnages. (Elle remplace la princesse VRM le 6/10 :
+    « ça rame trop » — un rendu de formes rondes ne coûte presque rien.) */
 const inflight = new Map<string, Promise<Record<string, string>>>()
-export function princessPortraits(looks: Royal[], poses: Pose[], px: number): Promise<Record<string, string>> {
+export function dollPortraits(looks: Look[], poses: DollPose[], px: number): Promise<Record<string, string>> {
   // Deux demandes identiques en même temps partagent le même rendu
-  const k = looks.map(royalKey).join('+') + poses.join() + px
+  const k = JSON.stringify(looks) + poses.join() + px
   let p = inflight.get(k)
   if (!p) {
-    p = renderPrincesses(looks, poses, px).finally(() => inflight.delete(k))
+    p = renderDolls(looks, poses, px).finally(() => inflight.delete(k))
     inflight.set(k, p)
   }
   return p
 }
 
-async function renderPrincesses(looks: Royal[], poses: Pose[], px: number): Promise<Record<string, string>> {
+async function renderDolls(looks: Look[], poses: DollPose[], px: number): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
-  const key = (p: Pose) => 'royal:' + looks.map(royalKey).join('+') + ':' + p + '@' + px
-  let missing = poses.filter(p => { const hit = cache.get(key(p)); if (hit) out[p] = hit; return !hit })
+  const key = (p: DollPose) => 'doll:' + JSON.stringify(looks) + ':' + p + '@' + px
+  const missing = poses.filter(p => { const hit = cache.get(key(p)); if (hit) out[p] = hit; return !hit })
   if (!missing.length || !looks.length) return out
-  // Gardés d'une fois précédente ?
-  const kept = await Promise.all(missing.map(p => diskGet('portrait', key(p))))
-  missing.forEach((p, i) => { const u = kept[i]; if (u) { cache.set(key(p), u); out[p] = u } })
-  missing = missing.filter((_, i) => !kept[i])
-  if (!missing.length) return out
   const H = Math.min(640, Math.round(px * 2))
   const W = Math.round(H * (looks.length > 1 ? 1.35 : 0.8))
-  await withRenderer(W, H, async (T, renderer, env) => {
+  await withRenderer(W, H, (T, renderer, env) => {
     const shadowTex = dotTex(T, '#2A2018')
-    const ps = await Promise.all(looks.map(l => makePrincess(T, l, { live: false })))
+    const dolls = looks.map(l => makeDoll(T, l, 1))
     try {
       for (const pose of missing) {
         const scene = new T.Scene()
         lights(T, scene, env)
-        ps.forEach((pr, i) => {
+        dolls.forEach((d, i) => {
           // Des instants choisis : en haut du saut, main levée, pas en avant
-          const yaw = posePrincess(pr, pose, pose === 'cheer' ? 0.26 + i * 0.1 : pose === 'wave' ? 0.17 : pose === 'walk' || pose === 'stride' ? 0.2 : 0.5)
-          pr.rig.rotation.y = yaw
-          pr.update(0)
-          pr.face.expr(pose === 'cheer' ? 'joy' : pose === 'wave' ? 'wink' : 'neutral', 99)
-          pr.face.redraw()
-          pr.obj.position.set(looks.length > 1 ? (i ? 0.36 : -0.36) : 0, 0, 0)
-          pr.obj.rotation.y = looks.length > 1 ? (i ? -0.35 : 0.35) : pose === 'walk' || pose === 'stride' ? 0.9 : -0.3
-          scene.add(pr.obj)
+          poseDoll(d, pose, pose === 'cheer' ? 0.26 + i * 0.1 : pose === 'wave' ? 0.17 : pose === 'walk' || pose === 'stride' ? 0.2 : 0)
+          d.obj.position.set(looks.length > 1 ? (i ? 0.36 : -0.36) : 0, 0, 0)
+          d.obj.rotation.y = looks.length > 1 ? (i ? -0.35 : 0.35) : pose === 'walk' || pose === 'stride' ? 0.9 : -0.3
+          scene.add(d.obj)
           const blob = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.3, depthWrite: false }))
           blob.rotation.x = -Math.PI / 2
-          blob.position.set(pr.obj.position.x, 0.002, 0)
-          blob.scale.set(0.74, 0.54, 1)
+          blob.position.set(d.obj.position.x, 0.002, 0)
+          blob.scale.set(0.5, 0.36, 1)
           scene.add(blob)
         })
-        // Cadrage fixe : tout le corps, le saut compris
+        // Cadrage fixe : tout le corps, le saut et le chapeau compris
         const cam = new T.PerspectiveCamera(30, W / H, 0.05, 50)
-        cam.position.set(0, 0.85, looks.length > 1 ? 3.25 : 3.0)
-        cam.lookAt(0, 0.66, 0)
+        cam.position.set(0, 0.8, looks.length > 1 ? 3.0 : 2.7)
+        cam.lookAt(0, 0.62, 0)
         renderer.render(scene, cam)
         const url = renderer.domElement.toDataURL('image/png')
         cache.set(key(pose), url)
-        void diskPut('portrait', key(pose), url, 48)
         out[pose] = url
-        ps.forEach(pr => scene.remove(pr.obj))
+        dolls.forEach(d => scene.remove(d.obj))
         scene.traverse(o => {
           const m = o as import('three').Mesh
           if (m.isMesh && m.geometry) { m.geometry.dispose(); (m.material as import('three').Material).dispose() }
         })
       }
     } finally {
-      ps.forEach(pr => pr.dispose())
+      dolls.forEach(d => d.dispose())
       shadowTex.dispose()
     }
   }).catch(() => { /* pas de WebGL : rien à montrer, rien de cassé */ })

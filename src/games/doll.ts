@@ -12,16 +12,14 @@ import { createStage, loader, type Stage } from '../core/three3d'
 import { ground, particles, type Particles } from '../core/scene3d'
 import { makeDoll, poseDoll, type Doll } from '../core/doll3d'
 
-/* Habille-toi — l'ANCIENNE VERSION de la Princesse, telle qu'elle était du
-   23 au 27/09, revenue le 28/09 derrière un petit bouton de la Princesse
-   (« qu'on puisse quand même faire l'ancienne version ») : ce n'est pas un
-   jeu du catalogue, `games/dressup.ts` la monte à la place de la princesse.
-   La petite fille des filles, construite en formes rondes comme les animaux
+/* Habille-toi — la petite fille des filles, telle qu'elle était du 23 au
+   27/09 ; revenue le 28/09 derrière un petit bouton de la Princesse, elle
+   EST le jeu depuis le 6/10 (`games/dressup.ts` la monte). La petite fille des filles, construite en formes rondes comme les animaux
    de la ferme (`core/doll3d.ts`), sur une estrade dans un petit décor. On la
    fait tourner au doigt ; chaque habit change pour de vrai (robe évasée,
    couettes, couronne, ballon…) et elle fait un saut de joie dans une pluie
    d'étincelles. Le look est gardé à chaque geste (dans le profil).
-   Créer : aucune note. Le bouton couronne ramène à la princesse. */
+   Créer : aucune note. */
 
 /* Quatre décors : le ciel, le sol, la lumière */
 const SCENES = [
@@ -52,8 +50,6 @@ interface State {
 let du: State | null = null
 let ctx: GameContext
 
-/** Le bouton qui ramène à la princesse : une couronne d'or. */
-const CROWN = `<svg viewBox="0 0 48 48" width="40" height="40"><path d="M9 34 L12 16 L19 25 L24 12 L29 25 L36 16 L39 34 Z" fill="#FFCE3C" stroke="#D9A32A" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 39 L38 39" stroke="#D9A32A" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="27" r="2.6" fill="#FF6B81"/></svg>`
 
 function paintButtons(me: State) {
   document.querySelectorAll<HTMLElement>('.du-opt').forEach(b => {
@@ -109,9 +105,8 @@ function finish(me: State) {
   })
 }
 
-/** Monte Habille-toi dans `c.root` ; `toPrincess` repasse à la princesse.
-    Renvoie le nettoyage (idempotent). */
-export function mountDoll(c: GameContext, toPrincess: () => void): () => void {
+/** Monte Habille-toi dans `c.root`. Renvoie le nettoyage (idempotent). */
+export function mountDoll(c: GameContext): () => void {
   {
     ctx = c
     const st0 = useFerme.getState()
@@ -126,7 +121,7 @@ export function mountDoll(c: GameContext, toPrincess: () => void): () => void {
 
     c.root.innerHTML = `
       <div class="arena du-arena">
-        <div class="du-scene" id="duScene"><button class="pr-switch" id="duSwitch" aria-label="La princesse">${CROWN}</button></div>
+        <div class="du-scene" id="duScene"></div>
         <div class="du-side">
           <div class="du-top">
             ${SCENES.map((b, i) => `<button class="du-bg du-swatch${i === 0 ? ' sel' : ''}" data-i="${i}" style="background:${b.swatch}" aria-label="Décor"></button>`).join('')}
@@ -184,7 +179,6 @@ export function mountDoll(c: GameContext, toPrincess: () => void): () => void {
       sfx('click', { vol: 0.4 }); rebuild(me); save(me)
     }
     c.root.querySelector<HTMLElement>('#duDone')!.onclick = () => { if (me.running) finish(me) }
-    c.root.querySelector<HTMLElement>('#duSwitch')!.onclick = () => { if (me.running) { sfx('switch', { vol: 0.5 }); toPrincess() } }
 
     const holder = c.root.querySelector<HTMLElement>('#duScene')!
     const hideLoader = loader(holder, 'dressup')

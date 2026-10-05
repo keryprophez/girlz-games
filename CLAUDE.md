@@ -64,11 +64,6 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              facts.ts    ← LA MÉMOIRE DES CALCULS (phase 4) : niveaux d'aide,
                            récolte composée, révisions espacées, pièges voisins,
                            « presque », + − × ÷ — logique pure, testée
-             phonics.ts  ← LES SONS DES CUBES DE L'ALPHABET (30/09) : les mots
-                           découpés à la main en graphèmes (« ch », « ou » =
-                           un cube) et en syllabes écrites du CP, le SON de
-                           chaque graphème, ce que la voix prononce (`landing`,
-                           `reading`), les leurres — logique pure, testée
              fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
              impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
              backup.ts   ← export/import JSON + alerte quota localStorage
@@ -78,18 +73,10 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            lapin, cactus, vache, poule, chien, canard, mouton
                            (`FARM`, les pions des jeux en DOM) et, depuis le
                            28/09, coq, chèvre, cheval, chat (`FARM_MORE`)
-             royal.ts    ← LEUR princesse en données (27/09) : pièces, peintures
-                           (couleur + motif) par pièce, cheveux, compagnon — testé
-             princess3d.ts ← LA PRINCESSE en 3D : le personnage VRM de pixiv
-                           (`assets/princess/princesse.vrm`, `@pixiv/three-vrm`)
-                           habillé par nous — `makePrincess(T, royal)`, habits
-                           liés à son squelette, tissu magique (`dye` : la
-                           teinture part du doigt), ses expressions
-                           (`face.expr`, `face.lookAt`), `posePrincess(p,
-                           'cheer'|'spin'|'waltz'…)` sur ses os normalisés
-             pet3d.ts    ← son compagnon : licorne, poney, chaton, chiot
-             castle3d.ts ← les décors qu'on touche : salle de bal, jardin, jour/nuit
-             atelierdb.ts ← l'IndexedDB de l'Atelier (partagée avec la Princesse)
+             royal.ts    ← l'ancienne princesse en données (27/09) ; sert encore
+                           aux Bijoux : le collier (`beads`) et le pendentif
+                           (`pendant`, `Piece`) gardés dans le store — testé
+             atelierdb.ts ← l'IndexedDB de l'Atelier
              cosmos.ts   ← LE SYSTÈME SOLAIRE de l'Espace (27/09, d'après la
                            maquette du père) : ciel et Voie lactée procéduraux,
                            Soleil qui bout, Terre jour/nuit/villes, atmosphères,
@@ -110,9 +97,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            suit la hauteur (`setDusk` : jour → doré → crépuscule
                            → nuit, étoiles, lune, aurore)
              doll3d.ts   ← la petite fille d'Habille-toi en formes rondes (+
-                           `character.ts`, son look) : l'ANCIENNE version de
-                           la Princesse, derrière son petit bouton (28/09,
-                           `games/doll.ts`, monté par `dressup.ts`)
+                           `character.ts`, son look, gardé dans le profil) :
+                           le jeu Habille-toi (`games/doll.ts`, monté par
+                           `dressup.ts`) ; en images (`dollPortraits` de
+                           `portraits.ts`) sur l'accueil, l'écran de fin et en
+                           tampon dans l'Atelier
              money3d.ts  ← L'ARGENT du Marché en 3D (28/09) : pièces en métal
                            (relief, patine, tranche, vraies tailles) et billets
                            courbés, rendus en IMAGES (`moneyImages`), gardés
@@ -145,7 +134,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            logique pure, testée (`games/jigsaw.ts` en fait
                            des pièces 3D)
              pictures.ts ← LES IMAGES DU PUZZLE (30/09), en 4:3 : la ferme
-                           en 3D, leur princesse dans la salle de bal,
+                           en 3D,
                            l'Espace avec leur fusée — rendues une fois,
                            gardées sur le disque (+ `drawingPicture` de
                            `games/coloring.ts` pour un dessin du dossier)
@@ -170,7 +159,7 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            taille réelle : nacrée irisée, verre, cristal
                            taillé, cœur, étoile, fleur, intercalaire, cube ;
                            un « kit » par scène (`beadKit` : `refract` pour
-                           la vitrine, `cheap` pour la princesse), `orientQ`
+                           la vitrine, `cheap` pour une scène légère), `orientQ`
                            (le trou sur Y, le long du fil), `instancedRun`
              voicefx.ts  ← LA VOIX RIGOLOTE de l'Animal qui répète (5/10) :
                            plus aiguë sans aller plus vite (des grains),
@@ -218,7 +207,7 @@ scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
 ```
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
-Memory, les Cubes de l'alphabet (ex-Chasse aux lettres), le Marché — et depuis le 22/09 les animaux
+Memory, la Chasse aux lettres, le Marché — et depuis le 22/09 les animaux
 des continents du Tour du Monde. 76 sujets dans
 `public/assets/photos/*.jpg`, réunis par `scripts/import-photos.mjs` —
 **animaux : iNaturalist** (recherche par taxon latin), **le reste : catégories
@@ -231,31 +220,18 @@ Puissance 4, les images du Puzzle) est fait des personnages
 3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
 `critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
 WebGL jetable), `portraitImg(url, px)` les insère ; `farmPicture()` de
-`core/pictures.ts` rend un pré 3D entier (4:3, gardé sur le disque). **Leurs princesses** (27/09) suivent la même règle :
-construites dans `core/princess3d.ts` à partir d'une `Royal`
-(`core/royal.ts`), en vraie 3D dans la Princesse, en images
-(`princessPortraits(looks, poses, px)`, une ou deux côte à côte) sur l'écran
-de fin, en promenade sur l'accueil et en tampons dans l'Atelier. Le store
-garde trois princesses (`royals.solo`, `.jade`, `.joyce`) ; `familyLooks()`
-donne celles à montrer (les deux sœurs dès qu'elles ont gardé la leur).
-Le collier enfilé dans les **Bijoux** (30/09) est à elles aussi : ses perles
-dans `Royal.beads` (sorte + couleur, dans l'ordre du fil), porté quand
-`neck` vaut `beads` ; `wearNecklace` (store) le met à la princesse qu'on
-habille seule et l'offre aux garde-robes de Jade et de Joyce ; `princess3d`
-le construit sur elle (groupe `collier`, accroché au haut du buste, plus
-long = plus bas sur la poitrine, par-dessus le corsage). Son **pendentif**
-(1/10) : une création de perles à repasser des Bijoux, `Royal.pendant`
-(`Piece` : des lignes de lettres, recadrées ; `null` dans une vieille
-sauvegarde), accrochée au milieu du fil par un anneau doré (`wearPendant` ;
-sans perles enfilées, un fil de soie le porte : `hasNecklace`), construite
-en UNE géométrie (groupe `pendentif`, `MeshStandardMaterial` aux couleurs
-dans ses sommets), inclinée juste assez pour rester sur le corsage. La
-vitrine des créations est dans le store (`creations`, 24 au plus).
-Un petit bouton rond (la petite fille à couettes, en bas à gauche de la
-scène) ouvre l'**ancienne version**, Habille-toi (`games/doll.ts`, demandé
-le 28/09) ; une couronne y ramène, le dernier choix est retenu
-(`ferme:princesse:mode`), et chaque version a ses timers de partie à elle
-(`scoped()` dans `dressup.ts`). Pour ajouter un mot : une ligne dans
+`core/pictures.ts` rend un pré 3D entier (4:3, gardé sur le disque). **La petite fille d'Habille-toi** suit la même règle : construite dans
+`core/doll3d.ts` à partir de son `Look` (`core/character.ts`, gardé dans le
+profil, `familyDoll()` du store), en vraie 3D dans Habille-toi, en images
+(`dollPortraits(looks, poses, px)`) sur l'écran de fin, en promenade sur
+l'accueil et en tampon dans l'Atelier. **La princesse VRM est partie le
+6/10** (le père : « la princesse ça rame trop, ramène la moche tête ronde,
+tant pis pour moi ») avec son modèle de 6 Mo, `princess3d.ts`, son compagnon
+(`pet3d.ts`), ses décors (`castle3d.ts`), sa photo du Puzzle et sa scène des
+Bijoux ; le collier et le pendentif des Bijoux restent gardés dans
+`royals.solo` (`Royal.beads`, `Royal.pendant`, `wearNecklace`,
+`wearPendant`), sans personne pour les porter. La vitrine des créations est
+dans le store (`creations`, 24 au plus). Pour ajouter un mot : une ligne dans
 `TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
 **regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
 
@@ -278,13 +254,12 @@ et on le récupère par le connecteur Drive (un sous-agent, le fichier arrive en
 base64). Une nouvelle planche se commande **avec la planche des plantes en
 image de référence** (`generate-image` de Canva l'accepte) : c'est ainsi que
 les fruits du Ninja (24/09, `public/assets/fruits/`) sont du même style.
-**Un personnage humain ne se construit pas en formes rondes** (27/09) : la
-première princesse, sphères et tubes, a été refusée le soir même (« sa tête
-ronde, on dirait un pantin de bois de 1950 »). Elle est maintenant le modèle
-VRM de démonstration de pixiv (licence VRM Public License 1.0 : modification
-et redistribution permises), allégé à 6 Mo ; ce qu'elle porte reste à nous
-(pièces construites, ajustées à son corps mesuré, liées à son squelette).
-Les animaux ronds de la ferme, eux, restent en formes rondes.
+**Un personnage humain en formes rondes** : refusé le 27/09 (« sa tête
+ronde, on dirait un pantin de bois de 1950 »), remplacé par le modèle VRM de
+pixiv… qui ramait trop sur la tablette : le 6/10, le père a choisi la
+petite fille ronde d'Habille-toi (« tant pis pour moi »). **La fluidité sur
+la tablette passe avant le réalisme** : un personnage lourd (6 Mo, ressorts,
+matériaux à compiler) se mesure avec `?fps` AVANT d'être adopté.
 Et avant toute nouvelle direction visuelle : **des maquettes au
 format de la tablette, montrées AVANT de coder** (c'est ainsi que le rendu du
 Potager et le ciel du Ninja ont été choisis).
@@ -414,12 +389,10 @@ la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
 
 Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
 `simon` (le Chœur sur scène, 28/09) · `pinball` (le Flipper de la grange, 1/10 :
-physique à nous dans `core/pinball.ts`, pas cannon-es) · `mirror` (les Perles Miroir, 30/09) · `dressup` · `bijoux` (30/09) ·
+physique à nous dans `core/pinball.ts`, pas cannon-es) · `mirror` (les Perles Miroir, 30/09) · `dressup` (Habille-toi, la petite fille ronde) · `bijoux` (30/09) ·
 `memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
 `taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
 son second mode, le Taquin, reste en DOM) ·
-`letters` (les Cubes de l'alphabet, 30/09 : cubes de bois, la voix dit le
-son, la syllabe, puis le mot — les sons dans `core/phonics.ts`) ·
 `hideseek` (Cache-Cache, 1/10 : la ferme en diorama qu'on fait tourner au
 doigt, `core/farm3d.ts` ; la nuit, à la lampe torche ; depuis le 6/10,
 l'éclair et la flamme sur la GRANDE ferme — `{ big: true }`, caméra libre :
@@ -450,7 +423,9 @@ retirées le soir même — « mille fois moins bien que la version isométrique
 hyper mignonne », « de la 2D saccadée et pixelisée sur une surface
 minuscule » ; les 3D du 23/09 sont revenues telles quelles. La Chenille est
 sortie le 30/09 (« elles aiment pas »). **Un jeu en vraie
-3D ne redescend pas en 2D.** Pour
+3D ne redescend pas en 2D** — sauf quand le père le demande : le 6/10, les
+Cubes de l'alphabet 3D (30/09) sont redevenus la Chasse aux lettres en 2D
+(« je préférais la version 2D sans tes cubes moches »), avec ses photos. Pour
 un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
 modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
 `mass = 0`.
@@ -465,8 +440,8 @@ Une soixantaine de bugs vécus, leur cause et leur parade, rangés dans
 (nettoyage, couleurs + ACES, canvas redimensionné, textures de shader,
 effets proportionnels au temps d'une image), physique (cannon-es, pas
 fixes, horloge simulée), toucher (deux doigts, glissé sur `window`, plein
-écran, tiroir qui avale le doigt), VRM (cheveux, yeux, habits liés, creux
-du cou), voix et sons (`setTimeout`, premier son, noms des lettres), bots
+écran, tiroir qui avale le doigt), VRM (parti le 6/10 : cheveux, yeux,
+habits liés, creux du cou), voix et sons (`setTimeout`, premier son, noms des lettres), bots
 (accroche, 4 fps, valeur périmée, gagner par chance, copie de la main),
 scripts (`pkill -f`, ports, serveurs des autres), PWA (la maj qui
 recharge), imagiers (banques d'images, planche-contact). Et en ajouter une
@@ -493,7 +468,7 @@ ligne quand on en paie un nouveau.
    → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
    minutes. Tous les bots : lancement manuel du workflow avec « tous ».
    `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
-   `npm run test:play` a **un bot par jeu** (6/10 : 40 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (6/10 : 38 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

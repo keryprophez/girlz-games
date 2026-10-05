@@ -1102,6 +1102,21 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
     la fourchette (deux par part, la pointe d'abord, la coupe se voit) ; un
     toucher sur le gâteau : il tourne, le couteau coupe la suivante. Six
     parts, « Gâteau dévoré ! ».
+- ✅ **« Les perfs sont assez catastrophiques »** (6/10, le père, sur la
+  tablette) — deux retours en arrière demandés :
+  - **Lettres** : « rollback, je préférais la version 2D sans tes cubes
+    moches » : la Chasse aux lettres du 30/09 revient telle quelle (photo,
+    cases, grosses lettres qui volent) ; les Cubes de l'alphabet 3D et
+    `core/phonics.ts` sont retirés.
+  - **Princesse** : « ça rame trop, ramène la moche tête ronde, tant pis pour
+    moi » ; son choix : la petite fille d'Habille-toi. Elle EST le jeu
+    (`dressup`, « Habille-toi ») ; le modèle VRM (6 Mo), `princess3d.ts`,
+    `pet3d.ts`, `castle3d.ts` et `@pixiv/three-vrm` sont retirés ; l'accueil,
+    l'écran de fin et le tampon de l'Atelier montrent la petite fille
+    (`dollPortraits`) ; le Puzzle perd la photo de la salle de bal ; les
+    Bijoux finissent à la vitrine (« Fini »), sans princesse.
+  - **Reste** : les autres jeux qui rament, à nommer par le père, avec
+    `?fps`, un par un.
 - ✅ **Cache-Cache, « trop facile » pour Joyce** (6/10, plan « go », maquette
   « go ») : la fleur ne change pas (la petite ferme de Jade). L'éclair et la
   flamme se jouent sur la GRANDE ferme (`buildFarm({ big: true })`, rayon 13 ;

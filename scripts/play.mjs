@@ -880,40 +880,18 @@ await scenario('suites-six-manches', async () => {
   await finDe('Sacré sens logique')
 })
 
-/* 🔤 Les Cubes de l'alphabet (30/09) : trois mots, cube après cube — le
-   premier GLISSÉ jusqu'à sa case, les autres touchés — par de vrais clics
-   sur les cubes 3D. Et la voix : pour chaque mot, exactement le mot, puis
-   le son de chaque cube posé, chaque syllabe complète, et la lecture finale
-   (syllabes puis mot) — ce qui est passé à `ctx.say`, dans l'ordre. */
-await scenario('cubes-trois-mots', async () => {
-  await openGame('Cubes de l', '__lg')
+/* 🔤 Chasse aux lettres : trois mots, lettre après lettre (la lettre vole). */
+await scenario('lettres-trois-mots', async () => {
+  await openGame('Chasse aux lettres', '__lg')
   for (let r = 0; r < 3; r++) {
-    await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 90000, polling: 500 })
-    const { text, expected, said } = await page.evaluate(() => ({ text: window.__lg.text, expected: window.__lg.expected, said: window.__lg.said }))
-    const from = said.lastIndexOf(text)
-    if (from < 0) throw new Error(`le mot « ${text} » n'a pas été dit au début`)
-    for (let k = 0; ; k++) {
-      const st = await page.evaluate(() => ({ need: window.__lg.need, pos: window.__lg.pos, cubes: window.__lg.cubes() }))
-      if (!st.need) break
-      const c = st.cubes.find(x => x.t === st.need && x.state === 'rest')
-      if (!c) throw new Error(`aucun cube « ${st.need} » sur la table (${text})`)
-      if (r === 0 && k === 0) {
-        // Glissé : appuyer sur le cube, l'emmener jusqu'à sa case, lâcher
-        const sl = await page.evaluate(i => window.__lg.slot(i), st.pos)
-        await page.mouse.move(c.x, c.y); await page.mouse.down()
-        for (let i = 1; i <= 8; i++) { await page.mouse.move(c.x + (sl.x - c.x) * i / 8, c.y + (sl.y - c.y) * i / 8); await page.waitForTimeout(40) }
-        await page.mouse.up()
-      } else await page.mouse.click(c.x, c.y)
-      await page.waitForFunction(p => window.__lg.pos > p, st.pos, { timeout: 30000, polling: 250 })
-      // La voix finit de parler avant le cube suivant (sinon elle saute des sons)
-      await page.waitForFunction(() => window.__lg.idle || window.__lg.lock, null, { timeout: 60000, polling: 250 })
+    await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 15000 })
+    const word = await page.evaluate(() => window.__lg.word)
+    for (const ch of word) {
+      await page.locator(`.lg-tile:not(.used)[data-ch="${ch}"]`).first().click()
+      await page.waitForTimeout(120)
     }
-    // Toute la lecture finale est dite, dans l'ordre
-    await page.waitForFunction(n => window.__lg.said.length >= n, from + expected.length, { timeout: 90000, polling: 500 })
-    const got = (await page.evaluate(() => window.__lg.said)).slice(from, from + expected.length)
-    if (JSON.stringify(got) !== JSON.stringify(expected)) throw new Error(`voix de « ${text} » : ${JSON.stringify(got)} au lieu de ${JSON.stringify(expected)}`)
   }
-  await finDe('Tous les mots écrits', 60000)
+  await finDe('Tous les mots trouvés')
 })
 
 /* 🪞 Les Perles Miroir (30/09) : trois reflets en perles à repasser, jusqu'à
@@ -1177,40 +1155,9 @@ await scenario('atelier-papillon', async () => {
   await page.locator('#atDone').click()
   await finDe('Chef-d', 20000)
 })
-/* 👑 La Princesse (27/09) : la partie entière, seule. Une jupe au toucher,
-   la couronne GLISSÉE de la garde-robe sur la tête, la teinture magique sur
-   la jupe, le peigne qui allonge les cheveux, la photo (rangée dans
-   l'Atelier), puis le bal : six pas de danse jusqu'à l'écran de fin. */
-const pr = f => page.evaluate(f)
-const prOpen = async (duo) => {
-  errors.length = 0
-  await page.goto(URL, { waitUntil: 'networkidle' })
-  await clickTile('La Princesse')
-  await page.locator('.duobtn').nth(duo ? 1 : 0).click({ force: true, timeout: 120000 })
-  await page.locator('.tierbtn.tier-easy').click({ force: true, timeout: 120000 })
-  // La princesse (un personnage VRM de 6 Mo) et ses vignettes : sous
-  // swiftshader, une minute ; on sonde chaque seconde (sonder à chaque image
-  // étouffe la page pendant la compilation des shaders)
-  await prWait(() => window.__pr && window.__pr.ready, 'princesse prête')
-  await prSettle()
-}
-/* Les vignettes de la garde-robe se calculent en 3D (une princesse hors
-   écran) : tant qu'elles tournent, la page est prise et un clic peut rester
-   bloqué. On attend qu'elles soient toutes là, et on clique en force. */
-const prSettle = () => prWait(() => window.__pr && window.__pr.pending === 0, 'vignettes calculées')
-/** Attendre, et dire où l'on en était si ça n'arrive pas. */
-const prWait = async (fn, what, timeout = 300000) => {
-  try { await page.waitForFunction(fn, null, { timeout, polling: 1000 }) } catch {
-    const st = await page.evaluate(() => window.__pr ? { ready: window.__pr.ready, pending: window.__pr.pending, tab: window.__pr.tab, ...window.__pr.dbg } : 'pas de __pr').catch(() => 'page perdue')
-    const toast = await page.evaluate(() => document.querySelector('.toast')?.textContent || '').catch(() => '')
-    throw new Error(`${what} : délai dépassé (${JSON.stringify(st)}) ${toast} ${[...errors, ...consoleErrs].slice(-5).join(' | ')}`)
-  }
-}
 /* 📿 Les Bijoux (30/09) : dix perles touchées dans le boîtier, une onzième
    GLISSÉE jusqu'à la planche, « annuler » en retire une, le fermoir ferme
-   le collier (gardé : la princesse le porte), la vitrine, puis la princesse
-   qui le porte au bal ; « Fini » mène à l'écran de fin. Enfin, dans la
-   Princesse, elle le porte aussi (construit en 3D sur elle). */
+   le collier (gardé), la vitrine ; « Fini » mène à l'écran de fin. */
 const bjWait = (fn, arg, what, timeout = 120000) => page.waitForFunction(fn, arg, { timeout, polling: 500 }).catch(async () => {
   const st = await page.evaluate(() => window.__bj ? { phase: window.__bj.phase, mode: window.__bj.mode, count: window.__bj.count, moving: window.__bj.moving, hama: window.__bj.hama } : 'pas de __bj').catch(() => 'page perdue')
   throw new Error(`${what} : délai dépassé (${JSON.stringify(st)}) ${[...errors, ...consoleErrs].slice(-4).join(' | ')}`)
@@ -1239,23 +1186,15 @@ await scenario('bijoux-collier-de-perles', async () => {
   await bjWait(() => window.__bj.phase === 'vitrine', null, 'vitrine', 180000)
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.solo)
   if (!kept || kept.neck !== 'beads' || kept.beads?.length !== 10) throw new Error(`le collier n'est pas gardé : ${JSON.stringify(kept?.beads)}`)
-  await page.locator('#bjPrincess').click({ force: true, timeout: 120000 })
-  await bjWait(() => window.__bj.phase === 'princess', null, 'la princesse', 300000)
-  if (!(await page.evaluate(() => window.__bj.worn))) throw new Error('la princesse ne porte pas le collier')
-  await page.locator('#bjDone').click({ force: true, timeout: 120000 })
+  await page.locator('#bjFini').click({ force: true, timeout: 120000 })
   await finDe('Quel joli collier', 60000)
-  // Dans la Princesse, elle le porte aussi
-  await prOpen(false)
-  const pr0 = await pr(() => ({ neck: window.__pr.looks[0].neck, beads: window.__pr.looks[0].beads.length, collier: window.__pr.collier[0] }))
-  if (pr0.neck !== 'beads' || pr0.beads !== 10 || !pr0.collier) throw new Error(`la Princesse ne porte pas le collier : ${JSON.stringify(pr0)}`)
 })
 
 /* 📿 Les perles à repasser des Bijoux (1/10) : le second atelier, une
    plaque en cœur ; des perles roses touchées une à une, une rangée GLISSÉE
    en violet, une perle reprise d'un toucher (la gomme) ; le fer ; la
    création fondue en l'air, « Au collier » : elle devient le PENDENTIF du
-   collier (gardé, dans la vitrine du collier), que la princesse porte au bal
-   — et dans la Princesse aussi. */
+   collier (gardé, dans la vitrine du collier). */
 await scenario('bijoux-perles-a-repasser-pendentif', async () => {
   await openGame('Les Bijoux', '__bj')
   await bjWait(() => window.__bj.phase === 'work', null, 'établi')
@@ -1302,127 +1241,21 @@ await scenario('bijoux-perles-a-repasser-pendentif', async () => {
   if (kept?.royals?.solo?.neck !== 'beads' || beads !== 10) throw new Error(`le pendentif n'est pas gardé : ${JSON.stringify(pend)}`)
   if (!kept.creations?.length) throw new Error('la création n\'est pas dans la vitrine des créations')
   if (!(await page.evaluate(() => window.__bj.vitrinePendant))) throw new Error('pas de pendentif dans la vitrine du collier')
-  await page.locator('#bjPrincess').click({ force: true, timeout: 120000 })
-  await bjWait(() => window.__bj.phase === 'princess', null, 'la princesse', 300000)
-  if (!(await page.evaluate(() => window.__bj.wornPendant))) throw new Error('la princesse ne porte pas le pendentif')
-  await page.locator('#bjDone').click({ force: true, timeout: 120000 })
+  await page.locator('#bjFini').click({ force: true, timeout: 120000 })
   await finDe('Quel joli collier', 60000)
-  // Dans la Princesse, elle le porte aussi
-  await prOpen(false)
-  const pr1 = await pr(() => ({ neck: window.__pr.looks[0].neck, pendant: !!window.__pr.looks[0].pendant, worn: window.__pr.pendentif[0] }))
-  if (pr1.neck !== 'beads' || !pr1.pendant || !pr1.worn) throw new Error(`la Princesse ne porte pas le pendentif : ${JSON.stringify(pr1)}`)
 })
 
-await scenario('princesse-habiller-teindre-bal', async () => {
-  await prOpen(false)
-  // La jupe courte, au toucher
-  await page.locator('.pr-tab[data-t="dress"]').click({ force: true, timeout: 120000 })
-  await prSettle()
-  await page.locator('.pr-tile[data-s="1"][data-i="1"]').click({ force: true, timeout: 120000 })
-  await page.waitForFunction(() => window.__pr.looks[0].skirt === 'short', null, { timeout: 40000, polling: 250 })
-  // La couronne glissée sur la tête
-  await page.locator('.pr-tab[data-t="crown"]').click({ force: true, timeout: 120000 })
-  await prSettle()
-  const tile = await page.locator('.pr-tile[data-s="0"][data-i="2"]').boundingBox()
-  const head = await pr(() => window.__pr.screenOf('head'))
-  const x0 = tile.x + tile.width / 2, y0 = tile.y + tile.height / 2
-  await page.mouse.move(x0, y0)
-  await page.mouse.down()
-  for (let i = 1; i <= 12; i++) {
-    await page.mouse.move(x0 + (head.x - x0) * i / 12, y0 + (head.y - y0) * i / 12)
-    await page.waitForTimeout(25)
-  }
-  await page.mouse.up()
-  await page.waitForFunction(() => window.__pr.looks[0].crown === 'crown', null, { timeout: 40000, polling: 250 })
-  // La teinture : bleu à étoiles, sur la jupe
-  await page.locator('.pr-tab[data-t="dye"]').click({ force: true, timeout: 120000 })
-  await page.locator('[data-dye="#3F63C8"]').click({ force: true, timeout: 120000 })
-  await page.locator('[data-pat="stars"]').click({ force: true, timeout: 120000 })
-  await page.waitForTimeout(1500) // la caméra se pose
-  const sk = await pr(() => window.__pr.screenOf('skirt'))
-  await page.mouse.click(sk.x, sk.y)
-  await page.waitForFunction(() => window.__pr.looks[0].paint.skirt.c === '#3F63C8' && window.__pr.looks[0].paint.skirt.p === 'stars', null, { timeout: 40000, polling: 250 })
-  // Le peigne : tirer vers le bas allonge les cheveux
-  await page.locator('.pr-tab[data-t="hair"]').click({ force: true, timeout: 120000 })
-  await prSettle()
-  await page.locator('[data-tool="comb"]').click({ force: true, timeout: 120000 })
-  await page.waitForTimeout(2500) // la caméra s'approche du visage
-  const len0 = await pr(() => window.__pr.looks[0].hair.len)
-  const hp = await pr(() => window.__pr.screenOf('hair'))
-  await page.mouse.move(hp.x, hp.y)
-  await page.mouse.down()
-  for (let i = 1; i <= 16; i++) { await page.mouse.move(hp.x, hp.y + i * 20); await page.waitForTimeout(60) }
-  await page.mouse.up()
-  await page.waitForFunction(l => window.__pr.looks[0].hair.len > l + 0.05, len0, { timeout: 60000, polling: 250 })
-  // La photo : rangée dans l'Atelier (dossier et coloriage)
-  await page.locator('#prPhoto').click({ force: true, timeout: 120000 })
-  await page.waitForFunction(() => window.__pr.photos === 1, null, { timeout: 60000, polling: 250 })
-  // Lire la base de l'Atelier SANS jamais la créer : ouverte ici avant le
-  // jeu, elle naissait vide et le jeu ne pouvait plus rien y ranger
-  await prWait(() => new Promise(res => {
-    const rq = indexedDB.open('ferme-atelier')
-    rq.onupgradeneeded = () => rq.transaction.abort()
-    rq.onsuccess = () => {
-      const d = rq.result
-      if (!d.objectStoreNames.contains('pages')) { d.close(); res(false); return }
-      const g = d.transaction('pages').objectStore('pages').get('princesse:liste')
-      g.onsuccess = () => { d.close(); res(Array.isArray(g.result) && g.result.length > 0) }
-      g.onerror = () => { d.close(); res(false) }
-    }
-    rq.onerror = () => res(false)
-  }), 'coloriage rangé', 120000)
-  // Le bal : six pas, puis la révérence et l'écran de fin
-  await page.locator('#prBall').click({ force: true, timeout: 120000 })
-  await page.locator('.pr-move').first().waitFor({ timeout: 120000 })
-  for (let k = 0; k < 6; k++) {
-    await page.locator('.pr-move').nth(k).click({ force: true, timeout: 120000 })
-    await page.waitForFunction(n => window.__pr.ball && window.__pr.ball.moves >= n, k + 1, { timeout: 80000, polling: 250 })
-  }
-  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Quel bal'), null, { timeout: 120000, polling: 500 })
-  // La princesse est gardée pour la prochaine fois
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.solo)
-  if (!saved || saved.skirt !== 'short' || saved.paint.skirt.c !== '#3F63C8') throw new Error('la princesse n\'est pas gardée')
-})
-
-/* 👑 À deux : deux princesses sur l'estrade, celles de Jade et de Joyce.
-   Teindre la seconde la rend active et la garde dans la carte de Joyce. */
-await scenario('princesse-a-deux', async () => {
-  await prOpen(true)
-  const n = await pr(() => window.__pr.looks.length)
-  if (n !== 2) throw new Error('il faut deux princesses à deux')
-  await page.locator('.pr-tab[data-t="dye"]').click({ force: true, timeout: 120000 })
-  await page.locator('[data-dye="#8CCB6A"]').click({ force: true, timeout: 120000 })
-  await page.waitForTimeout(1500)
-  const sk = await pr(() => window.__pr.screenOf('skirt', 1))
-  await page.mouse.click(sk.x, sk.y)
-  await page.waitForFunction(() => window.__pr.active === 1 && window.__pr.looks[1].paint.skirt.c === '#8CCB6A', null, { timeout: 40000, polling: 250 })
-  const joyce = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.joyce)
-  if (!joyce || joyce.paint.skirt.c !== '#8CCB6A') throw new Error('la princesse de Joyce n\'est pas gardée')
-  // On repart seule (le choix « à deux » est retenu par jeu)
-  await page.goto(URL, { waitUntil: 'networkidle' })
-  await clickTile('La Princesse')
-  await page.locator('.duobtn').first().click({ force: true, timeout: 120000 })
-})
-
-/* 👧 L'ancienne version (28/09) : le petit bouton rond de la Princesse ouvre
-   Habille-toi, la petite fille d'avant ; une couronne sur sa tête, gardée
-   dans le profil ; la couronne d'or ramène à la princesse. */
-await scenario('princesse-ancienne-version', async () => {
-  try {
-    await prOpen(false)
-    await page.locator('#prSwitch').click({ force: true, timeout: 120000 })
-    await page.waitForFunction(() => window.__du && window.__du.ready && !window.__pr, null, { timeout: 120000, polling: 500 })
-    await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 120000 })
-    await page.waitForFunction(() => window.__du.look.hat === 'crown', null, { timeout: 20000, polling: 250 })
-    const kept = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('ferme:v2') || '{}').state; return s?.profiles?.find(p => p.id === s.currentId)?.look })
-    if (!kept || kept.hat !== 'crown') throw new Error('le look de la petite fille n\'est pas gardé')
-    await page.locator('#duSwitch').click({ force: true, timeout: 120000 })
-    await prWait(() => window.__pr && window.__pr.ready && !window.__du, 'retour à la princesse')
-    if (errors.length) throw new Error('erreurs JS : ' + errors.join(' | '))
-  } finally {
-    // Le choix est retenu : ne pas laisser la petite fille aux bots suivants
-    await page.evaluate(() => localStorage.removeItem('ferme:princesse:mode')).catch(() => {})
-  }
+/* 👗 Habille-toi (revenue le 6/10 à la place de la princesse VRM) : une
+   couronne sur sa tête, gardée dans le profil ; « Fini » mène à l'écran de fin. */
+await scenario('habille-toi', async () => {
+  await openGame('Habille-toi', '__du')
+  await page.waitForFunction(() => window.__du && window.__du.ready, null, { timeout: 120000, polling: 500 })
+  await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 120000 })
+  await page.waitForFunction(() => window.__du.look.hat === 'crown', null, { timeout: 20000, polling: 250 })
+  const kept = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('ferme:v2') || '{}').state; return s?.profiles?.find(p => p.id === s.currentId)?.look })
+  if (!kept || kept.hat !== 'crown') throw new Error('le look de la petite fille n\'est pas gardé')
+  await page.locator('#duDone').click({ force: true, timeout: 120000 })
+  await finDe('Superbe look', 60000)
 })
 
 /* 🙈 Cache-Cache (1/10) : la ferme qu'on fait tourner. Le bot touche d'abord

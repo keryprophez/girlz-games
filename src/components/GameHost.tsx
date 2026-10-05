@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SHOW_PROFILES, familyLooks, soloRoyal, useFerme } from '../core/store'
+import { SHOW_PROFILES, familyDoll, soloRoyal, useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Op, Tier } from '../core/types'
 import { toast } from '../core/utils'
@@ -12,8 +12,8 @@ import { playMusic, stopMusic } from '../core/music'
 import { ICON, starsHTML } from '../core/icons'
 import { BADGE } from '../core/badges'
 import { Session, isPaused, onPause, setPaused } from '../core/session'
-import { princessPortraits } from '../core/portraits'
-import { royalKey, type Royal } from '../core/royal'
+import { dollPortraits } from '../core/portraits'
+import type { Look } from '../core/character'
 import { coachHand } from '../core/hand'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
@@ -62,15 +62,14 @@ function lastOps(gameId: string): Op[] {
 const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
-/** Leurs princesses (la Princesse) sur l'écran de fin : elles sautent de
-    joie pour une belle partie, elles font coucou « encore ! » pour une partie
-    ratée. Les deux sœurs ensemble dès qu'elles ont chacune gardé la leur.
-    Les images sont rendues dès l'ouverture du jeu (cache) : elles sont prêtes. */
-function EndPrincesses({ looks, mood }: { looks: Royal[]; mood: 'joy' | 'soft' | 'again' }) {
+/** Leur petite fille d'Habille-toi sur l'écran de fin : elle saute de joie
+    pour une belle partie, elle fait coucou « encore ! » pour une partie
+    ratée. Les images sont préparées sur l'accueil (cache) : elles sont prêtes. */
+function EndPrincesses({ looks, mood }: { looks: Look[]; mood: 'joy' | 'soft' | 'again' }) {
   const [img, setImg] = useState<Record<string, string>>({})
   useEffect(() => {
     let on = true
-    princessPortraits(looks, ['cheer', 'wave'], 200).then(r => { if (on) setImg(r) })
+    dollPortraits(looks, ['cheer', 'wave'], 200).then(r => { if (on) setImg(r) })
     return () => { on = false }
   }, [looks])
   const src = mood === 'again' ? img.wave : img.cheer
@@ -176,12 +175,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
 
   const profile = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
   // Un objet stable : de nouvelles tenues à chaque rendu relanceraient le rendu 3D
-  const looksKey = JSON.stringify(familyLooks(store.royals).map(royalKey))
-  const looks = useMemo(() => familyLooks(useFerme.getState().royals), [looksKey])
-  // Les images des princesses de l'écran de fin ne se préparent PLUS à
-  // l'ouverture du jeu : le rendu du personnage VRM concurrençait le
-  // chargement du jeu lui-même. Elles sont gardées (cache du navigateur) et
-  // préparées sur l'accueil, au calme (voir Ambient).
+  const looksKey = JSON.stringify(familyDoll(store))
+  const looks = useMemo(() => [familyDoll(useFerme.getState())], [looksKey])
 
   // Cérémonie des étoiles : chaque étoile gagnée sonne et étincelle
   useEffect(() => {

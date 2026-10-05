@@ -1,9 +1,9 @@
 import type { GameContext, GameDef } from '../core/types'
-import { useFerme } from '../core/store'
+import { familyDoll, useFerme } from '../core/store'
 import { sfx, preloadSfx } from '../core/sfx'
 import { tone } from '../core/audio'
 import { ICON } from '../core/icons'
-import { critterPortraits, princessPortraits } from '../core/portraits'
+import { critterPortraits, dollPortraits } from '../core/portraits'
 import { FARM } from '../core/critters'
 import { drawings, idbDel, idbGet, idbPut, princessPages, type Drawing } from '../core/atelierdb'
 import { SHEETS, sheetById, sheetLines, sheetMinis } from '../core/lineart'
@@ -1470,12 +1470,10 @@ export const coloring: GameDef = {
     }
     raf = requestAnimationFrame(loop)
 
-    // Tampons : leurs princesses (gardées dans la Princesse), rendues en images
-    const rs = useFerme.getState().royals
-    for (const slot of ['jade', 'joyce', 'solo'] as const) {
-      const look = rs[slot]
-      if (!look || (slot === 'solo' && (rs.jade || rs.joyce))) continue
-      void princessPortraits([look], ['wave'], 180).then(async urls => {
+    // Tampon : leur petite fille d'Habille-toi, rendue en image
+    for (const slot of ['doll'] as const) {
+      const look = familyDoll(useFerme.getState())
+      void dollPortraits([look], ['wave'], 180).then(async urls => {
         if (at !== me || !urls.wave) return
         // Carrée (les tampons le sont), la princesse au milieu
         const src = await loadImage(urls.wave)

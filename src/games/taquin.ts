@@ -3,11 +3,10 @@ import { $, pick } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
-import { princessPortraits } from '../core/portraits'
-import { familyLooks, useFerme } from '../core/store'
+import { useFerme } from '../core/store'
 import { drawings } from '../core/atelierdb'
 import { drawingPicture } from './coloring'
-import { farmPicture, princessPicture, spacePicture, canvasPicture, squareUrl, PIC_W, PIC_H, type Picture } from '../core/pictures'
+import { farmPicture, spacePicture, canvasPicture, squareUrl, PIC_W, PIC_H, type Picture } from '../core/pictures'
 import { mountJigsaw, pictureWait, pictureOrNull, type Jigsaw } from './jigsaw'
 
 /* Le Puzzle — c'était le Taquin ; depuis le 30/09, deux modes (validé par
@@ -107,14 +106,8 @@ function photoCanvas(url: string): Promise<HTMLCanvasElement | null> {
 
 function basePics(c: GameContext): Pic[] {
   const st = useFerme.getState()
-  const looks = familyLooks(st.royals)
   const pics: Pic[] = [
     { id: 'ferme', cap: 'Ferme', thumb: '', warm: true, load: farmPicture },
-    {
-      id: 'princesse', cap: 'Princesse', thumb: '', cls: 'pz-royal', warm: true, load: () => princessPicture(looks),
-      // Son portrait de l'écran de fin (préparé sur l'accueil, gardé sur le disque)
-      prep: () => princessPortraits(looks, ['cheer', 'wave'], 200).then(r => r.cheer || '')
-    },
     { id: 'espace', cap: 'Espace', thumb: '', warm: true, load: spacePicture }
   ]
   const custom = st.puzzleImgs[st.currentId]

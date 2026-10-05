@@ -1,23 +1,18 @@
 import { withRenderer } from './portraits'
 import { loadModel, fitModel, type Stage, type T3 } from './three3d'
 import { critterKit, type CritterKind } from './critters'
-import { makePrincess, posePrincess } from './princess3d'
-import { makePet } from './pet3d'
-import { makeDecor } from './castle3d'
 import { makeRocket } from './rocket3d'
-import { royalKey, type Royal } from './royal'
 import { diskGet, diskPut } from './diskcache'
-import type { Particles } from './scene3d'
 
 /* LES IMAGES DU PUZZLE (30/09) — tirées de LEURS créations, au format du
-   plateau (4:3) : la ferme en 3D, leur princesse dans la salle de bal, une
+   plateau (4:3) : la ferme en 3D, une
    belle vue de l'Espace avec leur fusée, et leurs dessins de l'Atelier
    (ceux-là sont composés par `drawingPicture` de `games/coloring.ts`).
 
    Chaque image est un rendu 3D fait UNE fois, dans un contexte WebGL
    jetable (`withRenderer`), comme les portraits : gardée en mémoire le temps
    de la session, et sur le disque (`core/diskcache.ts`) pour la ferme,
-   l'Espace et la princesse (par tenue) — la deuxième ouverture de l'appli ne
+   l'Espace — la deuxième ouverture de l'appli ne
    recalcule rien. Même style que les jeux 3D : mêmes personnages, même
    éclairage, ACES. */
 
@@ -232,66 +227,6 @@ export function farmPicture(): Promise<Picture | null> {
       skyTex.dispose()
       puff.dispose(); cloudMat.dispose()
       own.forEach(free)
-    }
-  }).catch(() => null))
-}
-
-/* =====================================================================
-   Leur princesse, dans la salle de bal (les deux sœurs ensemble dès
-   qu'elles ont chacune gardé la leur), qui saute de joie
-   ===================================================================== */
-export function princessPicture(looks: Royal[]): Promise<Picture | null> {
-  const key = 'princesse-v2:' + looks.map(royalKey).join('+')
-  return cached(key, true, () => withRenderer(PIC_W, PIC_H, async (T, renderer, env) => {
-    renderer.toneMappingExposure = 1.0
-    const scene = new T.Scene()
-    scene.background = new T.Color('#F3E4EA')
-    scene.fog = new T.Fog('#F3E4EA', 7, 16)
-    scene.environment = env
-    scene.environmentIntensity = 0.6
-    scene.add(new T.HemisphereLight('#FFF4FA', '#C9A6B8', 0.32))
-    const sun = sunLight(T, scene, [1.8, 4.2, 3.2], 2.1, 4.5)
-    const fill = new T.DirectionalLight(0xFFFFFF, 0.22)
-    fill.position.set(-1.8, 2.6, 5)
-    scene.add(fill)
-    // Le décor du château attend une scène du socle : on lui prête la nôtre
-    const noFx: Particles = { burst() { /* image fixe */ }, update() { /* image fixe */ }, dispose() { /* rien */ } }
-    const decor = makeDecor({ T, scene, sun } as unknown as Stage, 'bal', noFx)
-    const fy = decor.floorY
-    const duo = looks.length > 1
-    const ps = await Promise.all(looks.map(l => makePrincess(T, l, { live: false })))
-    const pets = await Promise.all(looks.map(l => l.pet !== 'none' ? makePet(T, l.pet, l).catch(() => null) : Promise.resolve(null)))
-    try {
-      ps.forEach((pr, i) => {
-        const yaw = posePrincess(pr, 'cheer', 0.26 + i * 0.1)
-        pr.rig.rotation.y = yaw
-        pr.update(0)
-        pr.face.expr('joy', 99)
-        pr.face.redraw()
-        pr.obj.position.set(duo ? (i ? 0.42 : -0.42) : 0, fy, 0)
-        pr.obj.rotation.y = duo ? (i ? -0.25 : 0.25) : -0.12
-        scene.add(pr.obj)
-        const pet = pets[i]
-        if (pet) {
-          const big = looks[i].pet === 'unicorn' || looks[i].pet === 'pony'
-          if (duo) pet.obj.position.set(i ? 1.05 : -1.05, fy, 0.1)
-          else pet.obj.position.set(big ? 0.66 : 0.45, fy, big ? 0.05 : 0.24)
-          pet.obj.rotation.y = duo ? (i ? -0.9 : 0.9) : -0.9
-          pet.pose('happy', 0.2)
-          pet.update(0)
-          scene.add(pet.obj)
-        }
-      })
-      const cam = new T.PerspectiveCamera(42, PIC_W / PIC_H, 0.05, 50)
-      // Serré sur elle (les bras levés compris) : moins de sol uni, plus de détails à reconnaître
-      if (duo) { cam.position.set(0, 1.05, 3.05); cam.lookAt(0, 0.74, 0) }
-      else { cam.position.set(0.1, 1.0, 2.55); cam.lookAt(0.05, 0.76, 0) }
-      renderer.render(scene, cam)
-      return grab(renderer, PIC_W, PIC_H)
-    } finally {
-      ps.forEach(pr => { scene.remove(pr.obj); pr.dispose() })
-      pets.forEach(p => { if (p) { scene.remove(p.obj); p.dispose() } })
-      decor.dispose()
     }
   }).catch(() => null))
 }
