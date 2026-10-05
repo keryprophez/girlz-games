@@ -135,6 +135,16 @@ export const BADGE: Record<string, string> = {
     <rect x="21" y="35" width="8" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
   // Le Flipper : la table en bois vue de haut, deux animaux-bumpers, la bille, les deux batteurs
+  // La Pâtisserie : le gâteau à deux étages, ses coulures, une bougie allumée
+  bakery: svg(`
+    <ellipse cx="24" cy="42" rx="19" ry="3.6" fill="${C.wood}"/>
+    <rect x="8" y="27" width="32" height="14" rx="3" fill="${C.pink}"/>
+    <path d="M8 30c0-2 1-3 3-3h26c2 0 3 1 3 3v1c-1.5 0-1.5 4-3 4s-1.5-3-3-3-1.5 6-3 6-1.5-6-3-6-1.5 3-3 3-1.5-5-3-5-1.5 7-3 7-1.5-7-3-7-1.5 4-3 4-1.5-3-3-3z" fill="${C.white}"/>
+    <rect x="14" y="17" width="20" height="11" rx="3" fill="${C.cream}"/>
+    <path d="M14 20c0-2 1-3 3-3h14c2 0 3 1 3 3v1c-1.4 0-1.4 3-2.8 3s-1.4-2-2.8-2-1.4 4-2.8 4-1.4-4-2.8-4-1.4 2-2.8 2-1.4-3-2.8-3z" fill="${C.coral}"/>
+    <rect x="22.6" y="9" width="2.8" height="8" rx="1" fill="${C.sky}"/>
+    <path d="M24 2.5c2.4 3 2.8 4.6 0 6.5-2.8-1.9-2.4-3.5 0-6.5z" fill="${C.mango}"/>
+  `),
   // La Ferme à construire : la grange rouge sur son pré, une clôture, une étincelle
   farmbuild: svg(`
     <ellipse cx="24" cy="40" rx="20" ry="5" fill="${C.meadow}"/>

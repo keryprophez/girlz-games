@@ -1962,3 +1962,32 @@ body.playing .po-card{max-width:880px;}
 .fb-trash.hot{background:#E8574C;transform:scale(1.25) !important;}
 .fb-dn{position:absolute;right:18px;top:84px;z-index:6;}
 .fb-dn .sn-tool{width:60px;height:60px;}
+
+/* ============================================================
+   LA PÂTISSERIE (5/10) — à gauche les cinq étapes ; en bas la palette de
+   l'étape en cours ; à droite « Souffle ! » (aux bougies) ; pendant la
+   chanson, tout s'efface (et ne capte plus le doigt)
+   ============================================================ */
+.bk-wrap{background:#F6E3D6;touch-action:none;overflow:hidden;}
+.bk-wrap canvas{display:block;width:100%;height:100%;}
+.bk-steps{position:absolute;left:16px;top:84px;z-index:6;display:flex;flex-direction:column;gap:10px;
+  background:rgba(255,250,244,.88);border-radius:26px;padding:12px 10px;box-shadow:0 6px 20px rgba(69,54,42,.16);transition:opacity .4s;}
+.bk-step{width:clamp(46px,4.6vw,58px);height:clamp(46px,4.6vw,58px);}
+.bk-step.sel{background:linear-gradient(135deg,var(--mango),var(--coral));}
+.bk-pal{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:10px;align-items:flex-end;
+  background:rgba(255,250,244,.92);border-radius:26px;padding:10px 16px 8px;box-shadow:0 6px 20px rgba(69,54,42,.18);
+  max-width:calc(100% - 240px);overflow-x:auto;scrollbar-width:none;transition:opacity .4s;}
+.bk-pal::-webkit-scrollbar{display:none;}
+.bk-pal .tool-item{flex:none;}
+.bk-opt{width:clamp(48px,5vw,62px);height:clamp(48px,5vw,62px);}
+.bk-opt.big{width:clamp(58px,6vw,78px);height:clamp(58px,6vw,78px);border-radius:20px;padding:0;overflow:hidden;background:#FFF8F0;}
+.bk-opt.big img{width:100%;height:100%;object-fit:cover;pointer-events:none;}
+.bk-opt.sel{box-shadow:0 0 0 4px #FFC94D;}
+.bk-sep{width:2px;align-self:stretch;background:rgba(69,54,42,.12);border-radius:2px;flex:none;}
+.bk-dot{display:block;width:58%;height:58%;border-radius:50%;margin:auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 0 0 2px rgba(69,54,42,.12);}
+.bk-blowitem{position:absolute;right:22px;bottom:22px;z-index:6;display:none;}
+.bk-wrap[data-step="bougies"] .bk-blowitem{display:flex;}
+.bk-blow{width:clamp(76px,7vw,92px);height:clamp(76px,7vw,92px);animation:bkPulse 1.6s ease-in-out infinite;}
+@keyframes bkPulse{50%{transform:scale(1.08);}}
+.bk-blow.off{opacity:.4;animation:none;}
+.bk-wrap[data-phase="party"] .bk-pal,.bk-wrap[data-phase="party"] .bk-steps,.bk-wrap[data-phase="party"] .bk-blowitem{opacity:0;pointer-events:none;}

@@ -1560,6 +1560,59 @@ await scenario('ferme-a-construire', async () => {
   await page.evaluate(() => localStorage.removeItem('ferme:construire'))
 })
 
+/* 🎂 La Pâtisserie : deux étages en cœur, le glaçage au doigt (flanc et
+   nappage), une ligne de crème, une fraise et des vermicelles, trois
+   bougies, « Souffle ! » : la chanson, la part, l'écran de fin. */
+await scenario('patisserie', async () => {
+  await openGame('La Pâtisserie', '__bk')
+  await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })
+  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__bk.step, ph: window.__bk.phase, t: window.__bk.tiers, b0: window.__bk.body(0), g1: window.__bk.glazed(window.__bk.tiers - 1), cr: window.__bk.count('rosace'), fr: window.__bk.count('fraise'), sp: window.__bk.sprinkles, lit: window.__bk.lit }))
+  const tap = async p => { await page.mouse.click(p.x, p.y) }
+  await page.locator('.bk-opt[data-tiers="2"]').click({ force: true, timeout: 120000 })
+  await page.locator('.bk-opt[data-shape="heart"]').click({ force: true, timeout: 120000 })
+  await page.waitForFunction(() => window.__bk.tiers === 2 && window.__bk.shape === 'heart', null, { timeout: 10000 })
+  // Le glaçage : le flanc en rose, le dessus (le nappage coule)
+  await page.locator('.bk-step[data-step="glacage"]').click({ force: true, timeout: 120000 })
+  await page.locator('.bk-opt[data-glaze="#F58FB8"]').click({ force: true, timeout: 120000 })
+  await tap(await page.evaluate(() => window.__bk.side(0)))
+  await page.waitForFunction(() => window.__bk.body(0) !== '#e9b872', null, { timeout: 60000, polling: 250 })
+    .catch(async () => { throw new Error(`le flanc n'a pas pris le glaçage (${await etat()})`) })
+  await tap(await page.evaluate(() => window.__bk.top()))
+  await page.waitForFunction(() => window.__bk.glazed(window.__bk.tiers - 1), null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`le nappage n'a pas coulé (${await etat()})`) })
+  // La crème : un trait sur le dessus de l'étage du bas
+  await page.locator('.bk-step[data-step="creme"]').click({ force: true, timeout: 120000 })
+  const a = await page.evaluate(() => window.__bk.top(0, 0.82))
+  await page.mouse.move(a.x - 80, a.y + 4); await page.mouse.down()
+  for (let i = 1; i <= 16; i++) await page.mouse.move(a.x - 80 + i * 10, a.y + 4)
+  await page.mouse.up()
+  await page.waitForFunction(() => window.__bk.count('rosace') >= 3, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`pas de crème (${await etat()})`) })
+  // Le décor : une fraise, des vermicelles
+  await page.locator('.bk-step[data-step="decor"]').click({ force: true, timeout: 120000 })
+  await page.locator('.bk-opt[data-deco="fraise"]').click({ force: true, timeout: 120000 })
+  await tap(await page.evaluate(() => window.__bk.top(undefined, 0.2)))
+  await page.waitForFunction(() => window.__bk.count('fraise') >= 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`pas de fraise (${await etat()})`) })
+  await page.locator('.bk-opt[data-deco="vermicelles"]').click({ force: true, timeout: 120000 })
+  const v = await page.evaluate(() => window.__bk.top(undefined, 0.4))
+  await page.mouse.move(v.x - 30, v.y); await page.mouse.down()
+  for (let i = 1; i <= 8; i++) await page.mouse.move(v.x - 30 + i * 8, v.y + (i % 2) * 4)
+  await page.mouse.up()
+  await page.waitForFunction(() => window.__bk.sprinkles > 0, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`pas de vermicelles (${await etat()})`) })
+  // Les bougies, puis on souffle
+  await page.locator('.bk-step[data-step="bougies"]').click({ force: true, timeout: 120000 })
+  for (const d of [0.2, 0.45, 0.6]) await tap(await page.evaluate(d => window.__bk.top(undefined, d), d))
+  await page.waitForFunction(() => window.__bk.lit >= 2, null, { timeout: 30000 })
+    .catch(async () => { throw new Error(`les bougies ne s'allument pas (${await etat()})`) })
+  await page.locator('#bkBlow').click({ force: true, timeout: 120000 })
+  await page.waitForFunction(() => window.__bk.lit === 0, null, { timeout: 60000 })
+    .catch(async () => { throw new Error(`les bougies ne s'éteignent pas (${await etat()})`) })
+  // La chanson puis la coupe suivent le temps du jeu (plus lent que la montre sous la 3D logicielle)
+  await finDe('Joyeux anniversaire', 240000)
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 

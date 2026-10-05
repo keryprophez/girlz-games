@@ -1074,8 +1074,19 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
 - ✅ **Le creux sous le cou de la Princesse** (5/10) : comblé par un anneau
   de peau lié à son squelette ; les perles et la chaîne du cœur posées sur
   son cou.
-- **20. La Pâtisserie** (nouveau, Créer, 3D) : étages, crème au doigt,
-  fruits, bougies qu'on souffle.
+- ✅ **20. La Pâtisserie** (5/10, Créer, 3D ; plan « go », maquette « oui ») :
+  une petite pâtisserie (mur à rayures, fanions, bocaux, comptoir en
+  marbre), le gâteau sur son présentoir qu'on tourne au doigt. Cinq étapes :
+  Gâteau (1 à 3 étages ; rond, cœur, carré), Glaçage (huit couleurs : le
+  flanc touché se teint depuis le doigt, le dessus reçoit le nappage qui
+  coule), Crème (cinq couleurs, rosace ou goutte, le doigt trace), Décor
+  (fraise, framboise, myrtille, cerise, perles ; les vermicelles tombent où
+  passe le doigt), Bougies (cinq couleurs, elles s'allument ; on souffle
+  dans le micro, ouvert à cette étape seulement, ou on touche « Souffle ! »).
+  Puis « Joyeux anniversaire » au carillon, des confettis, et la part
+  coupée (génoise, crème, confiture) qui sort sur sa petite assiette ; écran
+  de fin. Tout est modelé (`core/cake3d.ts`). Bot `patisserie`. **Reste :
+  la tablette** (le souffle au micro, `?fps` gâteau plein).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

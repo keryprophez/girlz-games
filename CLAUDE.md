@@ -181,6 +181,15 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              mic.ts      ← LE MICRO (5/10) : ouvert à la demande, coupé pour
                            de bon (`stop` arrête la piste), il ne garde rien
                            (un morceau de son passé au jeu puis oublié)
+             cake3d.ts   ← LE GÂTEAU de la Pâtisserie (5/10), modelé ici : étages
+                           ronds, en cœur ou carrés (`outlineOf`, extrudés,
+                           sommets soudés), nappage qui coule (`pour` : les
+                           gouttes descendent), couleur qui s'étale depuis le
+                           doigt (`paintable`, un cercle dans le shader),
+                           rosaces et gouttes de crème, fraise, framboise,
+                           myrtille, cerise, vermicelles, perles, bougies et
+                           flamme, présentoir ; la part coupée (`slice`,
+                           `cutFaces` : génoise, crème, confiture)
              farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
                            rond qu'on fait tourner, ses cachettes construites
                            (grange, meule, puits, charrette, tracteur, niche,
@@ -415,7 +424,12 @@ génère et que Chromium lit en boucle) · `farmbuild` (la Ferme à
 construire, 5/10 : le plateau de Cache-Cache vide, les pièces glissées du
 tiroir — par `pointerId`, écouté sur `window` —, chemins et clôtures au
 doigt, les animaux qui vont à leur place ; la ferme se garde dans
-`ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite). La Course,
+`ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite) ·
+`bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; la part se coupe avec deux
+plans de découpe — `localClippingEnabled`, le présentoir et les faces de coupe
+exclus —, et ce qui part avec la part reçoit ses matières à elle ; le micro ne
+s'ouvre qu'à l'étape des bougies, « Souffle ! » fait une rafale jusqu'à la
+dernière flamme). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -466,7 +480,7 @@ ligne quand on en paie un nouveau.
    → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
    minutes. Tous les bots : lancement manuel du workflow avec « tous ».
    `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
-   `npm run test:play` a **un bot par jeu** (5/10 : 38 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (5/10 : 39 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

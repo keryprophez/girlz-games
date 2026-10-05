@@ -50,6 +50,12 @@ const STAGE = {
     after: 1500, zoom: 1.12, cy: 0.46
   },
   maze: { wait: 5000 },
+  // La Pâtisserie : un gâteau tout fait, ses bougies allumées
+  bakery: {
+    ready: () => window.__bk && window.__bk.ready, wait: 1500,
+    act: async p => { await p.evaluate(() => window.__bk.demo()) },
+    after: 2500, zoom: 1.12, cy: 0.42
+  },
   // La Ferme à construire : une ferme toute faite (celle de la maquette)
   farmbuild: {
     ready: () => window.__fb && window.__fb.ready, wait: 1500,
@@ -279,7 +285,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

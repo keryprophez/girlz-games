@@ -15,18 +15,42 @@ type Mat = import('three').Material
 type Grp = import('three').Group
 type Mesh = import('three').Mesh
 
+export type CakeShape = 'round' | 'heart' | 'square'
+
+/** Un étage construit. */
+export interface Tier {
+  g: Grp
+  body: Mesh
+  /** Le nappage (dessus, bourrelet, coulures) : caché tant qu'on ne l'a pas versé. */
+  glaze: Grp
+  bodyMat: import('three').MeshPhysicalMaterial
+  glazeMat: import('three').MeshPhysicalMaterial
+  /** Son contour (repère de l'étage), tous les ~3 cm. */
+  outline: [number, number][]
+  h: number
+  r: number
+  shape: CakeShape
+  /** Verser le nappage (la première fois, les coulures descendent) ou le reteindre depuis `at`. */
+  pour(color: string, at: import('three').Vector3): void
+  step(dt: number): void
+}
+
 export interface CakeKit {
   T: T3
-  /** Un étage : sa génoise glacée, son nappage du dessus et ses coulures. */
-  tier(r: number, h: number, body: string, glaze: string, seed?: number): Grp
-  /** Une rosace de crème (posée sur y = 0, ~0,13 de rayon). */
-  rosette(color?: string): Mesh
+  /** Un étage de génoise, rond, en cœur ou carré (rayon ~r). */
+  tier(o: { shape: CakeShape; r: number; h: number; body: string; glaze: string; seed?: number }): Tier
+  /** Une rosace de crème (posée sur y = 0, ~0,13 de rayon) ; `drop` : une goutte de meringue. */
+  rosette(color?: string, drop?: boolean): Mesh
   strawberry(): Grp
   raspberry(): Grp
   blueberry(): Mesh
   cherry(): Grp
   /** Une bougie et sa flamme (la flamme : `userData.flame`). */
   candle(stripe: string): Grp
+  /** La part coupée (entre les angles a0 et a1, autour de +z) d'un étage. */
+  slice(t: Tier, a0: number, a1: number): Mesh
+  /** Les deux faces de coupe que laisse la part dans l'étage. */
+  cutFaces(t: Tier, a0: number, a1: number): Mesh[]
   /** Des vermicelles semés sur un disque de rayon r (y = 0). */
   sprinkles(n: number, r: number, seed?: number): import('three').InstancedMesh
   /** Des perles de sucre en couronne (rayon r, y = 0). */
@@ -35,16 +59,93 @@ export interface CakeKit {
   dispose(): void
 }
 
+/** Le contour d'un étage, de « rayon » r, dans le sens des aiguilles vu d'en haut. */
+export function outlineOf(shape: CakeShape, r: number): [number, number][] {
+  const out: [number, number][] = []
+  if (shape === 'round') {
+    const n = 96
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; out.push([Math.cos(a) * r, Math.sin(a) * r]) }
+  } else if (shape === 'heart') {
+    // Le cœur, pointe vers nous (+z), à peu près de la même surface qu'un rond
+    const n = 140, s = r / 15.2
+    for (let i = 0; i < n; i++) {
+      const t = i / n * Math.PI * 2
+      const x = 16 * Math.pow(Math.sin(t), 3)
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)
+      out.push([x * s, -(y - 2.5) * s * 1.02])
+    }
+    out.reverse()
+  } else {
+    const a = r * 0.88, c = Math.min(0.2, a * 0.35), m = 12
+    const corners: [number, number, number][] = [[a - c, a - c, 0], [-(a - c), a - c, 90], [-(a - c), -(a - c), 180], [a - c, -(a - c), 270]]
+    for (const [cx, cz, d0] of corners) for (let j = 0; j <= m; j++) {
+      const ang = (d0 + j / m * 90) * Math.PI / 180
+      out.push([cx + Math.cos(ang) * c, cz + Math.sin(ang) * c])
+    }
+  }
+  return out
+}
+export function perimeter(pts: [number, number][]) {
+  let L = 0
+  for (let i = 0; i < pts.length; i++) { const [a, b] = pts[i], [c, d] = pts[(i + 1) % pts.length]; L += Math.hypot(c - a, d - b) }
+  return L
+}
+/** Le point du contour à la distance `s` et sa normale vers l'extérieur. */
+export function along(pts: [number, number][], s: number): [number, number, number, number] {
+  const L = perimeter(pts)
+  s = ((s % L) + L) % L
+  for (let i = 0; i < pts.length; i++) {
+    const [a, b] = pts[i], [c, d] = pts[(i + 1) % pts.length]
+    const l = Math.hypot(c - a, d - b)
+    if (s <= l || i === pts.length - 1) {
+      const t = l > 0 ? s / l : 0
+      const x = a + (c - a) * t, z = b + (d - b) * t
+      let nx = d - b, nz = -(c - a)
+      const nl = Math.hypot(nx, nz) || 1
+      nx /= nl; nz /= nl
+      // Toujours vers l'extérieur (le centre est près de l'origine)
+      if (nx * x + nz * z < 0) { nx = -nx; nz = -nz }
+      return [x, z, nx, nz]
+    }
+    s -= l
+  }
+  return [pts[0][0], pts[0][1], 1, 0]
+}
+/** Le point (x, z) est-il dans le contour ? */
+export function inside(pts: [number, number][], x: number, z: number) {
+  let c = false
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, zi] = pts[i], [xj, zj] = pts[j]
+    if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c
+  }
+  return c
+}
+/** La distance du centre au bord, dans la direction `a` (0 = +x, sens de x vers z). */
+export function radiusAt(pts: [number, number][], a: number) {
+  const dx = Math.cos(a), dz = Math.sin(a)
+  let best = 0
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, z1] = pts[i], [x2, z2] = pts[(i + 1) % pts.length]
+    const ex = x2 - x1, ez = z2 - z1
+    const den = dx * ez - dz * ex
+    if (Math.abs(den) < 1e-9) continue
+    const t = (x1 * ez - z1 * ex) / den, u = (x1 * dz - z1 * dx) / den
+    if (t > 0 && u >= 0 && u <= 1) best = Math.max(best, t)
+  }
+  return best
+}
+
 /** Un hasard qu'on peut rejouer (les coulures d'un étage restent les mêmes). */
 const rng = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646 }
 
-export function cakeKit(T: T3): CakeKit {
+export async function cakeKit(T: T3): Promise<CakeKit> {
   const own: { dispose(): void }[] = []
   const k = <X extends { dispose(): void }>(x: X) => { own.push(x); return x }
   const phys = (o: import('three').MeshPhysicalMaterialParameters) => k(new T.MeshPhysicalMaterial(o))
 
   /* Les matières : glaçage satiné, nappage brillant, fruits vernis */
-  const icing = (c: string) => phys({ color: c, roughness: 0.5, sheen: 0.6, sheenColor: new T.Color('#FFFFFF'), sheenRoughness: 0.6, clearcoat: 0.15 })
+  // Le glaçage couvre une grande part de l'écran : pas de velours (cher par pixel), un léger vernis
+  const icing = (c: string) => phys({ color: c, roughness: 0.45, clearcoat: 0.2, clearcoatRoughness: 0.4 })
   const glazeMat = (c: string) => phys({ color: c, roughness: 0.18, clearcoat: 0.9, clearcoatRoughness: 0.12 })
   const cream = phys({ color: '#FFF7EC', roughness: 0.55, sheen: 0.5, sheenColor: new T.Color('#FFFFFF'), sheenRoughness: 0.7 })
   const red = phys({ color: '#D2203A', roughness: 0.28, clearcoat: 0.9, clearcoatRoughness: 0.18 })
@@ -58,77 +159,138 @@ export function cakeKit(T: T3): CakeKit {
   const porcelain = phys({ color: '#F6F2EC', roughness: 0.22, clearcoat: 0.7, clearcoatRoughness: 0.15 })
   const gold = phys({ color: '#D9AE4E', metalness: 1, roughness: 0.3 })
   const sph = k(new T.SphereGeometry(1, 24, 16))
+  const U: typeof import('three/examples/jsm/utils/BufferGeometryUtils.js') | null = await import('three/examples/jsm/utils/BufferGeometryUtils.js')
+  const mergeV = (g: Geo) => U ? U.mergeVertices(g, 1e-4) : g
+  const mergeG = (gs: Geo[]) => U ? U.mergeGeometries(gs) : null
+
+  /* La couleur qui s'étale depuis le doigt : un cercle qui grandit autour du
+     point touché (repère du monde), la nouvelle couleur dedans. */
+  const paintable = (m: import('three').MeshPhysicalMaterial) => {
+    const u = { uNew: { value: new T.Color() }, uC: { value: new T.Vector3() }, uR: { value: -1 } }
+    m.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, u)
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;\nuniform vec3 uNew; uniform vec3 uC; uniform float uR;')
+        .replace('#include <color_fragment>', '#include <color_fragment>\nif (uR > 0.0) { float e = smoothstep(uR, uR - 0.04, distance(vWp, uC)); diffuseColor.rgb = mix(diffuseColor.rgb, uNew, e); }')
+    }
+    m.customProgramCacheKey = () => 'peinture'
+    m.userData.paint = (c: string, at: import('three').Vector3) => {
+      if (u.uR.value > 0) m.color.copy(u.uNew.value)
+      u.uNew.value.set(c); u.uC.value.copy(at); u.uR.value = 0.001
+    }
+    m.userData.step = (dt: number) => {
+      if (u.uR.value <= 0) return
+      u.uR.value += dt * 3.2
+      if (u.uR.value > 3.5) { m.color.copy(u.uNew.value); u.uR.value = -1 }
+    }
+    return m
+  }
 
   /* ---- Un étage ---- */
-  const tier: CakeKit['tier'] = (r, h, body, glaze, seed = 7) => {
-    const g = new T.Group()
+  /* ---- Un étage, de la forme qu'on veut : la génoise (glacée ensuite), et
+     son nappage — le dessus, le bourrelet du bord, les coulures — caché tant
+     qu'on ne l'a pas versé (`pour`). ---- */
+  const tier: CakeKit['tier'] = (o): Tier => {
+    const { shape, r, h, seed = 7 } = o
     const rnd = rng(seed)
-    // Le corps : un cylindre aux bords arrondis (lathe), glacé
-    const prof: import('three').Vector2[] = [new T.Vector2(0, h)]
-    const c = 0.07
-    for (let i = 0; i <= 8; i++) { const a = (i / 8) * Math.PI / 2; prof.push(new T.Vector2(r - c + Math.sin(a) * c, h - c + Math.cos(a) * c)) }
-    prof.push(new T.Vector2(r, 0.02), new T.Vector2(r - 0.015, 0))
-    const bodyGeo = k(new T.LatheGeometry(prof.reverse(), 96))
-    const bm = new T.Mesh(bodyGeo, icing(body))
-    bm.castShadow = true; bm.receiveShadow = true
-    g.add(bm)
-    // Le nappage : une nappe sur le dessus et son bourrelet au bord
-    const gm = glazeMat(glaze)
-    const top = new T.Mesh(k(new T.CylinderGeometry(r - 0.02, r - 0.02, 0.025, 96)), gm)
+    const g = new T.Group()
+    const B = 0.06
+    // La génoise : le contour extrudé, aux bords arrondis (sommets soudés : lisse)
+    const inner = outlineOf(shape, r - B)
+    const sh = new T.Shape(inner.map(([x, z]) => new T.Vector2(x, -z)))
+    let geo: Geo = new T.ExtrudeGeometry(sh, { depth: Math.max(0.02, h - 2 * B), bevelEnabled: true, bevelThickness: B, bevelSize: B, bevelSegments: 5, curveSegments: 1 })
+    geo.rotateX(-Math.PI / 2)
+    geo.translate(0, B, 0)
+    geo.deleteAttribute('uv'); geo.deleteAttribute('normal')
+    geo = mergeV(geo)
+    geo.computeVertexNormals()
+    k(geo)
+    const bodyMat = paintable(icing(o.body))
+    const body = new T.Mesh(geo, bodyMat)
+    body.castShadow = true; body.receiveShadow = true
+    body.userData.paint = 'body'
+    g.add(body)
+    // Le nappage
+    const glazeG = new T.Group()
+    glazeG.visible = false
+    g.add(glazeG)
+    const gmat = paintable(glazeMat(o.glaze))
+    const topPts = outlineOf(shape, r - 0.03)
+    const topGeo = k(new T.ShapeGeometry(new T.Shape(topPts.map(([x, z]) => new T.Vector2(x, -z)))))
+    topGeo.rotateX(-Math.PI / 2)
+    const top = new T.Mesh(topGeo, gmat)
     top.position.y = h + 0.006
     top.receiveShadow = true
-    g.add(top)
-    const lip = new T.Mesh(k(new T.TorusGeometry(r - 0.035, 0.034, 12, 120)), gm)
-    lip.rotation.x = Math.PI / 2
+    top.userData.paint = 'glaze'
+    glazeG.add(top)
+    const lipPts = outlineOf(shape, r - 0.035)
+    const lipCurve = new T.CatmullRomCurve3(lipPts.map(([x, z]) => new T.Vector3(x, 0, z)), true)
+    const lip = new T.Mesh(k(new T.TubeGeometry(lipCurve, lipPts.length * 2, 0.034, 10, true)), gmat)
     lip.position.y = h - 0.012
-    g.add(lip)
-    // Les coulures : des gouttes qui pendent du bord, chacune sa longueur
+    lip.userData.paint = 'glaze'
+    glazeG.add(lip)
+    // Les coulures : des gouttes plaquées contre le flanc, de longueurs différentes
     const parts: Geo[] = []
-    const n = Math.round(r * 22)
+    const ring = outlineOf(shape, r)
+    const per = perimeter(ring)
+    const n = Math.round(per * 3.6)
     for (let i = 0; i < n; i++) {
-      const a = (i + rnd() * 0.6) / n * Math.PI * 2
-      // Des longues, des courtes, des toutes petites : jamais deux pareilles
+      const [px, pz, nx, nz] = along(ring, (i + rnd() * 0.6) / n * per)
       const L = 0.05 + Math.pow(rnd(), 1.6) * h * 0.66
       const w = 0.02 + rnd() * 0.012
-      // Une goutte : fine sous le bourrelet, qui s'arrondit en perle au bout
       const prof: import('three').Vector2[] = []
       for (let j = 0; j <= 14; j++) {
         const t = j / 14
-        const y = -t * L
         const bulb = Math.max(0, (t - 0.72) / 0.28)
-        const rr = w * (0.95 - 0.25 * Math.sin(t * Math.PI * 0.9) + 0.35 * Math.sin(bulb * Math.PI * 0.75))
-        prof.push(new T.Vector2(rr, y))
+        prof.push(new T.Vector2(w * (0.95 - 0.25 * Math.sin(t * Math.PI * 0.9) + 0.35 * Math.sin(bulb * Math.PI * 0.75)), -t * L))
       }
       for (let j = 1; j <= 6; j++) { const b = j / 6 * Math.PI / 2; prof.push(new T.Vector2(Math.cos(b) * prof[14].x, -L - Math.sin(b) * prof[14].x * 0.9)) }
       prof[prof.length - 1].x = 0.0005
       const drop = new T.LatheGeometry(prof.reverse(), 12)
-      // Plaquée contre le flanc (aplatie), le haut caché sous le bourrelet
       drop.scale(1, 1, 0.42)
-      drop.rotateY(-a + Math.PI / 2)
-      drop.translate(Math.cos(a) * (r + 0.002), h - 0.015, Math.sin(a) * (r + 0.002))
+      drop.rotateY(-Math.atan2(nz, nx) + Math.PI / 2)
+      drop.translate(px + nx * 0.002, 0, pz + nz * 0.002)
       parts.push(drop)
     }
-    import('three/examples/jsm/utils/BufferGeometryUtils.js').then(U => {
-      const dg = U.mergeGeometries(parts)
-      parts.forEach(p => p.dispose())
-      if (!dg) return
+    const dg = mergeG(parts)
+    parts.forEach(x => x.dispose())
+    const drips = new T.Group()
+    drips.position.y = h - 0.015
+    if (dg) {
       k(dg)
-      const drips = new T.Mesh(dg, gm)
-      drips.castShadow = true
-      g.add(drips)
-    })
-    return g
+      const dm = new T.Mesh(dg, gmat)
+      dm.castShadow = true
+      dm.userData.paint = 'glaze'
+      drips.add(dm)
+    }
+    glazeG.add(drips)
+    let pour = 0
+    return {
+      g, body, glaze: glazeG, bodyMat, glazeMat: gmat, outline: ring, h, r, shape,
+      pour(color, at) {
+        const first = !glazeG.visible
+        glazeG.visible = true
+        if (first) { gmat.color.set(color); pour = 0.001; drips.scale.y = 0.001 } else gmat.userData.paint(color, at)
+      },
+      step(dt) {
+        bodyMat.userData.step(dt); gmat.userData.step(dt)
+        if (pour > 0 && pour < 1) { pour = Math.min(1, pour + dt * 1.1); drips.scale.y = Math.max(0.001, 1 - Math.pow(1 - pour, 3)) }
+      }
+    }
   }
 
   /* ---- Une rosace : un profil en étoile qui monte en tournant et s'affine ---- */
-  const rosetteGeo = (() => {
-    const N = 96, M = 40, pts = 8
+  const rosetteGeo = (drop = false) => {
+    const N = 96, M = 40, pts = drop ? 6 : 8
     const pos: number[] = [], idx: number[] = []
     for (let j = 0; j <= M; j++) {
       const t = j / M
-      const s = Math.pow(1 - t, 0.85) * (1 + 0.1 * Math.sin(t * Math.PI * 3.2)) + (j === 0 ? 0.04 : 0)
-      const y = t * 1.25 + Math.sin(t * Math.PI) * 0.12
-      const tw = t * Math.PI * 2.3
+      const s = drop
+        ? Math.pow(1 - t, 0.6) * (0.9 + 0.25 * Math.sin(Math.min(1, t * 2.2) * Math.PI)) * (1 - 0.6 * t * t)
+        : Math.pow(1 - t, 0.85) * (1 + 0.1 * Math.sin(t * Math.PI * 3.2)) + (j === 0 ? 0.04 : 0)
+      const y = drop ? t * 1.15 : t * 1.25 + Math.sin(t * Math.PI) * 0.12
+      const tw = t * Math.PI * (drop ? 0.6 : 2.3)
       for (let i = 0; i <= N; i++) {
         const th = (i / N) * Math.PI * 2
         const star = 1 - 0.22 * Math.pow(0.5 - 0.5 * Math.cos(th * pts), 1.6)
@@ -146,12 +308,13 @@ export function cakeKit(T: T3): CakeKit {
     geo.computeVertexNormals()
     geo.scale(0.13, 0.13, 0.13)
     return k(geo)
-  })()
+  }
+  const rosettes = { star: rosetteGeo(false), drop: rosetteGeo(true) }
   const creams = new Map<string, Mat>()
-  const rosette: CakeKit['rosette'] = color => {
+  const rosette: CakeKit['rosette'] = (color, drop = false) => {
     let m = color ? creams.get(color) : cream
     if (!m && color) { m = phys({ color, roughness: 0.55, sheen: 0.5, sheenColor: new T.Color('#FFFFFF'), sheenRoughness: 0.7 }); creams.set(color, m) }
-    const mesh = new T.Mesh(rosetteGeo, m!)
+    const mesh = new T.Mesh(drop ? rosettes.drop : rosettes.star, m!)
     mesh.castShadow = true
     return mesh
   }
@@ -356,6 +519,73 @@ export function cakeKit(T: T3): CakeKit {
     return im
   }
 
+  /* ---- La part : génoise, crème et confiture en couches sur les coupes ---- */
+  const spongeTex = (() => {
+    const cv = document.createElement('canvas')
+    cv.width = 64; cv.height = 256
+    const x = cv.getContext('2d')!
+    const bands: [string, number][] = [['#E9B872', 54], ['#FFF4E0', 14], ['#D2203A', 8], ['#FFF4E0', 10], ['#E9B872', 54], ['#FFF4E0', 14], ['#E9B872', 54], ['#FFF4E0', 48]]
+    let y = 0
+    for (const [c, hh] of bands) { x.fillStyle = c; x.fillRect(0, 256 - y - hh, 64, hh); y += hh }
+    // Les trous de la génoise
+    x.fillStyle = 'rgba(160,110,50,0.35)'
+    for (let i = 0; i < 160; i++) x.fillRect(Math.random() * 64, Math.random() * 256, 2, 2)
+    const t = k(new T.CanvasTexture(cv))
+    t.colorSpace = T.SRGBColorSpace
+    return t
+  })()
+  const spongeMat = phys({ map: spongeTex, roughness: 0.85, side: T.DoubleSide })
+  const faceGeo = (t: Tier, a: number) => {
+    const R = radiusAt(t.outline, a)
+    const g = new T.PlaneGeometry(R, t.h)
+    g.translate(R / 2, t.h / 2, 0)
+    g.rotateY(-a)
+    return k(g)
+  }
+  const cutFaces: CakeKit['cutFaces'] = (t, a0, a1) => [faceGeo(t, a0), faceGeo(t, a1)].map(g => {
+    const m = new T.Mesh(g, spongeMat)
+    m.receiveShadow = true
+    return m
+  })
+  const slice: CakeKit['slice'] = (t, a0, a1) => {
+    // Un prisme : le dessus (nappage ou génoise glacée), le flanc (glaçage), les deux coupes
+    const n = 14
+    const pos: number[] = [], uv: number[] = [], idx: number[] = []
+    const groups: [number, number, number][] = []
+    const P = (x: number, y: number, z: number, u: number, v: number) => { pos.push(x, y, z); uv.push(u, v); return pos.length / 3 - 1 }
+    const rim = Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; const R = radiusAt(t.outline, a); return [Math.cos(a) * R, Math.sin(a) * R] as [number, number] })
+    // Dessus
+    let s0 = idx.length
+    const c = P(0, t.h, 0, 0.5, 0.5)
+    const top = rim.map(([x, z]) => P(x, t.h, z, 0.5, 0.5))
+    for (let i = 0; i < n; i++) idx.push(c, top[i + 1], top[i])
+    groups.push([s0, idx.length - s0, 0])
+    // Flanc
+    s0 = idx.length
+    const lo = rim.map(([x, z]) => P(x, 0, z, 0, 0)), hi = rim.map(([x, z]) => P(x, t.h, z, 0, 1))
+    for (let i = 0; i < n; i++) idx.push(lo[i], lo[i + 1], hi[i], hi[i], lo[i + 1], hi[i + 1])
+    groups.push([s0, idx.length - s0, 1])
+    // Les coupes (génoise en couches)
+    s0 = idx.length
+    for (const [i, flip] of [[0, false], [n, true]] as [number, boolean][]) {
+      const [x, z] = rim[i]
+      const a = P(0, 0, 0, 0, 0), b = P(x, 0, z, 1, 0), d = P(x, t.h, z, 1, 1), e = P(0, t.h, 0, 0, 1)
+      if (flip) idx.push(a, b, d, a, d, e); else idx.push(a, d, b, a, e, d)
+    }
+    groups.push([s0, idx.length - s0, 2])
+    const geo = new T.BufferGeometry()
+    geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3))
+    geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2))
+    geo.setIndex(idx)
+    for (const [st, cnt, mi] of groups) geo.addGroup(st, cnt, mi)
+    geo.computeVertexNormals()
+    k(geo)
+    const topMat = t.glaze.visible ? t.glazeMat : t.bodyMat
+    const m = new T.Mesh(geo, [topMat, t.bodyMat, spongeMat])
+    m.castShadow = true
+    return m
+  }
+
   /* ---- Le présentoir en porcelaine, son liseré doré ---- */
   const stand = (): Grp => {
     const g = new T.Group()
@@ -375,7 +605,7 @@ export function cakeKit(T: T3): CakeKit {
   }
 
   return {
-    T, tier, rosette, strawberry, raspberry, blueberry, cherry, candle, sprinkles, pearls, stand,
+    T, tier, rosette, strawberry, raspberry, blueberry, cherry, candle, sprinkles, pearls, stand, slice, cutFaces,
     dispose() { own.forEach(x => x.dispose()) }
   }
 }
