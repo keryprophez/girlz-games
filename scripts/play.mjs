@@ -11,7 +11,9 @@
    Usage : npm run build && npm run test:play
    (BOTS=poste,atelier npm run test:play pour n'en lancer que quelques-uns) */
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 
 // PORT=… : un autre port quand 4189 est pris (plusieurs sessions en parallèle)
@@ -36,12 +38,33 @@ for (let i = 0; ; i++) {
   await new Promise(r => setTimeout(r, 250))
 }
 
+/* Le faux micro de l'Animal qui répète (5/10) : Chromium lit ce fichier
+   en boucle comme s'il venait du micro — un silence, des « syllabes » (une
+   voix grave et ses harmoniques, quatre fois par seconde), un silence. */
+const FAKE_VOICE = join(tmpdir(), 'ferme-fausse-voix.wav')
+{
+  const sr = 48000, plan = [[1.5, 0], [1.3, 1], [2.6, 0]]
+  const n = Math.round(plan.reduce((t, [d]) => t + d, 0) * sr)
+  const pcm = Buffer.alloc(44 + n * 2)
+  let i = 0
+  for (const [d, on] of plan) for (let k = 0; k < Math.round(d * sr); k++, i++) {
+    const t = k / sr
+    const v = on ? (Math.sin(2 * Math.PI * 190 * t) + 0.5 * Math.sin(2 * Math.PI * 380 * t) + 0.3 * Math.sin(2 * Math.PI * 570 * t)) * (0.55 + 0.45 * Math.sin(2 * Math.PI * 4 * t)) * 0.18 : 0
+    pcm.writeInt16LE(Math.round(Math.max(-1, Math.min(1, v)) * 32767), 44 + i * 2)
+  }
+  pcm.write('RIFF', 0); pcm.writeUInt32LE(36 + n * 2, 4); pcm.write('WAVE', 8); pcm.write('fmt ', 12)
+  pcm.writeUInt32LE(16, 16); pcm.writeUInt16LE(1, 20); pcm.writeUInt16LE(1, 22); pcm.writeUInt32LE(sr, 24)
+  pcm.writeUInt32LE(sr * 2, 28); pcm.writeUInt16LE(2, 32); pcm.writeUInt16LE(16, 34); pcm.write('data', 36); pcm.writeUInt32LE(n * 2, 40)
+  writeFileSync(FAKE_VOICE, pcm)
+}
+
 const local = '/opt/pw-browsers/chromium'
 const browser = await chromium.launch({
   ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH }
     : existsSync(local) ? { executablePath: local }
     : { channel: 'chrome' }),
-  args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader']
+  args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader',
+    '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-audio-capture=${FAKE_VOICE}`]
 })
 const ctx = await browser.newContext({
   viewport: { width: 900, height: 640 },
@@ -1443,6 +1466,39 @@ const cacheCache = async (tier, fin) => {
   }
   await page.waitForFunction(t => document.querySelector('#result.show') && document.body.innerText.includes(t), fin, { timeout: 90000, polling: 500 })
 }
+/* 🦜 L'Animal qui répète : le faux micro « parle », il entend et répète
+   (la bouche s'ouvre) ; il répète encore avec un autre animal, puis à
+   l'envers ; le micro se coupe en pause et en sortant. */
+await scenario('animal-qui-repete', async () => {
+  await ctx.grantPermissions(['microphone'])
+  await openGame("L'Animal qui répète", '__ar')
+  await page.waitForFunction(() => window.__ar.micLive, null, { timeout: 60000, polling: 500 })
+    .catch(async () => { throw new Error(`le micro ne s'ouvre pas (${await page.evaluate(() => window.__ar.micErr)})`) })
+  await page.waitForFunction(() => window.__ar.repeats >= 1, null, { timeout: 60000, polling: 250 })
+  await page.waitForFunction(() => window.__ar.maxOpen > 0.3, null, { timeout: 15000, polling: 100 })
+    .catch(async () => { throw new Error(`il répète sans ouvrir la bouche (${await page.evaluate(() => window.__ar.maxOpen)})`) })
+  await page.locator('.ar-pick[data-k="cow"]').click()
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__ar.phase, k: window.__ar.kind, rep: window.__ar.repeats, mic: window.__ar.micLive, env: window.__ar.backwards }))
+  await page.waitForFunction(() => window.__ar.kind === 'cow', null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la vache ne vient pas (${await etat()})`) })
+  let n = await page.evaluate(() => window.__ar.repeats)
+  await page.waitForFunction(k => window.__ar.repeats > k, n, { timeout: 60000, polling: 250 })
+  await page.locator('#arRev').click()
+  n = await page.evaluate(() => window.__ar.repeats)
+  await page.waitForFunction(k => window.__ar.backwards && window.__ar.repeats > k, n, { timeout: 60000, polling: 250 })
+  // Pause : le micro se coupe ; reprise : il se rouvre
+  await page.locator('.pbtn[aria-label="Pause"]').click()
+  await page.waitForFunction(() => !window.__ar.micLive, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la pause ne coupe pas le micro (${await etat()})`) })
+  await page.locator('.pausewall').click({ force: true }).catch(() => {})
+  await page.waitForFunction(() => window.__ar.micLive, null, { timeout: 15000, polling: 250 })
+    .catch(async () => { throw new Error(`le micro ne se rouvre pas après la pause (${await etat()})`) })
+  // On sort : le micro est coupé pour de bon
+  await page.locator('.pbtn[aria-label="Menu"]').click()
+  await page.waitForFunction(() => window.__ar.phase === 'gone' && !window.__ar.micLive, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`en sortant, le micro reste ouvert (${await etat()})`) })
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 

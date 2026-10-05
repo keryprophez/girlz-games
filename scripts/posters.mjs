@@ -50,6 +50,12 @@ const STAGE = {
     after: 1500, zoom: 1.12, cy: 0.46
   },
   maze: { wait: 5000 },
+  // L'Animal qui répète : le cochon sur sa botte, en pleine phrase
+  parrot: {
+    ready: () => window.__ar && window.__ar.phase !== 'load', wait: 1500,
+    act: async p => { await p.evaluate(() => window.__ar.pose('pig', 0.85)) },
+    after: 1500, zoom: 1.1, cy: 0.44
+  },
   // Le Puzzle : la moitié des pièces posées (le haut et la gauche de l'image), les autres en vrac
   taquin2: {
     ready: () => window.__pz2 && window.__pz2.ready, wait: 1500,
@@ -267,7 +273,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.lg-say,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

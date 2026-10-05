@@ -33,14 +33,16 @@ registerProcessor('prise-du-micro', Prise)`
 let workletUrl: string | null = null
 const loaded = new WeakSet<BaseAudioContext>()
 
-/** Ouvre le micro. `onChunk` reçoit le son au fil de l'eau. */
-export async function openMic(onChunk: (x: Float32Array) => void): Promise<Mic> {
+/** Ouvre le micro. `onChunk` reçoit le son au fil de l'eau. `raw` : sans
+    les traitements de Chrome (les bots : leur fausse voix est un son
+    régulier, que l'anti-bruit effacerait). */
+export async function openMic(onChunk: (x: Float32Array) => void, o: { raw?: boolean } = {}): Promise<Mic> {
   const ac = getCtx()
   if (!ac || !navigator.mediaDevices?.getUserMedia) throw 'absent' as MicError
   let stream: MediaStream
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }
+      audio: { echoCancellation: !o.raw, noiseSuppression: !o.raw, autoGainControl: !o.raw, channelCount: 1 }
     })
   } catch (e) {
     const n = (e as { name?: string })?.name

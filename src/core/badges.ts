@@ -135,6 +135,21 @@ export const BADGE: Record<string, string> = {
     <rect x="21" y="35" width="8" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
   // Le Flipper : la table en bois vue de haut, deux animaux-bumpers, la bille, les deux batteurs
+  // L'Animal qui répète : le cochon qui parle, bouche ouverte, ses ondes
+  parrot: svg(`
+    <path d="M9.5 17 12 6.5l8.5 6.5z" fill="${C.pink}"/>
+    <path d="M34.5 17 32 6.5l-8.5 6.5z" fill="${C.pink}"/>
+    <circle cx="22" cy="26" r="15" fill="${C.pink}"/>
+    <circle cx="16.5" cy="21.5" r="2.3" fill="${C.ink}"/>
+    <circle cx="27.5" cy="21.5" r="2.3" fill="${C.ink}"/>
+    <ellipse cx="22" cy="28" rx="6.2" ry="4.4" fill="${C.coral}"/>
+    <circle cx="19.8" cy="28" r="1.2" fill="${C.ink}"/>
+    <circle cx="24.2" cy="28" r="1.2" fill="${C.ink}"/>
+    <path d="M16.5 34.2q5.5 6.2 11 0z" fill="${C.ink}"/>
+    <path d="M19.5 36.6q2.5 1.4 5 0" fill="none" stroke="${C.coralDark}" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M39.5 20.5a8 8 0 0 1 0 11" fill="none" stroke="${C.sky}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M43.5 16.5a14 14 0 0 1 0 19" fill="none" stroke="${C.sky}" stroke-width="3" stroke-linecap="round"/>
+  `),
   pinball: svg(`
     <path d="M8 45V19a16 16 0 0 1 32 0v26z" fill="${C.woodDark}"/>
     <path d="M11.5 43V19.5a12.5 12.5 0 0 1 25 0V43z" fill="${C.wood}"/>

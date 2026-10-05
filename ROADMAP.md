@@ -1045,8 +1045,23 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   nuit surtout : une lampe à ombre portée).
 - **18. La Ferme à construire** (nouveau, Créer, 3D) : poser bâtiments,
   enclos, mare, arbres, chemins, puis les 14 animaux qui y vivent.
-- **19. L'animal qui répète** (nouveau, Créer) : il redit ce qu'on dit avec
-  une voix rigolote ; le son ne quitte pas la tablette, rien n'est gardé.
+- ✅ **19. L'Animal qui répète** (5/10, Créer, 3D ; « GO », maquette
+  validée « oui ») : un animal de la ferme assis sur une botte de foin au
+  milieu de l'enclos de Cache-Cache (le pommier, la meule, le tas de bois
+  derrière), six au choix en bas avec leur nom. On parle, il penche la tête
+  et des ondes montrent qu'il écoute ; on se tait (½ s), il répète avec sa
+  voix — poussin accéléré, cochon aigu qui finit en grognant, vache grave
+  et « meuh », mouton qui chevrote, canard nasillard, chat —, la bouche
+  suit le son (`core/voicefx.ts`, testé). « À l'envers » ; le toucher le
+  chatouille ; au bout de 14 s sans un mot, il invite doucement (trois fois
+  au plus). Rien n'est gardé : la phrase reste en mémoire le temps de la
+  répéter ; le micro (`core/mic.ts`) ne s'ouvre que dans ce jeu, se coupe en
+  pause et en sortant ; sans micro, un micro barré qu'on touche pour
+  réessayer. Bot `animal-qui-repete` (un faux micro). **Reste : l'essayer
+  sur la tablette** (le micro, le volume, l'écho par le haut-parleur).
+- ✅ **Le creux sous le cou de la Princesse** (5/10) : comblé par un anneau
+  de peau lié à son squelette ; les perles et la chaîne du cœur posées sur
+  son cou.
 - **20. La Pâtisserie** (nouveau, Créer, 3D) : étages, crème au doigt,
   fruits, bougies qu'on souffle.
 

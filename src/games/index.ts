@@ -24,12 +24,13 @@ import { sentences } from './sentences'
 import { bijoux } from './bijoux'
 import { hideseek } from './hideseek'
 import { pinball } from './pinball'
+import { parrot } from './parrot'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, pinball, hideseek, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
-  dressup, bijoux, piano, fireworks, coloring, pizza
+  dressup, bijoux, piano, fireworks, coloring, pizza, parrot
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -58,7 +59,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',
-    games: [dressup, bijoux, piano, fireworks, coloring, pizza]
+    games: [dressup, bijoux, piano, fireworks, coloring, pizza, parrot]
   }
 ]
 

@@ -63,7 +63,11 @@ pot de peinture, les tampons de la ferme et leurs princesses, les coloriages
 tirés des photos de la Princesse, et un livre de coloriages : les animaux de
 la ferme de face et de profil, le petit train, la fusée, la grange ; un dossier où ranger ses dessins,
 les reprendre, revoir leur film ou les enregistrer dans la tablette), la
-Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque).
+Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque),
+et l'Animal qui répète (un animal de la ferme sur sa botte de foin redit ce
+qu'on lui dit avec sa voix à lui — poussin accéléré, cochon qui finit en
+grognant, vache grave, mouton qui chevrote, canard, chat —, ou à l'envers ;
+rien n'est gardé, le son ne quitte pas la tablette).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

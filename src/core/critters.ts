@@ -44,12 +44,15 @@ export interface CritterKit {
   dispose(): void
 }
 
-export function critterKit(T: T3): CritterKit {
+/** `fine` : vus de près (l'Animal qui répète, 5/10), des sphères et des
+    cônes bien plus fins — en petit, les facettes ne se voient pas. */
+export function critterKit(T: T3, o: { fine?: boolean } = {}): CritterKit {
+  const f = o.fine ? 3 : 1
   const geos = {
-    sphere: new T.SphereGeometry(1, 20, 14),
-    cone: new T.ConeGeometry(1, 1, 12),
-    cyl: new T.CylinderGeometry(1, 1, 1, 12),
-    capsule: new T.CapsuleGeometry(1, 1, 4, 10),
+    sphere: new T.SphereGeometry(1, 20 * f, 14 * f),
+    cone: new T.ConeGeometry(1, 1, 12 * f),
+    cyl: new T.CylinderGeometry(1, 1, 1, 12 * f),
+    capsule: new T.CapsuleGeometry(1, 1, 4 * f, 10 * f),
     box: new T.BoxGeometry(1, 1, 1)
   }
   const mat = (color: number, roughness = 0.7) => new T.MeshStandardMaterial({ color, roughness, metalness: 0 })
