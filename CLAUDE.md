@@ -203,7 +203,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            5/10, `{ empty: true }` (le plateau seul) et
                            `make(id)` : une pièce qu'on pose où l'on veut
                            (`PieceId`, la Ferme à construire ; ses vignettes :
-                           `piecePortraits` de `core/portraits.ts`)
+                           `piecePortraits` de `core/portraits.ts`) ; depuis
+                           le 6/10, `{ big: true }` : la GRANDE ferme de
+                           Cache-Cache (rayon 13, `BIG_LAYOUT` : maïs et
+                           épouvantail, silo, moulin, ruisseau et pont,
+                           verger, citrouilles)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -417,7 +421,11 @@ son second mode, le Taquin, reste en DOM) ·
 `letters` (les Cubes de l'alphabet, 30/09 : cubes de bois, la voix dit le
 son, la syllabe, puis le mot — les sons dans `core/phonics.ts`) ·
 `hideseek` (Cache-Cache, 1/10 : la ferme en diorama qu'on fait tourner au
-doigt, `core/farm3d.ts` ; la nuit, à la lampe torche) · `parrot` (l'Animal
+doigt, `core/farm3d.ts` ; la nuit, à la lampe torche ; depuis le 6/10,
+l'éclair et la flamme sur la GRANDE ferme — `{ big: true }`, caméra libre :
+incliner, zoom ×3, promener à deux doigts, la ferme tourne autour du point
+regardé (`pan`, la racine du plateau décalée) ; des animaux cachés en
+entier qu'on fouille, `peek: 'cache'`) · `parrot` (l'Animal
 qui répète, 5/10 : un animal sur sa botte de foin dans l'enclos de cette
 ferme, `critterKit(T, { fine: true })` pour les gros plans ; le micro ne
 s'ouvre que là, se coupe en pause et en sortant, et n'écoute pas pendant
@@ -485,7 +493,7 @@ ligne quand on en paie un nouveau.
    → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
    minutes. Tous les bots : lancement manuel du workflow avec « tous ».
    `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
-   `npm run test:play` a **un bot par jeu** (5/10 : 39 scénarios, le Potager en a quatre, le Feu d'artifice, le Puzzle, Cache-Cache et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (6/10 : 40 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

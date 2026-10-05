@@ -1435,7 +1435,7 @@ const cacheCache = async (tier, fin) => {
   await openGame('Cache-Cache', '__cc', tier)
   await page.waitForFunction(() => window.__cc.phase === 'seek', null, { timeout: 120000, polling: 500 })
   const total = await page.evaluate(() => window.__cc.total)
-  const want = { easy: 5, med: 8, exp: 10 }[tier]
+  const want = { easy: 5, med: 10, exp: 12 }[tier]
   if (total !== want) throw new Error(`${total} animaux au lieu de ${want}`)
   // Une cachette vide : un petit bruit doux, rien d'autre
   const vide = await page.evaluate(() => window.__cc.emptySpot())
@@ -1447,13 +1447,20 @@ const cacheCache = async (tier, fin) => {
   const box = await page.locator('#ccWrap canvas').boundingBox()
   let tours = 0, rates = 0
   for (let i = 0; i < 160; i++) {
-    const st = await page.evaluate(() => ({ found: window.__cc.found, total: window.__cc.total, a: window.__cc.animals().filter(a => !a.found && a.x !== null && a.state === 'hidden') }))
+    // Ceux qu'on voit dépasser, puis (la grande ferme, 6/10) ceux qui se cachent EN ENTIER : on fouille leur cachette
+    const st = await page.evaluate(() => {
+      const all = window.__cc.animals()
+      const a = all.filter(a => !a.found && a.x !== null && a.state === 'hidden')
+      const fouille = all.map((a, i) => ({ ...a, i })).filter(a => !a.found && a.inside && a.state === 'hidden')
+        .map(a => ({ ...a, at: window.__cc.spotAt(a.i) })).filter(a => a.at)
+      return { found: window.__cc.found, total: window.__cc.total, a, fouille }
+    })
     if (st.found >= st.total) break
-    if (st.a.length) {
-      const a = st.a[0]
-      await page.mouse.click(a.x, a.y)
+    const cible = st.a[0] ?? (st.fouille[0] && { ...st.fouille[0], x: st.fouille[0].at.x, y: st.fouille[0].at.y })
+    if (cible) {
+      await page.mouse.click(cible.x, cible.y)
       const ok = await page.waitForFunction(n => window.__cc.found > n, st.found, { timeout: 15000, polling: 250 }).then(() => true, () => false)
-      if (!ok && ++rates > 6) throw new Error(`le toucher ne trouve pas ${a.kind} (${a.slot})`)
+      if (!ok && ++rates > 8) throw new Error(`le toucher ne trouve pas ${cible.kind} (${cible.slot}${cible.inside ? ', caché en entier' : ''})`)
     } else {
       // Rien de visible d'ici : on fait tourner la ferme
       if (++tours > 40) throw new Error(`${st.total - st.found} animaux restent introuvables après ${tours} tours`)
@@ -1625,6 +1632,8 @@ await scenario('patisserie', async () => {
 })
 
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
+// L'éclair (6/10) : la grande ferme de jour, des animaux cachés en entier à fouiller
+await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 
 await browser.close()

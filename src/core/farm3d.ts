@@ -1613,7 +1613,9 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
   root.add(mk(T, K.box, M.woodDark, [1.66, 1.48, 0.3], [0.28, 0.05, 0.05]))
   const penLamp = mk(T, K.box, M.lamp, [1.55, 1.34, 0.3], [0.13, 0.19, 0.13])
   root.add(penLamp)
-  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.2; pen.push([Math.sin(a) * 1.04, Math.cos(a) * 1.04]) }
+  // Douze places pour les douze animaux de la grande ferme, onze sinon
+  const ring = o.big ? 9 : 8
+  for (let i = 0; i < ring; i++) { const a = i / ring * Math.PI * 2 + 0.2; pen.push([Math.sin(a) * 1.04, Math.cos(a) * 1.04]) }
   for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + 0.6; pen.push([Math.sin(a) * 0.4, Math.cos(a) * 0.4]) }
   }
 

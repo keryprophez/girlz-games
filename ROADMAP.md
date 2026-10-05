@@ -1102,6 +1102,20 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
     la fourchette (deux par part, la pointe d'abord, la coupe se voit) ; un
     toucher sur le gâteau : il tourne, le couteau coupe la suivante. Six
     parts, « Gâteau dévoré ! ».
+- ✅ **Cache-Cache, « trop facile » pour Joyce** (6/10, plan « go », maquette
+  « go ») : la fleur ne change pas (la petite ferme de Jade). L'éclair et la
+  flamme se jouent sur la GRANDE ferme (`buildFarm({ big: true })`, rayon 13 ;
+  autour de la cour : champ de maïs et épouvantail, silo, moulin aux ailes
+  qui tournent, ruisseau et pont, verger, citrouilles), 10 et 12 animaux (le
+  poussin les rejoint). Caméra libre : un doigt tourne ou incline (le sens
+  se choisit aux premiers pixels), deux doigts zooment jusqu'à ×3 et
+  promènent la vue, « Toute la ferme » recentre. Jusqu'à 3 (éclair) ou 4
+  (flamme) animaux se cachent EN ENTIER dans ce qui se fouille (botte, puits,
+  charrette, niche, poulailler, porte du moulin, trappe du silo, buisson) :
+  on touche la cachette, il en sort ; une cachette vide remue un peu. Toutes
+  les 20 à 34 s, l'un de ceux qu'on ne voit pas change de cachette en
+  courant. Bot `cache-cache-eclair` en plus. **Reste : la tablette** (`?fps`
+  sur la grande ferme, ~520 appels de dessin, la nuit surtout).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

@@ -1893,6 +1893,10 @@ body.playing .po-card{max-width:880px;}
 .cc-pip.got img{filter:none;opacity:1;}
 @keyframes ccPop{40%{transform:scale(1.32) rotate(-8deg)}}
 .cc-night .cc-tray{background:rgba(20,26,56,.55);}
+/* « Toute la ferme » (la grande ferme, 6/10) : la vue revient au milieu */
+.cc-centre{position:absolute;right:max(16px,2vw);bottom:max(18px,2.4vh);z-index:6;}
+.cc-centre .sn-tool{width:64px;height:64px;}
+
 .cc-night .cc-pip{background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);}
 .cc-night .cc-pip img{filter:brightness(0) invert(1);opacity:.3;}
 .cc-night .cc-pip.got{background:rgba(255,230,160,.92);}

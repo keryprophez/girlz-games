@@ -7,7 +7,7 @@ import { createStage, loader, dotTex, type Stage, type T3 } from '../core/three3
 import { particles, camShake, type Particles, type CamShake } from '../core/scene3d'
 import { critterKit, type Critter, type CritterKit, type CritterKind } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
-import { buildFarm, bake, PLATEAU_R, type Farm, type FarmSpot, type FarmSlot, type Matter, type Size } from '../core/farm3d'
+import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, type Size } from '../core/farm3d'
 
 /* 🙈 Cache-Cache à la ferme (1/10, proposition 13, validée par le père :
    « On fait tourner la ferme au doigt : la queue du chat dépasse d'une botte
@@ -34,6 +34,16 @@ import { buildFarm, bake, PLATEAU_R, type Farm, type FarmSpot, type FarmSlot, ty
      que leurs oreilles, certains ne se voient que d'un côté de la ferme ;
      flamme : LA NUIT, 10 animaux, une lampe torche suit le doigt et leurs
      yeux brillent dans le noir.
+   - Depuis le 6/10 (Joyce : « trop facile »), l'éclair et la flamme se
+     jouent sur la GRANDE FERME (`buildFarm({ big: true })`, rayon 13 : maïs,
+     silo, moulin, ruisseau, verger, citrouilles), avec 10 et 12 animaux. La
+     caméra est libre : un doigt tourne (de côté) ou incline (de haut en
+     bas), deux doigts zooment jusqu'à ×3 et promènent la vue (la ferme
+     tourne alors autour de ce qu'on regarde) ; « Toute la ferme » recentre.
+     Certains se cachent EN ENTIER dans ce qui se fouille (botte, puits,
+     charrette, niche, poulailler, porte du moulin, trappe du silo,
+     buisson) : on touche la cachette, il en sort. Et de temps en temps,
+     l'un de ceux qu'on ne voit pas change de cachette en courant.
    - La rampe suit la joueuse : trouvée vite, ceux qui restent bougent moins
      (et à l'éclair et à la flamme, l'un d'eux change de cachette en
      courant : on peut l'attraper en route) ; coincée, ils bougent plus, et
@@ -45,12 +55,13 @@ type V3 = import('three').Vector3
 type Mesh = import('three').Mesh
 type Obj = import('three').Object3D
 type Group = import('three').Group
-type Peek = 'franc' | 'oreilles' | 'yeux'
+/** Ce qui dépasse : franchement, les oreilles, les yeux (la nuit), ou rien du tout (`cache` : il faut fouiller). */
+type Peek = 'franc' | 'oreilles' | 'yeux' | 'cache'
 type Phase = 'intro' | 'hide' | 'seek' | 'outro'
 
-const POOL: CritterKind[] = ['cat', 'rabbit', 'pig', 'cow', 'dog', 'hen', 'duck', 'sheep', 'goat', 'horse', 'rooster']
-const SIZE: Partial<Record<CritterKind, Size>> = { cat: 's', rabbit: 's', hen: 's', duck: 's', rooster: 's', dog: 'm', pig: 'm', sheep: 'm', goat: 'm', cow: 'l', horse: 'l' }
-const BASE: Partial<Record<CritterKind, number>> = { cat: 0.62, rabbit: 0.6, hen: 0.62, duck: 0.66, rooster: 0.62, dog: 0.74, pig: 0.75, sheep: 0.8, goat: 0.72, cow: 0.9, horse: 0.78 }
+const POOL: CritterKind[] = ['cat', 'rabbit', 'pig', 'cow', 'dog', 'hen', 'duck', 'sheep', 'goat', 'horse', 'rooster', 'chick']
+const SIZE: Partial<Record<CritterKind, Size>> = { chick: 's', cat: 's', rabbit: 's', hen: 's', duck: 's', rooster: 's', dog: 'm', pig: 'm', sheep: 'm', goat: 'm', cow: 'l', horse: 'l' }
+const BASE: Partial<Record<CritterKind, number>> = { chick: 0.55, cat: 0.62, rabbit: 0.6, hen: 0.62, duck: 0.66, rooster: 0.62, dog: 0.74, pig: 0.75, sheep: 0.8, goat: 0.72, cow: 0.9, horse: 0.78 }
 /** Les places préférées (les mots du père d'abord : le chat dans le foin, le lapin au puits). */
 const PREF: Partial<Record<CritterKind, [string[], number]>> = {
   cat: [['bottes', 'meule-haut', 'meule-cote', 'pommier'], 0.75], rabbit: [['puits', 'terrier-1', 'terrier-2'], 0.75],
@@ -93,6 +104,8 @@ const SOFT: Record<Matter, () => void> = {
 }
 const PAW = `<svg class="ico" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><ellipse cx="12" cy="16" rx="5.4" ry="4.6" fill="currentColor"/><ellipse cx="5.6" cy="10.4" rx="2.3" ry="2.9" fill="currentColor"/><ellipse cx="9.4" cy="6.4" rx="2.3" ry="3" fill="currentColor"/><ellipse cx="14.6" cy="6.4" rx="2.3" ry="3" fill="currentColor"/><ellipse cx="18.4" cy="10.4" rx="2.3" ry="2.9" fill="currentColor"/></svg>`
 /** Deux mains qui cachent les yeux (le compte du cache-cache). */
+/** « Toute la ferme » : une mire (la vue revient au milieu). */
+const CENTRE = `<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><circle cx="24" cy="24" r="15" fill="none" stroke="#4FB8E7" stroke-width="4"/><circle cx="24" cy="24" r="5" fill="#4FB8E7"/><path d="M24 3v8M24 37v8M3 24h8M37 24h8" stroke="#4FB8E7" stroke-width="4" stroke-linecap="round"/></svg>`
 const HAND = `<svg viewBox="0 0 100 150" aria-hidden="true"><path d="M24 150V86c-6-6-14-14-15-22-1-6 5-9 10-5l9 9V30c0-5 3-8 7-8s7 3 7 8v34-46c0-5 3-8 7-8s7 3 7 8v46-40c0-5 3-8 7-8s7 3 7 8v42-30c0-5 3-7 6-7s6 2 6 7v56c0 20-10 32-18 38v22z" fill="#FFDCC0" stroke="#B9785A" stroke-width="3.5" stroke-linejoin="round"/><path d="M42 64v14M56 62v16M70 64v14" stroke="#D9A486" stroke-width="3" stroke-linecap="round"/></svg>`
 
 interface Tween {
@@ -142,7 +155,14 @@ interface State {
   phaseT: number
   seekT0: number
   rot: number; vRot: number; drag: boolean
-  zoom: number; tgtZoom: number; elev: number; introK: number
+  zoom: number; tgtZoom: number; elev: number; tgtElev: number; introK: number
+  /** La grande ferme : caméra libre, cachettes à fouiller. */
+  big: boolean
+  maxZoom: number
+  /** Le point de la ferme qu'on regarde (repère du plateau) : la ferme tourne autour. */
+  pan: V3; tgtPan: V3
+  /** Combien peuvent encore se cacher en entier ; quand le prochain change de place. */
+  cacheLeft: number; nextMove: number
   fit: { key: string; d: number; ty: number }
   hint: number; stuck: number; lastFind: number; streak: number; nextCall: number
   relocs: number; maxRelocs: number; relocP: number
@@ -304,6 +324,8 @@ function pose(h: Hider, slot: FarmSlot, peek: Peek, k: number) {
   const maxZ = h.maxZ * k, minZ = h.minZ * k
   const [ax, ay, az] = slot.at
   if (slot.type === 'top') {
+    // Caché en entier : tout le corps sous le bord
+    if (peek === 'cache') return { x: ax, y: (slot.rim ?? 0) - H - 0.05, z: az, ry: slot.rot ?? 0 }
     const p = peek === 'franc' ? Math.min(H * 0.7, H - eyeY + 0.2)
       : peek === 'oreilles' ? Math.max(0.06, H - eyeY - eyeR - 0.02)
       : H - eyeY + 0.03
@@ -315,7 +337,7 @@ function pose(h: Hider, slot: FarmSlot, peek: Peek, k: number) {
   const [ox, oz] = slot.out ?? [0, 1]
   const plane = slot.plane ?? 0
   if (slot.type === 'face') {
-    const q = peek === 'franc' ? (maxZ - eyeZ) + 0.18 : peek === 'oreilles' ? Math.max(0.05, maxZ - eyeZ - 0.05) : (maxZ - eyeZ) + 0.035
+    const q = peek === 'cache' ? -0.08 : peek === 'franc' ? (maxZ - eyeZ) + 0.18 : peek === 'oreilles' ? Math.max(0.05, maxZ - eyeZ - 0.05) : (maxZ - eyeZ) + 0.035
     const along = plane + q - maxZ
     const y = slot.open !== undefined ? Math.min(ay, slot.open - H - 0.03) : ay
     return { x: ax + ox * along, y, z: az + oz * along, ry: Math.atan2(ox, oz) }
@@ -347,7 +369,7 @@ function hideIn(me: State, h: Hider, spot: FarmSpot, slot: FarmSlot, peek: Peek)
   o.position.set(ps.x, ps.y, ps.z)
   o.rotation.set(0, ps.ry, 0)
   o.scale.setScalar(k)
-  if (h.raised && h.hang) { h.raised.visible = slot.type !== 'tree'; h.hang.visible = slot.type === 'tree' }
+  if (h.raised && h.hang) { h.raised.visible = slot.type !== 'tree' && peek !== 'cache'; h.hang.visible = slot.type === 'tree' }
   spot.g.updateWorldMatrix(true, true)
   // Les points qui dépassent de la cachette
   const pts: V3[] = []
@@ -358,16 +380,17 @@ function hideIn(me: State, h: Hider, spot: FarmSpot, slot: FarmSlot, peek: Peek)
     q.copy(sm.p); o.localToWorld(q); spot.g.worldToLocal(q)
     if (outside(slot, q)) pts.push(sm.p)
   }
-  if (pts.length < 2) { me.farm.root.attach(o); return false }
+  // Caché en entier : rien ne dépasse, il faudra fouiller la cachette
+  if (peek !== 'cache' && pts.length < 2) { me.farm.root.attach(o); return false }
   // Au plus 16 points, bien répartis
-  const keep = pts.length > 16 ? shuffle(pts).slice(0, 16) : pts
+  const keep = peek === 'cache' ? [] : pts.length > 16 ? shuffle(pts).slice(0, 16) : pts
   h.pts = keep
   h.spot = spot; h.slot = slot; h.peek = peek
   h.base.set(ps.x, ps.y, ps.z); h.ry = ps.ry; h.k = k
   h.state = 'hidden'
   // Caché, il ne trahit pas sa cachette par son ombre
   o.traverse(x => { x.castShadow = false })
-  for (const g of h.glow) g.visible = true
+  for (const g of h.glow) g.visible = peek !== 'cache'
   return true
 }
 
@@ -423,7 +446,12 @@ function plan(me: State): { h: Hider; spot: FarmSpot; slot: FarmSlot }[] | null 
   return null
 }
 
+/** Ce qui se fouille : on y entre en entier (pas un plancher qu'on verrait, pas l'eau ni le maïs). */
+const FOUILLE = new Set(['bottes', 'puits', 'charrette', 'godet', 'meule-haut', 'grange-porte', 'niche-tete', 'poulailler', 'moulin-porte', 'silo-trappe'])
+const fouille = (slot: FarmSlot) => FOUILLE.has(slot.id) || /^buisson-\d+-haut$/.test(slot.id)
+
 function peekFor(me: State, slot: FarmSlot): Peek {
+  if (me.cacheLeft > 0 && fouille(slot) && Math.random() < 0.5) { me.cacheLeft--; return 'cache' }
   if (me.night) return 'yeux'
   if (ctx.tier === 'easy') return 'franc'
   // L'éclair : on ne voit que des oreilles… sauf d'un seul côté, où ça dépasse un peu plus
@@ -492,6 +520,9 @@ function onTap(me: State, x: number, y: number) {
   if (best) { find(me, best.h, best.w); return }
   const si = wall?.object.userData.spot as number | undefined
   const spot = si !== undefined ? me.farm.spots[si] : null
+  // On fouille : celui qui s'y cache en entier en sort
+  const inside = spot && wall ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot && h.peek === 'cache') : null
+  if (inside && wall) { find(me, inside, wall.point.clone()); return }
   // Le « presque » : dans la cachette touchée, ou tout près d'un animal caché
   let near: Hider | null = spot ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot) ?? null : null
   if (!near) {
@@ -507,7 +538,11 @@ function onTap(me: State, x: number, y: number) {
     }
   }
   if (near) nearMiss(me, near, wall?.point ?? null)
-  else if (spot) SOFT[spot.matter]()
+  else if (spot) {
+    SOFT[spot.matter]()
+    // Sur la grande ferme, on la fouille pour rien : elle remue un peu
+    if (me.big) spot.shake = Math.max(spot.shake, 0.3)
+  }
 }
 
 /** Tout près : il glousse, sa cachette tremble, il passe la tête. */
@@ -576,10 +611,10 @@ function find(me: State, h: Hider, at: V3) {
 }
 
 /** L'un de ceux qui restent change de cachette, en courant : on peut l'attraper en route. */
-function relocate(me: State) {
+function relocate(me: State, who?: Hider) {
   const free = me.hiders.filter(h => !h.found && h.state === 'hidden')
   if (!free.length) return
-  const h = free[Math.floor(Math.random() * free.length)]
+  const h = who ?? free[Math.floor(Math.random() * free.length)]
   const used = new Set<string>()
   for (const o of me.hiders) if (o !== h && o.slot && !o.found) { used.add(o.slot.id); if (o.slot.group) used.add(o.slot.group) }
   const cands: { spot: FarmSpot; slot: FarmSlot }[] = []
@@ -721,7 +756,7 @@ function startHide(me: State, assign: { h: Hider; spot: FarmSpot; slot: FarmSlot
     const ry = Math.atan2(to.x - from.x, to.z - from.z)
     h.state = 'run'
     h.tw = {
-      a: from, b: to, t: -n * 0.09, dur: 1.5, hops: 3, h: 0.9,
+      a: from, b: to, t: -n * 0.09, dur: 1.5 + Math.min(1.2, from.distanceTo(to) * 0.08), hops: 3, h: 0.9,
       ry0: ry, ry1: ry, k0: 1, k1: fitK(h, slot) || 1,
       end: () => {
         if (!hideIn(me, h, spot, slot, peek)) {
@@ -737,7 +772,7 @@ function startHide(me: State, assign: { h: Hider; spot: FarmSpot; slot: FarmSlot
 function outro(me: State) {
   const n = me.hiders.length
   const secs = me.t - me.seekT0
-  const par = ctx.byTier(9, 11, 12) * n
+  const par = ctx.byTier(9, 13, 14) * n
   const stars: 1 | 2 | 3 = secs <= par ? 3 : secs <= par * 2 ? 2 : 1
   setMusicIntensity(3)
   ctx.finish({
@@ -757,10 +792,12 @@ function fitCam(me: State) {
   if (me.fit.key === key) return
   const { T } = me
   const c = new T.PerspectiveCamera(cam.fov, cam.aspect, 0.1, 400)
-  const R = PLATEAU_R
+  const R = me.farm.r
   const rim: V3[] = []
   for (let k = 0; k <= 8; k++) { const a = Math.PI / 2 + k / 8 * Math.PI; rim.push(new T.Vector3(Math.sin(a) * R, 0, Math.cos(a) * R)) }
-  const low = new T.Vector3(0, 0, R * 0.8), high = new T.Vector3(0, 3.3, -R + 1.9)
+  // Le plus haut au fond : la grange, ou le moulin et le silo de la grande ferme
+  // La grande ferme se voit en entier (on s'y promène ensuite) ; la petite, le bord de devant à peine rogné
+  const low = new T.Vector3(0, 0, R * (me.big ? 0.97 : 0.8)), high = me.big ? new T.Vector3(0, 4.6, -R + 2.3) : new T.Vector3(0, 3.3, -R + 1.9)
   const v = new T.Vector3()
   const ok = (d: number, ty: number) => {
     c.position.set(0, Math.sin(BASE_EL) * d, Math.cos(BASE_EL) * d)
@@ -782,11 +819,32 @@ function fitCam(me: State) {
 function frame(me: State, dt: number) {
   const cam = me.stage.camera
   fitCam(me)
+  me.elev += (me.tgtElev - me.elev) * Math.min(1, dt * 6)
   const d = me.fit.d / me.zoom * (1 + me.introK * 0.35)
   const el = me.elev + me.introK * 0.18
   cam.position.set(0, Math.sin(el) * d, Math.cos(el) * d)
-  cam.lookAt(0, me.fit.ty + (me.zoom - 1) * 0.6, 0)
+  // De près (la grande ferme), on regarde plus bas : là où se cachent les animaux
+  cam.lookAt(0, me.big ? me.fit.ty / me.zoom + 0.6 * (1 - 1 / me.zoom) : me.fit.ty + (me.zoom - 1) * 0.6, 0)
   me.shake.apply(dt)
+}
+
+/** Deux doigts qui glissent : la ferme suit les doigts ; le point regardé
+    (repère du plateau, autour duquel elle tourne) recule d'autant. */
+function panBy(me: State, mdx: number, mdy: number) {
+  const cam = me.stage.camera, el = me.stage.renderer.domElement
+  const k = cam.position.length() * 2 * Math.tan(cam.fov * Math.PI / 360) / Math.max(1, el.clientHeight)
+  const dx = mdx * k, dz = mdy * k / Math.max(0.35, Math.sin(me.elev))
+  const c = Math.cos(me.rot), s = Math.sin(me.rot)
+  me.tgtPan.x -= dx * c - dz * s
+  me.tgtPan.z -= dx * s + dz * c
+  const L = Math.hypot(me.tgtPan.x, me.tgtPan.z), max = me.farm.r - 2
+  if (L > max) me.tgtPan.multiplyScalar(max / L)
+  me.pan.copy(me.tgtPan)
+}
+
+/** « Toute la ferme » : la vue de départ. */
+function recenter(me: State) {
+  me.tgtPan.set(0, 0, 0); me.tgtZoom = 1; me.tgtElev = BASE_EL
 }
 
 function aimTorch(me: State, x: number, y: number) {
@@ -822,10 +880,16 @@ function step(me: State, dt: number) {
     const ready = me.hiders.every(h => !h.tw)
     if (u > 2.5 && ready) {
       me.veil.classList.remove('on')
-      me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t; me.nextCall = t + 26
+      me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t; me.nextCall = t + 26; me.nextMove = t + 25
       sfx('bong', { vol: 0.35, rate: 1.2 })
     }
   } else if (me.phase === 'seek') {
+    // Sur la grande ferme, de temps en temps, l'un de ceux qu'on ne voit pas change de cachette
+    if (me.big && t > me.nextMove) {
+      me.nextMove = t + 20 + Math.random() * 14
+      const unseen = me.hiders.filter(h => !h.found && h.state === 'hidden' && !seen(me, h).length)
+      if (unseen.length && me.relocs < me.maxRelocs) relocate(me, unseen[Math.floor(Math.random() * unseen.length)])
+    }
     me.stuck += dt
     if (me.stuck > 14) me.hint = Math.min(1, me.hint + 0.025 * dt)
     // Coincée depuis longtemps : l'un d'eux passe la tête et appelle
@@ -841,8 +905,10 @@ function step(me: State, dt: number) {
     }
   } else if (me.phase === 'outro') {
     const u = t - me.phaseT
+    // La fête : on revient au milieu, à l'enclos
     me.tgtZoom = 1.6
-    me.elev += (0.5 - me.elev) * Math.min(1, dt * 1.2)
+    me.tgtElev = 0.5
+    me.tgtPan.set(0, 0, 0)
     if (u > 0 && t > me.outroBurst) {
       me.outroBurst = t + 0.45
       const a = Math.random() * Math.PI * 2
@@ -864,6 +930,10 @@ function step(me: State, dt: number) {
   }
   if (me.phase === 'outro') me.rot += 0.55 * dt
   me.farm.root.rotation.y = me.rot
+  // La ferme tourne autour du point regardé : il reste sous la caméra
+  me.pan.lerp(me.tgtPan, Math.min(1, dt * 6))
+  const cr = Math.cos(me.rot), sr = Math.sin(me.rot)
+  me.farm.root.position.set(-(me.pan.x * cr + me.pan.z * sr), 0, -(-me.pan.x * sr + me.pan.z * cr))
   me.zoom += (me.tgtZoom - me.zoom) * Math.min(1, dt * 8)
   frame(me, dt)
   for (const h of me.hiders) {
@@ -910,7 +980,9 @@ export const hideseek: GameDef = {
     ctx = c
     let dead = false
     const night = c.tier === 'exp'
-    const n = c.byTier(5, 8, 10)
+    // La fleur reste la petite ferme de Jade ; l'éclair et la flamme, la grande
+    const big = c.tier !== 'easy'
+    const n = c.byTier(5, 10, 12)
     // Le chat et le lapin (les mots du père) sont toujours de la partie à la fleur
     const kinds: CritterKind[] = n <= 5
       ? shuffle(['cat', 'rabbit', ...shuffle(POOL.filter(k => k !== 'cat' && k !== 'rabbit')).slice(0, n - 2)] as CritterKind[])
@@ -921,7 +993,8 @@ export const hideseek: GameDef = {
         <div class="cc-veil${c.tier === 'easy' ? ' peek' : ''}" id="ccVeil">
           <div class="cc-hands"><i class="cc-hand cc-l">${HAND}</i><i class="cc-hand cc-r">${HAND}</i></div>
           <div class="cc-count"><b></b><b></b><b></b></div>
-        </div>
+        </div>${big ? `
+        <span class="tool-item cc-centre"><button class="sn-tool" id="ccCentre" aria-label="Toute la ferme">${CENTRE}</button><i class="tool-cap">Toute la ferme</i></span>` : ''}
       </div>`
     preloadSfx(['cloth', 'tick', 'click', 'drop', 'metal', 'pluck', 'confirm', 'whoosh', 'bong'])
     preloadCries(kinds.map(k => CRY[k]).filter((v): v is AnimalVoice => !!v))
@@ -943,17 +1016,17 @@ export const hideseek: GameDef = {
       const stage = await createStage(arena, night ? {
         sky: '#0A1230', fov: 40, cam: [0, 12, 15], target: [0, 1, 0],
         hemi: ['#4A5A9A', '#1A1E2A', 0.9],
-        sun: { pos: [-6, 14, -4], color: '#8EA6FF', intensity: 0.4, area: 10, far: 45 },
+        sun: { pos: [-6, 14, -4], color: '#8EA6FF', intensity: 0.4, area: big ? 16 : 10, far: big ? 70 : 45 },
         fill: 0.3, exposure: 1.05
       } : {
         sky: '#9ED4F2', fov: 40, cam: [0, 12, 15], target: [0, 1, 0],
         hemi: ['#DCEFFF', '#5E8A44', 1.0],
-        sun: { pos: [6.5, 14, 7], color: '#FFF0D2', intensity: 2.3, area: 10, far: 45 },
+        sun: { pos: [6.5, 14, 7], color: '#FFF0D2', intensity: 2.3, area: big ? 16 : 10, far: big ? 70 : 45 },
         fill: 0.45, exposure: 1.0
       })
       if (dead) { stage.dispose(); return }
       const T = stage.T
-      const farm = await buildFarm(stage, { night })
+      const farm = await buildFarm(stage, { night, big })
       if (dead || !stage.alive) { stage.dispose(); return }
       const kit = critterKit(T)
       const tm = {
@@ -980,9 +1053,11 @@ export const hideseek: GameDef = {
         stage, T, farm, kit, hiders, night,
         phase: 'intro', t: 0, phaseT: 0, seekT0: 0,
         rot: Math.PI, vRot: 0, drag: false,
-        zoom: 1, tgtZoom: 1, elev: BASE_EL, introK: 1, fit: { key: '', d: 20, ty: 1 },
+        zoom: 1, tgtZoom: 1, elev: BASE_EL, tgtElev: BASE_EL, introK: 1, fit: { key: '', d: 20, ty: 1 },
+        big, maxZoom: big ? 3 : 1.4, pan: new T.Vector3(), tgtPan: new T.Vector3(),
+        cacheLeft: c.byTier(0, 3, 4), nextMove: 0,
         hint: c.byTier(0.55, 0.3, 0.4), stuck: 0, lastFind: 0, streak: 0, nextCall: 0,
-        relocs: 0, maxRelocs: c.byTier(0, 2, 3), relocP: c.byTier(0, 0.4, 0.5),
+        relocs: 0, maxRelocs: c.byTier(0, 4, 6), relocP: c.byTier(0, 0.4, 0.5),
         penNext: 0, outroBurst: 0,
         fx: particles(stage, 500), shake: camShake(stage), ray: new T.Raycaster(),
         glowMat, torch: null, tray, veil
@@ -1024,19 +1099,26 @@ export const hideseek: GameDef = {
       /* --- Le doigt : un doigt tourne la ferme (le point touché suit), deux
          doigts zooment, un toucher cherche. Chaque doigt est suivi par son
          `pointerId` ; l'élan se mesure en temps réel, borné, et s'éteint en
-         une demi-seconde. La nuit, la lampe suit le doigt. --- */
+         une demi-seconde. La nuit, la lampe suit le doigt. Sur la grande
+         ferme, un doigt qui monte ou descend incline la vue (le sens se
+         choisit aux premiers pixels), et deux doigts qui glissent promènent
+         la vue. --- */
       const el = stage.renderer.domElement
       const pts = new Map<number, { x: number; y: number }>()
       let tap: { x: number; y: number; t: number; moved: number; multi: boolean } | null = null
       let pinch0 = 0, zoom0 = 1, lastT = 0
+      let mode: 'turn' | 'tilt' | 'hold' | null = null
+      let mid: { x: number; y: number } | null = null
+      const middle = () => { const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
+      $('ccCentre')?.addEventListener('click', () => { if (cc === me) { recenter(me); sfx('whoosh', { vol: 0.3, rate: 1.2 }) } })
       const onDown = (e: PointerEvent) => {
         if (cc !== me || e.target !== el) return
         pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
         me.vRot = 0
         lastT = performance.now()
-        if (pts.size === 1) tap = { x: e.clientX, y: e.clientY, t: lastT, moved: 0, multi: false }
+        if (pts.size === 1) { tap = { x: e.clientX, y: e.clientY, t: lastT, moved: 0, multi: false }; mode = me.big ? null : 'turn' }
         else if (tap) tap.multi = true
-        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = me.tgtZoom }
+        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = me.tgtZoom; mid = middle() }
         me.drag = true
         aimTorch(me, e.clientX, e.clientY)
       }
@@ -1049,6 +1131,10 @@ export const hideseek: GameDef = {
         aimTorch(me, e.clientX, e.clientY)
         if (me.phase !== 'seek') return
         if (pts.size === 1) {
+          // Le sens du geste se choisit aux premiers pixels : tourner, ou incliner
+          if (!mode && tap && tap.moved > 10) mode = Math.abs(e.clientY - tap.y) > Math.abs(e.clientX - tap.x) * 1.3 ? 'tilt' : 'turn'
+          if (mode === 'tilt') { me.tgtElev = Math.max(0.32, Math.min(1.32, me.tgtElev + dy * 0.0028)); me.vRot = 0; return }
+          if (mode !== 'turn') return
           const now = performance.now()
           const dts = Math.max(8, now - lastT) / 1000
           lastT = now
@@ -1057,16 +1143,18 @@ export const hideseek: GameDef = {
           me.vRot = Math.max(-3.2, Math.min(3.2, me.vRot * 0.5 + dx * k / dts * 0.5))
         } else if (pts.size === 2 && pinch0 > 0) {
           const [a, b] = [...pts.values()]
-          me.tgtZoom = Math.max(0.86, Math.min(1.4, zoom0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch0))
+          me.tgtZoom = Math.max(0.86, Math.min(me.maxZoom, zoom0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch0))
           me.vRot = 0
+          if (me.big && mid) { const m = middle(); panBy(me, m.x - mid.x, m.y - mid.y); mid = m }
         }
       }
       const onUp = (e: PointerEvent) => {
         if (!pts.has(e.pointerId) || cc !== me) return
         pts.delete(e.pointerId)
-        if (pts.size < 2) pinch0 = 0
+        if (pts.size < 2) { pinch0 = 0; mid = null }
         me.drag = pts.size > 0
-        if (pts.size > 0) { me.vRot = 0; lastT = performance.now(); return }
+        // Le doigt qui reste après deux doigts ne fait rien (pas de tour surprise)
+        if (pts.size > 0) { me.vRot = 0; lastT = performance.now(); mode = 'hold'; return }
         // Un doigt qui s'est arrêté avant de se lever ne lance rien
         if (performance.now() - lastT > 90) me.vRot = 0
         const t = tap
@@ -1077,7 +1165,7 @@ export const hideseek: GameDef = {
       }
       const onWheel = (e: WheelEvent) => {
         e.preventDefault()
-        me.tgtZoom = Math.max(0.86, Math.min(1.4, me.tgtZoom * Math.exp(-e.deltaY * 0.0012)))
+        me.tgtZoom = Math.max(0.86, Math.min(me.maxZoom, me.tgtZoom * Math.exp(-e.deltaY * 0.0012)))
       }
       el.addEventListener('pointerdown', onDown)
       window.addEventListener('pointermove', onMove)
@@ -1094,8 +1182,28 @@ export const hideseek: GameDef = {
           get calls() { return stage.renderer.info.render.calls },
           animals: () => me.hiders.map(h => {
             const p = h.found ? null : central(seen(me, h))
-            return { kind: h.kind, found: h.found, state: h.state, slot: h.slot?.id ?? null, x: p ? p.x : null, y: p ? p.y : null }
+            return { kind: h.kind, found: h.found, state: h.state, slot: h.slot?.id ?? null, inside: h.peek === 'cache', x: p ? p.x : null, y: p ? p.y : null }
           }),
+          /** Où fouiller pour l'animal n° i (caché en entier) : sa cachette, si c'est bien elle qu'un doigt toucherait d'ici. */
+          spotAt: (i: number) => {
+            const s = me.hiders[i]?.spot
+            if (!s) return null
+            const r = el.getBoundingClientRect()
+            for (const occ of shuffle(s.occ.slice()).slice(0, 12)) {
+              const v = occ.getWorldPosition(new T.Vector3())
+              if ((occ as unknown as { isInstancedMesh?: boolean }).isInstancedMesh) continue
+              occ.geometry.computeBoundingBox()
+              occ.geometry.boundingBox!.getCenter(v); occ.localToWorld(v)
+              const p = v.clone().project(stage.camera)
+              if (Math.abs(p.x) > 0.9 || Math.abs(p.y) > 0.85 || p.z > 1) continue
+              me.ray.setFromCamera(new T.Vector2(p.x, p.y), stage.camera)
+              const hit = me.ray.intersectObjects(me.farm.occ, false)[0]
+              if (hit && me.farm.spots[hit.object.userData.spot as number] === s) return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height }
+            }
+            return null
+          },
+          get zoom() { return me.zoom }, get elev() { return me.elev }, get pan() { return [me.pan.x, me.pan.z] },
+          recenter: () => recenter(me),
           // Une cachette vide qu'on voit : son point visé, si c'est bien elle qu'un doigt toucherait
           emptySpot: () => {
             const r = el.getBoundingClientRect()
