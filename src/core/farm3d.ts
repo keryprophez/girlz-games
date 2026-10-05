@@ -99,6 +99,20 @@ export interface Farm {
   step(dt: number, t: number): void
   /** Une botte de foin de plus, du même foin (l'Animal qui répète s'y assoit). */
   bale(): Mesh
+  /** Une pièce de plus, posée où l'on veut (la Ferme à construire, 5/10). */
+  make(id: PieceId): Piece
+}
+
+/** Les pièces qu'on pose une à une (la Ferme à construire, 5/10). */
+export type PieceId = 'barn' | 'coop' | 'kennel' | 'well' | 'appleTree' | 'bush' | 'haystack' | 'pond' | 'veggie' | 'mud'
+  | 'tractor' | 'cart' | 'barrels' | 'woodpile' | 'bales'
+export interface Piece {
+  g: Group
+  /** Rayon au sol. */
+  foot: number
+  matter: Matter
+  /** Sa lanterne (la grange), à allumer la nuit. */
+  lamp?: [number, number, number]
 }
 
 export const PLATEAU_R = 8
@@ -1148,6 +1162,33 @@ function woodpile(K: Kit): Built {
 
 /* ---------- La ferme entière ---------- */
 type Builder = (K: Kit) => Built
+const BUILDERS: Record<PieceId, Builder> = {
+  barn, coop, kennel, well, appleTree, bush: K => bush(K, 1), haystack, pond, veggie, mud,
+  tractor, cart, barrels, woodpile, bales
+}
+
+/** Les outils de construction et les matériaux peints (un jeu par scène). */
+async function kitOf(T: T3, keep: Pick<Stage, 'keep'>): Promise<Kit> {
+  const [U, RBmod] = await Promise.all([
+    import('three/examples/jsm/utils/BufferGeometryUtils.js'),
+    import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
+  ])
+  return {
+    T, U, RB: RBmod.RoundedBoxGeometry, M: mats(T, keep as Stage),
+    box: keep.keep(new T.BoxGeometry(1, 1, 1)), sph: keep.keep(new T.SphereGeometry(1, 18, 12)), cyl: keep.keep(new T.CylinderGeometry(1, 1, 1, 14))
+  }
+}
+const makePiece = (K: Kit, id: PieceId): Piece => {
+  const b = BUILDERS[id](K)
+  bake(K.T, K.U, b.g)
+  return { g: b.g, foot: b.foot, matter: b.matter, lamp: b.lamp }
+}
+
+/** Des pièces sans ferme autour : les vignettes du tiroir (`core/portraits.ts`). */
+export async function pieceKit(T: T3, keep: Pick<Stage, 'keep'>): Promise<{ make(id: PieceId): Piece }> {
+  const K = await kitOf(T, keep)
+  return { make: id => makePiece(K, id) }
+}
 /** [construction, angle (degrés), distance au centre] : la grange au fond au départ. */
 const LAYOUT: [Builder, number, number][] = [
   [barn, 0, 5.7], [haystack, 36, 5.4], [appleTree, 64, 6.3], [cart, 96, 5.6], [K => bush(K, 1), 124, 6.6],
@@ -1156,17 +1197,13 @@ const LAYOUT: [Builder, number, number][] = [
   [woodpile, 24, 3.5], [well, 112, 4.0], [mud, 200, 3.8], [barrels, 290, 4.0], [bales, 330, 3.9]
 ]
 
-export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Farm> {
+/** `empty` (la Ferme à construire, 5/10) : le plateau seul — l'herbe, la
+    cour, la barrière du tour —, sans enclos ni cachettes ; les fleurs ne
+    poussent qu'au bord, le reste est à construire (`make`). */
+export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean }): Promise<Farm> {
   const { T, scene } = stage
-  const [U, RBmod] = await Promise.all([
-    import('three/examples/jsm/utils/BufferGeometryUtils.js'),
-    import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
-  ])
-  const M = mats(T, stage)
-  const K: Kit = {
-    T, U, RB: RBmod.RoundedBoxGeometry, M,
-    box: stage.keep(new T.BoxGeometry(1, 1, 1)), sph: stage.keep(new T.SphereGeometry(1, 18, 12)), cyl: stage.keep(new T.CylinderGeometry(1, 1, 1, 14))
-  }
+  const K = await kitOf(T, stage)
+  const { U, M } = K
   const R = PLATEAU_R
   const root = new T.Group()
   scene.add(root)
@@ -1206,7 +1243,9 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
   yard.userData.noOcc = true
   root.add(yard)
 
-  /* L'enclos rond au milieu, sur un lit de paille */
+  /* L'enclos rond au milieu, sur un lit de paille (pas dans une ferme à construire) */
+  const pen: [number, number][] = []
+  if (!o.empty) {
   const straw = mk(T, new T.CircleGeometry(1.52, 40), M.hayFloor, [0, 0.012, 0], 1, [-Math.PI / 2, 0, 0])
   straw.castShadow = false
   root.add(straw)
@@ -1219,9 +1258,9 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
   root.add(mk(T, K.box, M.woodDark, [1.66, 1.48, 0.3], [0.28, 0.05, 0.05]))
   const penLamp = mk(T, K.box, M.lamp, [1.55, 1.34, 0.3], [0.13, 0.19, 0.13])
   root.add(penLamp)
-  const pen: [number, number][] = []
   for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.2; pen.push([Math.sin(a) * 1.04, Math.cos(a) * 1.04]) }
   for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + 0.6; pen.push([Math.sin(a) * 0.4, Math.cos(a) * 0.4]) }
+  }
 
   /* La barrière du tour de la ferme */
   const rim: { p: number[]; r: number[] }[] = []
@@ -1233,7 +1272,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
 
   /* Les cachettes */
   const spots: FarmSpot[] = []
-  for (const [build, deg, r] of LAYOUT) {
+  for (const [build, deg, r] of o.empty ? [] : LAYOUT) {
     const b = build(K)
     const a = deg * Math.PI / 180
     b.g.position.set(Math.sin(a) * r, 0, Math.cos(a) * r)
@@ -1255,7 +1294,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
   /* Fleurs, touffes et cailloux semés dans l'herbe, loin des cachettes */
   const free = (x: number, z: number, m: number) => {
     const d = Math.hypot(x, z)
-    if (d < 3.0 || d > R - 0.65) return false
+    if (d < (o.empty ? R - 1.5 : 3.0) || d > R - 0.65) return false
     return spots.every(s => Math.hypot(s.g.position.x - x, s.g.position.z - z) > s.foot + m)
   }
   const sow = (n: number, m: number) => {
@@ -1333,8 +1372,11 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
     const fp = new Float32Array(nf * 3), fc = new Float32Array(nf * 3)
     const near = spots.filter(s => s.matter === 'feuilles' || s.matter === 'eau')
     for (let i = 0; i < nf; i++) {
-      const s = near[i % near.length]
-      const base = new T.Vector3(s.g.position.x + (Math.random() - 0.5) * 2.4, 0.4 + Math.random() * 1.6, s.g.position.z + (Math.random() - 0.5) * 2.4)
+      // Sans buisson ni mare (une ferme à construire), elles volent au bord
+      const s = near[i % Math.max(1, near.length)]
+      const a = Math.random() * Math.PI * 2, d = R - 1.2 - Math.random() * 1.5
+      const cx = s ? s.g.position.x : Math.sin(a) * d, cz = s ? s.g.position.z : Math.cos(a) * d
+      const base = new T.Vector3(cx + (Math.random() - 0.5) * 2.4, 0.4 + Math.random() * 1.6, cz + (Math.random() - 0.5) * 2.4)
       flies.push({ p: base.clone(), base, ph: Math.random() * 10 })
     }
     const fg = new T.BufferGeometry()
@@ -1352,10 +1394,12 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
       s.g.add(L)
       lights.push(L)
     }
-    const L2 = new T.PointLight(0xFFB45A, 2.6, 4.6, 1.4)
-    L2.position.set(1.45, 1.3, 0.3)
-    root.add(L2)
-    lights.push(L2)
+    if (!o.empty) {
+      const L2 = new T.PointLight(0xFFB45A, 2.6, 4.6, 1.4)
+      L2.position.set(1.45, 1.3, 0.3)
+      root.add(L2)
+      lights.push(L2)
+    }
     M.lamp.emissiveIntensity = 2.2
     // La lune éclaire faiblement, sans ombre ; plus de reflets d'atelier
     scene.environmentIntensity = 0.07
@@ -1374,6 +1418,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
   return {
     root, spots, occ, top, pen, night: o.night,
     bale: () => mk(T, baleGeo, M.bale),
+    make: id => makePiece(K, id),
     party(k) {
       partyK = k
       M.lamp.emissiveIntensity = (o.night ? 2.2 : 0.15) + k * 2.5

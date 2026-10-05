@@ -300,3 +300,61 @@ export async function meadowBanner(w: number, h: number): Promise<string> {
   if (url) cache.set(key, url)
   return url
 }
+
+/** Les pièces de la Ferme à construire (5/10) en vignettes, pour son tiroir :
+    vues de trois quarts, d'un peu haut, sur fond transparent. Elles ne
+    changent jamais : rendues une fois, gardées sur le disque. */
+export async function piecePortraits(ids: import('./farm3d').PieceId[], px: number): Promise<Record<string, string>> {
+  const out: Record<string, string> = {}
+  const todo: import('./farm3d').PieceId[] = []
+  for (const id of ids) {
+    const key = 'piece:' + id + '@' + px
+    const hit = cache.get(key) ?? await diskGet('pieces', key).catch(() => null)
+    if (hit) { cache.set(key, hit); out[id] = hit } else todo.push(id)
+  }
+  if (!todo.length) return out
+  const size = Math.min(512, Math.round(px * 2))
+  await withRenderer(size, size, async (T, renderer, env) => {
+    const kept: { dispose(): void }[] = []
+    const { pieceKit } = await import('./farm3d')
+    const kit = await pieceKit(T, { keep: <X extends { dispose(): void }>(x: X) => { kept.push(x); return x } })
+    const shadowTex = dotTex(T, '#2A2018')
+    try {
+      for (const id of todo) {
+        const scene = new T.Scene()
+        const sun = lights(T, scene, env)
+        const p = kit.make(id)
+        p.g.rotation.y = -0.55
+        scene.add(p.g)
+        const box = new T.Box3().setFromObject(p.g)
+        const ctr = box.getCenter(new T.Vector3())
+        const sz = box.getSize(new T.Vector3())
+        const cam = sun.shadow.camera
+        const r = Math.max(sz.x, sz.z) * 0.8
+        cam.left = cam.bottom = -r; cam.right = cam.top = r; cam.updateProjectionMatrix()
+        const blob = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: 0.3, depthWrite: false }))
+        blob.rotation.x = -Math.PI / 2
+        blob.position.set(ctr.x, 0.002, ctr.z)
+        blob.scale.set(sz.x * 1.2, sz.z * 1.2, 1)
+        scene.add(blob)
+        const rad = sz.length() / 2
+        const view = new T.PerspectiveCamera(30, 1, 0.05, 80)
+        const dist = rad / Math.sin(15 * Math.PI / 180) * 0.78
+        view.position.set(ctr.x, ctr.y + dist * 0.55, ctr.z + dist * 0.84)
+        view.lookAt(ctr.x, ctr.y - sz.y * 0.05, ctr.z)
+        renderer.render(scene, view)
+        const url = renderer.domElement.toDataURL('image/png')
+        const key = 'piece:' + id + '@' + px
+        cache.set(key, url)
+        diskPut('pieces', key, url, 40).catch(() => { /* rien */ })
+        out[id] = url
+        scene.traverse(o => { const m = o as import('three').Mesh; if (m.isMesh) m.geometry.dispose() })
+        blob.geometry.dispose(); (blob.material as import('three').Material).dispose()
+      }
+    } finally {
+      shadowTex.dispose()
+      kept.forEach(x => x.dispose())
+    }
+  }).catch(() => { /* pas de WebGL : le tiroir garde ses pastilles */ })
+  return out
+}
