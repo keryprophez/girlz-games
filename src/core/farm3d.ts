@@ -97,6 +97,8 @@ export interface Farm {
   /** La fête : les lanternes s'allument en grand (0..1). */
   party(k: number): void
   step(dt: number, t: number): void
+  /** Une botte de foin de plus, du même foin (l'Animal qui répète s'y assoit). */
+  bale(): Mesh
 }
 
 export const PLATEAU_R = 8
@@ -1367,8 +1369,11 @@ export async function buildFarm(stage: Stage, o: { night: boolean }): Promise<Fa
   }
 
   let partyK = 0
+  const baleGeo = new K.RB(0.92, 0.46, 0.5, 2, 0.05)
+  stage.keep(baleGeo)
   return {
     root, spots, occ, top, pen, night: o.night,
+    bale: () => mk(T, baleGeo, M.bale),
     party(k) {
       partyK = k
       M.lamp.emissiveIntensity = (o.night ? 2.2 : 0.15) + k * 2.5
