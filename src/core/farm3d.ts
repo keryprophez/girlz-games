@@ -103,6 +103,8 @@ export interface Farm {
   bale(): Mesh
   /** Une pièce de plus, posée où l'on veut (la Ferme à construire, 5/10). */
   make(id: PieceId): Piece
+  /** Allume ou éteint les petits détails (vus de loin, ils coûtent sans se voir). */
+  detail(on: boolean): void
 }
 
 /** Les pièces qu'on pose une à une (la Ferme à construire, 5/10). */
@@ -120,6 +122,8 @@ export interface Piece {
 export const PLATEAU_R = 8
 /** Le rayon de la grande ferme (Cache-Cache à l'éclair et à la flamme, 6/10). */
 export const BIG_R = 13
+/** Le rayon de la carte ×4 (6/10, « joue de la taille de la carte »). */
+export const HUGE_R = 26
 
 /* ---------- Peindre au canvas ---------- */
 function paint(w: number, h = w) {
@@ -524,7 +528,9 @@ function mats(T: T3, stage: Stage) {
     siloTop: S({ color: 0x8E949C, roughness: 0.35, metalness: 0.6 }),
     sail: S({ color: 0xEDE3CC, roughness: 0.9, side: T.DoubleSide }),
     pumpkin: S({ color: 0xE0741A, roughness: 0.55 }),
-    burlap: S({ color: 0xC8A870, roughness: 1 })
+    burlap: S({ color: 0xC8A870, roughness: 1 }),
+    // La carte ×4 : les sapins, le blé, les tournesols (couleurs dans les sommets)
+    pine: S({ vertexColors: true, roughness: 0.88 })
   }
 }
 
@@ -775,6 +781,7 @@ function haystack(K: Kit): Built {
   }
   const sm = many(K, new T.CylinderGeometry(0.008, 0.008, 1, 4), M.straw, straws, false)
   sm.userData.noOcc = true
+  sm.userData.detail = true
   g.add(sm)
   // La fourche, plantée contre la meule
   const fork = new T.Group()
@@ -832,6 +839,7 @@ function tree(K: Kit, apples: boolean, balls: number[][], trunkH: number): { g: 
     }
     const am = many(K, new T.SphereGeometry(0.075, 10, 8), M.apple, list.map(l => ({ p: l.p })))
     am.userData.noOcc = true
+    am.userData.detail = true
     g.add(am)
   }
   return { g, crown }
@@ -956,6 +964,7 @@ function bush(K: Kit, n: number): Built {
   }
   const fl = many(K, new T.SphereGeometry(0.05, 8, 6), M.flower, list, false)
   fl.userData.noOcc = true
+  fl.userData.detail = true
   g.add(fl)
   const side: [number, number] = n % 2 ? [-1, 0] : [1, 0]
   return {
@@ -1248,16 +1257,17 @@ function cornStalk(K: Kit): Geo {
   return g
 }
 
-function cornfield(K: Kit): Built {
+function cornfield(K: Kit, big = false): Built {
   const { T, M } = K
   const g = new T.Group()
-  const W = 3.6, D = 2.8, rows = 8, per = 8
+  // Le grand champ (la carte ×4, 6/10) : plus large, plus de trous où se faufiler
+  const [W, D, rows, per] = big ? [6.4, 4.6, 14, 11] : [3.6, 2.8, 8, 8]
   // La terre labourée, ses sillons
   const bed = mk(T, K.box, M.soil, [0, 0.025, 0], [W + 0.3, 0.05, D + 0.3])
   bed.castShadow = false
   g.add(bed)
   // Les pieds, en rangs (des trous : on s'y faufile)
-  const holes = new Set(['2,3', '5,2', '3,6', '6,5'])
+  const holes = new Set(big ? ['2,3', '5,2', '3,7', '6,5', '9,2', '11,6', '8,8', '12,3'] : ['2,3', '5,2', '3,6', '6,5'])
   const stalks: { p: number[]; s: number[]; r: number[] }[] = []
   const cobs: { p: number[]; s: number[]; r: number[] }[] = []
   for (let i = 0; i < rows; i++) for (let j = 0; j < per; j++) {
@@ -1286,8 +1296,8 @@ function cornfield(K: Kit): Built {
     id, type: 'top', at: [-W / 2 + (i + 0.5) * W / rows, 0.04, -D / 2 + (j + 0.5) * D / per], rim: 0.55, w: 0.6, sizes: ['s', 'm'], group: 'mais-' + id
   })
   return {
-    g, matter: 'feuilles', aim: [0, 1.0, D / 2], foot: 2.4, sway: 1,
-    slots: [slot('mais-1', 2, 3), slot('mais-2', 5, 2), slot('mais-3', 3, 6), slot('mais-4', 6, 5)]
+    g, matter: 'feuilles', aim: [0, 1.0, D / 2], foot: big ? 3.8 : 2.4, sway: 1,
+    slots: [...holes].map((h, k) => { const [i, j] = h.split(',').map(Number); return slot('mais-' + (k + 1), i, j) })
   }
 }
 
@@ -1503,6 +1513,280 @@ function stream(K: Kit): Built {
   }
 }
 
+/* ---------- La carte ×4 (6/10 : « joue de la taille de la carte ») ----------
+   Un troisième cercle, de 15 à 25 du centre : trois bois, le grand champ de
+   maïs, le lac et son ponton, un hameau, des tournesols, du blé. Vue de loin,
+   un animal n'y est qu'un point : il faut zoomer et parcourir la carte. */
+
+/** Un hasard qu'on peut rejouer (un bois reste le même d'une partie à l'autre). */
+const seeded = (n: number) => () => { n = (n * 16807) % 2147483647; return (n - 1) / 2147483646 }
+
+/** Un sapin : le tronc et trois étages d'aiguilles arrondis, au bord un peu
+    frangé (hauteur 1, à l'échelle de l'arbre) ; lisse, pas en facettes. */
+function pineGeo(K: Kit): Geo {
+  const { T, U } = K
+  const parts: Geo[] = []
+  const trunk = new T.CylinderGeometry(0.05, 0.08, 0.3, 10)
+  trunk.translate(0, 0.15, 0)
+  parts.push(tint(T, trunk, 0x5A3A22))
+  for (const [y, r, h] of [[0.22, 0.36, 0.42], [0.46, 0.28, 0.36], [0.68, 0.19, 0.32]]) {
+    // Un étage : un cône bombé (profil arrondi), le bord ondulé
+    const prof: import('three').Vector2[] = []
+    for (let k = 0; k <= 8; k++) { const t = k / 8; prof.push(new T.Vector2(Math.max(0.001, r * (1 - t) * (1 + 0.18 * Math.sin(t * Math.PI))), t * h)) }
+    prof.unshift(new T.Vector2(0.001, -0.02))
+    const c = new T.LatheGeometry(prof, 20)
+    const p = c.attributes.position
+    for (let i = 0; i < p.count; i++) {
+      if (p.getY(i) > 0.02) continue
+      const a = Math.atan2(p.getZ(i), p.getX(i)), f = 1 + 0.07 * Math.sin(a * 9)
+      p.setX(i, p.getX(i) * f); p.setZ(i, p.getZ(i) * f); p.setY(i, p.getY(i) - 0.025 * (0.5 + 0.5 * Math.sin(a * 9)))
+    }
+    c.translate(0, y, 0)
+    parts.push(tint(T, c, 0x2F6E3A, 0.45))
+  }
+  const g = U.mergeGeometries(parts.map(x => { x.deleteAttribute('uv'); return x.index ? x : x }))!
+  parts.forEach(x => x.dispose())
+  g.computeVertexNormals()
+  return g
+}
+
+/** Un bouquet de quelques arbres au milieu des prés (on se cache derrière un tronc). */
+function grove(K: Kit, seed: number): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const rnd = seeded(seed * 104729 + 7)
+  const pos: [number, number, number][] = []
+  for (let tries = 0; pos.length < 3 + (seed % 3) && tries < 200; tries++) {
+    const a = rnd() * 6.28, d = Math.sqrt(rnd()) * 1.9, x = Math.cos(a) * d, z = Math.sin(a) * d
+    if (pos.every(([px, pz]) => Math.hypot(px - x, pz - z) > 1.2)) pos.push([x, z, 0.8 + rnd() * 0.45])
+  }
+  const pines = pos.filter((_, i) => (i + seed) % 2 === 0)
+  if (pines.length) g.add(many(K, pineGeo(K), M.pine, pines.map(([x, z, k]) => ({ p: [x, 0, z], s: [k * 3, k * 3.4, k * 3], r: [0, rnd() * 6, 0] }))))
+  for (const [x, z, k] of pos.filter((_, i) => (i + seed) % 2 === 1)) {
+    const { g: t } = tree(K, rnd() < 0.4, [[0, 2.5, 0, 1.0], [0.7, 2.3, 0.2, 0.7], [-0.6, 2.4, -0.1, 0.72], [0.1, 3.1, -0.2, 0.66]], 1.8)
+    t.position.set(x, 0, z); t.scale.setScalar(k * 0.9)
+    g.add(t)
+  }
+  g.add(mk(T, blob(K, BUSH, 14, 0.55), M.leafBush, [pos[0][0] + 0.9, 0, pos[0][1] + 0.6], 0.7))
+  const id = `bosquet${seed}`
+  return {
+    g, matter: 'feuilles', aim: [0, 1.2, 1.4], foot: 2.4, sway: 0.5,
+    slots: [
+      { id: id + '-buisson', type: 'top', at: [pos[0][0] + 0.9, 0, pos[0][1] + 0.6], rim: 0.88, w: 0.75, sizes: ['s', 'm'] },
+      ...pos.slice(0, 2).map(([x, z, k], i): FarmSlot => ({ id: `${id}-arbre-${i}`, type: 'rear', at: [x, 0, z], out: [i ? -1 : 1, 0], plane: 0.22 * k, w: 0.8, sizes: ['s', 'm'], side: true }))
+    ]
+  }
+}
+
+/** Une haie : une rangée de buissons, des fleurs ; on s'y glisse. */
+function hedge(K: Kit, seed: number): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const rnd = seeded(seed * 7727 + 3)
+  const n = 6, L = 6.4
+  for (let k = 0; k < n; k++) {
+    const x = -L / 2 + (k + 0.5) * L / n
+    g.add(mk(T, blob(K, BUSH, 12, 0.55), M.leafBush, [x, 0, (rnd() - 0.5) * 0.3], [0.68 + rnd() * 0.12, 0.62 + rnd() * 0.2, 0.62]))
+  }
+  const id = `haie${seed}`
+  return {
+    g, matter: 'feuilles', aim: [0, 0.7, 0.6], foot: 3.3, sway: 0.8,
+    slots: [1, 4].map((k, i): FarmSlot => ({ id: `${id}-${i}`, type: 'top', at: [-L / 2 + (k + 0.5) * L / n, 0, 0], rim: 0.78, w: 0.7, sizes: ['s', 'm'] }))
+  }
+}
+
+function forest(K: Kit, seed: number): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const rnd = seeded(seed * 7919 + 13)
+  // Les arbres, pas trop serrés : des sapins et des arbres ronds
+  const pos: [number, number, number][] = []
+  for (let tries = 0; pos.length < 20 && tries < 400; tries++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * 4.4
+    const x = Math.cos(a) * d, z = Math.sin(a) * d
+    if (pos.every(([px, pz]) => Math.hypot(px - x, pz - z) > 1.25)) pos.push([x, z, 0.8 + rnd() * 0.5])
+  }
+  const pines = pos.filter((_, i) => i % 5 !== 0)
+  g.add(many(K, pineGeo(K), M.pine, pines.map(([x, z, k]) => ({ p: [x, 0, z], s: [k * 3.2, k * 3.6, k * 3.2], r: [0, rnd() * 6, 0] }))))
+  for (const [x, z, k] of pos.filter((_, i) => i % 5 === 0)) {
+    const { g: t } = tree(K, false, [[0, 2.5, 0, 1.0], [0.7, 2.3, 0.2, 0.7], [-0.6, 2.4, -0.1, 0.72], [0.1, 3.1, -0.2, 0.66]], 1.8)
+    t.position.set(x, 0, z); t.scale.setScalar(k)
+    g.add(t)
+  }
+  // Le sol du sous-bois, des fougères, des champignons
+  const floor = mk(T, new T.CircleGeometry(4.8, 28), M.mudDry, [0, 0.008, 0], 1, [-Math.PI / 2, 0, 0])
+  floor.castShadow = false
+  floor.userData.noOcc = true
+  g.add(floor)
+  const ferns: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let i = 0; i < 26; i++) { const a = rnd() * 6.28, d = 1 + rnd() * 3.8; ferns.push({ p: [Math.cos(a) * d, 0.12, Math.sin(a) * d], s: [0.3, 0.16, 0.3], r: [0, rnd() * 6, 0] }) }
+  const fm = many(K, new T.SphereGeometry(1, 8, 5), M.leafBush, ferns, false)
+  fm.userData.noOcc = true
+  fm.userData.detail = true
+  g.add(fm)
+  // Un tronc couché, creux (on s'y glisse) ; une souche creuse ; deux buissons
+  const free = (x: number, z: number, m: number) => pos.every(([px, pz]) => Math.hypot(px - x, pz - z) > m)
+  let lx = 0, lz = 0
+  for (let tries = 0; tries < 200; tries++) { const a = rnd() * 6.28, d = 1.2 + rnd() * 2.6; lx = Math.cos(a) * d; lz = Math.sin(a) * d; if (free(lx, lz, 1.5)) break }
+  const ly = rnd() * Math.PI
+  const log = new T.Group()
+  log.position.set(lx, 0, lz); log.rotation.y = ly
+  log.add(mk(T, new T.CylinderGeometry(0.42, 0.44, 1.9, 16, 1, true), M.bark, [0, 0.42, 0], 1, [0, 0, Math.PI / 2]))
+  log.add(mk(T, new T.CylinderGeometry(0.35, 0.35, 1.88, 14, 1, true), M.dark, [0, 0.42, 0], 1, [0, 0, Math.PI / 2]))
+  for (const sx of [-1, 1]) log.add(mk(T, new T.RingGeometry(0.35, 0.44, 16), M.logEnd, [sx * 0.95, 0.42, 0], 1, [0, sx * Math.PI / 2, 0]))
+  g.add(log)
+  let sx2 = 0, sz2 = 0
+  for (let tries = 0; tries < 200; tries++) { const a = rnd() * 6.28, d = 0.8 + rnd() * 3.2; sx2 = Math.cos(a) * d; sz2 = Math.sin(a) * d; if (free(sx2, sz2, 1.1) && Math.hypot(sx2 - lx, sz2 - lz) > 1.6) break }
+  g.add(mk(T, new T.CylinderGeometry(0.46, 0.55, 0.6, 14, 1, true), M.bark, [sx2, 0.3, sz2]))
+  g.add(mk(T, new T.CircleGeometry(0.44, 14), M.dark, [sx2, 0.5, sz2], 1, [-Math.PI / 2, 0, 0]))
+  g.add(mk(T, new T.RingGeometry(0.36, 0.47, 16), M.logEnd, [sx2, 0.6, sz2], 1, [-Math.PI / 2, 0, 0]))
+  const bushes: [number, number][] = []
+  for (let tries = 0; bushes.length < 2 && tries < 300; tries++) {
+    const a = rnd() * 6.28, d = 1 + rnd() * 3.4, x = Math.cos(a) * d, z = Math.sin(a) * d
+    if (free(x, z, 1.2) && Math.hypot(x - lx, z - lz) > 1.6 && Math.hypot(x - sx2, z - sz2) > 1.3 && bushes.every(([bx, bz]) => Math.hypot(bx - x, bz - z) > 1.6)) bushes.push([x, z])
+  }
+  for (const [x, z] of bushes) g.add(mk(T, blob(K, BUSH, 14, 0.55), M.leafBush, [x, 0, z], 0.8))
+  const ox = Math.cos(ly), oz = -Math.sin(ly)
+  const id = `bois${seed}`
+  return {
+    g, matter: 'feuilles', aim: [0, 1.4, 2.5], foot: 4.8, sway: 0.5,
+    slots: [
+      { id: id + '-tronc', type: 'face', at: [lx, 0.08, lz], out: [ox, oz], plane: 0.95, open: 0.78, w: 0.66, sizes: ['s', 'm'], group: id + 'tronc' },
+      { id: id + '-souche', type: 'top', at: [sx2, 0, sz2], rim: 0.6, w: 0.8, sizes: ['s'] },
+      ...bushes.map(([x, z], k): FarmSlot => ({ id: `${id}-buisson-${k}`, type: 'top', at: [x, 0, z], rim: 1.0, w: 0.8, sizes: ['s', 'm'] })),
+      ...pos.slice(0, 3).map(([x, z, k], i): FarmSlot => ({ id: `${id}-arbre-${i}`, type: 'rear', at: [x, 0, z], out: [Math.sign(x) || 1, 0], plane: 0.22 * k, w: 0.8, sizes: ['s', 'm'], side: true }))
+    ]
+  }
+}
+
+/** Le blé : des épis dorés serrés, à hauteur de poule. */
+function wheat(K: Kit): Built {
+  const { T, U, M } = K
+  const g = new T.Group()
+  const W = 5.2, D = 4.0
+  g.add(mk(T, K.box, M.soil, [0, 0.02, 0], [W + 0.2, 0.04, D + 0.2]))
+  const parts: Geo[] = []
+  for (let k = 0; k < 5; k++) {
+    // Vus d'en haut, des tiges sans bouchons et des épis en fuseau suffisent
+    const st = new T.CylinderGeometry(0.006, 0.01, 0.6, 3, 1, true)
+    st.translate(0, 0.3, 0)
+    const ear = new T.CylinderGeometry(0.004, 0.02, 0.13, 4, 1, true)
+    ear.translate(0, 0.64, 0)
+    for (const x of [st, ear]) { x.rotateZ((k - 2) * 0.12); x.rotateY(k * 1.3); x.translate((k - 2) * 0.03, 0, ((k * 7) % 5 - 2) * 0.02) }
+    parts.push(tint(T, st, 0xC9A64A), tint(T, ear, 0xE3C062))
+  }
+  const tuft = U.mergeGeometries(parts.map(x => x.toNonIndexed()))!
+  parts.forEach(x => x.dispose())
+  tuft.computeVertexNormals()
+  const holes: [number, number][] = [[-1.4, -0.6], [1.2, 0.8], [0.2, -1.1], [-0.6, 1.2]]
+  const list: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let x = -W / 2 + 0.12; x < W / 2; x += 0.24) for (let z = -D / 2 + 0.12; z < D / 2; z += 0.24) {
+    if (holes.some(([hx, hz]) => Math.hypot(hx - x, hz - z) < 0.3)) continue
+    list.push({ p: [x + (Math.random() - 0.5) * 0.08, 0.04, z + (Math.random() - 0.5) * 0.08], s: [1, 0.85 + Math.random() * 0.3, 1], r: [0, Math.random() * 6, 0] })
+  }
+  g.add(many(K, tuft, M.pine, list, false))
+  return {
+    g, matter: 'foin', aim: [0, 0.5, D / 2], foot: 3.3, sway: 1,
+    slots: holes.map(([x, z], k): FarmSlot => ({ id: 'ble-' + (k + 1), type: 'top', at: [x, 0.04, z], rim: 0.5, w: 0.55, sizes: ['s'], group: 'ble-' + (k + 1) }))
+  }
+}
+
+/** Les tournesols : de hautes tiges, de grandes feuilles, la fleur tournée vers le soleil. */
+function sunflowers(K: Kit): Built {
+  const { T, U, M } = K
+  const g = new T.Group()
+  const W = 4.6, D = 3.4, rows = 8, per = 6
+  g.add(mk(T, K.box, M.soil, [0, 0.02, 0], [W + 0.2, 0.04, D + 0.2]))
+  const parts: Geo[] = []
+  const stem = new T.CylinderGeometry(0.025, 0.035, 1.7, 6)
+  stem.translate(0, 0.85, 0)
+  parts.push(tint(T, stem, 0x5E8A2E))
+  for (const [y, a] of [[0.6, 0], [0.95, 2.2], [1.25, 4.1]]) {
+    const lf = new T.SphereGeometry(0.16, 8, 6)
+    lf.scale(1, 0.18, 0.6); lf.translate(0.16, y, 0); lf.rotateY(a)
+    parts.push(tint(T, lf, 0x4E8A34))
+  }
+  const disc = new T.CylinderGeometry(0.13, 0.13, 0.05, 14)
+  disc.rotateX(Math.PI / 2); disc.translate(0, 1.72, 0.06)
+  parts.push(tint(T, disc, 0x5A3A1A))
+  for (let k = 0; k < 12; k++) {
+    const pe = new T.SphereGeometry(0.07, 6, 4)
+    pe.scale(1, 0.4, 0.25); pe.translate(0.18, 0, 0); pe.rotateZ(k * Math.PI / 6); pe.translate(0, 1.72, 0.05)
+    parts.push(tint(T, pe, 0xF2B820))
+  }
+  const plant = U.mergeGeometries(parts.map(x => x.toNonIndexed()))!
+  parts.forEach(x => x.dispose())
+  plant.computeVertexNormals()
+  const holes = new Set(['1,2', '4,4', '6,1', '3,0'])
+  const list: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let i = 0; i < rows; i++) for (let j = 0; j < per; j++) {
+    if (holes.has(`${i},${j}`)) continue
+    list.push({ p: [-W / 2 + (i + 0.5) * W / rows, 0.04, -D / 2 + (j + 0.5) * D / per], s: [1, 0.85 + Math.random() * 0.3, 1], r: [(Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.5, 0] })
+  }
+  g.add(many(K, plant, M.pine, list))
+  return {
+    g, matter: 'feuilles', aim: [0, 1.0, D / 2], foot: 3.0, sway: 1,
+    slots: [...holes].map((h, k): FarmSlot => {
+      const [i, j] = h.split(',').map(Number)
+      return { id: 'tournesol-' + (k + 1), type: 'top', at: [-W / 2 + (i + 0.5) * W / rows, 0.04, -D / 2 + (j + 0.5) * D / per], rim: 0.7, w: 0.55, sizes: ['s', 'm'], group: 'tournesol-' + (k + 1) }
+    })
+  }
+}
+
+/** Le lac : la berge, les roseaux, le ponton de bois et la barque. */
+function lake(K: Kit): Built {
+  const { T, M } = K
+  const g = new T.Group()
+  const shape = (r: number) => {
+    const s = new T.Shape()
+    for (let i = 0; i <= 56; i++) {
+      const a = i / 56 * Math.PI * 2, rr = r * (1 + Math.sin(a * 2 + 0.6) * 0.12 + Math.sin(a * 5) * 0.05)
+      if (i === 0) s.moveTo(Math.cos(a) * rr * 1.25, Math.sin(a) * rr); else s.lineTo(Math.cos(a) * rr * 1.25, Math.sin(a) * rr)
+    }
+    return new T.ShapeGeometry(s, 4)
+  }
+  g.add(mk(T, shape(3.4), M.shore, [0, 0.012, 0], 1, [-Math.PI / 2, 0, 0]))
+  const water = mk(T, shape(3.0), M.water, [0, 0.024, 0], 1, [-Math.PI / 2, 0, 0])
+  water.castShadow = false
+  g.add(water)
+  const reeds: { p: number[]; s: number[]; r: number[] }[] = []
+  for (let i = 0; i < 90; i++) {
+    const a = (i < 60 ? 2.4 + Math.random() * 1.6 : 5.4 + Math.random() * 1.2), r = 2.7 + Math.random() * 0.6
+    const h = 0.6 + Math.random() * 0.5
+    reeds.push({ p: [Math.cos(a) * r * 1.25, h / 2, Math.sin(a) * r], s: [1, h, 1], r: [(Math.random() - 0.5) * 0.3, 0, (Math.random() - 0.5) * 0.3] })
+  }
+  g.add(many(K, new T.ConeGeometry(0.03, 1, 5), M.reed, reeds))
+  const pads: { p: number[]; r: number[]; s: number[] }[] = []
+  for (let i = 0; i < 9; i++) { const a = Math.random() * 6.28, d = Math.random() * 2; pads.push({ p: [Math.cos(a) * d * 1.2, 0.03, Math.sin(a) * d], r: [-Math.PI / 2, 0, Math.random() * 6], s: [1, 1, 1] }) }
+  const pm = many(K, new T.CircleGeometry(0.17, 16, 0.3, Math.PI * 2 - 0.6), M.lily, pads, false)
+  pm.userData.noOcc = true
+  g.add(pm)
+  // Le ponton : des planches sur pilotis, du bord vers le milieu
+  const jetty = new T.Group()
+  jetty.position.set(0.4, 0, 2.6)
+  for (let k = 0; k < 9; k++) jetty.add(mk(T, K.box, M.wood, [0, 0.3, -k * 0.22], [0.9, 0.05, 0.2]))
+  for (const [x, z] of [[-0.4, 0], [0.4, 0], [-0.4, -1.7], [0.4, -1.7]]) jetty.add(mk(T, K.cyl, M.woodDark, [x, 0.15, z], [0.05, 0.4, 0.05]))
+  g.add(jetty)
+  // La barque, amarrée au bout du ponton
+  const boat = new T.Group()
+  boat.position.set(1.5, 0.06, 0.6); boat.rotation.y = 0.5
+  const hull = new T.SphereGeometry(1, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)
+  hull.scale(0.9, 0.36, 0.42)
+  boat.add(mk(T, hull, M.paint, [0, 0.34, 0]))
+  boat.add(mk(T, new T.CircleGeometry(1, 16), M.woodM, [0, 0.3, 0], [0.86, 0.4, 1], [-Math.PI / 2, 0, 0]))
+  boat.add(mk(T, K.box, M.wood, [0, 0.42, 0], [0.12, 0.04, 0.78]))
+  g.add(boat)
+  return {
+    g, matter: 'eau', aim: [0, 0.3, 2.4], foot: 4.2, sway: 0.3,
+    slots: [
+      { id: 'lac-roseaux', type: 'top', at: [Math.cos(3.2) * 3.4, 0, Math.sin(3.2) * 2.7], rim: 0.45, w: 0.6, sizes: ['s'] },
+      { id: 'lac-ponton', type: 'rear', at: [0.4, 0, 1.9], out: [1, 0], plane: 0.45, w: 0.6, sizes: ['s'], side: true, only: ['duck', 'cat', 'rabbit', 'chick', 'hen'] },
+      { id: 'lac-barque', type: 'top', at: [1.5, 0.12, 0.6], rim: 0.62, w: 0.7, sizes: ['s', 'm'] },
+      { id: 'lac-eau', type: 'top', at: [-0.8, 0, -0.4], rim: 0.024, w: 0.9, sizes: ['s'], only: ['duck'] }
+    ]
+  }
+}
+
 /* ---------- La ferme entière ---------- */
 type Builder = (K: Kit) => Built
 const BUILDERS: Record<PieceId, Builder> = {
@@ -1546,25 +1830,40 @@ const BIG_LAYOUT: [Builder, number, number][] = [
   [haystack, 298, 10.9], [K => bush(K, 4), 328, 11.3], [K => bush(K, 5), 40, 11.9],
   [K => bush(K, 6), 176, 8.3], [K => bush(K, 7), 252, 8.1], [K => bush(K, 8), 80, 8.2], [barrels, 122, 8.4], [bales, 352, 8.6]
 ]
+/** La carte ×4 : un troisième cercle, de 15 à 25 du centre. */
+const HUGE_LAYOUT: [Builder, number, number][] = [
+  [K => forest(K, 1), 22, 20.2], [K => cornfield(K, true), 68, 19.6], [lake, 114, 20.2],
+  [barn, 160, 21.6], [coop, 177, 18.2], [haystack, 147, 17.6], [cart, 190, 21.4],
+  [K => forest(K, 2), 216, 20.8], [sunflowers, 254, 19.2], [wheat, 291, 20.4], [K => forest(K, 3), 332, 20.6],
+  [appleTree, 44, 16.2], [K => bush(K, 9), 92, 16.4], [bales, 132, 16.8], [kennel, 200, 16.2], [K => bush(K, 10), 236, 16.4],
+  [barrels, 272, 16.0], [woodpile, 312, 16.4], [mud, 352, 16.6], [well, 6, 16.6], [appleTree, 238, 23.8], [K => bush(K, 11), 160, 25.0],
+  // Les bouquets d'arbres et les haies qui cloisonnent les prés
+  [K => grove(K, 1), 45, 23.4], [K => grove(K, 2), 92, 23.6], [K => grove(K, 3), 138, 23.8], [K => grove(K, 4), 196, 24.2],
+  [K => grove(K, 5), 272, 24.0], [K => grove(K, 6), 312, 23.4], [K => grove(K, 7), 355, 23.6], [K => grove(K, 8), 240, 13.6],
+  [K => grove(K, 9), 30, 13.8], [K => grove(K, 10), 128, 13.6],
+  [K => hedge(K, 1), 8, 14.2], [K => hedge(K, 2), 102, 14.4], [K => hedge(K, 3), 206, 14.0], [K => hedge(K, 4), 286, 14.4]
+]
 
 /** `empty` (la Ferme à construire, 5/10) : le plateau seul — l'herbe, la
     cour, la barrière du tour —, sans enclos ni cachettes ; les fleurs ne
     poussent qu'au bord, le reste est à construire (`make`). */
-export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean; big?: boolean }): Promise<Farm> {
+export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean; big?: boolean; huge?: boolean }): Promise<Farm> {
   const { T, scene } = stage
   const K = await kitOf(T, stage)
   const { U, M } = K
-  const R = o.big ? BIG_R : PLATEAU_R
+  const R = o.huge ? HUGE_R : o.big ? BIG_R : PLATEAU_R
   // Ce qui se sème (fleurs, touffes, cailloux) suit la surface
   const area = (R / PLATEAU_R) ** 2
   const root = new T.Group()
   scene.add(root)
+  /** Ce qui ne se voit que de près (fleurs, touffes, cailloux, fougères, pommes) : éteint vu de loin. */
+  const details: import('three').Object3D[] = []
 
   /* Le plateau : l'herbe, le flanc de terre, l'herbe qui roule au bord, la
      roche qui s'effile dessous comme une île flottante */
   const topGeo = new T.CircleGeometry(R, 96)
   // L'herbe garde la taille de ses brins, quelle que soit la ferme
-  if (o.big) { const uv = topGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * R / PLATEAU_R + 0.5, (uv.getY(i) - 0.5) * R / PLATEAU_R + 0.5) }
+  if (o.big || o.huge) { const uv = topGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * R / PLATEAU_R + 0.5, (uv.getY(i) - 0.5) * R / PLATEAU_R + 0.5) }
   const top = mk(T, topGeo, M.grass, [0, 0, 0], 1, [-Math.PI / 2, 0, 0])
   top.castShadow = false
   root.add(top)
@@ -1600,23 +1899,28 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
 
   /* L'enclos rond au milieu, sur un lit de paille (pas dans une ferme à construire) */
   const pen: [number, number][] = []
+  let lampX = 1.45
   if (!o.empty) {
-  const straw = mk(T, new T.CircleGeometry(1.52, 40), M.hayFloor, [0, 0.012, 0], 1, [-Math.PI / 2, 0, 0])
+  // Sur la carte ×4, un enclos plus grand : dix-huit animaux y reviennent
+  const pk = o.huge ? 1.45 : 1, PR = 1.58 * pk
+  const straw = mk(T, new T.CircleGeometry(PR - 0.06, 40), M.hayFloor, [0, 0.012, 0], 1, [-Math.PI / 2, 0, 0])
   straw.castShadow = false
   root.add(straw)
   const posts: { p: number[] }[] = []
-  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; posts.push({ p: [Math.sin(a) * 1.58, 0.3, Math.cos(a) * 1.58] }) }
+  const nPen = Math.round(16 * pk)
+  for (let i = 0; i < nPen; i++) { const a = i / nPen * Math.PI * 2; posts.push({ p: [Math.sin(a) * PR, 0.3, Math.cos(a) * PR] }) }
   root.add(many(K, new T.BoxGeometry(0.08, 0.6, 0.08), M.woodDark, posts))
-  for (const y of [0.28, 0.52]) root.add(mk(T, new T.TorusGeometry(1.58, 0.032, 6, 64), M.wood, [0, y, 0], 1, [Math.PI / 2, 0, 0]))
+  for (const y of [0.28, 0.52]) root.add(mk(T, new T.TorusGeometry(PR, 0.032, 6, 64), M.wood, [0, y, 0], 1, [Math.PI / 2, 0, 0]))
   // La lanterne de l'enclos, sur son poteau
-  root.add(mk(T, K.box, M.woodDark, [1.78, 0.75, 0.3], [0.08, 1.5, 0.08]))
-  root.add(mk(T, K.box, M.woodDark, [1.66, 1.48, 0.3], [0.28, 0.05, 0.05]))
-  const penLamp = mk(T, K.box, M.lamp, [1.55, 1.34, 0.3], [0.13, 0.19, 0.13])
+  root.add(mk(T, K.box, M.woodDark, [PR + 0.2, 0.75, 0.3], [0.08, 1.5, 0.08]))
+  root.add(mk(T, K.box, M.woodDark, [PR + 0.08, 1.48, 0.3], [0.28, 0.05, 0.05]))
+  const penLamp = mk(T, K.box, M.lamp, [PR - 0.03, 1.34, 0.3], [0.13, 0.19, 0.13])
+  lampX = PR - 0.13
   root.add(penLamp)
-  // Douze places pour les douze animaux de la grande ferme, onze sinon
-  const ring = o.big ? 9 : 8
-  for (let i = 0; i < ring; i++) { const a = i / ring * Math.PI * 2 + 0.2; pen.push([Math.sin(a) * 1.04, Math.cos(a) * 1.04]) }
-  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + 0.6; pen.push([Math.sin(a) * 0.4, Math.cos(a) * 0.4]) }
+  // Les places : onze (petite ferme), douze (grande), dix-huit (carte ×4)
+  const ring = o.huge ? 12 : o.big ? 9 : 8, inner = o.huge ? 6 : 3
+  for (let i = 0; i < ring; i++) { const a = i / ring * Math.PI * 2 + 0.2; pen.push([Math.sin(a) * 1.04 * pk, Math.cos(a) * 1.04 * pk]) }
+  for (let i = 0; i < inner; i++) { const a = i / inner * Math.PI * 2 + 0.6; pen.push([Math.sin(a) * 0.4 * pk, Math.cos(a) * 0.4 * pk]) }
   }
 
   /* La barrière du tour de la ferme */
@@ -1629,8 +1933,15 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
 
   /* Les cachettes */
   const spots: FarmSpot[] = []
-  for (const [build, deg, r] of o.empty ? [] : o.big ? [...LAYOUT, ...BIG_LAYOUT] : LAYOUT) {
+  // Une construction posée deux fois (la grange du hameau) : ses places prennent un suffixe (`#2`)
+  const ids = new Map<string, number>()
+  for (const [build, deg, r] of o.empty ? [] : o.huge ? [...LAYOUT, ...BIG_LAYOUT, ...HUGE_LAYOUT] : o.big ? [...LAYOUT, ...BIG_LAYOUT] : LAYOUT) {
     const b = build(K)
+    for (const sl of b.slots) {
+      const n = (ids.get(sl.id) ?? 0) + 1
+      ids.set(sl.id, n)
+      if (n > 1) { sl.id += '#' + n; if (sl.group) sl.group += '#' + n }
+    }
     const a = deg * Math.PI / 180
     b.g.position.set(Math.sin(a) * r, 0, Math.cos(a) * r)
     b.g.rotation.y = a + Math.PI
@@ -1639,6 +1950,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
     const spin = b.g.userData.spin as Group | undefined
     bake(T, U, b.g, m => { for (let x: import('three').Object3D | null = m; x; x = x.parent) if (x === spin) return true; return false })
     const idx = spots.length
+    b.g.traverse(x => { if (x.userData.detail) { details.push(x); (x as Mesh).castShadow = false } })
     const occ: Mesh[] = []
     b.g.traverse(ob => {
       const m = ob as Mesh
@@ -1666,25 +1978,28 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
     return out
   }
   {
-    // Une fleur : cinq pétales et un cœur jaune (deux instances par fleur)
+    // Une fleur : cinq pétales et un cœur jaune (deux instances par fleur).
+    // Sur la carte ×4, pas dix fois plus : la densité est plafonnée, et ces
+    // détails s'éteignent vus de loin (`detail`)
+    const dense = Math.min(area, 3.2)
     const petal = U.mergeGeometries([0, 1, 2, 3, 4].map(k => {
-      const s = new T.SphereGeometry(0.045, 8, 6)
+      const s = new T.SphereGeometry(0.045, o.huge ? 6 : 8, o.huge ? 4 : 6)
       s.scale(1, 0.4, 1)
       s.translate(Math.cos(k * 1.2566) * 0.05, 0, Math.sin(k * 1.2566) * 0.05)
       return s
     }))!
     const cols = [0xE8E2D2, 0xD8506E, 0xE0B01E, 0x9A6AD0, 0xE07A2E]
-    const pts = sow(Math.round(80 * area), 0.15)
-    root.add(many(K, petal, M.flower, pts.map(([x, z], i) => ({ p: [x, 0.09, z], r: [0, Math.random() * 6, 0], s: [1, 1, 1], c: cols[i % cols.length] })), false))
-    root.add(many(K, new T.SphereGeometry(0.03, 6, 5), M.yellow, pts.map(([x, z]) => ({ p: [x, 0.1, z] })), false))
-    root.add(many(K, new T.CylinderGeometry(0.008, 0.008, 0.09, 4), M.sprout, pts.map(([x, z]) => ({ p: [x, 0.045, z] })), false))
+    const pts = sow(Math.round(80 * dense), 0.15)
+    details.push(root.add(many(K, petal, M.flower, pts.map(([x, z], i) => ({ p: [x, 0.09, z], r: [0, Math.random() * 6, 0], s: [1, 1, 1], c: cols[i % cols.length] })), false)).children.at(-1)!)
+    details.push(root.add(many(K, new T.SphereGeometry(0.03, 6, 5), M.yellow, pts.map(([x, z]) => ({ p: [x, 0.1, z] })), false)).children.at(-1)!)
+    details.push(root.add(many(K, new T.CylinderGeometry(0.008, 0.008, 0.09, 4), M.sprout, pts.map(([x, z]) => ({ p: [x, 0.045, z] })), false)).children.at(-1)!)
     const tuft = U.mergeGeometries([-1, 0, 1].map(k => {
       const c = new T.ConeGeometry(0.03, 0.2, 4)
       c.translate(0, 0.1, 0); c.rotateZ(k * 0.4); c.translate(k * 0.03, 0, 0)
       return c
     }))!
-    root.add(many(K, tuft, M.tuft, sow(Math.round(140 * area), 0.05).map(([x, z]) => ({ p: [x, 0, z], r: [0, Math.random() * 6, 0], s: [1, 0.7 + Math.random() * 0.8, 1] })), false))
-    root.add(many(K, K.sph, M.pebble, sow(Math.round(14 * area), 0.2).map(([x, z]) => ({ p: [x, 0.02, z], s: [0.12 + Math.random() * 0.12, 0.07, 0.1 + Math.random() * 0.08] }))))
+    details.push(root.add(many(K, tuft, M.tuft, sow(Math.round(140 * dense), 0.05).map(([x, z]) => ({ p: [x, 0, z], r: [0, Math.random() * 6, 0], s: [1, 0.7 + Math.random() * 0.8, 1] })), false)).children.at(-1)!)
+    details.push(root.add(many(K, o.huge ? new T.SphereGeometry(1, 8, 5) : K.sph, M.pebble, sow(Math.round(14 * dense), 0.2).map(([x, z]) => ({ p: [x, 0.02, z], s: [0.12 + Math.random() * 0.12, 0.07, 0.1 + Math.random() * 0.08] })), !o.huge)).children.at(-1)!)
   }
 
   /* Ce qui cache la vue : le plateau, les cachettes, l'enclos, la barrière */
@@ -1755,7 +2070,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
     }
     if (!o.empty) {
       const L2 = new T.PointLight(0xFFB45A, 2.6, 4.6, 1.4)
-      L2.position.set(1.45, 1.3, 0.3)
+      L2.position.set(lampX, 1.3, 0.3)
       root.add(L2)
       lights.push(L2)
     }
@@ -1778,6 +2093,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
     root, r: R, spots, occ, top, pen, night: o.night,
     bale: () => mk(T, baleGeo, M.bale),
     make: id => makePiece(K, id),
+    detail(on) { for (const d of details) d.visible = on },
     party(k) {
       partyK = k
       M.lamp.emissiveIntensity = (o.night ? 2.2 : 0.15) + k * 2.5
