@@ -47,10 +47,17 @@ export interface CakeKit {
   cherry(): Grp
   /** Une bougie et sa flamme (la flamme : `userData.flame`). */
   candle(stripe: string): Grp
-  /** La part coupée (entre les angles a0 et a1, autour de +z) d'un étage. */
-  slice(t: Tier, a0: number, a1: number): Mesh
-  /** Les deux faces de coupe que laisse la part dans l'étage. */
+  /** Les deux faces de coupe que laisse la part (entre les angles a0 et a1) dans l'étage. */
   cutFaces(t: Tier, a0: number, a1: number): Mesh[]
+  /** La coupe d'une part entamée (entre a0 et a1) à la distance d du centre :
+      génoise, crème et confiture, en travers ; null si l'étage est déjà mangé là. */
+  biteFace(t: Tier, a0: number, a1: number, d: number): Mesh | null
+  /** Le couteau à gâteau : la lame dans le plan xy, le long de +x, le fil en bas (y = 0). */
+  knife(): Grp
+  /** La petite fourchette : les dents vers le bas (-y), le manche en haut. */
+  fork(): Grp
+  /** Une bouchée de gâteau (génoise en couches, le dessus de la couleur `top`). */
+  morsel(top: Mat): Mesh
   /** Des vermicelles semés sur un disque de rayon r (y = 0). */
   sprinkles(n: number, r: number, seed?: number): import('three').InstancedMesh
   /** Des perles de sucre en couronne (rayon r, y = 0). */
@@ -547,44 +554,78 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
     m.receiveShadow = true
     return m
   })
-  const slice: CakeKit['slice'] = (t, a0, a1) => {
-    // Un prisme : le dessus (nappage ou génoise glacée), le flanc (glaçage), les deux coupes
-    const n = 14
-    const pos: number[] = [], uv: number[] = [], idx: number[] = []
-    const groups: [number, number, number][] = []
-    const P = (x: number, y: number, z: number, u: number, v: number) => { pos.push(x, y, z); uv.push(u, v); return pos.length / 3 - 1 }
-    const rim = Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; const R = radiusAt(t.outline, a); return [Math.cos(a) * R, Math.sin(a) * R] as [number, number] })
-    // Dessus
-    let s0 = idx.length
-    const c = P(0, t.h, 0, 0.5, 0.5)
-    const top = rim.map(([x, z]) => P(x, t.h, z, 0.5, 0.5))
-    for (let i = 0; i < n; i++) idx.push(c, top[i + 1], top[i])
-    groups.push([s0, idx.length - s0, 0])
-    // Flanc
-    s0 = idx.length
-    const lo = rim.map(([x, z]) => P(x, 0, z, 0, 0)), hi = rim.map(([x, z]) => P(x, t.h, z, 0, 1))
-    for (let i = 0; i < n; i++) idx.push(lo[i], lo[i + 1], hi[i], hi[i], lo[i + 1], hi[i + 1])
-    groups.push([s0, idx.length - s0, 1])
-    // Les coupes (génoise en couches)
-    s0 = idx.length
-    for (const [i, flip] of [[0, false], [n, true]] as [number, boolean][]) {
-      const [x, z] = rim[i]
-      const a = P(0, 0, 0, 0, 0), b = P(x, 0, z, 1, 0), d = P(x, t.h, z, 1, 1), e = P(0, t.h, 0, 0, 1)
-      if (flip) idx.push(a, b, d, a, d, e); else idx.push(a, d, b, a, e, d)
+  /* La coupe d'une part entamée : la droite perpendiculaire à la bissectrice,
+     à la distance d, rognée par le contour de l'étage et par les deux bords de la part */
+  const biteFace: CakeKit['biteFace'] = (t, a0, a1, d) => {
+    const m = (a0 + a1) / 2
+    const ux = Math.cos(m), uz = Math.sin(m), vx = -uz, vz = ux
+    const cx = ux * d, cz = uz * d
+    if (d <= 0.02 || !inside(t.outline, cx, cz)) return null
+    // Les croisements de la droite avec le contour : le plus proche de chaque côté
+    let lo = -Infinity, hi = Infinity
+    const P = t.outline
+    for (let i = 0; i < P.length; i++) {
+      const [x1, z1] = P[i], [x2, z2] = P[(i + 1) % P.length]
+      const ex = x2 - x1, ez = z2 - z1
+      const den = vx * ez - vz * ex
+      if (Math.abs(den) < 1e-9) continue
+      const s0 = ((x1 - cx) * ez - (z1 - cz) * ex) / den, u = ((x1 - cx) * vz - (z1 - cz) * vx) / den
+      if (u < 0 || u > 1) continue
+      if (s0 < 0) lo = Math.max(lo, s0); else hi = Math.min(hi, s0)
     }
-    groups.push([s0, idx.length - s0, 2])
-    const geo = new T.BufferGeometry()
-    geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3))
-    geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2))
-    geo.setIndex(idx)
-    for (const [st, cnt, mi] of groups) geo.addGroup(st, cnt, mi)
-    geo.computeVertexNormals()
-    k(geo)
-    const topMat = t.glaze.visible ? t.glazeMat : t.bodyMat
-    const m = new T.Mesh(geo, [topMat, t.bodyMat, spongeMat])
-    m.castShadow = true
-    return m
+    const half = d * Math.tan((a1 - a0) / 2)
+    // Rentré un peu là où il touche le bord arrondi de la génoise
+    lo = Math.max(lo + 0.03, -half); hi = Math.min(hi - 0.03, half)
+    if (hi - lo < 0.01) return null
+    const g = new T.PlaneGeometry(hi - lo, t.h)
+    g.translate((hi + lo) / 2, t.h / 2, 0)
+    // Le plan regarde vers le centre (vers la pointe mangée)
+    g.rotateY(Math.PI / 2 - m + Math.PI)
+    g.translate(cx, 0, cz)
+    const mesh = new T.Mesh(k(g), spongeMat)
+    mesh.receiveShadow = true
+    return mesh
   }
+
+  /* ---- Le couteau et la fourchette, en inox ---- */
+  const steel = phys({ color: '#E4E7EB', metalness: 1, roughness: 0.22 })
+  const handleMat = phys({ color: '#FFF4EA', roughness: 0.35, clearcoat: 0.6 })
+  const knife = (): Grp => {
+    const g = new T.Group()
+    const bl = new T.Shape()
+    bl.moveTo(0, 0); bl.lineTo(0.86, 0); bl.quadraticCurveTo(1.02, 0.02, 1.04, 0.14); bl.lineTo(0, 0.15); bl.closePath()
+    const blade = new T.Mesh(k(new T.ExtrudeGeometry(bl, { depth: 0.008, bevelEnabled: false })), steel)
+    blade.position.z = -0.004
+    blade.castShadow = true
+    g.add(blade)
+    const hd = k(new T.CapsuleGeometry(0.032, 0.36, 4, 12))
+    hd.rotateZ(Math.PI / 2)
+    const handle = new T.Mesh(hd, handleMat)
+    handle.position.set(-0.2, 0.1, 0)
+    handle.castShadow = true
+    g.add(handle)
+    return g
+  }
+  const forkGeo = (() => {
+    const parts: Geo[] = []
+    const box = (w: number, h: number, dd: number, x: number, y: number) => { const b = new T.BoxGeometry(w, h, dd); b.translate(x, y, 0); parts.push(b) }
+    for (let i = 0; i < 4; i++) box(0.011, 0.13, 0.008, -0.033 + i * 0.022, -0.075)
+    box(0.08, 0.035, 0.009, 0, 0)
+    box(0.034, 0.1, 0.009, 0, 0.06)
+    box(0.042, 0.42, 0.012, 0, 0.32)
+    const m = mergeG(parts.map(x => x.toNonIndexed()))
+    parts.forEach(x => x.dispose())
+    return m ? k(m) : k(new T.BoxGeometry(0.05, 0.6, 0.01))
+  })()
+  const fork = (): Grp => {
+    const g = new T.Group()
+    const m = new T.Mesh(forkGeo, steel)
+    m.castShadow = true
+    g.add(m)
+    return g
+  }
+  const morselGeo = k(new T.BoxGeometry(0.11, 0.09, 0.09))
+  const morsel: CakeKit['morsel'] = top => new T.Mesh(morselGeo, [spongeMat, spongeMat, top, spongeMat, spongeMat, spongeMat])
 
   /* ---- Le présentoir en porcelaine, son liseré doré ---- */
   const stand = (): Grp => {
@@ -605,7 +646,7 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
   }
 
   return {
-    T, tier, rosette, strawberry, raspberry, blueberry, cherry, candle, sprinkles, pearls, stand, slice, cutFaces,
+    T, tier, rosette, strawberry, raspberry, blueberry, cherry, candle, sprinkles, pearls, stand, cutFaces, biteFace, knife, fork, morsel,
     dispose() { own.forEach(x => x.dispose()) }
   }
 }

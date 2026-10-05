@@ -1087,6 +1087,21 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   coupée (génoise, crème, confiture) qui sort sur sa petite assiette ; écran
   de fin. Tout est modelé (`core/cake3d.ts`). Bot `patisserie`. **Reste :
   la tablette** (le souffle au micro, `?fps` gâteau plein).
+- ✅ **Retours de Joyce sur la Pâtisserie** (6/10, plan « go ») :
+  - les vermicelles ne se voyaient PAS (leur `InstancedMesh` jugé hors champ,
+    voir `PIEGES.md`) ; ils tombent maintenant un à un sur ce qu'il y a sous
+    eux, couchés sur la surface (le bourrelet, une rosace, l'étage du
+    dessous), et se reposent si l'on verse le nappage après ;
+  - une baie touchée sur le flanc d'un étage passait DERRIÈRE lui (le rayon
+    sautait le flanc jusqu'au premier dessus suivant) : on garde la première
+    surface touchée ; sur un flanc, la décoration monte au bord du dessus de
+    cet étage ; jamais dans l'étage d'au-dessus ni dans ses coulures ;
+  - on MANGE le gâteau, comme la pizza : la première part se coupe toute
+    seule après la chanson (le couteau, puis elle glisse sur sa petite
+    assiette, la caméra recule pour tout voir) ; un toucher = une bouchée à
+    la fourchette (deux par part, la pointe d'abord, la coupe se voit) ; un
+    toucher sur le gâteau : il tourne, le couteau coupe la suivante. Six
+    parts, « Gâteau dévoré ! ».
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

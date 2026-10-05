@@ -1609,8 +1609,19 @@ await scenario('patisserie', async () => {
   await page.locator('#bkBlow').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__bk.lit === 0, null, { timeout: 60000 })
     .catch(async () => { throw new Error(`les bougies ne s'éteignent pas (${await etat()})`) })
-  // La chanson puis la coupe suivent le temps du jeu (plus lent que la montre sous la 3D logicielle)
-  await finDe('Joyeux anniversaire', 240000)
+  // La chanson, puis on MANGE tout le gâteau (6 parts, 2 bouchées chacune) : le temps du
+  // jeu suit les images (une par seconde sous la 3D logicielle), on l'accélère
+  await page.evaluate(() => window.__bk.speed(4))
+  const mange = () => page.evaluate(() => JSON.stringify(window.__bk.eat))
+  await page.waitForFunction(() => window.__bk.eat?.at, null, { timeout: 240000, polling: 500 })
+    .catch(async () => { throw new Error(`la première part n'est pas servie (${await etat()})`) })
+  for (let n = 0; n < 30 && await page.evaluate(() => window.__bk.phase) === 'eat'; n++) {
+    await page.waitForFunction(() => window.__bk.eat?.at || window.__bk.phase !== 'eat', null, { timeout: 120000, polling: 300 })
+      .catch(async () => { throw new Error(`on ne peut plus toucher (${await mange()})`) })
+    const at = await page.evaluate(() => window.__bk.eat?.at)
+    if (at) await tap(at)
+  }
+  await finDe('Gâteau dévoré', 120000).catch(async () => { throw new Error(`le gâteau n'est pas fini (${await mange()})`) })
 })
 
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))

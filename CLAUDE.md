@@ -188,8 +188,10 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            doigt (`paintable`, un cercle dans le shader),
                            rosaces et gouttes de crème, fraise, framboise,
                            myrtille, cerise, vermicelles, perles, bougies et
-                           flamme, présentoir ; la part coupée (`slice`,
-                           `cutFaces` : génoise, crème, confiture)
+                           flamme, présentoir ; les faces de coupe (`cutFaces` :
+                           génoise, crème, confiture), la coupe d'une part
+                           entamée (`biteFace`), le couteau, la fourchette et
+                           la bouchée (`knife`, `fork`, `morsel`)
              farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
                            rond qu'on fait tourner, ses cachettes construites
                            (grange, meule, puits, charrette, tracteur, niche,
@@ -425,11 +427,14 @@ construire, 5/10 : le plateau de Cache-Cache vide, les pièces glissées du
 tiroir — par `pointerId`, écouté sur `window` —, chemins et clôtures au
 doigt, les animaux qui vont à leur place ; la ferme se garde dans
 `ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite) ·
-`bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; la part se coupe avec deux
-plans de découpe — `localClippingEnabled`, le présentoir et les faces de coupe
-exclus —, et ce qui part avec la part reçoit ses matières à elle ; le micro ne
-s'ouvre qu'à l'étape des bougies, « Souffle ! » fait une rafale jusqu'à la
-dernière flamme). La Course,
+`bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le 6/10, on le
+MANGE en six parts : ce qui reste est coupé par deux plans —
+`localClippingEnabled`, leur union sous un demi-tour enlevé, leur intersection
+au-delà ; le présentoir et les faces de coupe exclus —, la part est une copie
+des étages gardée entre ses deux bords, une bouchée un troisième plan qui
+avance depuis la pointe ; ce qui part avec la part reçoit ses matières à elle ;
+le micro ne s'ouvre qu'à l'étape des bougies, « Souffle ! » fait une rafale
+jusqu'à la dernière flamme ; son bot accélère le temps, `__bk.speed`). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été

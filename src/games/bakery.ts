@@ -1,10 +1,10 @@
 import type { GameDef, GameContext } from '../core/types'
 import { createStage, loader, woodTex, type Stage, type T3 } from '../core/three3d'
 import { particles, type Particles } from '../core/scene3d'
-import { cakeKit, type CakeKit, type CakeShape, type Tier } from '../core/cake3d'
+import { cakeKit, radiusAt, type CakeKit, type CakeShape, type Tier } from '../core/cake3d'
 import { withRenderer } from '../core/portraits'
 import { sfx, preloadSfx } from '../core/sfx'
-import { getCtx, tone } from '../core/audio'
+import { getCtx, sCrunch, tone } from '../core/audio'
 import { playNote } from '../core/music'
 import { onPause } from '../core/session'
 import { openMic, type Mic } from '../core/mic'
@@ -21,8 +21,12 @@ import { visible } from '../core/hand'
                vermicelles tombent où passe le doigt
    - Bougies : on les plante (elles s'allument), puis on SOUFFLE pour de vrai
                (le micro, ouvert à cette étape seulement) ou on touche « Souffle ! »
-   Puis « Joyeux anniversaire » au carillon, des confettis, et on coupe une
-   part, qui sort sur sa petite assiette. Pas de note sur une création. */
+   Puis « Joyeux anniversaire » au carillon, des confettis, et on le MANGE
+   (6/10, demandé par Joyce : « comme la pizza ») : la première part se
+   coupe toute seule et glisse sur sa petite assiette ; un toucher = une
+   bouchée à la fourchette (la pointe d'abord, la coupe se voit), deux par
+   part ; puis un toucher sur le gâteau : il tourne, le couteau coupe la
+   part suivante. Six parts, et il n'en reste rien. Pas de note sur une création. */
 
 type Step = 'base' | 'glacage' | 'creme' | 'decor' | 'bougies'
 type Deco = 'fraise' | 'framboise' | 'myrtille' | 'cerise' | 'perle' | 'vermicelles'
@@ -41,10 +45,49 @@ const SIZES: Record<number, { r: number; h: number }[]> = {
 }
 const PLATE_Y = 0.4
 const MAX_ITEMS = 140, MAX_CANDLES = 12, MAX_SPRINKLES = 900
-/** La part : entre ces deux angles (autour de +z, vers nous). */
-const CUT = [Math.PI / 2 - 0.38, Math.PI / 2 + 0.38] as const
+/** On mange le gâteau en six parts ; la première est centrée sur +z (vers nous, au repos). */
+const PARTS = 6, DP = Math.PI * 2 / PARTS, A0 = Math.PI / 2 - DP / 2
+/** La petite assiette, sur le comptoir. */
+const PLATE = { x: 1.55, z: 1.35 }
 
 interface Item { kind: string; obj: import('three').Object3D; candle?: { flame: import('three').Group; lit: number } }
+
+type V3 = import('three').Vector3
+type Plane = import('three').Plane
+type Mat = import('three').Material
+/** Une part coupée, sur sa petite assiette. */
+interface Slice {
+  g: import('three').Group
+  a0: number; a1: number; mid: number
+  /** Ses deux bords et la bouchée (repère de la part), et leurs copies dans le monde (celles des matières). */
+  local: Plane[]; world: Plane[]
+  bites: number
+  items: Item[]
+  tiers: { t: Tier; y: number }[]
+  mats: Mat[]
+  /** La coupe d'une bouchée (pas coupée elle-même : elle est pile sur le plan). */
+  cap: Mat
+  top: Mat
+  from: { p: V3; r: number }; to: { p: V3; r: number }
+  t: number
+}
+/** Le gâteau qu'on mange : ce qui en reste (deux plans de coupe), la part servie, le couteau, la fourchette. */
+interface Eat {
+  parts: number
+  base: number
+  local: Plane[]; world: Plane[]
+  mats: Mat[]
+  faces: import('three').Mesh[]
+  knife: import('three').Group
+  fork: import('three').Group
+  slice: Slice | null
+  /** Le recul de la caméra, 0 → 1. */
+  camK: number
+  anim: null
+    | { kind: 'turn'; t: number; from: number; to: number }
+    | { kind: 'knife'; t: number; lines: number[]; hit: number }
+    | { kind: 'fork'; t: number; at: V3; from: V3; morsel: import('three').Mesh | null }
+}
 
 interface State {
   stage: Stage
@@ -66,7 +109,7 @@ interface State {
   candle: string
   rot: number
   vRot: number
-  phase: 'make' | 'blow' | 'party' | 'cut' | 'done'
+  phase: 'make' | 'blow' | 'party' | 'eat' | 'done'
   phaseT: number
   mic: Mic | null
   blow: number
@@ -77,7 +120,7 @@ interface State {
   fx: Particles
   ray: import('three').Raycaster
   t: number
-  slice: import('three').Group | null
+  eat: Eat | null
   stand: import('three').Object3D[]
 }
 
@@ -98,16 +141,51 @@ function buildBase(s: State) {
     s.tiers.push(t); s.tierY.push(y)
     y += sz.h + 0.03
   })
-  s.cake.updateMatrixWorld(true)
+  if (s.sprN) { s.sprN = 0; s.spr.count = 0 }
   // Ce qui était posé retombe sur le nouveau gâteau, là où il était
-  for (const it of s.items) {
+  reseat(s)
+}
+
+const isCream = (it: Item) => it.kind === 'rosace' || it.kind === 'goutte'
+
+/** La hauteur de ce qu'il y a de plus haut sous un objet posé en (x, z) (le centre et quatre points du tour). */
+function restOn(s: State, x: number, z: number, rad: number, withItems: boolean) {
+  let y = -Infinity
+  for (const [ox, oz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const p = dropOnto(s, x + ox * rad * 0.6, z + oz * rad * 0.6, withItems)
+    if (p) y = Math.max(y, p.y)
+  }
+  return isFinite(y) ? y : null
+}
+
+/** Tout ce qui est posé se repose sur ce qu'il y a dessous (un nouveau gâteau,
+    le nappage versé APRÈS le décor : sinon il l'aurait recouvert). La crème
+    d'abord, puis ce qui peut être posé sur elle ; les vermicelles en dernier. */
+function reseat(s: State) {
+  s.cake.updateMatrixWorld(true)
+  for (const cream of [true, false]) for (const it of s.items) {
+    if (isCream(it) !== cream) continue
     const p = it.obj.position
-    const hit = dropOnto(s, p.x, p.z)
-    if (hit) p.y = hit.y
+    const y = restOn(s, p.x, p.z, (FOOT[it.kind] ?? [0.05])[0], !cream)
+    if (y !== null) p.y = y
     else { s.cake.remove(it.obj); it.obj.userData.gone = true }
   }
   s.items = s.items.filter(it => !it.obj.userData.gone)
-  if (s.sprN) { s.sprN = 0; s.spr.count = 0 }
+  const m4 = new s.T.Matrix4(), q = new s.T.Quaternion(), p = new s.T.Vector3(), sc = new s.T.Vector3()
+  for (let i = 0; i < s.sprN; i++) {
+    s.spr.getMatrixAt(i, m4)
+    m4.decompose(p, q, sc)
+    const h = dropHit(s, p.x, p.z, true)
+    if (!h) continue
+    s.spr.setMatrixAt(i, m4.compose(h.p.addScaledVector(h.n, 0.006), lay(s, h.n, q), sc))
+  }
+  s.spr.instanceMatrix.needsUpdate = true
+}
+
+/** Un vermicelle couché sur la surface (de normale n), tourné au hasard. */
+function lay(s: State, n: import('three').Vector3, q: import('three').Quaternion) {
+  const yaw = new s.T.Quaternion().setFromAxisAngle(new s.T.Vector3(0, 1, 0), Math.random() * Math.PI * 2)
+  return q.setFromUnitVectors(new s.T.Vector3(0, 1, 0), n.lengthSq() ? n.clone().normalize() : new s.T.Vector3(0, 1, 0)).multiply(yaw)
 }
 
 /** Les surfaces où l'on pose (les étages, leur nappage, l'assiette du présentoir). */
@@ -119,24 +197,65 @@ function surfaces(s: State, withItems = false): import('three').Object3D[] {
 }
 
 /** Le point du dessus sous (x, z) du gâteau (repère du gâteau), en tombant d'en haut. */
-function dropOnto(s: State, x: number, z: number) {
+function dropOnto(s: State, x: number, z: number, withItems = false) {
+  return dropHit(s, x, z, withItems)?.p ?? null
+}
+/** Pareil, avec la normale de la surface (repère du gâteau). */
+function dropHit(s: State, x: number, z: number, withItems = false) {
   const o = s.cake.localToWorld(new s.T.Vector3(x, 5, z))
   s.ray.set(o, new s.T.Vector3(0, -1, 0))
-  const h = s.ray.intersectObjects(surfaces(s), false)[0]
-  return h ? s.cake.worldToLocal(h.point.clone()) : null
+  const h = s.ray.intersectObjects(surfaces(s, withItems), false)[0]
+  if (!h?.face) return null
+  const n = h.face.normal.clone().transformDirection(h.object.matrixWorld)
+  return { p: s.cake.worldToLocal(h.point.clone()), n: n.applyQuaternion(s.cake.getWorldQuaternion(new s.T.Quaternion()).invert()) }
 }
 
-/** Le point de la surface sous le doigt : un dessus (normale vers le haut), ou n'importe quoi. */
-function pick(s: State, cx: number, cy: number, top: boolean, withItems = false) {
+/** Ce qu'on touche sous le doigt : la PREMIÈRE surface (jamais une autre
+    derrière : une baie posée sur le flanc d'un étage passait derrière lui). */
+function pick(s: State, cx: number, cy: number, withItems = false) {
   const r = s.stage.renderer.domElement.getBoundingClientRect()
   s.ray.setFromCamera(new s.T.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), s.stage.camera)
   for (const h of s.ray.intersectObjects(surfaces(s, withItems), false)) {
     if (!h.face) continue
     const n = h.face.normal.clone().transformDirection(h.object.matrixWorld)
-    if (top && n.y < 0.55) continue
     return { point: h.point, local: s.cake.worldToLocal(h.point.clone()), obj: h.object as import('three').Mesh, n }
   }
   return null
+}
+
+/** L'étage d'une surface touchée (son génoise ou son nappage), -1 sinon. */
+const tierOf = (s: State, o: import('three').Object3D) =>
+  s.tiers.findIndex(t => t.body === o || !!t.glaze.getObjectById(o.id))
+
+/** Le rayon (vu d'en haut) de ce qu'on pose, et ce qu'il peut dépasser du bord. */
+const FOOT: Record<string, [number, number]> = {
+  rosace: [0.12, 0.07], goutte: [0.11, 0.06], fraise: [0.05, 0.02], framboise: [0.045, 0.015], myrtille: [0.05, 0.015],
+  cerise: [0.06, 0.02], perle: [0.03, 0.01], bougie: [0.03, 0.01]
+}
+
+/** Où se pose ce qu'on a touché : sur le DESSUS de l'étage touché (un toucher
+    sur son flanc remonte au bord), sans entrer dans l'étage d'au-dessus ni
+    dans ses coulures, sans pendre dans le vide ; à la hauteur de ce qu'il y a
+    de plus haut sous lui (le bourrelet du nappage, une rosace). */
+function seat(s: State, h: NonNullable<ReturnType<typeof pick>>, kind: string, withItems: boolean) {
+  const [rad, over] = FOOT[kind] ?? [0.05, 0.02]
+  let { x, z } = h.local
+  let level = tierOf(s, h.obj)
+  if (level < 0 && !s.stand.includes(h.obj)) {
+    // Sur une rosace : l'étage dessous (celui dont le dessus est juste en dessous)
+    level = s.tierY.reduce((b, y, i) => h.local.y >= y + s.tiers[i].h - 0.02 ? i : b, -1)
+  }
+  const a = Math.atan2(z, x)
+  let d = Math.hypot(x, z)
+  const R = (i: number) => radiusAt(s.tiers[i].outline, a)
+  const maxR = level < 0 ? 1.3 - rad : R(level) - rad + over
+  const minR = level + 1 < s.tiers.length ? R(level + 1) + rad + 0.02 : 0
+  // Le flanc touché : la décoration va au bord du dessus de cet étage
+  if (level >= 0 && h.n.y < 0.55 && tierOf(s, h.obj) >= 0) d = maxR
+  d = minR > maxR ? (minR + maxR) / 2 : Math.min(maxR, Math.max(minR, d))
+  x = Math.cos(a) * d; z = Math.sin(a) * d
+  const y = restOn(s, x, z, rad, withItems)
+  return y === null ? null : new s.T.Vector3(x, y, z)
 }
 
 function addItem(s: State, kind: string, obj: import('three').Object3D, at: import('three').Vector3, extra: Partial<Item> = {}) {
@@ -157,58 +276,68 @@ function onPlace(s: State, cx: number, cy: number, drag: boolean) {
   if (s.phase !== 'make') return
   if (s.step === 'glacage') {
     if (drag) return
-    const h = pick(s, cx, cy, false)
+    const h = pick(s, cx, cy)
     if (!h) return
-    const t = s.tiers.find(x => x.body === h.obj || x.glaze.children.includes(h.obj) || x.glaze.getObjectById(h.obj.id))
+    const t = s.tiers.find(x => x.body === h.obj || x.glaze.getObjectById(h.obj.id))
     if (!t) return
     if (h.obj.userData.paint === 'body' && h.n.y < 0.55) { t.bodyMat.userData.paint(s.glaze, h.point); sfx('cloth', { vol: 0.5 }) }
-    else { t.pour(s.glaze, h.point); sfx('pluck', { vol: 0.5, rate: 0.7 }) }
+    else {
+      const first = !t.glaze.visible
+      t.pour(s.glaze, h.point); sfx('pluck', { vol: 0.5, rate: 0.7 })
+      // Le nappage versé après le décor : ce qui est posé remonte dessus
+      if (first && (s.items.length || s.sprN)) reseat(s)
+    }
     return
   }
   if (s.step === 'creme') {
-    const h = pick(s, cx, cy, true)
-    if (!h) return
-    const p = h.local
-    if (s.items.some(it => (it.kind === 'rosace' || it.kind === 'goutte') && Math.hypot(it.obj.position.x - p.x, it.obj.position.z - p.z) < (drag ? 0.15 : 0.11))) return
-    if (addItem(s, s.drop ? 'goutte' : 'rosace', s.kit.rosette(s.cream, s.drop), p)) sfx('cloth', { vol: 0.35, rate: 1.4 })
+    const h = pick(s, cx, cy)
+    const kind = s.drop ? 'goutte' : 'rosace'
+    const p = h && seat(s, h, kind, false)
+    if (!p) return
+    if (s.items.some(it => isCream(it) && Math.hypot(it.obj.position.x - p.x, it.obj.position.z - p.z) < (drag ? 0.15 : 0.11))) return
+    if (addItem(s, kind, s.kit.rosette(s.cream, s.drop), p)) sfx('cloth', { vol: 0.35, rate: 1.4 })
     return
   }
   if (s.step === 'decor') {
     if (s.deco === 'vermicelles') { sprinkle(s, cx, cy); return }
     if (drag) return
-    const h = pick(s, cx, cy, true, true)
-    if (!h) return
+    const h = pick(s, cx, cy, true)
+    const p = h && seat(s, h, s.deco, true)
+    if (!p) return
     const o = s.deco === 'fraise' ? s.kit.strawberry() : s.deco === 'framboise' ? s.kit.raspberry() : s.deco === 'myrtille' ? s.kit.blueberry()
       : s.deco === 'cerise' ? s.kit.cherry() : s.kit.pearls(1, 0, '#FFFFFF')
-    if (addItem(s, s.deco, o, h.local)) sfx('pluck', { vol: 0.5, rate: 1.1 + Math.random() * 0.3 })
+    if (addItem(s, s.deco, o, p)) sfx('pluck', { vol: 0.5, rate: 1.1 + Math.random() * 0.3 })
     return
   }
   if (s.step === 'bougies') {
     if (drag) return
-    const h = pick(s, cx, cy, true, true)
-    if (!h) return
+    const h = pick(s, cx, cy, true)
+    const p = h && seat(s, h, 'bougie', true)
+    if (!p) return
     if (s.items.filter(it => it.candle).length >= MAX_CANDLES) { sfx('error', { vol: 0.4 }); return }
     const g = s.kit.candle(s.candle)
     const flame = g.userData.flame as import('three').Group
     flame.scale.setScalar(0.001)
-    const it = addItem(s, 'bougie', g, h.local, { candle: { flame, lit: 0.001 } })
+    const it = addItem(s, 'bougie', g, p, { candle: { flame, lit: 0.001 } })
     if (it) { sfx('click', { vol: 0.5 }); tone(1500, 0.05, 'triangle', 0.06, 0.18) }
     updateBlowBtn(s)
   }
 }
 
-/** Les vermicelles tombent autour du doigt. */
+/** Les vermicelles tombent autour du doigt, chacun sur ce qu'il y a sous lui
+    (le nappage, son bourrelet, une rosace, l'étage du dessous) ; ceux qui
+    tomberaient contre un flanc ne restent pas. */
 function sprinkle(s: State, cx: number, cy: number) {
   const h = pick(s, cx, cy, true)
-  if (!h) return
-  const m4 = new s.T.Matrix4(), q = new s.T.Quaternion(), e = new s.T.Euler(), col = new s.T.Color()
+  const c = h && seat(s, h, 'perle', true)
+  if (!c) return
+  const m4 = new s.T.Matrix4(), q = new s.T.Quaternion(), col = new s.T.Color(), one = new s.T.Vector3(1, 1, 1)
   const COLS = ['#FF6B81', '#FFC94D', '#5EC97B', '#4FB8E7', '#B197FC', '#FFFFFF', '#FF9F43']
   for (let i = 0; i < 6 && s.sprN < MAX_SPRINKLES; i++) {
     const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * 0.13
-    const x = h.local.x + Math.cos(a) * d, z = h.local.z + Math.sin(a) * d
-    e.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.3)
-    q.setFromEuler(e)
-    m4.compose(new s.T.Vector3(x, h.local.y + 0.006, z), q, new s.T.Vector3(1, 1, 1))
+    const g = dropHit(s, c.x + Math.cos(a) * d, c.z + Math.sin(a) * d, true)
+    if (!g || g.n.y < 0.5) continue
+    m4.compose(g.p.addScaledVector(g.n, 0.006), lay(s, g.n, q), one)
     s.spr.setMatrixAt(s.sprN, m4)
     s.spr.setColorAt(s.sprN, col.set(COLS[Math.floor(Math.random() * COLS.length)]))
     s.sprN++
@@ -286,60 +415,327 @@ function confetti(s: State) {
   sfx('confirm', { vol: 0.25, rate: 1.2 })
 }
 
-/** On coupe : la part (et ce qui est posé dessus) sort sur sa petite assiette. */
-function cut(s: State) {
-  s.phase = 'cut'; s.phaseT = 0
+/* ---------- On mange le gâteau, part par part ----------
+   Ce qui reste du gâteau est COUPÉ par deux plans (`localClippingEnabled`) :
+   la part enlevée grandit d'un sixième à chaque fois, toujours d'un seul
+   tenant — moins d'un demi-tour, on garde l'union des deux demi-espaces ;
+   plus, leur intersection. Les faces de coupe (génoise, crème, confiture)
+   sont posées pile sur les plans, sans être coupées. La part, elle, est une
+   COPIE des étages (nappage, bourrelet, coulures compris) gardée entre ses
+   deux bords, et une bouchée est un troisième plan qui avance depuis la
+   pointe. Ce qui part avec la part reçoit ses matières à elle. */
+
+const isMesh = (o: import('three').Object3D): o is import('three').Mesh => (o as import('three').Mesh).isMesh
+const matsOf = (m: import('three').Mesh) => Array.isArray(m.material) ? m.material : [m.material]
+/** L'angle (repère du gâteau) est-il dans la part [a0, a0 + DP] ? */
+const inPart = (a: number, a0: number) => ((a - a0) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) < DP
+
+function startEat(s: State) {
   const T = s.T
-  s.cake.rotation.y = 0
-  s.cake.updateMatrixWorld(true)
-  const [a0, a1] = CUT
-  // Le gâteau perd sa part : deux plans qui se croisent au centre
-  const p1 = new T.Plane(new T.Vector3(Math.sin(a0), 0, -Math.cos(a0)), 0)
-  const p2 = new T.Plane(new T.Vector3(-Math.sin(a1), 0, Math.cos(a1)), 0)
+  s.phase = 'eat'
+  // Ce qui est posé sur l'assiette du présentoir ne se coupe pas : ses matières à lui
+  for (const it of s.items) {
+    if (it.obj.position.y >= PLATE_Y + 0.01) continue
+    it.obj.traverse(o => { if (isMesh(o)) o.material = Array.isArray(o.material) ? o.material.map(x => x.clone()) : o.material.clone() })
+  }
+  // Les vermicelles tombés sur l'assiette : à part, eux aussi
+  {
+    const m4 = new T.Matrix4(), c = new T.Color(), keep: number[] = []
+    for (let i = 0; i < s.sprN; i++) { s.spr.getMatrixAt(i, m4); if (m4.elements[13] < PLATE_Y + 0.01) keep.push(i) }
+    if (keep.length) {
+      const im = new T.InstancedMesh(s.spr.geometry, (s.spr.material as Mat).clone(), keep.length)
+      keep.forEach((i, j) => { s.spr.getMatrixAt(i, m4); im.setMatrixAt(j, m4); s.spr.getColorAt(i, c); im.setColorAt(j, c) })
+      im.frustumCulled = false
+      s.cake.add(im)
+    }
+  }
+  // Toutes les matières du gâteau (étages, crème, fruits, bougies, vermicelles) suivent les deux plans
+  const local = [new T.Plane(), new T.Plane()], world = [new T.Plane(), new T.Plane()]
+  const mats = new Set<Mat>()
+  for (const t of s.tiers) t.g.traverse(o => { if (isMesh(o)) matsOf(o).forEach(m => mats.add(m)) })
+  for (const it of s.items) if (it.obj.position.y >= PLATE_Y + 0.01) it.obj.traverse(o => { if (isMesh(o)) matsOf(o).forEach(m => mats.add(m)) })
+  matsOf(s.spr).forEach(m => mats.add(m))
+  for (const m of mats) { m.clippingPlanes = world; m.clipIntersection = true }
   s.stage.renderer.localClippingEnabled = true
-  const inWedge = (x: number, z: number) => { const a = Math.atan2(z, x); return a > a0 && a < a1 }
-  const slice = new T.Group()
-  const faces: import('three').Mesh[] = []
-  for (const [i, t] of s.tiers.entries()) {
-    const sl = s.kit.slice(t, a0, a1)
-    sl.material = (sl.material as import('three').Material[]).map(m => m.clone())
-    sl.position.y = s.tierY[i]
-    slice.add(sl)
-    for (const f of s.kit.cutFaces(t, a0, a1)) { f.position.y = s.tierY[i]; faces.push(f) }
-  }
-  // Ce qui est posé sur la part part avec elle (ses matières à elle : pas coupées)
-  for (const it of s.items.slice()) {
-    const p = it.obj.position
-    if (!inWedge(p.x, p.z) || p.y < PLATE_Y + 0.01) continue
-    s.cake.remove(it.obj)
-    it.obj.traverse(o => {
-      const m = o as import('three').Mesh
-      if (m.isMesh) m.material = Array.isArray(m.material) ? m.material.map(x => x.clone()) : m.material.clone()
-    })
-    slice.add(it.obj)
-    s.items = s.items.filter(x => x !== it)
-  }
-  // Tout le gâteau perd sa part — sauf le présentoir (pas de trou dans l'assiette)
-  s.cake.traverse(o => {
-    const m = o as import('three').Mesh
-    if (!m.isMesh || s.stand.includes(m)) return
-    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) { mat.clippingPlanes = [p1, p2]; mat.clipIntersection = true }
-  })
-  // Les faces de coupe, posées APRÈS : elles sont pile sur les plans
-  for (const f of faces) s.cake.add(f)
-  // La petite assiette, sur le comptoir
+  // Le couteau (sa lame part du centre, le manche dehors) et la fourchette
+  const knife = new T.Group()
+  const k = s.kit.knife()
+  k.rotation.y = Math.PI; k.position.x = 1.08
+  knife.add(k)
+  knife.visible = false
+  s.cake.add(knife)
+  const fork = s.kit.fork()
+  fork.visible = false
+  s.stage.scene.add(fork)
+  // La petite assiette
   const plate = new T.Mesh(new T.CylinderGeometry(0.62, 0.55, 0.05, 48), new T.MeshPhysicalMaterial({ color: '#F6F2EC', roughness: 0.22, clearcoat: 0.7 }))
-  plate.position.set(1.55, 0.025, 1.35)
+  plate.position.set(PLATE.x, 0.025, PLATE.z)
   plate.receiveShadow = true; plate.castShadow = true
   s.stage.scene.add(plate)
-  s.stage.keep(plate.geometry); s.stage.keep(plate.material as import('three').Material)
-  slice.userData.from = new T.Vector3(0, 0, 0)
-  slice.userData.to = new T.Vector3(1.5, 0.05 - PLATE_Y, 1.35 - 0.62)
-  s.stage.scene.add(slice)
-  s.slice = slice
-  sfx('chop', { vol: 0.6 })
+  s.stage.keep(plate.geometry); s.stage.keep(plate.material as Mat)
+  s.eat = { parts: 0, base: s.rot, local, world, mats: [...mats], faces: [], knife, fork, slice: null, camK: 0, anim: null }
+  setCakePlanes(s)
+  cutNext(s)
 }
 
+/** Les deux plans de ce qui reste, et ses faces de coupe. */
+function setCakePlanes(s: State) {
+  const e = s.eat!, T = s.T
+  const A1 = A0 + e.parts * DP
+  e.local[0].set(new T.Vector3(Math.sin(A0), 0, -Math.cos(A0)), 0)
+  e.local[1].set(new T.Vector3(-Math.sin(A1), 0, Math.cos(A1)), 0)
+  const union = e.parts * DP <= Math.PI + 1e-6
+  for (const m of e.mats) if (m.clipIntersection !== union) { m.clipIntersection = union; m.needsUpdate = true }
+  for (const f of e.faces) s.cake.remove(f)
+  e.faces = []
+  if (e.parts >= PARTS) {
+    // Plus rien : les étages et ce qui était dessus disparaissent
+    for (const t of s.tiers) t.g.visible = false
+    for (const it of s.items) if (it.obj.position.y >= PLATE_Y + 0.01) it.obj.visible = false
+    s.spr.visible = false
+    return
+  }
+  if (e.parts === 0) return
+  s.tiers.forEach((t, i) => {
+    for (const f of s.kit.cutFaces(t, A0, A1)) { f.position.y = s.tierY[i]; s.cake.add(f); e.faces.push(f) }
+  })
+}
+
+/** La part suivante : le gâteau tourne pour la présenter, le couteau coupe, elle glisse sur l'assiette. */
+function cutNext(s: State) {
+  const e = s.eat
+  if (!e || e.anim || e.slice || e.parts >= PARTS) return
+  e.anim = { kind: 'turn', t: 0, from: s.rot, to: e.base + e.parts * DP }
+}
+
+function serve(s: State) {
+  const e = s.eat!
+  const a0 = A0 + e.parts * DP
+  e.parts++
+  setCakePlanes(s)
+  e.slice = makeSlice(s, a0, a0 + DP)
+  sfx('cloth', { vol: 0.45, rate: 0.8 })
+}
+
+function makeSlice(s: State, a0: number, a1: number): Slice {
+  const T = s.T
+  const mid = (a0 + a1) / 2
+  const g = new T.Group()
+  g.rotation.y = s.cake.rotation.y
+  s.stage.scene.add(g)
+  const local = [
+    new T.Plane(new T.Vector3(-Math.sin(a0), 0, Math.cos(a0)), 0), // garde ce qui est après a0
+    new T.Plane(new T.Vector3(Math.sin(a1), 0, -Math.cos(a1)), 0), // garde ce qui est avant a1
+    new T.Plane(new T.Vector3(Math.cos(mid), 0, Math.sin(mid)), 1) // la bouchée (au début : rien)
+  ]
+  const world = local.map(p => p.clone())
+  const mats: Mat[] = []
+  const own = (m: Mat, planes: Plane[] | null) => { const c = m.clone(); c.clippingPlanes = planes; c.clipIntersection = false; mats.push(c); return c }
+  let sponge: Mat | null = null
+  const tiers: Slice['tiers'] = []
+  s.tiers.forEach((t, i) => {
+    const c = t.g.clone(true)
+    c.visible = true
+    c.position.y = s.tierY[i]
+    c.traverse(o => { if (isMesh(o)) o.material = Array.isArray(o.material) ? o.material.map(m => own(m, world)) : own(o.material, world) })
+    g.add(c)
+    // Ses deux coupes (la génoise en couches), rognées par la bouchée
+    for (const f of s.kit.cutFaces(t, a0, a1)) { sponge ??= own(f.material as Mat, [world[2]]); f.material = sponge; f.position.y = s.tierY[i]; g.add(f) }
+    tiers.push({ t, y: s.tierY[i] })
+  })
+  const cap = own(sponge!, null)
+  // Ce qui est posé sur la part part avec elle
+  const items: Item[] = []
+  for (const it of s.items.slice()) {
+    const p = it.obj.position
+    if (p.y < PLATE_Y + 0.01 || !inPart(Math.atan2(p.z, p.x), a0)) continue
+    s.cake.remove(it.obj)
+    it.obj.traverse(o => { if (isMesh(o)) o.material = Array.isArray(o.material) ? o.material.map(m => own(m, null)) : own(o.material, null) })
+    g.add(it.obj)
+    items.push(it)
+    s.items = s.items.filter(x => x !== it)
+  }
+  // Et ses vermicelles
+  {
+    const m4 = new T.Matrix4(), c = new T.Color(), v = new T.Vector3(), keep: number[] = []
+    for (let i = 0; i < s.sprN; i++) {
+      s.spr.getMatrixAt(i, m4); v.setFromMatrixPosition(m4)
+      if (v.y >= PLATE_Y + 0.01 && inPart(Math.atan2(v.z, v.x), a0)) keep.push(i)
+    }
+    if (keep.length) {
+      const im = new T.InstancedMesh(s.spr.geometry, own(s.spr.material as Mat, [world[2]]), keep.length)
+      keep.forEach((i, j) => { s.spr.getMatrixAt(i, m4); im.setMatrixAt(j, m4); s.spr.getColorAt(i, c); im.setColorAt(j, c) })
+      im.frustumCulled = false
+      g.add(im)
+    }
+  }
+  // Le dessus de la part, pour la bouchée sur la fourchette
+  const tt = s.tiers[s.tiers.length - 1]
+  const top = own(tt.glaze.visible ? tt.glazeMat : tt.bodyMat, null)
+  // Sur l'assiette, de trois quarts : la pointe à gauche, le glaçage du bord à droite —
+  // les bouchées avancent de la pointe vers le bord sous nos yeux
+  const L = radiusAt(s.tiers[0].outline, mid)
+  const want = -0.3
+  let rot = mid - want
+  rot += Math.PI * 2 * Math.round((g.rotation.y - rot) / (Math.PI * 2))
+  const cx = Math.cos(mid) * L * 0.45, cz = Math.sin(mid) * L * 0.45
+  const wx = cx * Math.cos(rot) + cz * Math.sin(rot), wz = -cx * Math.sin(rot) + cz * Math.cos(rot)
+  return {
+    g, a0, a1, mid, local, world, bites: 0, items, tiers, mats, cap, top,
+    from: { p: g.position.clone(), r: g.rotation.y },
+    to: { p: new T.Vector3(PLATE.x - wx, 0.05 - PLATE_Y, PLATE.z - wz), r: rot },
+    t: 0
+  }
+}
+
+/** Le dessus de la part à la distance d de la pointe (repère de la part). */
+function sliceTop(sl: Slice, d: number) {
+  let y = sl.tiers[0].y + sl.tiers[0].t.h
+  for (const { t, y: ty } of sl.tiers) if (radiusAt(t.outline, sl.mid) > d + 0.04) y = ty + t.h
+  return y
+}
+/** Là où la fourchette pique : le milieu de ce qui reste à manger. */
+function biteAt(s: State, sl: Slice) {
+  const L = radiusAt(sl.tiers[0].t.outline, sl.mid)
+  const d = sl.bites === 0 ? L * 0.25 : L * 0.72
+  return sl.g.localToWorld(new s.T.Vector3(Math.cos(sl.mid) * d, sliceTop(sl, d) + 0.01, Math.sin(sl.mid) * d))
+}
+
+/** Un toucher pendant qu'on mange : une bouchée de la part servie, ou la part suivante. */
+function eatTap(s: State) {
+  const e = s.eat
+  if (s.phase !== 'eat' || !e || e.anim) return
+  if (e.slice) {
+    if (e.slice.t < 1) return
+    const at = biteAt(s, e.slice)
+    e.fork.visible = true
+    e.anim = { kind: 'fork', t: 0, at, from: at.clone().add(new s.T.Vector3(0.9, 1.1, 0.7)), morsel: null }
+    sfx('select', { vol: 0.3, rate: 1.4 })
+  } else cutNext(s)
+}
+
+/** La fourchette pique : la pointe de la part disparaît (une coupe à la place), ou le reste. */
+function applyBite(s: State, at: V3) {
+  const e = s.eat!, sl = e.slice!
+  sl.bites++
+  const L = radiusAt(sl.tiers[0].t.outline, sl.mid)
+  const col = '#' + ((sl.top as import('three').MeshStandardMaterial).color?.getHexString() ?? 'E9B872')
+  s.fx.burst(at, { count: 16, color: ['#E9B872', col, '#FFF4E0'], speed: 0.7, spread: 1, life: 0.8, size: 0.04, gravity: 1.6 })
+  sCrunch()
+  if (sl.bites === 1) {
+    const d = L * 0.5
+    sl.local[2].constant = -d
+    for (const { t, y } of sl.tiers) {
+      const f = s.kit.biteFace(t, sl.a0, sl.a1, d)
+      if (f) { f.material = sl.cap; f.position.y = y; sl.g.add(f) }
+    }
+    const ux = Math.cos(sl.mid), uz = Math.sin(sl.mid)
+    for (const it of sl.items) if (it.obj.position.x * ux + it.obj.position.z * uz < d + 0.02) it.obj.visible = false
+    return
+  }
+  // La dernière bouchée : il ne reste rien de la part
+  s.stage.scene.remove(sl.g)
+  sl.mats.forEach(m => { if (m !== sl.top) m.dispose() })
+  e.slice = null
+}
+
+/** Pendant qu'on mange, la caméra recule et glisse à droite : le gâteau ET la petite assiette. */
+const CAM0 = { p: [0, 2.05, 5.4], t: [0, 0.95, 0] }, CAM_EAT = { p: [0.5, 2.15, 6.7], t: [0.5, 0.72, 0.3] }
+
+function stepEat(s: State, dt: number) {
+  const e = s.eat
+  if (!e) return
+  const T = s.T
+  const ease = (k: number) => k * k * (3 - 2 * k)
+  e.camK = Math.min(1, e.camK + dt / 1.6)
+  {
+    const k = ease(e.camK), L = (a: number[], b: number[], i: number) => a[i] + (b[i] - a[i]) * k
+    s.stage.camera.position.set(L(CAM0.p, CAM_EAT.p, 0), L(CAM0.p, CAM_EAT.p, 1), L(CAM0.p, CAM_EAT.p, 2))
+    s.stage.camera.lookAt(L(CAM0.t, CAM_EAT.t, 0), L(CAM0.t, CAM_EAT.t, 1), L(CAM0.t, CAM_EAT.t, 2))
+  }
+  const a = e.anim
+  if (a?.kind === 'turn') {
+    a.t = Math.min(1, a.t + dt / 0.7)
+    s.rot = a.from + (a.to - a.from) * ease(a.t)
+    if (a.t >= 1) {
+      s.rot = a.to
+      const k = e.parts
+      const lines = k === 0 ? [A0, A0 + DP] : k < PARTS - 1 ? [A0 + (k + 1) * DP] : []
+      e.anim = lines.length ? { kind: 'knife', t: 0, lines, hit: 0 } : null
+      if (!lines.length) serve(s)
+    }
+  } else if (a?.kind === 'knife') {
+    // Le couteau descend jusqu'au présentoir le long de chaque coupe, puis remonte
+    const per = 0.8
+    a.t += dt
+    const i = Math.min(a.lines.length - 1, Math.floor(a.t / per)), p = (a.t - i * per) / per
+    const top = s.tierY[s.tierY.length - 1] + s.tiers[s.tiers.length - 1].h
+    const hi = top + 0.45, lo = PLATE_Y + 0.004
+    const y = p < 0.45 ? hi + (lo - hi) * ease(p / 0.45) : p < 0.6 ? lo : lo + (hi - lo) * ease((p - 0.6) / 0.4)
+    e.knife.visible = true
+    e.knife.rotation.y = -a.lines[i]
+    e.knife.position.y = y
+    if (p >= 0.42 && a.hit <= i) { a.hit = i + 1; sfx('chop', { vol: 0.6 }) }
+    if (a.t >= a.lines.length * per) { e.knife.visible = false; e.anim = null; serve(s) }
+  } else if (a?.kind === 'fork') {
+    // La fourchette arrive, pique, et repart vers nous avec la bouchée
+    a.t += dt
+    const f = e.fork
+    const above = a.at.clone().add(new T.Vector3(0.06, 0.4, 0.05)), into = a.at.clone().add(new T.Vector3(0.02, 0.1, 0.02))
+    const cam = s.stage.camera
+    const mouth = cam.position.clone().add(cam.getWorldDirection(new T.Vector3()).multiplyScalar(1.1)).add(new T.Vector3(0.15, -0.3, 0))
+    if (a.t < 0.4) f.position.lerpVectors(a.from, above, ease(a.t / 0.4))
+    else if (a.t < 0.55) f.position.lerpVectors(above, into, ease((a.t - 0.4) / 0.15))
+    else {
+      if (!a.morsel) {
+        applyBite(s, a.at)
+        a.morsel = s.kit.morsel(e.slice?.top ?? s.tiers[0].bodyMat)
+        a.morsel.position.y = -0.14
+        f.add(a.morsel)
+      }
+      const k = Math.min(1, (a.t - 0.55) / 0.75)
+      f.position.lerpVectors(into, mouth, k * k)
+    }
+    f.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), new T.Vector3(-0.42, -1, -0.3).normalize())
+    f.scale.setScalar(a.t > 1.1 ? Math.max(0.001, 1 - (a.t - 1.1) / 0.2) : 1)
+    if (a.t >= 1.3) {
+      if (a.morsel) f.remove(a.morsel)
+      f.visible = false
+      tone(520, 0.09, 'triangle', 0.08); tone(780, 0.14, 'triangle', 0.08, 0.11)
+      e.anim = null
+      if (!e.slice && e.parts >= PARTS) {
+        s.phase = 'done'
+        ctx.after(900, () => { if (me === s) ctx.finish({ title: 'Gâteau dévoré !', msg: 'Il n’en reste pas une miette', stars: 3 }) })
+      }
+    }
+  }
+  // La part glisse sur son assiette (en arc), en tournant
+  const sl = e.slice
+  if (sl && sl.t < 1) {
+    sl.t = Math.min(1, sl.t + dt / 1.4)
+    const k = ease(sl.t)
+    sl.g.position.lerpVectors(sl.from.p, sl.to.p, k)
+    sl.g.position.y += Math.sin(k * Math.PI) * 0.45
+    sl.g.rotation.y = sl.from.r + (sl.to.r - sl.from.r) * k
+    if (sl.t >= 1) sfx('confirm', { vol: 0.4 })
+  }
+  // Les plans suivent le gâteau et la part
+  s.cake.rotation.y = s.rot
+  s.cake.updateMatrixWorld()
+  e.local.forEach((p, i) => e.world[i].copy(p).applyMatrix4(s.cake.matrixWorld))
+  if (sl) { sl.g.updateMatrixWorld(); sl.local.forEach((p, i) => sl.world[i].copy(p).applyMatrix4(sl.g.matrixWorld)) }
+}
+
+/** Où toucher pendant qu'on mange (la main, les bots) : la part servie, sinon le gâteau. */
+function eatTarget(s: State) {
+  const e = s.eat
+  if (!e || e.anim || s.phase !== 'eat') return null
+  const r = s.stage.renderer.domElement.getBoundingClientRect()
+  const scr = (w: V3) => { const v = w.project(s.stage.camera); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height } }
+  if (e.slice) return e.slice.t >= 1 ? scr(biteAt(s, e.slice)) : null
+  const t = s.tiers.length - 1
+  return scr(s.cake.localToWorld(new s.T.Vector3(0, s.tierY[t] + s.tiers[t].h * 0.6, 0)))
+}
 /* ---------- Chaque image ---------- */
 
 function frame(s: State, dt: number) {
@@ -348,7 +744,7 @@ function frame(s: State, dt: number) {
   // Le plateau tourne au doigt (avec son élan) ; pendant la fête, tout seul
   if (s.phase === 'party') s.rot += dt * 0.35
   else if (s.phase === 'make' || s.phase === 'blow') { s.rot += s.vRot * dt; s.vRot *= Math.pow(0.01, dt) }
-  if (s.phase !== 'cut' && s.phase !== 'done') s.cake.rotation.y = s.rot
+  s.cake.rotation.y = s.rot
   for (const t of s.tiers) t.step(dt)
   for (const it of s.items) {
     const o = it.obj
@@ -380,25 +776,13 @@ function frame(s: State, dt: number) {
     }
   }
   s.blow *= Math.pow(0.2, dt)
-  // Après la chanson, on coupe ; la part glisse sur son assiette ; puis la fin
+  // Après la chanson, le gâteau se remet de face ; la première part se coupe toute seule
   if (s.phase === 'party' && s.phaseT > 1.2) {
-    // Le gâteau se remet de face avant la coupe
     const want = Math.round(s.rot / (Math.PI * 2)) * Math.PI * 2
     s.rot += (want - s.rot) * Math.min(1, dt * 3)
-    s.cake.rotation.y = s.rot
-    if (Math.abs(want - s.rot) < 0.01) cut(s)
+    if (Math.abs(want - s.rot) < 0.01) { s.rot = want; s.cake.rotation.y = want; startEat(s) }
   }
-  if (s.phase === 'cut' && s.slice) {
-    const k = Math.min(1, s.phaseT / 1.6), e = k * k * (3 - 2 * k)
-    const from = s.slice.userData.from as import('three').Vector3, to = s.slice.userData.to as import('three').Vector3
-    s.slice.position.lerpVectors(from, to, e)
-    s.slice.position.y += Math.sin(e * Math.PI) * 0.45
-    if (k >= 1) {
-      s.phase = 'done'
-      sfx('confirm', { vol: 0.5 })
-      ctx.after(1600, () => { if (me === s) ctx.finish({ title: 'Joyeux anniversaire !', msg: 'Quel beau gâteau, et une part pour toi', stars: 3 }) })
-    }
-  }
+  if (s.phase === 'eat' || s.phase === 'done') stepEat(s, dt)
   s.fx.update(dt)
 }
 
@@ -406,7 +790,7 @@ function frame(s: State, dt: number) {
 
 async function build(c: GameContext, arena: HTMLElement): Promise<State | null> {
   const stage = await createStage(arena, {
-    sky: '#F6E3D6', fov: 30, cam: [0, 2.05, 5.4], target: [0, 0.95, 0],
+    sky: '#F6E3D6', fov: 30, cam: CAM0.p as [number, number, number], target: CAM0.t as [number, number, number],
     hemi: ['#FFF4E6', '#C8A88E', 0.9], sun: { pos: [-3.5, 6, 4.5], color: '#FFF1DC', intensity: 2.2, area: 3, far: 20 },
     fill: 0.55, exposure: 1.02
   })
@@ -443,8 +827,9 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
       x.stroke()
     }
   })
-  const counter = new T.Mesh(new T.BoxGeometry(8, 0.12, 3.2), new T.MeshStandardMaterial({ map: marble, roughness: 0.22 }))
-  counter.position.set(0, -0.06, -0.3)
+  // Profond : quand la caméra recule pour le repas, on n'en voit pas le bord
+  const counter = new T.Mesh(new T.BoxGeometry(9, 0.12, 6.4), new T.MeshStandardMaterial({ map: marble, roughness: 0.22 }))
+  counter.position.set(0, -0.06, 1.0)
   counter.receiveShadow = true
   stage.scene.add(counter)
   // L'étagère et ses bocaux de bonbons, les fanions
@@ -478,12 +863,15 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
   stand.traverse(o => { if ((o as import('three').Mesh).isMesh) standMeshes.push(o) })
   const spr = kit.sprinkles(MAX_SPRINKLES, 0.001)
   spr.count = 0
+  // Sa sphère englobante serait calculée une fois, vide (aucun vermicelle encore) :
+  // le moteur ne les dessinerait jamais
+  spr.frustumCulled = false
   cake.add(spr)
   const s: State = {
     stage, T, kit, cake, tiers: [], tierY: [], nTiers: 2, shape: 'round', items: [], spr, sprN: 0,
     step: 'base', glaze: GLAZES[1][0], cream: CREAMS[0][0], drop: false, deco: 'fraise', candle: CANDLES[0][0],
     rot: 0.35, vRot: 0, phase: 'make', phaseT: 0, mic: null, blow: 0, gust: false, blowHeld: 0, blowNext: 0,
-    fx: particles(stage, 500), ray: new T.Raycaster(), t: 0, slice: null, stand: standMeshes
+    fx: particles(stage, 500), ray: new T.Raycaster(), t: 0, eat: null, stand: standMeshes
   }
   buildBase(s)
   return s
@@ -564,10 +952,11 @@ const sideOf = (s: State, i: number) => {
 
 export const bakery: GameDef = {
   id: 'bakery', name: 'La Pâtisserie', icon: '🎂', sq: 'sq-pink', cat: 'creatif', noTier: true,
-  subtitle: 'Fais un gâteau, décore-le, et souffle les bougies',
+  subtitle: 'Fais un gâteau, décore-le, souffle les bougies… et mange-le !',
   // La main : selon l'étape, choisir dans la palette, toucher le gâteau, tracer la crème, souffler
   hand: root => {
     const s = me
+    if (s?.phase === 'eat') { const p = eatTarget(s); return p ? { tap: p } : null }
     if (!s || s.phase !== 'make') return null
     if (s.step === 'base') return { choose: visible(root, '.bk-opt').slice(0, 3) }
     if (s.step === 'glacage') return { tap: Math.random() < 0.5 ? sideOf(s, 0) : topOf(s, s.tiers.length - 1, 0) }
@@ -663,8 +1052,11 @@ export const bakery: GameDef = {
     let lastT = 0
     const onDown = (e: PointerEvent) => {
       const s = me
-      if (!s || e.target !== s.stage.renderer.domElement || s.phase !== 'make') return
-      const onCake = s.step !== 'base' && !!pick(s, e.clientX, e.clientY, s.step !== 'glacage', true)
+      if (!s || e.target !== s.stage.renderer.domElement) return
+      // Pendant qu'on mange : un toucher = une bouchée (ou la part suivante)
+      if (s.phase === 'eat') { pts.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: 0, placing: true }); return }
+      if (s.phase !== 'make') return
+      const onCake = s.step !== 'base' && !!pick(s, e.clientX, e.clientY, true)
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: 0, placing: onCake })
       lastT = performance.now()
       s.vRot = 0
@@ -691,6 +1083,7 @@ export const bakery: GameDef = {
       const p = pts.get(e.pointerId)
       pts.delete(e.pointerId)
       if (!s || !p) return
+      if (s.phase === 'eat') { if (e.type !== 'pointercancel' && p.moved < 14) eatTap(s); return }
       if (performance.now() - lastT > 90) s.vRot = 0
       if (e.type !== 'pointercancel' && p.moved < 12 && s.step !== 'creme') onPlace(s, e.clientX, e.clientY, false)
     }
@@ -718,7 +1111,13 @@ export const bakery: GameDef = {
         glazed(i: number) { return !!me?.tiers[i].glaze.visible },
         count(kind: string) { return me?.items.filter(it => it.kind === kind).length ?? 0 },
         get sprinkles() { return me?.sprN ?? 0 },
+        /** Ce qui est posé : sorte et place (repère du gâteau). */
+        items() { return me?.items.map(it => [it.kind, ...it.obj.position.toArray().map(v => +v.toFixed(2))]) ?? [] },
         get lit() { return me ? litCandles(me).length : 0 },
+        /** Le temps du jeu accéléré (la 3D logicielle des bots fait une image par seconde) : la fête et le repas sont longs. */
+        speed(k: number) { if (me) me.stage.timeScale = k },
+        /** Pendant qu'on mange : parts coupées, bouchées de la part servie, où toucher (null : attendre). */
+        get eat() { const e = me?.eat; return e ? { parts: e.parts, bites: e.slice?.bites ?? null, at: me && eatTarget(me) } : null },
         top(i?: number, d?: number) { return me ? topOf(me, i ?? me.tiers.length - 1, d) : null },
         side(i = 0) { return me ? sideOf(me, i) : null },
         /** L'affiche : un gâteau tout fait, ses bougies allumées. */
