@@ -1150,10 +1150,10 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   encore + ») : un animal qui courait d'une cachette à l'autre — après une
   trouvaille rapide, ou toutes les 20 à 34 s sur la carte — se faisait
   voir. Une fois cachés, ils ne bougent plus. Puis « enlève aussi les
-  indices » : à l'éclair et à la flamme, le bout qui dépasse ne remue plus
-  et plus personne ne passe la tête en appelant quand on cale ; la fleur
-  (Jade) les garde. Reste le « presque » (un toucher tout près : il glousse
-  et passe la tête).
+  indices » et « enlève » : à TOUS les niveaux, le bout qui dépasse ne
+  remue plus et personne ne passe la tête en appelant quand on cale ; à
+  l'éclair et à la flamme, plus de « presque » non plus (un toucher tout
+  près ne fait rien glousser). La fleur garde le « presque ».
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

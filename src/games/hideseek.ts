@@ -23,7 +23,7 @@ import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, 
      mains, trois tics — à la fleur, on voit entre les doigts) et ils
      courent se cacher : DANS le foin, le puits, la boue, un tonneau, un
      terrier, derrière la porte d'écurie… avec un bout qui dépasse (oreilles,
-     queue, museau, fesses) et qui bouge de temps en temps.
+     queue, museau, fesses), immobile.
    - Le toucher est généreux (près du bout qui dépasse, pas besoin de viser
      pile) : l'animal sort d'un bond, rit avec sa VRAIE voix (`cry`), des
      étincelles, et file à l'enclos, où on voit ceux déjà trouvés ; en haut,
@@ -49,14 +49,14 @@ import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, 
      tronc creux) : on touche la cachette — dans un bois, là où il est —, il
      en sort. Une fois cachés, ils ne bougent plus (le 6/10, le père : un
      animal qui change de cachette en courant se fait voir — « enlève-le
-     complètement ») ; et sans indice : rien ne remue, personne n'appelle
-     (« enlève aussi les indices »). Reste le « presque » : un toucher tout
-     près, il glousse et passe la tête.
+     complètement ») ; et sans indice : rien ne remue, personne n'appelle,
+     et un toucher tout près ne fait rien glousser (« enlève aussi les
+     indices », puis « enlève » le « presque »).
    - Performances (« catastrophiques » le 6/10) : de loin, ni ombres ni
      petits détails ; de près, une ombre serrée autour de ce qu'on regarde.
-   - À la fleur, la rampe suit la joueuse : trouvée vite, ceux qui restent
-     remuent moins ; coincée, ils remuent plus, et l'un d'eux finit par
-     passer la tête en appelant.
+   - Plus aucun indice qui vient tout seul, même à la fleur (6/10) : caché,
+     un animal ne bouge pas. À la fleur seulement, le « presque » : un
+     toucher tout près, il glousse et passe la tête.
    - La fin : la fête dans l'enclos, tout le monde saute et chante, la ferme
      tourne. Les étoiles viennent du temps passé à chercher. */
 
@@ -145,7 +145,8 @@ interface Hider {
   body: V3[]
   state: 'pen' | 'run' | 'hidden' | 'jump'
   found: boolean
-  wig: number; wigT: number; wigK: number; ph: number
+  ph: number
+  /** Le « presque » : il passe la tête un instant ; quand il a gloussé pour la dernière fois. */
   boost: number; giggle: number
   tw: Tween | null
   pen: number
@@ -181,7 +182,7 @@ interface State {
   /** Combien peuvent encore se cacher en entier. */
   cacheLeft: number
   fit: { key: string; d: number; ty: number }
-  hint: number; stuck: number; lastFind: number; streak: number; nextCall: number
+  lastFind: number; streak: number
   penNext: number
   outroBurst: number
   fx: Particles
@@ -320,7 +321,7 @@ function makeHider(me: { T: T3; U: BGU; kit: Kit; mats: Record<string, import('t
     spot: null, slot: null, peek: 'franc',
     base: new T.Vector3(), ry: 0, k: 1, pts: [], body,
     state: 'pen', found: false,
-    wig: 2 + Math.random() * 3, wigT: -1, wigK: 0, ph: Math.random() * 10,
+    ph: Math.random() * 10,
     boost: 0, giggle: -9, tw: null, pen: i, hop: 1 + Math.random() * 3, sang: false, glow
   }
 }
@@ -555,9 +556,10 @@ function onTap(me: State, x: number, y: number) {
   // On fouille : celui qui s'y cache en entier en sort
   const inside = spot && wall ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot && h.peek === 'cache' && (!wide(spot) || nearSlot(me, h, wall.point, 1.3))) : null
   if (inside && wall) { find(me, inside, wall.point.clone()); return }
-  // Le « presque » : dans la cachette touchée (pas loin, dans un bois), ou tout près d'un animal caché
-  let near: Hider | null = spot && wall ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot && (!wide(spot) || nearSlot(me, h, wall.point, 2.6))) ?? null : null
-  if (!near) {
+  // Le « presque » (à la fleur seulement ; sur la carte ×4, rien ne trahit
+  // personne) : dans la cachette touchée, ou tout près d'un animal caché
+  let near: Hider | null = !me.big && spot ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot) ?? null : null
+  if (!near && !me.big) {
     const cam = me.stage.camera
     let bd = tol * 2.2
     for (const h of me.hiders) {
@@ -589,7 +591,6 @@ function nearMiss(me: State, h: Hider, at: V3 | null) {
   SOFT[spot.matter]()
   const p = at ?? spot.g.getWorldPosition(tmpV(me)).setY(0.8)
   me.fx.burst(p, { count: 10, color: BITS[spot.matter], speed: 1.4, spread: 0.9, life: 0.6, size: 0.07, gravity: 4 })
-  me.hint = Math.min(1, me.hint + 0.04)
 }
 
 /** Trouvé ! Il sort d'un bond, rit avec sa voix, file à l'enclos. */
@@ -628,14 +629,10 @@ function find(me: State, h: Hider, at: V3) {
     ry0: h.c.obj.rotation.y, ry1: h.c.obj.rotation.y + Math.PI * 2, k0: h.k, k1: 1,
     end: () => { h.state = 'pen'; h.k = 1; h.hop = 1 + Math.random() * 3; sfx('pluck', { vol: 0.3, rate: 1.1 }) }
   }
-  // La rampe : trouvée vite, ceux qui restent bougent moins ; lentement, plus
+  // Trouvés coup sur coup : la musique s'emballe
   const since = me.t - me.lastFind
   me.lastFind = me.t
-  me.stuck = 0
-  if (since < 8) { me.hint = Math.max(0.06, me.hint - 0.1); me.streak++ } else {
-    if (since > 22) me.hint = Math.min(1, me.hint + 0.12)
-    me.streak = 0
-  }
+  me.streak = since < 8 ? me.streak + 1 : 0
   setMusicIntensity(Math.min(3, me.streak))
   const left = me.hiders.filter(x => !x.found).length
   if (!left) { me.phase = 'outro'; me.phaseT = me.t + 1.2; outro(me) }
@@ -658,48 +655,15 @@ function stepTween(h: Hider, dt: number) {
   if (u >= 1) { o.scale.setScalar(tw.k1); h.tw = null; tw.end() }
 }
 
-/** Caché : de temps en temps, le bout qui dépasse bouge (l'indice) — à la
-    fleur seulement : sur la carte ×4, il ne bouge plus du tout (le 6/10, le
-    père : « enlève aussi les indices »). */
-function animHidden(me: State, h: Hider, dt: number) {
-  const o = h.c.obj
-  const slot = h.slot
-  let dy = 0, rz = 0, ry = 0, fw = 0, ear = 0
-  let wag = me.big ? 0 : Math.sin(me.t * 2.1 + h.ph) * 0.1
-  const amp = 0.7 + 0.6 * me.hint
-  if (!me.big && h.wigT < 0) {
-    h.wig -= dt
-    if (h.wig <= 0) { h.wigT = 0; h.wigK = Math.random() < 0.5 ? 0 : 1 }
-  }
-  if (!me.big && h.wigT >= 0) {
-    h.wigT += dt
-    const u = h.wigT / 0.95
-    if (u >= 1) { h.wigT = -1; h.wig = (6.5 - 4.9 * me.hint) * (0.7 + Math.random() * 0.6) }
-    else {
-      const env = Math.sin(u * Math.PI)
-      if (slot?.type === 'top') {
-        if (h.wigK === 0) dy = env * 0.06 * amp
-        else rz = Math.sin(u * Math.PI * 4) * 0.12 * amp * env
-      } else if (slot?.type === 'face') ry = Math.sin(u * Math.PI * 2) * 0.3 * amp
-      else if (slot?.type === 'rear') ry = Math.sin(u * Math.PI * 6) * 0.13 * amp * env
-      ear = Math.sin(u * Math.PI * 3) * 0.5 * env
-      wag = Math.sin(u * Math.PI * 8) * 0.55 * env * amp
-    }
-  }
-  // Il passe la tête un instant (un « presque », ou à la fleur, il en a assez d'attendre)
-  if (h.boost > 0) {
-    h.boost = Math.max(0, h.boost - dt)
-    const b = Math.sin((1 - h.boost / 1.1) * Math.PI)
-    if (slot?.type === 'face') fw = b * 0.1
-    else if (slot?.type === 'rear') fw = -b * 0.1
-    else dy += b * 0.11
-  }
-  o.position.set(h.base.x + Math.sin(h.ry) * fw, h.base.y + dy, h.base.z + Math.cos(h.ry) * fw)
-  o.rotation.set(0, h.ry + ry, rz)
-  h.ears.forEach((e, k) => { e.rotation.z = (e.userData.r0 as number) + (k % 2 ? ear : -ear) })
-  for (const t of h.tails) t.rotation.y = (t.userData.r0 as number) + wag
-  if (h.raised?.visible) h.raised.rotation.z = wag * 0.8
-  if (h.hang?.visible && !me.big) { h.hang.rotation.x = Math.sin(me.t * 1.5 + h.ph) * 0.08; h.hang.rotation.z = Math.sin(me.t * 1.1) * 0.1 + wag * 0.4 }
+/** Caché, il ne bouge pas (le 6/10, le père : « enlève aussi les indices ») ;
+    seul le « presque » de la fleur lui fait passer la tête un instant. */
+function animHidden(h: Hider, dt: number) {
+  if (h.boost <= 0) return
+  h.boost = Math.max(0, h.boost - dt)
+  const b = Math.sin((1 - h.boost / 1.1) * Math.PI)
+  const t = h.slot?.type
+  const fw = t === 'face' ? b * 0.1 : t === 'rear' ? -b * 0.1 : 0
+  h.c.obj.position.set(h.base.x + Math.sin(h.ry) * fw, h.base.y + (t === 'face' || t === 'rear' ? 0 : b * 0.11), h.base.z + Math.cos(h.ry) * fw)
 }
 
 /** À l'enclos : il nous regarde, sautille de temps en temps ; à la fin, la fête. */
@@ -917,24 +881,10 @@ function step(me: State, dt: number) {
     const ready = me.hiders.every(h => !h.tw)
     if (u > 2.5 && ready) {
       me.veil.classList.remove('on')
-      me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t; me.nextCall = t + 26
+      me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t
       // La carte ×4 : on partait de l'enclos, on recule sur toute la ferme (ils sont quelque part là-dedans)
       if (me.big) me.tgtZoom = 1
       sfx('bong', { vol: 0.35, rate: 1.2 })
-    }
-  } else if (me.phase === 'seek') {
-    me.stuck += dt
-    if (me.stuck > 14) me.hint = Math.min(1, me.hint + 0.025 * dt)
-    // Coincée depuis longtemps : l'un d'eux passe la tête et appelle (à la fleur seulement)
-    if (!me.big && me.stuck > 24 && t > me.nextCall) {
-      me.nextCall = t + 9
-      const hs = me.hiders.filter(h => !h.found && h.state === 'hidden')
-      const h = hs[Math.floor(Math.random() * hs.length)]
-      if (h) {
-        h.boost = 1.1
-        if (h.spot) h.spot.shake = 0.4
-        if (h.voice) cry(h.voice, { vol: 0.3, max: 0.5 })
-      }
     }
   } else if (me.phase === 'outro') {
     const u = t - me.phaseT
@@ -975,7 +925,7 @@ function step(me: State, dt: number) {
   frame(me, dt)
   for (const h of me.hiders) {
     me.kit.blink(h.c, dt)
-    if (h.tw) { if (h.tw.t < 0) h.tw.t += dt; else stepTween(h, dt) } else if (h.state === 'hidden') animHidden(me, h, dt)
+    if (h.tw) { if (h.tw.t < 0) h.tw.t += dt; else stepTween(h, dt) } else if (h.state === 'hidden') animHidden(h, dt)
     else if (h.state === 'pen') animPen(me, h, dt)
   }
   if (me.glowMat) me.glowMat.opacity = 0.7 + Math.sin(t * 2.6) * 0.25
@@ -1112,7 +1062,7 @@ export const hideseek: GameDef = {
         el: BASE_EL, big, maxZoom: big ? 16 : 1.4, pan: new T.Vector3(), tgtPan: new T.Vector3(), vPan: new T.Vector3(),
         close: false, torchT: 0, torchAt: null,
         cacheLeft: c.byTier(0, 4, 6),
-        hint: c.byTier(0.55, 0.3, 0.4), stuck: 0, lastFind: 0, streak: 0, nextCall: 0,
+        lastFind: 0, streak: 0,
         penNext: 0, outroBurst: 0,
         fx: particles(stage, 500), shake: camShake(stage), ray: new T.Raycaster(),
         glowMat, torch: null, tray, veil
