@@ -193,10 +193,14 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            `make(id)` : une pièce qu'on pose où l'on veut
                            (`PieceId`, la Ferme à construire ; ses vignettes :
                            `piecePortraits` de `core/portraits.ts`) ; depuis
-                           le 6/10, `{ big: true }` : la GRANDE ferme de
-                           Cache-Cache (rayon 13, `BIG_LAYOUT` : maïs et
-                           épouvantail, silo, moulin, ruisseau et pont,
-                           verger, citrouilles)
+                           le 6/10, `{ huge: true }` : la CARTE ×4 de
+                           Cache-Cache (rayon 26 : `BIG_LAYOUT`, maïs,
+                           silo, moulin, ruisseau, verger, citrouilles, puis
+                           `HUGE_LAYOUT`, trois bois, grand maïs, lac,
+                           hameau, tournesols, blé, bosquets, haies ; une
+                           construction posée deux fois suffixe ses places,
+                           `#2`) et `detail(on)` (fleurs, cailloux, fougères
+                           éteints vus de loin)
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -395,10 +399,14 @@ physique à nous dans `core/pinball.ts`, pas cannon-es) · `mirror` (les Perles 
 son second mode, le Taquin, reste en DOM) ·
 `hideseek` (Cache-Cache, 1/10 : la ferme en diorama qu'on fait tourner au
 doigt, `core/farm3d.ts` ; la nuit, à la lampe torche ; depuis le 6/10,
-l'éclair et la flamme sur la GRANDE ferme — `{ big: true }`, caméra libre :
-incliner, zoom ×3, promener à deux doigts, la ferme tourne autour du point
-regardé (`pan`, la racine du plateau décalée) ; des animaux cachés en
-entier qu'on fouille, `peek: 'cache'`) · `parrot` (l'Animal
+l'éclair et la flamme sur la CARTE ×4 — `{ huge: true }`, 14 et 18
+animaux, caméra de carte : un doigt promène (avec élan), pincer zoome
+jusqu'au ras du sol, tourner deux doigts fait pivoter, les glisser
+ensemble incline ; la ferme tourne autour du point regardé (`pan`, la
+racine du plateau décalée) ; de loin ni ombre ni détails, de près une
+ombre serrée (`closeUp`) ; le toucher à la mesure de ce qu'on voit ; des
+animaux cachés en entier qu'on fouille, `peek: 'cache'` — dans un grand
+coin, là où l'on touche) · `parrot` (l'Animal
 qui répète, 5/10 : un animal sur sa botte de foin dans l'enclos de cette
 ferme, `critterKit(T, { fine: true })` pour les gros plans ; le micro ne
 s'ouvre que là, se coupe en pause et en sortant, et n'écoute pas pendant

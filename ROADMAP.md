@@ -1129,8 +1129,23 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   charrette, niche, poulailler, porte du moulin, trappe du silo, buisson) :
   on touche la cachette, il en sort ; une cachette vide remue un peu. Toutes
   les 20 à 34 s, l'un de ceux qu'on ne voit pas change de cachette en
-  courant. Bot `cache-cache-eclair` en plus. **Reste : la tablette** (`?fps`
-  sur la grande ferme, ~520 appels de dessin, la nuit surtout).
+  courant. Bot `cache-cache-eclair` en plus.
+- ✅ **Cache-Cache, « toujours bcp trop simple »** (6/10 ; les règles en plus
+  refusées, « joue de la taille de la carte + la navigation » ; la marche au
+  ras du sol refusée ; maquette de la carte ×4 « GOO ») : l'éclair et la
+  flamme passent sur la CARTE ×4 (`buildFarm({ huge: true })`, rayon 26 :
+  trois bois avec souche et tronc creux, le grand maïs, le lac et sa barque,
+  un hameau, tournesols, blé, dix bosquets, quatre haies — 69 coins), avec
+  14 et 18 animaux (des jumeaux au-delà des douze espèces). On part de
+  l'enclos, la vue recule sur toute la ferme : de là, un animal fait
+  quelques pixels. Caméra de carte : un doigt promène (avec élan), pincer
+  zoome jusqu'au ras du sol (la vue se couche en s'approchant), tourner
+  deux doigts fait pivoter, les glisser ensemble incline. Le toucher est à
+  la mesure de ce qu'on voit ; dans un bois ou un champ, on fouille là où
+  l'on touche ; celui qui change de cachette reste dans le coin. Coût : de
+  loin ni ombre ni détails (~540 appels de dessin, 590 la nuit), de près
+  une ombre serrée autour du point regardé (~270). **Reste : la tablette**
+  (`?fps`, la nuit surtout).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

@@ -1914,9 +1914,12 @@ body.playing .po-card{max-width:880px;}
 .cc-pip img{width:112%;height:112%;object-fit:cover;filter:brightness(0);opacity:.32;transition:filter .35s,opacity .35s;}
 .cc-pip.got{background:#FFF6D6;box-shadow:inset 0 0 0 3px #FFC94D;animation:ccPop .55s var(--spring);}
 .cc-pip.got img{filter:none;opacity:1;}
+/* La carte ×4 : dix-huit silhouettes tiennent entre la maison et la barre de droite */
+.cc-tray.many{gap:5px;padding:5px 8px;max-width:calc(100vw - 430px);flex-wrap:wrap;justify-content:center;border-radius:24px;}
+.cc-tray.many .cc-pip{width:clamp(26px,3vw,40px);}
 @keyframes ccPop{40%{transform:scale(1.32) rotate(-8deg)}}
 .cc-night .cc-tray{background:rgba(20,26,56,.55);}
-/* « Toute la ferme » (la grande ferme, 6/10) : la vue revient au milieu */
+/* « Toute la ferme » (la carte ×4, 6/10) : la vue revient au milieu */
 .cc-centre{position:absolute;right:max(16px,2vw);bottom:max(18px,2.4vh);z-index:6;}
 .cc-centre .sn-tool{width:64px;height:64px;}
 

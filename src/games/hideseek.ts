@@ -34,16 +34,23 @@ import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, 
      que leurs oreilles, certains ne se voient que d'un côté de la ferme ;
      flamme : LA NUIT, 10 animaux, une lampe torche suit le doigt et leurs
      yeux brillent dans le noir.
-   - Depuis le 6/10 (Joyce : « trop facile »), l'éclair et la flamme se
-     jouent sur la GRANDE FERME (`buildFarm({ big: true })`, rayon 13 : maïs,
-     silo, moulin, ruisseau, verger, citrouilles), avec 10 et 12 animaux. La
-     caméra est libre : un doigt tourne (de côté) ou incline (de haut en
-     bas), deux doigts zooment jusqu'à ×3 et promènent la vue (la ferme
-     tourne alors autour de ce qu'on regarde) ; « Toute la ferme » recentre.
-     Certains se cachent EN ENTIER dans ce qui se fouille (botte, puits,
-     charrette, niche, poulailler, porte du moulin, trappe du silo,
-     buisson) : on touche la cachette, il en sort. Et de temps en temps,
-     l'un de ceux qu'on ne voit pas change de cachette en courant.
+   - Depuis le 6/10 (Joyce : « trop facile », puis le père : « joue de la
+     taille de la carte + la navigation »), l'éclair et la flamme se jouent
+     sur la CARTE ×4 (`buildFarm({ huge: true })`, rayon 26 : trois bois, le
+     grand maïs, le lac, un hameau, tournesols, blé, bosquets, haies), avec
+     14 et 18 animaux. Vus de loin, ils ne font que quelques pixels : il
+     faut s'approcher. La caméra se mène comme une carte : un doigt promène
+     la vue (avec son élan), pincer zoome jusqu'au ras du sol, tourner deux
+     doigts fait pivoter la ferme, les glisser ensemble vers le haut ou le
+     bas l'incline ; « Toute la ferme » recentre. Le toucher est à la mesure
+     de ce qu'on voit (de loin, il faut viser). Certains se cachent EN
+     ENTIER dans ce qui se fouille (botte, puits, charrette, niche,
+     poulailler, porte du moulin, trappe du silo, buisson, haie, souche,
+     tronc creux) : on touche la cachette — dans un bois, là où il est —, il
+     en sort. Et de temps en temps, l'un de ceux qu'on ne voit pas change de
+     cachette en courant, pas loin.
+   - Performances (« catastrophiques » le 6/10) : de loin, ni ombres ni
+     petits détails ; de près, une ombre serrée autour de ce qu'on regarde.
    - La rampe suit la joueuse : trouvée vite, ceux qui restent bougent moins
      (et à l'éclair et à la flamme, l'un d'eux change de cachette en
      courant : on peut l'attraper en route) ; coincée, ils bougent plus, et
@@ -62,6 +69,8 @@ type Phase = 'intro' | 'hide' | 'seek' | 'outro'
 const POOL: CritterKind[] = ['cat', 'rabbit', 'pig', 'cow', 'dog', 'hen', 'duck', 'sheep', 'goat', 'horse', 'rooster', 'chick']
 const SIZE: Partial<Record<CritterKind, Size>> = { chick: 's', cat: 's', rabbit: 's', hen: 's', duck: 's', rooster: 's', dog: 'm', pig: 'm', sheep: 'm', goat: 'm', cow: 'l', horse: 'l' }
 const BASE: Partial<Record<CritterKind, number>> = { chick: 0.55, cat: 0.62, rabbit: 0.6, hen: 0.62, duck: 0.66, rooster: 0.62, dog: 0.74, pig: 0.75, sheep: 0.8, goat: 0.72, cow: 0.9, horse: 0.78 }
+/** Le nom d'une place sans le suffixe d'une construction posée deux fois (`#2`, la grange du hameau). */
+const baseId = (slot: FarmSlot) => slot.id.split('#')[0]
 /** Les places préférées (les mots du père d'abord : le chat dans le foin, le lapin au puits). */
 const PREF: Partial<Record<CritterKind, [string[], number]>> = {
   cat: [['bottes', 'meule-haut', 'meule-cote', 'pommier'], 0.75], rabbit: [['puits', 'terrier-1', 'terrier-2'], 0.75],
@@ -156,11 +165,17 @@ interface State {
   seekT0: number
   rot: number; vRot: number; drag: boolean
   zoom: number; tgtZoom: number; elev: number; tgtElev: number; introK: number
-  /** La grande ferme : caméra libre, cachettes à fouiller. */
+  /** L'inclinaison vraie de la caméra (de près, la vue se couche). */
+  el: number
+  /** La carte ×4 : caméra libre, cachettes à fouiller. */
   big: boolean
   maxZoom: number
-  /** Le point de la ferme qu'on regarde (repère du plateau) : la ferme tourne autour. */
-  pan: V3; tgtPan: V3
+  /** Le point de la ferme qu'on regarde (repère du plateau) : la ferme tourne autour ; son élan. */
+  pan: V3; tgtPan: V3; vPan: V3
+  /** Vue de près : les petits détails et l'ombre du soleil sont allumés. */
+  close: boolean
+  /** La prochaine ombre de la lampe, vue de loin ; son point sur l'écran (la carte ×4 : il le garde quand la vue bouge). */
+  torchT: number; torchAt: { x: number; y: number } | null
   /** Combien peuvent encore se cacher en entier ; quand le prochain change de place. */
   cacheLeft: number; nextMove: number
   fit: { key: string; d: number; ty: number }
@@ -399,6 +414,8 @@ function hideIn(me: State, h: Hider, spot: FarmSpot, slot: FarmSlot, peek: Peek)
 function strand(me: State, h: Hider, spot: FarmSpot, slot: FarmSlot) {
   if (import.meta.env.DEV) console.warn('cache-cache : rien ne dépasse', h.kind, slot.id)
   me.farm.root.attach(h.c.obj)
+  // Arrivé DANS un buisson ou une botte : il monte dessus (sinon on ne le verrait de nulle part)
+  if (slot.type === 'top') h.c.obj.position.y = Math.max(h.c.obj.position.y, slot.rim ?? 0)
   h.state = 'hidden'; h.pts = h.body; h.spot = spot; h.slot = slot
   h.base.copy(h.c.obj.position); h.ry = h.c.obj.rotation.y; h.k = h.c.obj.scale.x
 }
@@ -430,7 +447,7 @@ function plan(me: State): { h: Hider; spot: FarmSpot; slot: FarmSlot }[] | null 
     for (const h of order) {
       let cands = fits(h)
       const pref = PREF[h.kind]
-      if (pref && attempt < 40 && Math.random() < pref[1]) { const p = cands.filter(c => pref[0].includes(c.slot.id)); if (p.length) cands = p }
+      if (pref && attempt < 40 && Math.random() < pref[1]) { const p = cands.filter(c => pref[0].includes(baseId(c.slot))); if (p.length) cands = p }
       // La fleur se voit presque de partout ; l'éclair cache plusieurs animaux d'un seul côté
       if (tier === 'easy' && side >= 1) { const p = cands.filter(c => !c.slot.side); if (p.length) cands = p }
       if (tier === 'med' && side < 3 && Math.random() < 0.6) { const p = cands.filter(c => c.slot.side); if (p.length) cands = p }
@@ -448,7 +465,16 @@ function plan(me: State): { h: Hider; spot: FarmSpot; slot: FarmSlot }[] | null 
 
 /** Ce qui se fouille : on y entre en entier (pas un plancher qu'on verrait, pas l'eau ni le maïs). */
 const FOUILLE = new Set(['bottes', 'puits', 'charrette', 'godet', 'meule-haut', 'grange-porte', 'niche-tete', 'poulailler', 'moulin-porte', 'silo-trappe'])
-const fouille = (slot: FarmSlot) => FOUILLE.has(slot.id) || /^buisson-\d+-haut$/.test(slot.id)
+/** Les buissons, et sur la carte ×4 : la souche, le tronc creux et les buissons des bois, des bosquets, les haies. */
+const FOUILLE_RE = /^(buisson-\d+-haut|bois\d+-(souche|tronc|buisson-\d+)|bosquet\d+-buisson|haie\d+-\d+)$/
+const fouille = (slot: FarmSlot) => FOUILLE.has(baseId(slot)) || FOUILLE_RE.test(baseId(slot))
+/** Un grand coin (un bois, un champ, le lac) : on y fouille LÀ où l'on touche, pas tout le bois d'un coup. */
+const wide = (spot: FarmSpot) => spot.foot > 3
+function nearSlot(me: State, h: Hider, p: V3, r: number): boolean {
+  if (!h.spot || !h.slot) return false
+  const v = h.spot.g.localToWorld(new me.T.Vector3(...h.slot.at))
+  return Math.hypot(v.x - p.x, v.z - p.z) < r
+}
 
 function peekFor(me: State, slot: FarmSlot): Peek {
   if (me.cacheLeft > 0 && fouille(slot) && Math.random() < 0.5) { me.cacheLeft--; return 'cache' }
@@ -496,7 +522,13 @@ function onTap(me: State, x: number, y: number) {
   const el = me.stage.renderer.domElement
   const r = el.getBoundingClientRect()
   const ndc = new me.T.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
-  const tol = Math.max(40, Math.min(r.width, r.height) * 0.065)
+  let tol = Math.max(40, Math.min(r.width, r.height) * 0.065)
+  if (me.big) {
+    // La carte ×4 : généreux de près, mais de loin il faut viser (un animal n'y fait que quelques pixels)
+    const cam = me.stage.camera
+    const px = r.height / (2 * Math.tan(cam.fov * Math.PI / 360) * cam.position.length())
+    tol = Math.max(18, Math.min(tol, px * 1.1))
+  }
   let best: { h: Hider; d: number; w: V3 } | null = null
   for (const h of me.hiders) {
     if (h.found || (h.state !== 'hidden' && h.state !== 'run')) continue
@@ -521,10 +553,10 @@ function onTap(me: State, x: number, y: number) {
   const si = wall?.object.userData.spot as number | undefined
   const spot = si !== undefined ? me.farm.spots[si] : null
   // On fouille : celui qui s'y cache en entier en sort
-  const inside = spot && wall ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot && h.peek === 'cache') : null
+  const inside = spot && wall ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot && h.peek === 'cache' && (!wide(spot) || nearSlot(me, h, wall.point, 1.3))) : null
   if (inside && wall) { find(me, inside, wall.point.clone()); return }
-  // Le « presque » : dans la cachette touchée, ou tout près d'un animal caché
-  let near: Hider | null = spot ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot) ?? null : null
+  // Le « presque » : dans la cachette touchée (pas loin, dans un bois), ou tout près d'un animal caché
+  let near: Hider | null = spot && wall ? me.hiders.find(h => !h.found && h.state === 'hidden' && h.spot === spot && (!wide(spot) || nearSlot(me, h, wall.point, 2.6))) ?? null : null
   if (!near) {
     const cam = me.stage.camera
     let bd = tol * 2.2
@@ -627,7 +659,12 @@ function relocate(me: State, who?: Hider) {
     }
   }
   if (!cands.length) return
-  const pick = cands[Math.floor(Math.random() * cands.length)]
+  // Sur la carte ×4, il ne traverse pas toute la ferme : une cachette pas loin
+  const here = h.c.obj.getWorldPosition(tmpV(me))
+  me.farm.root.worldToLocal(here)
+  const close = me.big ? cands.filter(c => c.spot.g.position.distanceTo(here) < 10) : []
+  const pool = close.length ? close : cands
+  const pick = pool[Math.floor(Math.random() * pool.length)]
   const old = h.spot
   me.relocs++
   if (old) old.shake = 0.5
@@ -642,12 +679,14 @@ function relocate(me: State, who?: Hider) {
   const to = targetOf(me, h, pick.spot, pick.slot, peek)
   const from = h.c.obj.position.clone()
   const ry1 = Math.atan2(to.x - from.x, to.z - from.z)
+  const dist = from.distanceTo(to)
   h.tw = {
-    a: from, b: to, t: 0, dur: 2.3, hops: 5, h: 0.75,
+    a: from, b: to, t: 0, dur: me.big ? 1.1 + dist * 0.12 : 2.3, hops: me.big ? Math.max(4, Math.round(dist / 1.5)) : 5, h: 0.75,
     ry0: ry1, ry1, k0: h.c.obj.scale.x, k1: fitK(h, pick.slot) || 1,
     end: () => {
       if (h.found) return
-      if (!hideIn(me, h, pick.spot, pick.slot, peek)) strand(me, h, pick.spot, pick.slot)
+      // Comme au départ : un peu moins bien caché plutôt qu'introuvable (un canard n'a pas d'oreilles qui dépassent)
+      if (!hideIn(me, h, pick.spot, pick.slot, peek) && !hideIn(me, h, pick.spot, pick.slot, 'franc')) strand(me, h, pick.spot, pick.slot)
       pick.spot.shake = 0.4
       SOFT[pick.spot.matter]()
     }
@@ -772,7 +811,7 @@ function startHide(me: State, assign: { h: Hider; spot: FarmSpot; slot: FarmSlot
 function outro(me: State) {
   const n = me.hiders.length
   const secs = me.t - me.seekT0
-  const par = ctx.byTier(9, 13, 14) * n
+  const par = ctx.byTier(9, 18, 20) * n
   const stars: 1 | 2 | 3 = secs <= par ? 3 : secs <= par * 2 ? 2 : 1
   setMusicIntensity(3)
   ctx.finish({
@@ -796,7 +835,7 @@ function fitCam(me: State) {
   const rim: V3[] = []
   for (let k = 0; k <= 8; k++) { const a = Math.PI / 2 + k / 8 * Math.PI; rim.push(new T.Vector3(Math.sin(a) * R, 0, Math.cos(a) * R)) }
   // Le plus haut au fond : la grange, ou le moulin et le silo de la grande ferme
-  // La grande ferme se voit en entier (on s'y promène ensuite) ; la petite, le bord de devant à peine rogné
+  // La carte ×4 se voit en entier (on s'y promène ensuite) ; la petite ferme, le bord de devant à peine rogné
   const low = new T.Vector3(0, 0, R * (me.big ? 0.97 : 0.8)), high = me.big ? new T.Vector3(0, 4.6, -R + 2.3) : new T.Vector3(0, 3.3, -R + 1.9)
   const v = new T.Vector3()
   const ok = (d: number, ty: number) => {
@@ -807,9 +846,9 @@ function fitCam(me: State) {
     if (v.copy(high).project(c).y > 0.74) return false
     return rim.every(p => Math.abs(v.copy(p).project(c).x) <= 0.985)
   }
-  let best = { d: 30, ty: 1 }
+  let best = { d: R * 4, ty: 1 }
   for (let ty = -1.5; ty <= 2.5; ty += 0.1) {
-    let lo = 8, hi = 60
+    let lo = R * 0.6, hi = R * 6
     for (let it = 0; it < 20; it++) { const d = (lo + hi) / 2; if (ok(d, ty)) hi = d; else lo = d }
     if (hi < best.d) best = { d: hi, ty }
   }
@@ -819,13 +858,48 @@ function fitCam(me: State) {
 function frame(me: State, dt: number) {
   const cam = me.stage.camera
   fitCam(me)
+  // La carte ×4 se zoome jusqu'à 4 m du point regardé, au ras des cachettes
+  if (me.big) me.maxZoom = me.fit.d / 4.2
   me.elev += (me.tgtElev - me.elev) * Math.min(1, dt * 6)
   const d = me.fit.d / me.zoom * (1 + me.introK * 0.35)
-  const el = me.elev + me.introK * 0.18
-  cam.position.set(0, Math.sin(el) * d, Math.cos(el) * d)
-  // De près (la grande ferme), on regarde plus bas : là où se cachent les animaux
-  cam.lookAt(0, me.big ? me.fit.ty / me.zoom + 0.6 * (1 - 1 / me.zoom) : me.fit.ty + (me.zoom - 1) * 0.6, 0)
+  // Plus on s'approche de la carte, plus la vue se couche : on finit au ras du sol
+  const f = me.big ? Math.max(0, Math.min(1, Math.log(me.zoom) / Math.log(me.maxZoom))) : 0
+  me.el = Math.max(0.2, me.elev - f * 0.3) + me.introK * 0.18
+  cam.position.set(0, Math.sin(me.el) * d, Math.cos(me.el) * d)
+  // De près (la carte ×4), on regarde plus bas : là où se cachent les animaux
+  cam.lookAt(0, me.big ? me.fit.ty / me.zoom + 0.5 * (1 - 1 / me.zoom) : me.fit.ty + (me.zoom - 1) * 0.6, 0)
+  if (me.big) closeUp(me, d)
   me.shake.apply(dt)
+}
+
+/** Le soleil, vu de la ferme (son ombre suit ce qu'on regarde). */
+const SUN: [number, number, number] = [6.5, 14, 7]
+
+/** La carte ×4 coûte cher : de loin, ni ombre du soleil (une passe de rendu
+    en moins) ni petits détails ; de près, les détails, et une ombre serrée
+    autour du point regardé (l'origine du monde : la ferme glisse dessous),
+    qui ne dessine que ce qui est dans sa boîte. */
+function closeUp(me: State, d: number) {
+  const on = me.close ? d < me.fit.d * 0.5 : d < me.fit.d * 0.4
+  if (on !== me.close) { me.close = on; me.farm.detail(on) }
+  const sun = me.stage.sun
+  if (!sun || me.night) return
+  if (!on) {
+    // L'ombre part sous la ferme (même direction de soleil) et n'est plus redessinée : tout est éclairé
+    if (sun.shadow.autoUpdate) {
+      sun.shadow.autoUpdate = false
+      sun.target.position.set(0, -600, 0); sun.position.set(SUN[0] * 1.6, SUN[1] * 1.6 - 600, SUN[2] * 1.6)
+      sun.shadow.needsUpdate = true
+    }
+    return
+  }
+  sun.shadow.autoUpdate = true
+  const a = Math.max(5, Math.min(14, Math.round(d * 0.5)))
+  const sc = sun.shadow.camera
+  if (sc.right !== a) { sc.left = -a; sc.right = a; sc.top = a; sc.bottom = -a; sc.updateProjectionMatrix() }
+  // La boîte un peu en avant : la vue porte plus loin derrière le point regardé que devant
+  sun.target.position.set(0, 0, -a * 0.4)
+  sun.position.set(SUN[0] * 1.6, SUN[1] * 1.6, SUN[2] * 1.6 - a * 0.4)
 }
 
 /** Deux doigts qui glissent : la ferme suit les doigts ; le point regardé
@@ -833,24 +907,37 @@ function frame(me: State, dt: number) {
 function panBy(me: State, mdx: number, mdy: number) {
   const cam = me.stage.camera, el = me.stage.renderer.domElement
   const k = cam.position.length() * 2 * Math.tan(cam.fov * Math.PI / 360) / Math.max(1, el.clientHeight)
-  const dx = mdx * k, dz = mdy * k / Math.max(0.35, Math.sin(me.elev))
+  const dx = mdx * k, dz = mdy * k / Math.max(0.35, Math.sin(me.el))
   const c = Math.cos(me.rot), s = Math.sin(me.rot)
   me.tgtPan.x -= dx * c - dz * s
   me.tgtPan.z -= dx * s + dz * c
+  keepIn(me)
+  me.pan.copy(me.tgtPan)
+}
+
+/** La ferme tourne autour du point regardé : il reste sous la caméra. */
+function place(me: State) {
+  const cr = Math.cos(me.rot), sr = Math.sin(me.rot)
+  me.farm.root.rotation.y = me.rot
+  me.farm.root.position.set(-(me.pan.x * cr + me.pan.z * sr), 0, -(-me.pan.x * sr + me.pan.z * cr))
+}
+
+/** Le point regardé reste sur la ferme. */
+function keepIn(me: State) {
   const L = Math.hypot(me.tgtPan.x, me.tgtPan.z), max = me.farm.r - 2
   if (L > max) me.tgtPan.multiplyScalar(max / L)
-  me.pan.copy(me.tgtPan)
 }
 
 /** « Toute la ferme » : la vue de départ. */
 function recenter(me: State) {
-  me.tgtPan.set(0, 0, 0); me.tgtZoom = 1; me.tgtElev = BASE_EL
+  me.tgtPan.set(0, 0, 0); me.vPan.set(0, 0, 0); me.tgtZoom = 1; me.tgtElev = BASE_EL
 }
 
 function aimTorch(me: State, x: number, y: number) {
   if (!me.torch) return
   const r = me.stage.renderer.domElement.getBoundingClientRect()
   const ndc = new me.T.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
+  if (me.big) { me.torchAt = { x: ndc.x, y: ndc.y }; return }
   me.ray.setFromCamera(ndc, me.stage.camera)
   const hit = me.ray.intersectObjects(me.farm.occ, false)[0]
   if (hit) { me.torch.want.copy(hit.point); return }
@@ -881,6 +968,8 @@ function step(me: State, dt: number) {
     if (u > 2.5 && ready) {
       me.veil.classList.remove('on')
       me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t; me.nextCall = t + 26; me.nextMove = t + 25
+      // La carte ×4 : on partait de l'enclos, on recule sur toute la ferme (ils sont quelque part là-dedans)
+      if (me.big) me.tgtZoom = 1
       sfx('bong', { vol: 0.35, rate: 1.2 })
     }
   } else if (me.phase === 'seek') {
@@ -906,7 +995,7 @@ function step(me: State, dt: number) {
   } else if (me.phase === 'outro') {
     const u = t - me.phaseT
     // La fête : on revient au milieu, à l'enclos
-    me.tgtZoom = 1.6
+    me.tgtZoom = me.big ? 4.5 : 1.6
     me.tgtElev = 0.5
     me.tgtPan.set(0, 0, 0)
     if (u > 0 && t > me.outroBurst) {
@@ -929,11 +1018,15 @@ function step(me: State, dt: number) {
     if (Math.abs(me.vRot) < 0.01) me.vRot = 0
   }
   if (me.phase === 'outro') me.rot += 0.55 * dt
-  me.farm.root.rotation.y = me.rot
-  // La ferme tourne autour du point regardé : il reste sous la caméra
+  // Le doigt levé, la vue glisse encore un peu (l'élan de la carte)
+  if (!me.drag && (me.vPan.x || me.vPan.z)) {
+    me.tgtPan.addScaledVector(me.vPan, dt)
+    keepIn(me)
+    me.vPan.multiplyScalar(Math.pow(0.03, dt))
+    if (me.vPan.length() < 0.05) me.vPan.set(0, 0, 0)
+  }
   me.pan.lerp(me.tgtPan, Math.min(1, dt * 6))
-  const cr = Math.cos(me.rot), sr = Math.sin(me.rot)
-  me.farm.root.position.set(-(me.pan.x * cr + me.pan.z * sr), 0, -(-me.pan.x * sr + me.pan.z * cr))
+  place(me)
   me.zoom += (me.tgtZoom - me.zoom) * Math.min(1, dt * 8)
   frame(me, dt)
   for (const h of me.hiders) {
@@ -945,12 +1038,25 @@ function step(me: State, dt: number) {
   const tc = me.torch
   if (tc) {
     const cam = me.stage.camera.position
+    if (me.big) {
+      // Sur la carte ×4, la vue bouge sans le doigt : la lampe garde son point
+      // de l'écran (au départ, un peu sous le milieu), posé sur le sol
+      me.ray.setFromCamera(new me.T.Vector2(me.torchAt?.x ?? 0, me.torchAt?.y ?? -0.15), me.stage.camera)
+      me.ray.ray.intersectPlane(new me.T.Plane(new me.T.Vector3(0, 1, 0), 0), tc.want)
+    }
     tc.spot.position.set(cam.x + 0.8, cam.y - 3.4, cam.z - 2.2)
     tc.aim.lerp(tc.want, Math.min(1, dt * 10))
     tc.spot.target.position.copy(tc.aim)
     tc.beam.position.copy(tc.spot.position)
     tc.beam.lookAt(tc.aim)
     const L = tc.aim.distanceTo(tc.spot.position)
+    if (me.big && me.phase !== 'outro') {
+      // Sur la carte ×4, la lampe porte aussi loin que la vue ; de loin, son
+      // ombre n'est redessinée que trois fois par seconde (elle ne s'y voit pas)
+      tc.spot.intensity = 90 * Math.max(1, L / 13)
+      tc.spot.shadow.autoUpdate = me.close
+      if (!me.close && t > me.torchT) { me.torchT = t + 0.33; tc.spot.shadow.needsUpdate = true }
+    }
     const rr = L * Math.tan(tc.spot.angle) * 0.62
     tc.beam.scale.set(rr, rr, L)
   }
@@ -980,16 +1086,18 @@ export const hideseek: GameDef = {
     ctx = c
     let dead = false
     const night = c.tier === 'exp'
-    // La fleur reste la petite ferme de Jade ; l'éclair et la flamme, la grande
+    // La fleur reste la petite ferme de Jade ; l'éclair et la flamme, la carte ×4
     const big = c.tier !== 'easy'
-    const n = c.byTier(5, 10, 12)
-    // Le chat et le lapin (les mots du père) sont toujours de la partie à la fleur
+    const n = c.byTier(5, 14, 18)
+    // Le chat et le lapin (les mots du père) sont toujours de la partie à la fleur ;
+    // au-delà des douze espèces, des jumeaux (petits et moyens : les grandes places sont rares)
     const kinds: CritterKind[] = n <= 5
       ? shuffle(['cat', 'rabbit', ...shuffle(POOL.filter(k => k !== 'cat' && k !== 'rabbit')).slice(0, n - 2)] as CritterKind[])
-      : shuffle(POOL.slice()).slice(0, n)
+      : n <= POOL.length ? shuffle(POOL.slice()).slice(0, n)
+      : shuffle([...POOL, ...shuffle(POOL.filter(k => SIZE[k] !== 'l')).slice(0, n - POOL.length)])
     c.root.innerHTML = `
       <div class="arena g3-arena cc-wrap${night ? ' cc-night' : ''}" id="ccWrap">
-        <div class="cc-tray" id="ccTray">${kinds.map((k, i) => `<span class="cc-pip" data-i="${i}" data-k="${k}"></span>`).join('')}</div>
+        <div class="cc-tray${n > 12 ? ' many' : ''}" id="ccTray">${kinds.map((k, i) => `<span class="cc-pip" data-i="${i}" data-k="${k}"></span>`).join('')}</div>
         <div class="cc-veil${c.tier === 'easy' ? ' peek' : ''}" id="ccVeil">
           <div class="cc-hands"><i class="cc-hand cc-l">${HAND}</i><i class="cc-hand cc-r">${HAND}</i></div>
           <div class="cc-count"><b></b><b></b><b></b></div>
@@ -1016,17 +1124,19 @@ export const hideseek: GameDef = {
       const stage = await createStage(arena, night ? {
         sky: '#0A1230', fov: 40, cam: [0, 12, 15], target: [0, 1, 0],
         hemi: ['#4A5A9A', '#1A1E2A', 0.9],
-        sun: { pos: [-6, 14, -4], color: '#8EA6FF', intensity: 0.4, area: big ? 16 : 10, far: big ? 70 : 45 },
+        sun: { pos: [-6, 14, -4], color: '#8EA6FF', intensity: 0.4, area: 10, far: 45 },
         fill: 0.3, exposure: 1.05
       } : {
         sky: '#9ED4F2', fov: 40, cam: [0, 12, 15], target: [0, 1, 0],
         hemi: ['#DCEFFF', '#5E8A44', 1.0],
-        sun: { pos: [6.5, 14, 7], color: '#FFF0D2', intensity: 2.3, area: big ? 16 : 10, far: big ? 70 : 45 },
+        sun: { pos: SUN, color: '#FFF0D2', intensity: 2.3, area: 10, far: big ? 60 : 45 },
         fill: 0.45, exposure: 1.0
       })
       if (dead) { stage.dispose(); return }
       const T = stage.T
-      const farm = await buildFarm(stage, { night, big })
+      const farm = await buildFarm(stage, { night, huge: big })
+      // L'ombre du soleil suit le point regardé (`closeUp`) : sa cible doit être dans la scène
+      if (big && stage.sun) stage.scene.add(stage.sun.target)
       if (dead || !stage.alive) { stage.dispose(); return }
       const kit = critterKit(T)
       const tm = {
@@ -1053,11 +1163,13 @@ export const hideseek: GameDef = {
         stage, T, farm, kit, hiders, night,
         phase: 'intro', t: 0, phaseT: 0, seekT0: 0,
         rot: Math.PI, vRot: 0, drag: false,
-        zoom: 1, tgtZoom: 1, elev: BASE_EL, tgtElev: BASE_EL, introK: 1, fit: { key: '', d: 20, ty: 1 },
-        big, maxZoom: big ? 3 : 1.4, pan: new T.Vector3(), tgtPan: new T.Vector3(),
-        cacheLeft: c.byTier(0, 3, 4), nextMove: 0,
+        // La carte ×4 s'ouvre sur l'enclos, puis recule sur toute la ferme quand on cherche
+        zoom: big ? 3.2 : 1, tgtZoom: big ? 3.2 : 1, elev: BASE_EL, tgtElev: BASE_EL, introK: 1, fit: { key: '', d: 20, ty: 1 },
+        el: BASE_EL, big, maxZoom: big ? 16 : 1.4, pan: new T.Vector3(), tgtPan: new T.Vector3(), vPan: new T.Vector3(),
+        close: false, torchT: 0, torchAt: null,
+        cacheLeft: c.byTier(0, 4, 6), nextMove: 0,
         hint: c.byTier(0.55, 0.3, 0.4), stuck: 0, lastFind: 0, streak: 0, nextCall: 0,
-        relocs: 0, maxRelocs: c.byTier(0, 4, 6), relocP: c.byTier(0, 0.4, 0.5),
+        relocs: 0, maxRelocs: c.byTier(0, 6, 8), relocP: c.byTier(0, 0.4, 0.5),
         penNext: 0, outroBurst: 0,
         fx: particles(stage, 500), shake: camShake(stage), ray: new T.Raycaster(),
         glowMat, torch: null, tray, veil
@@ -1070,7 +1182,7 @@ export const hideseek: GameDef = {
         const spot = new T.SpotLight(0xFFF0D2, 90, 0, 0.24, 0.55, 1.0)
         spot.castShadow = true
         spot.shadow.mapSize.set(1024, 1024)
-        spot.shadow.camera.near = 2; spot.shadow.camera.far = 45
+        spot.shadow.camera.near = 2; spot.shadow.camera.far = big ? 140 : 45
         spot.shadow.bias = -0.0008
         stage.scene.add(spot, spot.target)
         // Le faisceau : plus dense au cœur qu'aux bords, fondu à ses deux bouts
@@ -1096,29 +1208,40 @@ export const hideseek: GameDef = {
       cc = me
       hideLoader()
 
-      /* --- Le doigt : un doigt tourne la ferme (le point touché suit), deux
-         doigts zooment, un toucher cherche. Chaque doigt est suivi par son
-         `pointerId` ; l'élan se mesure en temps réel, borné, et s'éteint en
-         une demi-seconde. La nuit, la lampe suit le doigt. Sur la grande
-         ferme, un doigt qui monte ou descend incline la vue (le sens se
-         choisit aux premiers pixels), et deux doigts qui glissent promènent
-         la vue. --- */
+      /* --- Le doigt. La petite ferme : un doigt la tourne (le point touché
+         suit), deux doigts zooment, un toucher cherche. La carte ×4 se mène
+         comme une carte : un doigt la promène, deux doigts pincent (zoom) en
+         tournant (la ferme pivote) et promènent, ou glissent ensemble vers
+         le haut ou le bas (la vue s'incline) — le geste se choisit aux
+         premiers pixels. Chaque doigt est suivi par son `pointerId` ; l'élan
+         se mesure en temps réel, borné, et s'éteint vite. La nuit, la lampe
+         suit le doigt. --- */
       const el = stage.renderer.domElement
       const pts = new Map<number, { x: number; y: number }>()
       let tap: { x: number; y: number; t: number; moved: number; multi: boolean } | null = null
-      let pinch0 = 0, zoom0 = 1, lastT = 0
-      let mode: 'turn' | 'tilt' | 'hold' | null = null
-      let mid: { x: number; y: number } | null = null
-      const middle = () => { const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
+      let lastT = 0
+      let mode: 'turn' | 'pan' | 'hold' = 'turn'
+      /** Deux doigts : leur écart, leur angle, leur milieu et leurs hauteurs au départ du geste, et le geste choisi. */
+      let two: { d0: number; a0: number; m: { x: number; y: number }; m0: { x: number; y: number }; ys: number[]; zoom0: number; rot0: number; el0: number; kind: 'pinch' | 'tilt' | null } | null = null
+      const pair = () => {
+        const [a, b] = [...pts.values()]
+        return { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, ys: [a.y, b.y] }
+      }
+      const startTwo = (kind: 'pinch' | 'tilt' | null) => {
+        const p = pair()
+        two = { d0: p.d, a0: p.ang, m: p.m, m0: p.m, ys: p.ys, zoom0: me.tgtZoom, rot0: me.rot, el0: me.tgtElev, kind }
+      }
+      const turned = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b))
       $('ccCentre')?.addEventListener('click', () => { if (cc === me) { recenter(me); sfx('whoosh', { vol: 0.3, rate: 1.2 }) } })
       const onDown = (e: PointerEvent) => {
         if (cc !== me || e.target !== el) return
         pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-        me.vRot = 0
+        me.vRot = 0; me.vPan.set(0, 0, 0)
         lastT = performance.now()
-        if (pts.size === 1) { tap = { x: e.clientX, y: e.clientY, t: lastT, moved: 0, multi: false }; mode = me.big ? null : 'turn' }
+        // L'heure de l'événement, pas celle où on le traite : une image lente entre l'appui et le lever ne transforme pas un toucher en appui long
+        if (pts.size === 1) { tap = { x: e.clientX, y: e.clientY, t: e.timeStamp, moved: 0, multi: false }; mode = me.big ? 'pan' : 'turn' }
         else if (tap) tap.multi = true
-        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = me.tgtZoom; mid = middle() }
+        if (pts.size === 2) startTwo(me.big ? null : 'pinch')
         me.drag = true
         aimTorch(me, e.clientX, e.clientY)
       }
@@ -1131,36 +1254,57 @@ export const hideseek: GameDef = {
         aimTorch(me, e.clientX, e.clientY)
         if (me.phase !== 'seek') return
         if (pts.size === 1) {
-          // Le sens du geste se choisit aux premiers pixels : tourner, ou incliner
-          if (!mode && tap && tap.moved > 10) mode = Math.abs(e.clientY - tap.y) > Math.abs(e.clientX - tap.x) * 1.3 ? 'tilt' : 'turn'
-          if (mode === 'tilt') { me.tgtElev = Math.max(0.32, Math.min(1.32, me.tgtElev + dy * 0.0028)); me.vRot = 0; return }
-          if (mode !== 'turn') return
+          if (mode === 'hold') return
           const now = performance.now()
           const dts = Math.max(8, now - lastT) / 1000
           lastT = now
+          if (mode === 'pan') {
+            // Un toucher qui tremble ne promène pas la vue
+            if (tap && tap.moved < 8) return
+            const x0 = me.tgtPan.x, z0 = me.tgtPan.z
+            panBy(me, dx, dy)
+            const vx = (me.tgtPan.x - x0) / dts, vz = (me.tgtPan.z - z0) / dts
+            me.vPan.set(me.vPan.x * 0.5 + vx * 0.5, 0, me.vPan.z * 0.5 + vz * 0.5).clampLength(0, 40)
+            return
+          }
           const k = 1 / Math.max(120, el.clientWidth * 0.36)
           me.rot += dx * k
           me.vRot = Math.max(-3.2, Math.min(3.2, me.vRot * 0.5 + dx * k / dts * 0.5))
-        } else if (pts.size === 2 && pinch0 > 0) {
-          const [a, b] = [...pts.values()]
-          me.tgtZoom = Math.max(0.86, Math.min(me.maxZoom, zoom0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch0))
+        } else if (pts.size === 2 && two) {
+          const q = pair()
           me.vRot = 0
-          if (me.big && mid) { const m = middle(); panBy(me, m.x - mid.x, m.y - mid.y); mid = m }
+          if (!two.kind) {
+            // Le geste se choisit aux premiers pixels : les deux doigts montent
+            // ou descendent ensemble (incliner), sinon pincer et tourner
+            const dd = Math.abs(q.d - two.d0), da = Math.abs(turned(q.ang, two.a0)) * q.d / 2
+            const ya = q.ys[0] - two.ys[0], yb = q.ys[1] - two.ys[1]
+            if (Math.max(dd, da, Math.abs(ya), Math.abs(yb)) < 14) return
+            startTwo(Math.sign(ya) === Math.sign(yb) && Math.min(Math.abs(ya), Math.abs(yb)) > Math.max(dd, da) * 0.8 ? 'tilt' : 'pinch')
+            return
+          }
+          if (two.kind === 'tilt') { me.tgtElev = Math.max(0.32, Math.min(1.45, two.el0 + (q.m.y - two.m0.y) * 0.004)); return }
+          me.tgtZoom = Math.max(0.86, Math.min(me.maxZoom, two.zoom0 * q.d / Math.max(1, two.d0)))
+          if (me.big) {
+            // Tourner les doigts dans le sens des aiguilles d'une montre fait tourner la ferme dans le même sens
+            me.rot = two.rot0 - turned(q.ang, two.a0)
+            panBy(me, q.m.x - two.m.x, q.m.y - two.m.y)
+            two.m = q.m
+          }
         }
       }
       const onUp = (e: PointerEvent) => {
         if (!pts.has(e.pointerId) || cc !== me) return
         pts.delete(e.pointerId)
-        if (pts.size < 2) { pinch0 = 0; mid = null }
+        if (pts.size < 2) two = null
         me.drag = pts.size > 0
-        // Le doigt qui reste après deux doigts ne fait rien (pas de tour surprise)
-        if (pts.size > 0) { me.vRot = 0; lastT = performance.now(); mode = 'hold'; return }
+        // Le doigt qui reste après deux doigts ne fait rien (pas de tour ni de glissé surprise)
+        if (pts.size > 0) { me.vRot = 0; me.vPan.set(0, 0, 0); lastT = performance.now(); mode = 'hold'; return }
         // Un doigt qui s'est arrêté avant de se lever ne lance rien
-        if (performance.now() - lastT > 90) me.vRot = 0
+        if (performance.now() - lastT > 90) { me.vRot = 0; me.vPan.set(0, 0, 0) }
         const t = tap
         tap = null
-        if (e.type === 'pointercancel' || !t || t.multi || t.moved > 14 || performance.now() - t.t > 650) return
-        me.vRot = 0
+        if (e.type === 'pointercancel' || !t || t.multi || t.moved > 14 || e.timeStamp - t.t > 650) return
+        me.vRot = 0; me.vPan.set(0, 0, 0)
         onTap(me, e.clientX, e.clientY)
       }
       const onWheel = (e: WheelEvent) => {
@@ -1180,29 +1324,59 @@ export const hideseek: GameDef = {
           get total() { return me.hiders.length }, get spin() { return me.drag ? 1 : me.vRot }, get night() { return me.night },
           get relocs() { return me.relocs },
           get calls() { return stage.renderer.info.render.calls },
+          // Seulement les points qu'un doigt toucherait vraiment (pas sous un bouton de la barre)
           animals: () => me.hiders.map(h => {
-            const p = h.found ? null : central(seen(me, h))
-            return { kind: h.kind, found: h.found, state: h.state, slot: h.slot?.id ?? null, inside: h.peek === 'cache', x: p ? p.x : null, y: p ? p.y : null }
+            const p = h.found ? null : central(seen(me, h).filter(q => document.elementFromPoint(q.x, q.y) === el))
+            return { kind: h.kind, found: h.found, state: h.state, slot: h.slot?.id ?? null, inside: h.peek === 'cache', peek: h.peek, pts: h.pts.length, x: p ? p.x : null, y: p ? p.y : null }
           }),
-          /** Où fouiller pour l'animal n° i (caché en entier) : sa cachette, si c'est bien elle qu'un doigt toucherait d'ici. */
+          /** Où fouiller pour l'animal n° i (caché en entier) : sa cachette, si c'est bien elle qu'un doigt
+              toucherait d'ici — dans un grand coin (un bois), là où il est. */
           spotAt: (i: number) => {
-            const s = me.hiders[i]?.spot
-            if (!s) return null
+            const h = me.hiders[i], s = h?.spot
+            if (!s || !h.slot) return null
             const r = el.getBoundingClientRect()
-            for (const occ of shuffle(s.occ.slice()).slice(0, 12)) {
-              const v = occ.getWorldPosition(new T.Vector3())
-              if ((occ as unknown as { isInstancedMesh?: boolean }).isInstancedMesh) continue
-              occ.geometry.computeBoundingBox()
-              occ.geometry.boundingBox!.getCenter(v); occ.localToWorld(v)
+            const cands = [s.g.localToWorld(new T.Vector3(h.slot.at[0], h.slot.at[1] + 0.3, h.slot.at[2]))]
+            if (!wide(s)) {
+              for (const occ of shuffle(s.occ.slice()).slice(0, 12)) {
+                if ((occ as unknown as { isInstancedMesh?: boolean }).isInstancedMesh) continue
+                const v = new T.Vector3()
+                occ.geometry.computeBoundingBox()
+                occ.geometry.boundingBox!.getCenter(v); occ.localToWorld(v)
+                cands.push(v)
+              }
+            }
+            for (const v of cands) {
               const p = v.clone().project(stage.camera)
               if (Math.abs(p.x) > 0.9 || Math.abs(p.y) > 0.85 || p.z > 1) continue
               me.ray.setFromCamera(new T.Vector2(p.x, p.y), stage.camera)
               const hit = me.ray.intersectObjects(me.farm.occ, false)[0]
-              if (hit && me.farm.spots[hit.object.userData.spot as number] === s) return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height }
+              const x = r.left + (p.x + 1) / 2 * r.width, y = r.top + (1 - p.y) / 2 * r.height
+              if (hit && me.farm.spots[hit.object.userData.spot as number] === s && (!wide(s) || nearSlot(me, h, hit.point, 1.3)) && document.elementFromPoint(x, y) === el) return { x, y }
             }
             return null
           },
           get zoom() { return me.zoom }, get elev() { return me.elev }, get pan() { return [me.pan.x, me.pan.z] },
+          get maxZoom() { return me.maxZoom }, get close() { return me.close },
+          /** La vue bouge encore (doigt, élan, zoom, glissé vers le point visé). */
+          get moving() {
+            return me.drag || Math.abs(me.vRot) > 0.01 || me.vPan.length() > 0.05 || me.pan.distanceTo(me.tgtPan) > 0.05 ||
+              Math.abs(me.zoom - me.tgtZoom) > me.zoom * 0.02 || Math.abs(me.elev - me.tgtElev) > 0.01
+          },
+          /** Le bot s'approche de l'animal n° i comme un enfant qui zoome sur un coin de la carte : il tourne un
+              peu, s'approche plus ou moins, regarde de biais ou d'en haut — d'un coup (sous SwiftShader, une
+              image prend une seconde : glisser jusque-là prendrait des minutes). */
+          visit: (i: number, turn: number, near: number, el: number) => {
+            const h = me.hiders[i]
+            if (!h || h.found) return false
+            const p = me.farm.root.worldToLocal(h.c.obj.getWorldPosition(new T.Vector3()))
+            me.rot += turn; me.vRot = 0; me.vPan.set(0, 0, 0)
+            me.tgtPan.set(p.x, 0, p.z); keepIn(me); me.pan.copy(me.tgtPan)
+            me.zoom = me.tgtZoom = me.maxZoom * near; me.elev = me.tgtElev = el
+            place(me); frame(me, 0)
+            me.farm.root.updateMatrixWorld(true); stage.camera.updateMatrixWorld()
+            return true
+          },
+          get BASE_EL() { return BASE_EL },
           recenter: () => recenter(me),
           // Une cachette vide qu'on voit : son point visé, si c'est bien elle qu'un doigt toucherait
           emptySpot: () => {

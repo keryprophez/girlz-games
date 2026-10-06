@@ -13,8 +13,9 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 Glace ; Cache-Cache, une petite ferme en 3D qu'on fait tourner au doigt pour
 trouver les animaux cachés (une queue qui dépasse de la meule, des oreilles
 au bord du puits), et la nuit, à la lampe torche — aux niveaux éclair et
-flamme, une grande ferme (maïs, silo, moulin, ruisseau, verger) où l'on
-zoome, se promène et fouille les cachettes ; le Flipper de la grange, un pouce par batteur, la vache, le cochon et
+flamme, une ferme quatre fois plus grande (bois, lac, hameau, champs de maïs,
+de blé et de tournesols) qu'on parcourt comme une carte — glisser, pincer
+jusqu'au ras du sol, tourner, incliner — pour y fouiller les cachettes ; le Flipper de la grange, un pouce par batteur, la vache, le cochon et
 le mouton en bumpers qui crient, une rampe jusqu'au grenier et le multibille ;
 Ninja Verger, en 2D, où l'on tranche des fruits illustrés
 d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe

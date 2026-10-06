@@ -1263,13 +1263,18 @@ await scenario('habille-toi', async () => {
    il touche un animal qu'il VOIT d'ici (le crochet ne rend que les points
    qu'aucun décor ne cache), sinon il fait tourner la ferme d'un glissé et
    attend qu'elle s'arrête. Tous trouvés : la fête, puis l'écran de fin. La
-   nuit (flamme), dix animaux à la lampe torche. */
+   carte ×4 (éclair et flamme, 6/10) : un glissé doit promener la vue et la
+   molette zoomer ; quand il ne voit rien, il s'approche d'un animal (comme
+   un enfant qui zoome sur un coin), en tournant un peu à chaque fois. La
+   nuit (flamme), dix-huit animaux à la lampe torche. */
 const cacheCache = async (tier, fin) => {
   await openGame('Cache-Cache', '__cc', tier)
   await page.waitForFunction(() => window.__cc.phase === 'seek', null, { timeout: 120000, polling: 500 })
   const total = await page.evaluate(() => window.__cc.total)
-  const want = { easy: 5, med: 10, exp: 12 }[tier]
+  const want = { easy: 5, med: 14, exp: 18 }[tier]
   if (total !== want) throw new Error(`${total} animaux au lieu de ${want}`)
+  const calme = () => page.waitForFunction(() => !window.__cc.moving, null, { timeout: 60000, polling: 250 })
+  await calme()
   // Une cachette vide : un petit bruit doux, rien d'autre
   const vide = await page.evaluate(() => window.__cc.emptySpot())
   if (vide) {
@@ -1278,15 +1283,35 @@ const cacheCache = async (tier, fin) => {
     if (await page.evaluate(() => window.__cc.found) !== 0) throw new Error(`la cachette vide ${vide.id} a trouvé un animal`)
   }
   const box = await page.locator('#ccWrap canvas').boundingBox()
+  const carte = tier !== 'easy'
+  if (carte) {
+    // Un doigt qui glisse promène la vue ; la molette (le pincement) zoome
+    const [x0, z0] = await page.evaluate(() => window.__cc.pan)
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6)
+    await page.mouse.down()
+    for (let k = 1; k <= 8; k++) await page.mouse.move(box.x + box.width * (0.6 - k * 0.03), box.y + box.height * (0.6 - k * 0.02))
+    await page.mouse.up()
+    await calme()
+    const [x1, z1] = await page.evaluate(() => window.__cc.pan)
+    if (Math.hypot(x1 - x0, z1 - z0) < 1) throw new Error(`le glissé ne promène pas la vue (${x0.toFixed(1)},${z0.toFixed(1)} → ${x1.toFixed(1)},${z1.toFixed(1)})`)
+    const zoom0 = await page.evaluate(() => window.__cc.zoom)
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.wheel(0, -600)
+    await calme()
+    if (await page.evaluate(() => window.__cc.zoom) < zoom0 * 1.5) throw new Error('la molette ne zoome pas')
+    await page.evaluate(() => window.__cc.recenter())
+    await calme()
+  }
   let tours = 0, rates = 0
-  for (let i = 0; i < 160; i++) {
-    // Ceux qu'on voit dépasser, puis (la grande ferme, 6/10) ceux qui se cachent EN ENTIER : on fouille leur cachette
+  for (let i = 0; i < 260; i++) {
+    // Ceux qu'on voit dépasser, puis ceux qui se cachent EN ENTIER : on fouille leur cachette
     const st = await page.evaluate(() => {
       const all = window.__cc.animals()
       const a = all.filter(a => !a.found && a.x !== null && a.state === 'hidden')
       const fouille = all.map((a, i) => ({ ...a, i })).filter(a => !a.found && a.inside && a.state === 'hidden')
         .map(a => ({ ...a, at: window.__cc.spotAt(a.i) })).filter(a => a.at)
-      return { found: window.__cc.found, total: window.__cc.total, a, fouille }
+      const reste = all.map((a, i) => ({ ...a, i })).filter(a => !a.found).map(a => a.i)
+      return { found: window.__cc.found, total: window.__cc.total, a, fouille, reste }
     })
     if (st.found >= st.total) break
     const cible = st.a[0] ?? (st.fouille[0] && { ...st.fouille[0], x: st.fouille[0].at.x, y: st.fouille[0].at.y })
@@ -1294,6 +1319,15 @@ const cacheCache = async (tier, fin) => {
       await page.mouse.click(cible.x, cible.y)
       const ok = await page.waitForFunction(n => window.__cc.found > n, st.found, { timeout: 15000, polling: 250 }).then(() => true, () => false)
       if (!ok && ++rates > 8) throw new Error(`le toucher ne trouve pas ${cible.kind} (${cible.slot}${cible.inside ? ', caché en entier' : ''})`)
+    } else if (carte) {
+      // Rien de visible d'ici : on s'approche de l'un d'eux, en tournant, de plus ou moins près, de biais ou d'en haut
+      if (++tours > 120) {
+        const qui = await page.evaluate(() => window.__cc.animals().filter(a => !a.found).map(a => `${a.kind} ${a.slot} (${a.peek}, ${a.pts} points)`).join(' ; '))
+        throw new Error(`${st.total - st.found} animaux restent introuvables après ${tours - 1} visites : ${qui}`)
+      }
+      const n = st.reste[tours % st.reste.length], k = Math.floor(tours / st.reste.length)
+      await page.evaluate(([n, k]) => window.__cc.visit(n, 0.9 + (k % 3) * 0.6, [0.42, 0.26, 0.6][k % 3], k % 2 ? 1.35 : window.__cc.BASE_EL), [n, k])
+      await page.waitForTimeout(400)
     } else {
       // Rien de visible d'ici : on fait tourner la ferme
       if (++tours > 40) throw new Error(`${st.total - st.found} animaux restent introuvables après ${tours} tours`)
@@ -1301,7 +1335,7 @@ const cacheCache = async (tier, fin) => {
       await page.mouse.down()
       for (let k = 1; k <= 6; k++) await page.mouse.move(box.x + box.width * (0.3 + k * 0.05), box.y + box.height * 0.8)
       await page.mouse.up()
-      await page.waitForFunction(() => Math.abs(window.__cc.spin) < 0.02, null, { timeout: 30000, polling: 250 })
+      await calme()
     }
   }
   await page.waitForFunction(t => document.querySelector('#result.show') && document.body.innerText.includes(t), fin, { timeout: 90000, polling: 500 })

@@ -120,9 +120,8 @@ export interface Piece {
 }
 
 export const PLATEAU_R = 8
-/** Le rayon de la grande ferme (Cache-Cache à l'éclair et à la flamme, 6/10). */
-export const BIG_R = 13
-/** Le rayon de la carte ×4 (6/10, « joue de la taille de la carte »). */
+/** Le rayon de la carte ×4 (Cache-Cache à l'éclair et à la flamme, 6/10 :
+    « joue de la taille de la carte »). */
 export const HUGE_R = 26
 
 /* ---------- Peindre au canvas ---------- */
@@ -1573,7 +1572,8 @@ function grove(K: Kit, seed: number): Built {
     g, matter: 'feuilles', aim: [0, 1.2, 1.4], foot: 2.4, sway: 0.5,
     slots: [
       { id: id + '-buisson', type: 'top', at: [pos[0][0] + 0.9, 0, pos[0][1] + 0.6], rim: 0.88, w: 0.75, sizes: ['s', 'm'] },
-      ...pos.slice(0, 2).map(([x, z, k], i): FarmSlot => ({ id: `${id}-arbre-${i}`, type: 'rear', at: [x, 0, z], out: [i ? -1 : 1, 0], plane: 0.22 * k, w: 0.8, sizes: ['s', 'm'], side: true }))
+      // Derrière le tronc d'un arbre rond (pas d'un sapin : ses branches touchent presque le sol)
+      ...pos.filter((_, i) => (i + seed) % 2 === 1).slice(0, 2).map(([x, z, k], i): FarmSlot => ({ id: `${id}-arbre-${i}`, type: 'rear', at: [x, 0, z], out: [i ? -1 : 1, 0], plane: 0.22 * k * 0.9, w: 0.8, sizes: ['s', 'm'], side: true }))
     ]
   }
 }
@@ -1654,7 +1654,8 @@ function forest(K: Kit, seed: number): Built {
       { id: id + '-tronc', type: 'face', at: [lx, 0.08, lz], out: [ox, oz], plane: 0.95, open: 0.78, w: 0.66, sizes: ['s', 'm'], group: id + 'tronc' },
       { id: id + '-souche', type: 'top', at: [sx2, 0, sz2], rim: 0.6, w: 0.8, sizes: ['s'] },
       ...bushes.map(([x, z], k): FarmSlot => ({ id: `${id}-buisson-${k}`, type: 'top', at: [x, 0, z], rim: 1.0, w: 0.8, sizes: ['s', 'm'] })),
-      ...pos.slice(0, 3).map(([x, z, k], i): FarmSlot => ({ id: `${id}-arbre-${i}`, type: 'rear', at: [x, 0, z], out: [Math.sign(x) || 1, 0], plane: 0.22 * k, w: 0.8, sizes: ['s', 'm'], side: true }))
+      // Derrière le tronc d'un arbre rond seulement : sous les branches basses d'un sapin, on ne le verrait de nulle part
+      ...pos.filter((_, i) => i % 5 === 0).slice(0, 3).map(([x, z, k], i): FarmSlot => ({ id: `${id}-arbre-${i}`, type: 'rear', at: [x, 0, z], out: [Math.sign(x) || 1, 0], plane: 0.22 * k, w: 0.8, sizes: ['s', 'm'], side: true }))
     ]
   }
 }
@@ -1823,14 +1824,14 @@ const LAYOUT: [Builder, number, number][] = [
   [veggie, 272, 5.3], [coop, 302, 5.7], [K => bush(K, 3), 328, 6.6],
   [woodpile, 24, 3.5], [well, 112, 4.0], [mud, 200, 3.8], [barrels, 290, 4.0], [bales, 330, 3.9]
 ]
-/** La grande ferme (6/10) : un second cercle autour du premier. */
+/** La carte ×4 (6/10) : un second cercle autour du premier… */
 const BIG_LAYOUT: [Builder, number, number][] = [
   [cornfield, 14, 10.4], [silo, 58, 10.9], [windmill, 98, 10.7], [stream, 150, 10.1],
   [appleTree, 198, 10.6], [appleTree, 211, 11.7], [appleTree, 224, 10.4], [pumpkins, 262, 10.6],
   [haystack, 298, 10.9], [K => bush(K, 4), 328, 11.3], [K => bush(K, 5), 40, 11.9],
   [K => bush(K, 6), 176, 8.3], [K => bush(K, 7), 252, 8.1], [K => bush(K, 8), 80, 8.2], [barrels, 122, 8.4], [bales, 352, 8.6]
 ]
-/** La carte ×4 : un troisième cercle, de 15 à 25 du centre. */
+/** … et un troisième, de 13 à 25 du centre. */
 const HUGE_LAYOUT: [Builder, number, number][] = [
   [K => forest(K, 1), 22, 20.2], [K => cornfield(K, true), 68, 19.6], [lake, 114, 20.2],
   [barn, 160, 21.6], [coop, 177, 18.2], [haystack, 147, 17.6], [cart, 190, 21.4],
@@ -1847,11 +1848,11 @@ const HUGE_LAYOUT: [Builder, number, number][] = [
 /** `empty` (la Ferme à construire, 5/10) : le plateau seul — l'herbe, la
     cour, la barrière du tour —, sans enclos ni cachettes ; les fleurs ne
     poussent qu'au bord, le reste est à construire (`make`). */
-export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean; big?: boolean; huge?: boolean }): Promise<Farm> {
+export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boolean; huge?: boolean }): Promise<Farm> {
   const { T, scene } = stage
   const K = await kitOf(T, stage)
   const { U, M } = K
-  const R = o.huge ? HUGE_R : o.big ? BIG_R : PLATEAU_R
+  const R = o.huge ? HUGE_R : PLATEAU_R
   // Ce qui se sème (fleurs, touffes, cailloux) suit la surface
   const area = (R / PLATEAU_R) ** 2
   const root = new T.Group()
@@ -1863,7 +1864,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
      roche qui s'effile dessous comme une île flottante */
   const topGeo = new T.CircleGeometry(R, 96)
   // L'herbe garde la taille de ses brins, quelle que soit la ferme
-  if (o.big || o.huge) { const uv = topGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * R / PLATEAU_R + 0.5, (uv.getY(i) - 0.5) * R / PLATEAU_R + 0.5) }
+  if (o.huge) { const uv = topGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * R / PLATEAU_R + 0.5, (uv.getY(i) - 0.5) * R / PLATEAU_R + 0.5) }
   const top = mk(T, topGeo, M.grass, [0, 0, 0], 1, [-Math.PI / 2, 0, 0])
   top.castShadow = false
   root.add(top)
@@ -1917,8 +1918,8 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
   const penLamp = mk(T, K.box, M.lamp, [PR - 0.03, 1.34, 0.3], [0.13, 0.19, 0.13])
   lampX = PR - 0.13
   root.add(penLamp)
-  // Les places : onze (petite ferme), douze (grande), dix-huit (carte ×4)
-  const ring = o.huge ? 12 : o.big ? 9 : 8, inner = o.huge ? 6 : 3
+  // Les places : onze (petite ferme), dix-huit (carte ×4)
+  const ring = o.huge ? 12 : 8, inner = o.huge ? 6 : 3
   for (let i = 0; i < ring; i++) { const a = i / ring * Math.PI * 2 + 0.2; pen.push([Math.sin(a) * 1.04 * pk, Math.cos(a) * 1.04 * pk]) }
   for (let i = 0; i < inner; i++) { const a = i / inner * Math.PI * 2 + 0.6; pen.push([Math.sin(a) * 0.4 * pk, Math.cos(a) * 0.4 * pk]) }
   }
@@ -1935,7 +1936,7 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
   const spots: FarmSpot[] = []
   // Une construction posée deux fois (la grange du hameau) : ses places prennent un suffixe (`#2`)
   const ids = new Map<string, number>()
-  for (const [build, deg, r] of o.empty ? [] : o.huge ? [...LAYOUT, ...BIG_LAYOUT, ...HUGE_LAYOUT] : o.big ? [...LAYOUT, ...BIG_LAYOUT] : LAYOUT) {
+  for (const [build, deg, r] of o.empty ? [] : o.huge ? [...LAYOUT, ...BIG_LAYOUT, ...HUGE_LAYOUT] : LAYOUT) {
     const b = build(K)
     for (const sl of b.slots) {
       const n = (ids.get(sl.id) ?? 0) + 1
