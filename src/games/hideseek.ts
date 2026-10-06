@@ -47,14 +47,14 @@ import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, 
      ENTIER dans ce qui se fouille (botte, puits, charrette, niche,
      poulailler, porte du moulin, trappe du silo, buisson, haie, souche,
      tronc creux) : on touche la cachette — dans un bois, là où il est —, il
-     en sort. Et de temps en temps, l'un de ceux qu'on ne voit pas change de
-     cachette en courant, pas loin.
+     en sort. Une fois cachés, ils ne bougent plus (le 6/10, le père : un
+     animal qui change de cachette en courant se fait voir — « enlève-le
+     complètement »).
    - Performances (« catastrophiques » le 6/10) : de loin, ni ombres ni
      petits détails ; de près, une ombre serrée autour de ce qu'on regarde.
-   - La rampe suit la joueuse : trouvée vite, ceux qui restent bougent moins
-     (et à l'éclair et à la flamme, l'un d'eux change de cachette en
-     courant : on peut l'attraper en route) ; coincée, ils bougent plus, et
-     l'un d'eux finit par passer la tête en appelant.
+   - La rampe suit la joueuse : trouvée vite, ceux qui restent remuent
+     moins ; coincée, ils remuent plus, et l'un d'eux finit par passer la
+     tête en appelant.
    - La fin : la fête dans l'enclos, tout le monde saute et chante, la ferme
      tourne. Les étoiles viennent du temps passé à chercher. */
 
@@ -139,7 +139,7 @@ interface Hider {
   base: V3; ry: number; k: number
   /** Les points qui dépassent (repère de l'animal) */
   pts: V3[]
-  /** Quelques points de tout le corps, quand il court à découvert */
+  /** Quelques points de tout le corps (s'il reste à découvert, `strand`) */
   body: V3[]
   state: 'pen' | 'run' | 'hidden' | 'jump'
   found: boolean
@@ -176,11 +176,10 @@ interface State {
   close: boolean
   /** La prochaine ombre de la lampe, vue de loin ; son point sur l'écran (la carte ×4 : il le garde quand la vue bouge). */
   torchT: number; torchAt: { x: number; y: number } | null
-  /** Combien peuvent encore se cacher en entier ; quand le prochain change de place. */
-  cacheLeft: number; nextMove: number
+  /** Combien peuvent encore se cacher en entier. */
+  cacheLeft: number
   fit: { key: string; d: number; ty: number }
   hint: number; stuck: number; lastFind: number; streak: number; nextCall: number
-  relocs: number; maxRelocs: number; relocP: number
   penNext: number
   outroBurst: number
   fx: Particles
@@ -492,9 +491,8 @@ function seen(me: State, h: Hider): { x: number; y: number; w: V3 }[] {
   const cam = me.stage.camera
   const r = me.stage.renderer.domElement.getBoundingClientRect()
   const out: { x: number; y: number; w: V3 }[] = []
-  const list = h.state === 'run' ? h.body : h.pts
   const dir = tmpV(me)
-  for (const p of list) {
+  for (const p of h.pts) {
     const w = h.c.obj.localToWorld(p.clone())
     dir.copy(w).sub(cam.position)
     const d = dir.length()
@@ -531,17 +529,17 @@ function onTap(me: State, x: number, y: number) {
   }
   let best: { h: Hider; d: number; w: V3 } | null = null
   for (const h of me.hiders) {
-    if (h.found || (h.state !== 'hidden' && h.state !== 'run')) continue
+    if (h.found || h.state !== 'hidden') continue
     for (const p of seen(me, h)) {
       const d = Math.hypot(p.x - x, p.y - y)
-      if (d < (h.state === 'run' ? tol * 1.4 : tol) && (!best || d < best.d)) best = { h, d, w: p.w }
+      if (d < tol && (!best || d < best.d)) best = { h, d, w: p.w }
     }
   }
   me.ray.setFromCamera(ndc, me.stage.camera)
   const wall = me.ray.intersectObjects(me.farm.occ, false)[0]
   if (!best) {
     // Pile sur l'animal, devant tout le reste
-    const objs = me.hiders.filter(h => !h.found && (h.state === 'hidden' || h.state === 'run')).map(h => h.c.obj)
+    const objs = me.hiders.filter(h => !h.found && h.state === 'hidden').map(h => h.c.obj)
     const hit = me.ray.intersectObjects(objs, true).find(i => !i.object.userData.glow)
     if (hit && (!wall || hit.distance < wall.distance)) {
       let o: Obj | null = hit.object
@@ -638,59 +636,7 @@ function find(me: State, h: Hider, at: V3) {
   }
   setMusicIntensity(Math.min(3, me.streak))
   const left = me.hiders.filter(x => !x.found).length
-  if (!left) { me.phase = 'outro'; me.phaseT = me.t + 1.2; outro(me); return }
-  if (since < 9 && me.relocs < me.maxRelocs && Math.random() < me.relocP) relocate(me)
-}
-
-/** L'un de ceux qui restent change de cachette, en courant : on peut l'attraper en route. */
-function relocate(me: State, who?: Hider) {
-  const free = me.hiders.filter(h => !h.found && h.state === 'hidden')
-  if (!free.length) return
-  const h = who ?? free[Math.floor(Math.random() * free.length)]
-  const used = new Set<string>()
-  for (const o of me.hiders) if (o !== h && o.slot && !o.found) { used.add(o.slot.id); if (o.slot.group) used.add(o.slot.group) }
-  const cands: { spot: FarmSpot; slot: FarmSlot }[] = []
-  for (const spot of me.farm.spots) {
-    if (spot === h.spot) continue
-    for (const slot of spot.slots) {
-      if (me.night && (slot.type === 'rear' || slot.type === 'tree')) continue
-      if (used.has(slot.id) || (slot.group && used.has(slot.group)) || !fitK(h, slot)) continue
-      cands.push({ spot, slot })
-    }
-  }
-  if (!cands.length) return
-  // Sur la carte ×4, il ne traverse pas toute la ferme : une cachette pas loin
-  const here = h.c.obj.getWorldPosition(tmpV(me))
-  me.farm.root.worldToLocal(here)
-  const close = me.big ? cands.filter(c => c.spot.g.position.distanceTo(here) < 10) : []
-  const pool = close.length ? close : cands
-  const pick = pool[Math.floor(Math.random() * pool.length)]
-  const old = h.spot
-  me.relocs++
-  if (old) old.shake = 0.5
-  me.farm.root.attach(h.c.obj)
-  h.state = 'run'
-  h.spot = null; h.slot = null
-  for (const g of h.glow) g.visible = false
-  if (h.raised && h.hang) { h.raised.visible = true; h.hang.visible = false }
-  if (h.voice) cry(h.voice, { vol: 0.32, max: 0.35, rate: 1.15 })
-  sfx('cloth', { vol: 0.35, rate: 1.1 })
-  const peek = peekFor(me, pick.slot)
-  const to = targetOf(me, h, pick.spot, pick.slot, peek)
-  const from = h.c.obj.position.clone()
-  const ry1 = Math.atan2(to.x - from.x, to.z - from.z)
-  const dist = from.distanceTo(to)
-  h.tw = {
-    a: from, b: to, t: 0, dur: me.big ? 1.1 + dist * 0.12 : 2.3, hops: me.big ? Math.max(4, Math.round(dist / 1.5)) : 5, h: 0.75,
-    ry0: ry1, ry1, k0: h.c.obj.scale.x, k1: fitK(h, pick.slot) || 1,
-    end: () => {
-      if (h.found) return
-      // Comme au départ : un peu moins bien caché plutôt qu'introuvable (un canard n'a pas d'oreilles qui dépassent)
-      if (!hideIn(me, h, pick.spot, pick.slot, peek) && !hideIn(me, h, pick.spot, pick.slot, 'franc')) strand(me, h, pick.spot, pick.slot)
-      pick.spot.shake = 0.4
-      SOFT[pick.spot.matter]()
-    }
-  }
+  if (!left) { me.phase = 'outro'; me.phaseT = me.t + 1.2; outro(me) }
 }
 
 function stepTween(h: Hider, dt: number) {
@@ -967,18 +913,12 @@ function step(me: State, dt: number) {
     const ready = me.hiders.every(h => !h.tw)
     if (u > 2.5 && ready) {
       me.veil.classList.remove('on')
-      me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t; me.nextCall = t + 26; me.nextMove = t + 25
+      me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t; me.nextCall = t + 26
       // La carte ×4 : on partait de l'enclos, on recule sur toute la ferme (ils sont quelque part là-dedans)
       if (me.big) me.tgtZoom = 1
       sfx('bong', { vol: 0.35, rate: 1.2 })
     }
   } else if (me.phase === 'seek') {
-    // Sur la grande ferme, de temps en temps, l'un de ceux qu'on ne voit pas change de cachette
-    if (me.big && t > me.nextMove) {
-      me.nextMove = t + 20 + Math.random() * 14
-      const unseen = me.hiders.filter(h => !h.found && h.state === 'hidden' && !seen(me, h).length)
-      if (unseen.length && me.relocs < me.maxRelocs) relocate(me, unseen[Math.floor(Math.random() * unseen.length)])
-    }
     me.stuck += dt
     if (me.stuck > 14) me.hint = Math.min(1, me.hint + 0.025 * dt)
     // Coincée depuis longtemps : l'un d'eux passe la tête et appelle
@@ -1167,9 +1107,8 @@ export const hideseek: GameDef = {
         zoom: big ? 3.2 : 1, tgtZoom: big ? 3.2 : 1, elev: BASE_EL, tgtElev: BASE_EL, introK: 1, fit: { key: '', d: 20, ty: 1 },
         el: BASE_EL, big, maxZoom: big ? 16 : 1.4, pan: new T.Vector3(), tgtPan: new T.Vector3(), vPan: new T.Vector3(),
         close: false, torchT: 0, torchAt: null,
-        cacheLeft: c.byTier(0, 4, 6), nextMove: 0,
+        cacheLeft: c.byTier(0, 4, 6),
         hint: c.byTier(0.55, 0.3, 0.4), stuck: 0, lastFind: 0, streak: 0, nextCall: 0,
-        relocs: 0, maxRelocs: c.byTier(0, 6, 8), relocP: c.byTier(0, 0.4, 0.5),
         penNext: 0, outroBurst: 0,
         fx: particles(stage, 500), shake: camShake(stage), ray: new T.Raycaster(),
         glowMat, torch: null, tray, veil
@@ -1322,7 +1261,6 @@ export const hideseek: GameDef = {
         ;(window as unknown as { __cc: unknown }).__cc = {
           get phase() { return me.phase }, get found() { return me.hiders.filter(h => h.found).length },
           get total() { return me.hiders.length }, get spin() { return me.drag ? 1 : me.vRot }, get night() { return me.night },
-          get relocs() { return me.relocs },
           get calls() { return stage.renderer.info.render.calls },
           // Seulement les points qu'un doigt toucherait vraiment (pas sous un bouton de la barre)
           animals: () => me.hiders.map(h => {

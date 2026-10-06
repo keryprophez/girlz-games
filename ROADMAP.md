@@ -1142,10 +1142,15 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   zoome jusqu'au ras du sol (la vue se couche en s'approchant), tourner
   deux doigts fait pivoter, les glisser ensemble incline. Le toucher est à
   la mesure de ce qu'on voit ; dans un bois ou un champ, on fouille là où
-  l'on touche ; celui qui change de cachette reste dans le coin. Coût : de
-  loin ni ombre ni détails (~540 appels de dessin, 590 la nuit), de près
-  une ombre serrée autour du point regardé (~270). **Reste : la tablette**
-  (`?fps`, la nuit surtout).
+  l'on touche. Coût : de loin ni ombre ni détails (~540 appels de dessin,
+  590 la nuit), de près une ombre serrée autour du point regardé (~270).
+  **Reste : la tablette** (`?fps`, la nuit surtout).
+- ✅ **Cache-Cache : plus aucun changement de cachette** (6/10, le père :
+  « enlève le changement de cachette complètement, c'est ce qui simplifie
+  encore + ») : un animal qui courait d'une cachette à l'autre — après une
+  trouvaille rapide, ou toutes les 20 à 34 s sur la carte — se faisait
+  voir. Une fois cachés, ils ne bougent plus ; seul l'indice reste (le
+  bout qui dépasse remue, et coincée, l'un passe la tête en appelant).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses
