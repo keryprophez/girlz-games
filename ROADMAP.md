@@ -1149,8 +1149,11 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   « enlève le changement de cachette complètement, c'est ce qui simplifie
   encore + ») : un animal qui courait d'une cachette à l'autre — après une
   trouvaille rapide, ou toutes les 20 à 34 s sur la carte — se faisait
-  voir. Une fois cachés, ils ne bougent plus ; seul l'indice reste (le
-  bout qui dépasse remue, et coincée, l'un passe la tête en appelant).
+  voir. Une fois cachés, ils ne bougent plus. Puis « enlève aussi les
+  indices » : à l'éclair et à la flamme, le bout qui dépasse ne remue plus
+  et plus personne ne passe la tête en appelant quand on cale ; la fleur
+  (Jade) les garde. Reste le « presque » (un toucher tout près : il glousse
+  et passe la tête).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

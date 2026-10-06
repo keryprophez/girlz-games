@@ -49,12 +49,14 @@ import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, 
      tronc creux) : on touche la cachette — dans un bois, là où il est —, il
      en sort. Une fois cachés, ils ne bougent plus (le 6/10, le père : un
      animal qui change de cachette en courant se fait voir — « enlève-le
-     complètement »).
+     complètement ») ; et sans indice : rien ne remue, personne n'appelle
+     (« enlève aussi les indices »). Reste le « presque » : un toucher tout
+     près, il glousse et passe la tête.
    - Performances (« catastrophiques » le 6/10) : de loin, ni ombres ni
      petits détails ; de près, une ombre serrée autour de ce qu'on regarde.
-   - La rampe suit la joueuse : trouvée vite, ceux qui restent remuent
-     moins ; coincée, ils remuent plus, et l'un d'eux finit par passer la
-     tête en appelant.
+   - À la fleur, la rampe suit la joueuse : trouvée vite, ceux qui restent
+     remuent moins ; coincée, ils remuent plus, et l'un d'eux finit par
+     passer la tête en appelant.
    - La fin : la fête dans l'enclos, tout le monde saute et chante, la ferme
      tourne. Les étoiles viennent du temps passé à chercher. */
 
@@ -656,18 +658,20 @@ function stepTween(h: Hider, dt: number) {
   if (u >= 1) { o.scale.setScalar(tw.k1); h.tw = null; tw.end() }
 }
 
-/** Caché : de temps en temps, le bout qui dépasse bouge (l'indice). */
+/** Caché : de temps en temps, le bout qui dépasse bouge (l'indice) — à la
+    fleur seulement : sur la carte ×4, il ne bouge plus du tout (le 6/10, le
+    père : « enlève aussi les indices »). */
 function animHidden(me: State, h: Hider, dt: number) {
   const o = h.c.obj
   const slot = h.slot
   let dy = 0, rz = 0, ry = 0, fw = 0, ear = 0
-  let wag = Math.sin(me.t * 2.1 + h.ph) * 0.1
+  let wag = me.big ? 0 : Math.sin(me.t * 2.1 + h.ph) * 0.1
   const amp = 0.7 + 0.6 * me.hint
-  if (h.wigT < 0) {
+  if (!me.big && h.wigT < 0) {
     h.wig -= dt
     if (h.wig <= 0) { h.wigT = 0; h.wigK = Math.random() < 0.5 ? 0 : 1 }
   }
-  if (h.wigT >= 0) {
+  if (!me.big && h.wigT >= 0) {
     h.wigT += dt
     const u = h.wigT / 0.95
     if (u >= 1) { h.wigT = -1; h.wig = (6.5 - 4.9 * me.hint) * (0.7 + Math.random() * 0.6) }
@@ -682,7 +686,7 @@ function animHidden(me: State, h: Hider, dt: number) {
       wag = Math.sin(u * Math.PI * 8) * 0.55 * env * amp
     }
   }
-  // Il passe la tête un instant (un « presque », ou il en a assez d'attendre)
+  // Il passe la tête un instant (un « presque », ou à la fleur, il en a assez d'attendre)
   if (h.boost > 0) {
     h.boost = Math.max(0, h.boost - dt)
     const b = Math.sin((1 - h.boost / 1.1) * Math.PI)
@@ -695,7 +699,7 @@ function animHidden(me: State, h: Hider, dt: number) {
   h.ears.forEach((e, k) => { e.rotation.z = (e.userData.r0 as number) + (k % 2 ? ear : -ear) })
   for (const t of h.tails) t.rotation.y = (t.userData.r0 as number) + wag
   if (h.raised?.visible) h.raised.rotation.z = wag * 0.8
-  if (h.hang?.visible) { h.hang.rotation.x = Math.sin(me.t * 1.5 + h.ph) * 0.08; h.hang.rotation.z = Math.sin(me.t * 1.1) * 0.1 + wag * 0.4 }
+  if (h.hang?.visible && !me.big) { h.hang.rotation.x = Math.sin(me.t * 1.5 + h.ph) * 0.08; h.hang.rotation.z = Math.sin(me.t * 1.1) * 0.1 + wag * 0.4 }
 }
 
 /** À l'enclos : il nous regarde, sautille de temps en temps ; à la fin, la fête. */
@@ -921,8 +925,8 @@ function step(me: State, dt: number) {
   } else if (me.phase === 'seek') {
     me.stuck += dt
     if (me.stuck > 14) me.hint = Math.min(1, me.hint + 0.025 * dt)
-    // Coincée depuis longtemps : l'un d'eux passe la tête et appelle
-    if (me.stuck > 24 && t > me.nextCall) {
+    // Coincée depuis longtemps : l'un d'eux passe la tête et appelle (à la fleur seulement)
+    if (!me.big && me.stuck > 24 && t > me.nextCall) {
       me.nextCall = t + 9
       const hs = me.hiders.filter(h => !h.found && h.state === 'hidden')
       const h = hs[Math.floor(Math.random() * hs.length)]
