@@ -15,7 +15,7 @@ import { chromium } from 'playwright-core'
 
 // PORT / DIST : à côté du smoke (4188) et des bots (4189), qui servent dist/
 const PORT = Number(process.env.PORT || 4187)
-const URL = `http://localhost:${PORT}/girlz-games/`
+const URL = `http://localhost:${PORT}/`
 const OUT = 'public/assets/affiches/'
 const W = 600, H = 450
 

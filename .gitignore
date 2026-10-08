@@ -10,3 +10,9 @@ photos.picks.json
 
 # Les worktrees des agents (session Claude Code)
 .claude/worktrees/
+
+# Cloudflare : l'état local de wrangler, et les secrets du Worker en local
+# (`.dev.vars`, format CLE=valeur ; jamais dans le dépôt)
+.wrangler/
+.dev.vars
+.dev.vars.*

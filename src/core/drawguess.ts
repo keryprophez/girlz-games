@@ -6,16 +6,18 @@
    Anthropic efface ce qu'on lui envoie sous 30 jours et ne s'en sert pas
    pour entraîner ses modèles.
 
-   - La clé est celle du père, collée une fois derrière la « Question de
-     grand » ; elle reste sur la tablette (`localStorage`), jamais dans le
-     dépôt (le site est public). Plafond de dépense : dans la console.
+   - Le jeu envoie le dessin à NOTRE Worker (`/api/devine`, derrière le code
+     d'accès de l'app) ; c'est lui qui appelle Claude avec la clé du père,
+     un secret du Worker (`worker/devine.ts`). La clé n'est ni dans l'app,
+     ni sur la tablette, ni dans le dépôt (9/10).
    - La réponse est une FICHE imposée (`SCHEMA`) : trois propositions
      courtes, chacune avec la photo de l'imagier qui lui correspond (ou
      « aucune »). Rien d'autre ne peut sortir ; `parseGuess` revérifie tout
-     et tronque.
+     et tronque, au Worker puis dans le jeu.
    - Le défi : selon le niveau, il choisit parmi les sujets du niveau (la
      fleur), parmi plus de sujets (l'éclair), ou parmi tout (la flamme).
-   Logique pure et testée ici, sauf `guessDrawing` (l'appel réseau). */
+   Logique pure et testée ici (lue aussi par le Worker), sauf `guessDrawing`
+   (l'appel réseau). */
 
 /** Le mot de chaque photo de l'imagier, avec son article. */
 export const WORDS: Record<string, [string, string]> = {
@@ -45,7 +47,7 @@ export const POOLS: Record<'easy' | 'med' | 'exp', string[]> = {
 }
 
 /** Ce qu'il peut répondre au défi : les sujets du niveau (fleur), ceux de la fleur et de l'éclair (éclair), tout (flamme : null). */
-export function candidates(tier: 'easy' | 'med' | 'exp'): string[] | null {
+export function candidates(tier: Tier): string[] | null {
   if (tier === 'easy') return POOLS.easy
   if (tier === 'med') return [...POOLS.easy, ...POOLS.med]
   return null
@@ -131,65 +133,43 @@ export function spoken(g: GuessItem): string {
   return s[0].toUpperCase() + s.slice(1) + ' ?'
 }
 
-/* ---------- La clé (celle du père, sur la tablette seulement) ---------- */
-const KEY = 'ferme:cle-claude'
-export function getKey(): string {
-  try { return localStorage.getItem(KEY) || '' } catch { return '' }
-}
-export function setKey(k: string) {
-  try { if (k) localStorage.setItem(KEY, k.trim()); else localStorage.removeItem(KEY) } catch { /* stockage refusé */ }
-}
-/** Une clé de l'API Anthropic a cette forme. */
-export const looksLikeKey = (k: string) => /^sk-ant-[A-Za-z0-9_-]{20,}$/.test(k.trim())
-
 /* ---------- L'appel ---------- */
 export type GuessError = 'cle' | 'reseau' | 'limite' | 'refus' | 'autre'
+const ERRORS: readonly GuessError[] = ['cle', 'reseau', 'limite', 'refus', 'autre']
+export const isGuessError = (x: unknown): x is GuessError => ERRORS.includes(x as GuessError)
 export class GuessFailure extends Error {
   constructor(public why: GuessError) { super(why) }
 }
 
-/** Le modèle qui regarde : le meilleur pour lire un dessin d'enfant, réglé pour répondre vite. */
+/** Le modèle qui regarde (au Worker) : le meilleur pour lire un dessin d'enfant, réglé pour répondre vite. */
 export const MODEL = 'claude-opus-5-5'
 
-/** Montre le dessin (une image PNG en base64, sans l'en-tête `data:`) et rend ses trois propositions. */
-export async function guessDrawing(key: string, png: string, cands: string[] | null, signal?: AbortSignal): Promise<Guess> {
-  const { default: Anthropic } = await import('@anthropic-ai/sdk')
-  // Dans le navigateur : la clé est celle du père, sur SA tablette (voir l'en-tête)
-  const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 1, timeout: 45_000 })
-  const body = {
-    model: MODEL,
-    max_tokens: 2000,
-    system: [{ type: 'text' as const, text: systemPrompt(), cache_control: { type: 'ephemeral' as const } }],
-    output_config: { effort: 'low' as const, format: { type: 'json_schema' as const, schema: SCHEMA as unknown as Record<string, unknown> } },
-    messages: [{
-      role: 'user' as const,
-      content: [
-        { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/png' as const, data: png } },
-        { type: 'text' as const, text: userPrompt(cands) }
-      ]
-    }]
-  }
-  let res: { stop_reason: string | null; content: { type: string; text?: string }[] }
+export type Tier = 'easy' | 'med' | 'exp'
+
+/** Montre le dessin (une image PNG en base64, sans l'en-tête `data:`) et rend ses trois propositions.
+ *  `tier` : le défi de ce niveau (parmi quels sujets il devine) ; null : Libre, parmi tout. */
+export async function guessDrawing(png: string, tier: Tier | null, signal?: AbortSignal): Promise<Guess> {
+  let res: Response
   try {
-    try {
-      // Un refus de sécurité (peu probable sur un dessin d'enfant) est rejoué par un autre modèle, côté serveur
-      res = await client.beta.messages.create({ ...body, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }, { signal })
-    } catch (e) {
-      // Le paramètre refusé (400) : la même demande, sans lui
-      if (e instanceof Anthropic.BadRequestError) res = await client.messages.create(body, { signal })
-      else throw e
-    }
+    res = await fetch('/api/devine', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ png, tier: tier ?? 'libre' }),
+      signal
+    })
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new GuessFailure('cle')
-    if (e instanceof Anthropic.RateLimitError) throw new GuessFailure('limite')
-    if (e instanceof Anthropic.APIConnectionError) throw new GuessFailure('reseau')
-    throw new GuessFailure('autre')
+    if ((e as Error)?.name === 'AbortError') throw e
+    throw new GuessFailure('reseau')
   }
-  if (res.stop_reason === 'refusal') throw new GuessFailure('refus')
-  const text = res.content.find(b => b.type === 'text')?.text
-  let raw: unknown
-  try { raw = text ? JSON.parse(text) : null } catch { raw = null }
-  const g = parseGuess(raw)
+  // 401 : la session du code d'accès a expiré (un grand doit le retaper)
+  if (res.status === 401) throw new GuessFailure('cle')
+  let data: unknown = null
+  try { data = await res.json() } catch { /* pas du JSON */ }
+  if (!res.ok) {
+    const why = (data as { error?: unknown } | null)?.error
+    throw new GuessFailure(isGuessError(why) ? why : 'autre')
+  }
+  const g = parseGuess(data)
   if (!g) throw new GuessFailure('autre')
   return g
 }

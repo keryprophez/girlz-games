@@ -18,7 +18,7 @@ import { chromium } from 'playwright-core'
 
 // PORT=… : un autre port quand 4189 est pris (plusieurs sessions en parallèle)
 const PORT = Number(process.env.PORT || 4189)
-const URL = `http://localhost:${PORT}/girlz-games/`
+const URL = `http://localhost:${PORT}/`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord, ou PORT=…`); process.exit(1) }
@@ -1447,8 +1447,6 @@ await scenario('ferme-a-construire', async () => {
 await scenario('devine-mon-dessin', async () => {
   await openGame('Devine mon dessin', '__dg', 'easy')
   await page.waitForFunction(() => window.__dg.ready && window.__dg.phase === 'draw', null, { timeout: 60000, polling: 250 })
-  if (await page.evaluate(() => window.__dg.error) !== 'nokey') throw new Error('sans clé, pas de cadenas')
-  if (!(await page.locator('#dgKeyItem').isVisible())) throw new Error('sans clé, pas de bouton « Clé »')
   const draw = async () => {
     const b = await page.locator('#dgCv').boundingBox()
     await page.mouse.move(b.x + b.width * 0.4, b.y + b.height * 0.4)
@@ -1459,11 +1457,13 @@ await scenario('devine-mon-dessin', async () => {
   }
   // « Fini » respire quand le dessin est prêt : un bouton animé ne paraît jamais « stable » (piège connu)
   const fini = async () => { await page.locator('#dgDone button').click({ force: true }); await page.waitForFunction(() => window.__dg.phase !== 'draw', null, { timeout: 10000, polling: 100 }) }
-  // Sans clé, « Fini » ne part nulle part
+  // Sans clé au Worker (le devineur répond « cle ») : le cadenas, et l'on dessine encore
+  await page.evaluate(() => { window.__dg.fake = () => { throw { why: 'cle' } } })
   await draw()
   await page.locator('#dgDone button').click({ force: true })
-  await page.waitForTimeout(500)
-  if (await page.evaluate(() => window.__dg.phase) !== 'draw' || await page.evaluate(() => window.__dg.tries) !== 0) throw new Error('sans clé, le dessin est parti')
+  await page.waitForFunction(() => window.__dg.error === 'cle', null, { timeout: 10000, polling: 100 })
+  if (!(await page.locator('#dgBubble .dg-icon').isVisible())) throw new Error('sans clé, pas de cadenas')
+  if (await page.evaluate(() => window.__dg.phase) !== 'draw') throw new Error('sans clé, la feuille ne revient pas')
   // Libre : « Non », une autre idée, « Oui »
   await page.evaluate(() => { window.__dg.fake = () => ({ items: [{ article: 'un', mot: 'soleil', photo: null }, { article: 'un', mot: 'chat', photo: 'cat' }] }) })
   await page.locator('.dg-mode[data-m="libre"]').click()

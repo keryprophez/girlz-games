@@ -104,7 +104,8 @@ complètes sont dans `CLAUDE.md`.
 | Son | Web Audio : musique générative, foley Kenney pour les chocs |
 | Persistance | zustand + `localStorage` (meilleure note par jeu, réglages) |
 | Installation | vite-plugin-pwa (service worker + manifest) |
-| Déploiement | GitHub Actions → GitHub Pages |
+| Hébergement | Cloudflare Workers (compte tld83) : l'app derrière un code d'accès, `/api/devine` (Claude) — `worker/` |
+| Déploiement | GitHub Actions → `wrangler deploy` |
 
 Chaque jeu implémente `mount(ctx) => cleanup` (voir `src/core/types.ts`) et
 tient en un fichier plus une ligne dans `src/games/index.ts`.
@@ -113,27 +114,30 @@ tient en un fichier plus une ligne dans `src/games/index.ts`.
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173/girlz-games/
+npm run dev          # http://localhost:5173/
 npm run build        # tsc strict + build de production dans dist/
 npm run preview      # sert le build
 npm run lint         # ESLint
 npm test             # vitest (logique pure)
 npm run test:smoke   # ouvre chaque jeu dans Chromium : 0 erreur JS, chargement terminé
 npm run test:play    # un bot par jeu joue sa partie jusqu'à l'écran de fin
+npm run worker:dev   # le vrai Worker (portail, /api/devine) sur le build, port 8787
 ```
 
-`test:smoke` (tous les jeux) et `test:play` (les bots des seuls jeux touchés
-depuis la dernière mise en ligne, choisis par `scripts/touched.mjs`)
-**bloquent le déploiement** en CI.
+`test:smoke` (tous les jeux) et `test:play` (les bots des seuls jeux
+touchés, dits par `node scripts/touched.mjs origin/main`) tournent **avant
+chaque envoi sur `main`** : la CI, légère, ne fait que lint, tests, build
+et déploiement.
 
 Sur la tablette, ajouter `?fps` à l'adresse allume un petit compteur d'images
 par seconde (et le coût d'une image 3D) pour régler la 3D ; `?fps=0` l'éteint.
 
 ## 🌍 Mise en ligne
 
-Le workflow `deploy.yml` construit, teste et publie sur
-https://keryprophez.github.io/girlz-games/ à chaque push sur la branche par
-défaut. Sur la tablette : ouvrir l'adresse, « Ajouter à l'écran d'accueil ».
+Le workflow `deploy.yml` vérifie, construit et publie le Worker sur
+https://girlz-games.tld83.workers.dev à chaque push sur la branche par
+défaut. Sur la tablette : ouvrir l'adresse, taper le code de la famille
+(une fois), puis « Ajouter à l'écran d'accueil ».
 
 ## 🗺 Documents
 

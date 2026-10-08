@@ -9,7 +9,7 @@ import { chromium } from 'playwright-core'
 
 // PORT=… : un autre port quand 4188 est pris (plusieurs sessions en parallèle)
 const PORT = Number(process.env.PORT || 4188)
-const URL = `http://localhost:${PORT}/girlz-games/`
+const URL = `http://localhost:${PORT}/`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord, ou PORT=…`); process.exit(1) }

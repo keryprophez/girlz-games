@@ -8,8 +8,10 @@
    - tout le reste (socle 3D, coquille, main qui montre, styles…) → aucun
      bot : le smoke, qui ouvre tous les jeux, reste le filet.
 
-   node scripts/touched.mjs origin/main   → les bots de ta branche
-   node scripts/touched.mjs --ci          → en intégration : depuis la dernière
+   node scripts/touched.mjs origin/main   → les bots de ta branche : à faire
+     jouer dans la session AVANT l'envoi sur `main` (9/10 : la CI, devenue
+     légère, ne joue plus ni smoke ni bots — CLAUDE.md, « Méthode »)
+   node scripts/touched.mjs --ci          → (l'ancienne CI) depuis la dernière
      mise en ligne réussie (API GitHub), écrit `run` et `bots` dans
      $GITHUB_OUTPUT. BOTS_FORCE=tous les lance tous. */
 import { execFileSync } from 'node:child_process'

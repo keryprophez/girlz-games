@@ -35,9 +35,11 @@ des lieux du 2/09 (verdict par jeu) · `README.md` = présentation de l'app.
    Aucun analytique tiers. **Une seule exception, choisie par le père le
    8/10 : Devine mon dessin** envoie le DESSIN (réduit, sans prénom, sans
    voix ni photo) à Claude, l'IA d'Anthropic, qui l'efface sous 30 jours
-   et ne s'en sert pas pour s'entraîner — avec la clé API du père, collée
-   derrière la « Question de grand » et gardée sur la tablette (jamais dans
-   le dépôt : le site est public). Rien d'autre ne part, nulle part.
+   et ne s'en sert pas pour s'entraîner — par NOTRE Worker
+   (`worker/devine.ts`), avec la clé API du père, un secret du Worker
+   Cloudflare (`ANTHROPIC_API_KEY`, posé dans le tableau de bord) : jamais
+   dans l'app, ni sur la tablette, ni dans le dépôt (9/10, « je veux pas
+   ajouter la clef sur la tablette »). Rien d'autre ne part, nulle part.
 4. **Français uniquement** : textes, commentaires de code, messages de commit.
    Et on se tutoie.
 
@@ -187,13 +189,14 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            entamée (`biteFace`), le couteau, la fourchette et
                            la bouchée (`knife`, `fork`, `morsel`)
              drawguess.ts ← LE DEVINEUR de Devine mon dessin (8/10) : la
-                           clé du père (`getKey`, sur la tablette), l'appel à
-                           Claude (`guessDrawing` : Opus 5.5, effort bas, le
-                           dessin en PNG, une FICHE imposée — trois
-                           propositions avec la photo de l'imagier qui leur
-                           correspond), `parseGuess` qui revérifie tout,
-                           `matches` (le défi trouvé ?), les sujets par
-                           niveau (`POOLS`, `candidates`) — testé, sauf l'appel
+                           FICHE imposée (`SCHEMA` : trois propositions avec
+                           la photo de l'imagier qui leur correspond), les
+                           consignes (`systemPrompt`, `userPrompt`),
+                           `parseGuess` qui revérifie tout, `matches` (le défi
+                           trouvé ?), les sujets par niveau (`POOLS`,
+                           `candidates`) — lu aussi par le Worker ; et
+                           `guessDrawing` (le dessin → `POST /api/devine`)
+                           — testé, sauf l'appel
              farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
                            rond qu'on fait tourner, ses cachettes construites
                            (grange, meule, puits, charrette, tracteur, niche,
@@ -217,6 +220,12 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
+worker/          LE WORKER CLOUDFLARE (9/10, il sert l'app : wrangler.jsonc)
+                 index.ts (les routes) · access.ts + access-page.ts (le CODE
+                 D'ACCÈS de toute l'app, repris de food-coach : cookie signé,
+                 fermé tant que les secrets manquent) · devine.ts (l'appel
+                 à Claude : Opus 5.5, effort bas, la fiche imposée, le repli
+                 serveur, la clé en secret) · headers.ts · worker.test.ts
 scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
 scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
 scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
@@ -431,9 +440,10 @@ doigt, les animaux qui vont à leur place ; la ferme se garde dans
 `ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite) ·
 `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
 le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
-(la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé,
-un cadenas ; le bot répond à la place de Claude, `__dg.fake` : jamais de
-vrai appel en intégration) · `bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le 6/10, on le
+(la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
+au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
+répond à la place de Claude, `__dg.fake` : jamais de vrai appel en
+intégration) · `bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le 6/10, on le
 MANGE en six parts : ce qui reste est coupé par deux plans —
 `localClippingEnabled`, leur union sous un demi-tour enlevé, leur intersection
 au-delà ; le présentoir et les faces de coupe exclus —, la part est une copie
@@ -483,16 +493,14 @@ ligne quand on en paie un nouveau.
    Pour la 3D : `args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader']`.
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
-4. En CI, à chaque push sur `main` (sur GitHub, sans coûter un token), le
-   smoke ouvre TOUS les jeux, puis **seuls les bots des jeux touchés**
-   jouent (2/10, le père : « on ne valide via bot que les jeux que l'on
-   touche spécifiquement ») ; l'un ou l'autre en échec **bloque la mise en
-   ligne**. `scripts/touched.mjs` compare avec la dernière mise en ligne
-   réussie : un fichier d'un jeu, un module qui ne sert qu'à lui (sa table
-   `OWN`) ou un scénario modifié de `play.mjs` → ses bots ; un module commun
-   → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
-   minutes. Tous les bots : lancement manuel du workflow avec « tous ».
-   `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
+4. **Avant chaque envoi sur `main`, dans la session** (9/10 : la CI est
+   devenue légère, le dépôt privé — voir « Git & déploiement ») : le smoke
+   ouvre TOUS les jeux (`npm run test:smoke`), puis **seuls les bots des
+   jeux touchés** jouent (2/10, le père : « on ne valide via bot que les
+   jeux que l'on touche spécifiquement ») ; l'un ou l'autre en échec = pas
+   d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
+   d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
+   modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
    `npm run test:play` a **un bot par jeu** (8/10 : 39 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
@@ -508,31 +516,53 @@ ligne quand on en paie un nouveau.
    - **un seul agent à la fois** — à cinq sur 4 cœurs, la 3D logicielle
      sature, les tests expirent avant d'ouvrir un jeu et tout est refait ;
    - en local, **3 ou 4 captures** bien choisies (celles qui jugent le
-     rendu), **un seul passage du bot du jeu touché**, pas de smoke complet :
-     la CI rejoue le smoke et les bots des jeux touchés avant la mise en ligne ;
-   - **une mise en ligne par lot**, pas une par jeu (un push sur `main`
-     pendant un déploiement annule celui qui tourne) ;
+     rendu), **un seul passage du bot du jeu touché** pendant le travail ;
+     le smoke complet et les bots des jeux touchés UNE fois, juste avant
+     l'envoi du lot sur `main` ;
+   - **une mise en ligne par lot**, pas une par jeu ;
    - lire `PIEGES.md` par domaine, et les gros fichiers par morceaux.
 
 ## Git & déploiement
 
-- Repo `keryprophez/girlz-games` (public), en ligne :
-  https://keryprophez.github.io/girlz-games/
-- **`main` est la branche par défaut ET la seule qui publie** (23/09) :
-  `deploy.yml` se déclenche sur un push de `main`. L'ancienne branche
-  déployée `claude/magic-farm-game-q66bw4` n'est plus à pousser (elle va être
-  supprimée).
+- **Hébergé sur Cloudflare** depuis le 9/10 (le père : « une vraie web app
+  cloudflare, et plus une page github ») : le Worker `girlz-games` du compte
+  `tld83`, https://girlz-games.tld83.workers.dev — **toute l'app derrière un
+  code d'accès** (comme food-coach). Procédures de son compte (token,
+  secrets, erreurs connues) : skill `.claude/skills/cloudflare-deploy`
+  (reprise du gabarit `keryprophez/tld-docs`). L'ancienne adresse GitHub
+  Pages s'éteint ; les créations restées sur la tablette à l'ancienne
+  adresse ne suivent pas (choix du père : on repart de zéro).
+- Repo `keryprophez/girlz-games`, **privé** : ses minutes de CI comptent
+  dans le quota commun du compte GitHub (2 000 par mois en Free, partagées
+  avec tous ses sites) — d'où la CI légère.
+- **`main` est la branche par défaut ET la seule qui publie** :
+  `deploy.yml` se déclenche sur un push de `main` (sauf docs seules).
 - Développer sur une branche de travail, ne jamais pousser ailleurs sans
   demander. Livraison :
   ```bash
-  git fetch origin && git merge origin/main   # puis smoke + bots
+  git fetch origin && git merge origin/main
+  npm run build && npm run test:smoke   # tous les jeux s'ouvrent
+  node scripts/touched.mjs origin/main  # dit les bots des jeux touchés…
+  BOTS=<ceux-là> npm run test:play      # …qui jouent jusqu'à leur fin
   git push -u origin <branche-de-travail>
   git checkout main && git merge --ff-only <branche> && git push origin main
   git checkout <branche>
   ```
-- CI : `npm ci` → `npm run build` → `npm run test:smoke` → `touched.mjs` →
-  `test:play` (les bots des jeux touchés, sauté s'il n'y en a pas) → Pages.
-  Si un run est annulé, le relancer à la main : `workflow_dispatch` sur `main`.
-  Si le déploiement est refusé par l'environnement `github-pages`, c'est sa
-  règle de branches (Settings → Environments → github-pages) qui n'accepte
-  pas encore `main`.
+- CI (`deploy.yml`, quelques minutes) : `npm ci` → `npm run lint` →
+  `npm test` → `npm run build` (tsc de l'app ET du Worker) →
+  `cloudflare/wrangler-action@v4` (`wrangler deploy`). Un seul secret
+  GitHub : `CLOUDFLARE_API_TOKEN`. Si un run est annulé ou échoue sur le
+  réseau : `workflow_dispatch` sur `main`.
+- **Les secrets du Worker** se posent dans le tableau de bord Cloudflare
+  (Workers & Pages → `girlz-games` → Settings → Variables and secrets, type
+  Secret) et survivent aux déploiements ; jamais dans le dépôt :
+  `ACCESS_CODE` (le code de la famille ; le changer déconnecte les
+  appareils), `ACCESS_SIGNING_SECRET` (32 caractères aléatoires au moins ;
+  absent ou trop court = app fermée), `ANTHROPIC_API_KEY` (la clé du père,
+  dans un workspace Anthropic à plafond de dépense ; absente = le cadenas de
+  Devine mon dessin). Variable facultative : `ACCESS_MAX_AGE_DAYS` (400 par
+  défaut, gardée par `keep_vars`).
+- En local : `npm run build && npm run worker:dev` sert le vrai Worker
+  (`wrangler dev`, port 8787) avec les secrets de `.dev.vars` (ignoré par
+  git, `CLE=valeur` par ligne). Le smoke et les bots, eux, tournent sous
+  `vite preview` : sans portail ni en-têtes du Worker.

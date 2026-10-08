@@ -8,18 +8,13 @@ import { photoImg } from '../core/sprites'
 import { ICON } from '../core/icons'
 import { shuffle } from '../core/utils'
 import { visible } from '../core/hand'
-import {
-  candidates, getKey, setKey, looksLikeKey, guessDrawing, GuessFailure, matches, spoken, POOLS,
-  type Guess, type GuessError
-} from '../core/drawguess'
-import { createElement } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { MathGate } from '../components/PlayTimer'
+import { guessDrawing, isGuessError, matches, spoken, POOLS, type Guess, type GuessError } from '../core/drawguess'
 
 /* 🎨 DEVINE MON DESSIN (8/10, Jouer ; le père : « DEVINE MON DESSIN ! »,
    puis « met un chat ») — elle dessine sur la feuille de l'Atelier, le chat
    de la ferme, sur sa botte de foin, regarde et devine. C'est Claude qui
-   regarde (core/drawguess.ts : la clé du père, le dessin seul envoyé).
+   regarde, appelé par notre Worker (core/drawguess.ts, worker/devine.ts :
+   le dessin seul envoyé, la clé du père reste au Worker).
 
    - Défi : la photo de l'imagier épinglée sur la feuille dit quoi dessiner
      (sans un mot). « Fini » (l'œil) : il réfléchit (la tête penchée, trois
@@ -33,8 +28,10 @@ import { MathGate } from '../components/PlayTimer'
      parmi tout (et il n'a droit qu'à une réponse).
    - Libre : elle dessine ce qu'elle veut ; il propose, elle répond du
      pouce (Oui / Non). Pas de score : une création ne se note pas.
-   - Sans clé, sans réseau : on dessine quand même ; la bulle montre un
-     cadenas (ou un nuage), le bouton « Clé » ouvre la Question de grand.
+   - Sans clé (pas encore posée au Worker), sans réseau : on dessine quand
+     même ; à « Fini », la bulle montre un cadenas (ou un nuage, un sablier).
+     Rien à régler sur la tablette (9/10 : « je veux pas ajouter la clef sur
+     la tablette »).
    - Le signe « c'est une IA » (demandé par Anthropic) : l'étincelle dorée
      au-dessus du chat. */
 
@@ -64,7 +61,6 @@ const I = {
   pencil: svg(`<path d="M10 38l4-12 20-20 8 8-20 20z" fill="#FFD43B" stroke="#45362A" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 38l4-12 8 8z" fill="#F4D8B0" stroke="#45362A" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 38l2-6 4 4z" fill="#45362A"/>`, 30),
   thumb: (up: boolean) => svg(`<g transform="${up ? '' : 'rotate(180 24 24)'}"><path d="M14 22h-6v18h6zM17 40h17c3 0 5-2 6-5l3-10c1-3-1-6-4-6h-9l2-7c1-4-2-7-5-6l-10 14z" fill="#fff"/></g>`, 46),
   next: svg(`<path d="M10 24h24M24 12l12 12-12 12" fill="none" stroke="#45362A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`, 32),
-  key: svg(`<circle cx="15" cy="24" r="9" fill="none" stroke="#B9851F" stroke-width="5"/><path d="M24 24h18M36 24v7M42 24v5" fill="none" stroke="#B9851F" stroke-width="5" stroke-linecap="round"/>`, 32),
   lock: svg(`<rect x="10" y="21" width="28" height="22" rx="5" fill="#B9851F"/><path d="M16 21v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#B9851F" stroke-width="5"/><circle cx="24" cy="31" r="3.4" fill="#fff"/><rect x="22.6" y="32" width="2.8" height="6" rx="1.4" fill="#fff"/>`, 84),
   cloud: svg(`<path d="M14 36h22a8 8 0 0 0 0-16 11 11 0 0 0-21-2 8 8 0 0 0-1 18z" fill="#B8C4D0"/><path d="M19 25l10 10M29 25 19 35" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>`, 84),
   wait: svg(`<path d="M14 6h20v6c0 5-5 8-7.5 12 2.5 4 7.5 7 7.5 12v6H14v-6c0-5 5-8 7.5-12C19 20 14 17 14 12z" fill="#FFD34D" stroke="#B9851F" stroke-width="2.5" stroke-linejoin="round"/>`, 84),
@@ -103,12 +99,13 @@ interface S {
   eraser: boolean
   strokes: Map<number, Stroke>
   abort: AbortController | null
-  error: GuessError | 'nokey' | null
+  error: GuessError | null
 }
 
 let me: S | null = null
 let ctx: GameContext
-/** Le bot (scripts/play.mjs) répond à la place de Claude : jamais de vrai appel en intégration. */
+/** Le bot (scripts/play.mjs) répond à la place de Claude : jamais de vrai appel en intégration.
+ *  Il peut aussi « échouer » : lancer `{ why: 'cle' }` (le cadenas). */
 type Fake = (target: string | null) => Guess | Promise<Guess>
 let fake: Fake | null = null
 
@@ -186,13 +183,11 @@ function bubble(html: string | null, cls = '') {
   if (html) { b.innerHTML = html; b.className = 'dg-bubble ' + cls }
 }
 
-const FAIL_ICON: Record<GuessError | 'nokey', string> = { nokey: I.lock, cle: I.lock, reseau: I.cloud, limite: I.wait, refus: I.what, autre: I.cloud }
+const FAIL_ICON: Record<GuessError, string> = { cle: I.lock, reseau: I.cloud, limite: I.wait, refus: I.what, autre: I.cloud }
 
-function showError(s: S, why: GuessError | 'nokey') {
+function showError(s: S, why: GuessError) {
   s.error = why
   bubble(`<span class="dg-icon">${FAIL_ICON[why]}</span>`, 'dg-err')
-  // Sans clé (ou une clé refusée) : le bouton « Clé » apparaît pour un grand
-  $q('#dgKeyItem').hidden = !(why === 'nokey' || why === 'cle')
   sfx('error', { vol: 0.25, rate: 0.9 })
   setAnim(s, 'shrug')
   s.phase = 'draw'
@@ -214,7 +209,6 @@ function startRound(s: S) {
   }
   clearPaper(s)
   bubble(null)
-  if (!getKey() && !fake) showError(s, 'nokey')
   setAnim(s, 'idle')
   pips(s)
   syncDone(s)
@@ -229,8 +223,6 @@ function pips(s: S) {
 async function onDone(s: S) {
   if (s.phase !== 'draw') return
   if (!s.dirty) { $q('#dgDone').classList.add('dg-shake'); ctx.after(500, () => $q('#dgDone').classList.remove('dg-shake')); sfx('tick', { vol: 0.3 }); return }
-  const key = getKey()
-  if (!key && !fake) { showError(s, 'nokey'); return }
   s.phase = 'think'; s.tries++; s.error = null
   syncDone(s)
   bubble('<div class="dg-dots"><i></i><i></i><i></i></div>', 'dg-think')
@@ -238,17 +230,20 @@ async function onDone(s: S) {
   sfx('whoosh', { vol: 0.25, rate: 1.3 })
   const png = exportPng()
   const t0 = performance.now()
-  const cands = s.mode === 'defi' ? candidates(ctx.tier) : null
   let g: Guess
   try {
     if (fake) g = await fake(s.target)
     else {
       s.abort = new AbortController()
-      g = await guessDrawing(key, png, cands, s.abort.signal)
+      // Le niveau choisit parmi quels sujets il devine (au Worker) ; en Libre, parmi tout
+      g = await guessDrawing(png, s.mode === 'defi' ? ctx.tier : null, s.abort.signal)
     }
   } catch (e) {
     if (me !== s || !ctx.alive()) return
-    showError(s, e instanceof GuessFailure ? e.why : 'autre')
+    const why = (e as { why?: unknown } | null)?.why
+    // Une réponse qui n'est pas venue ne lui coûte pas un de ses trois essais
+    s.tries--
+    showError(s, isGuessError(why) ? why : 'autre')
     return
   } finally { s.abort = null }
   if (me !== s || !ctx.alive()) return
@@ -350,44 +345,6 @@ function setMode(s: S, m: Mode) {
   sfx('select', { vol: 0.3 })
 }
 
-/* ---------- La clé (un grand : la Question de grand, puis la clé) ---------- */
-let gateRoot: Root | null = null
-function openKey(s: S) {
-  const sheet = $q('#dgSheet')
-  sheet.hidden = false
-  const close = () => { gateRoot?.unmount(); gateRoot = null; sheet.hidden = true; sheet.innerHTML = '' }
-  sheet.innerHTML = '<div class="modal" id="dgGate"></div>'
-  sheet.onclick = e => { if (e.target === sheet) close() }
-  gateRoot = createRoot($q('#dgGate'))
-  gateRoot.render(createElement(MathGate, {
-    onClose: close,
-    onSuccess: () => {
-      gateRoot?.unmount(); gateRoot = null
-      const had = !!getKey()
-      sheet.innerHTML = `<div class="modal dg-keybox">
-        <div class="pt-gate-title">Clé de l'API Claude</div>
-        <p>Colle ici ta clé (platform.claude.com → API Keys). Elle reste sur cette tablette ; seul le dessin est envoyé, pour que le chat le devine.</p>
-        <input id="dgKeyIn" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
-        <div class="dg-keyrow"><button class="bigbtn" id="dgKeyOk">Garder</button>${had ? '<button class="bigbtn ghost" id="dgKeyDel">Retirer la clé</button>' : ''}<button class="bigbtn ghost" id="dgKeyNo">Annuler</button></div>
-        <div class="dg-keyerr" id="dgKeyErr" hidden>Ce n'est pas une clé de l'API (elle commence par sk-ant-)</div>
-      </div>`
-      const inp = $q<HTMLInputElement>('#dgKeyIn')
-      inp.focus()
-      $q('#dgKeyOk').onclick = () => {
-        if (!looksLikeKey(inp.value)) { $q('#dgKeyErr').hidden = false; return }
-        setKey(inp.value)
-        close()
-        $q('#dgKeyItem').hidden = true
-        if (s.phase === 'draw') bubble(null)
-        sfx('confirm', { vol: 0.4 })
-      }
-      const del = ctx.root.querySelector<HTMLElement>('#dgKeyDel')
-      if (del) del.onclick = () => { setKey(''); close(); showError(s, 'nokey') }
-      $q('#dgKeyNo').onclick = close
-    }
-  }))
-}
-
 /* ---------- Chaque image : le chat, la bulle qui le suit ---------- */
 function frame(s: S, dt: number) {
   s.t += dt; s.animT += dt
@@ -461,7 +418,6 @@ export const drawguess: GameDef = {
         <div class="dg-modes">
           <span class="tool-item"><button class="sn-tool dg-mode sel" data-m="defi" aria-label="Défi">${I.defi}</button><i class="tool-cap">Défi</i></span>
           <span class="tool-item"><button class="sn-tool dg-mode" data-m="libre" aria-label="Libre">${I.libre}</button><i class="tool-cap">Libre</i></span>
-          <span class="tool-item" id="dgKeyItem" hidden><button class="sn-tool dg-key" id="dgKey" aria-label="Clé">${I.key}</button><i class="tool-cap">Clé</i></span>
         </div>
         <div class="dg-bubble" id="dgBubble" hidden></div>
         <div class="dg-spark" id="dgSpark">${I.spark}</div>
@@ -469,7 +425,6 @@ export const drawguess: GameDef = {
           <span class="tool-item"><button class="dg-yes" id="dgYes" aria-label="Oui">${I.thumb(true)}</button><i class="tool-cap">Oui</i></span>
           <span class="tool-item"><button class="dg-no" id="dgNo" aria-label="Non">${I.thumb(false)}</button><i class="tool-cap">Non</i></span>
         </div>
-        <div class="dg-sheet" id="dgSheet" hidden></div>
       </div>`
     preloadSfx(['whoosh', 'pluck', 'confirm', 'cloth', 'tick', 'error', 'select'])
     preloadCries(['chat'])
@@ -563,7 +518,6 @@ export const drawguess: GameDef = {
       $q('#dgYes').addEventListener('click', () => { if (s.phase === 'show') win(s) })
       $q('#dgNo').addEventListener('click', () => { if (s.phase === 'show') wrong(s) })
       ctx.root.querySelectorAll<HTMLElement>('.dg-mode').forEach(b => b.addEventListener('click', () => setMode(s, b.dataset.m as Mode)))
-      $q('#dgKey').addEventListener('click', () => openKey(s))
 
       // Accroche pour les bots (scripts/play.mjs) — inerte en production
       if ((window as unknown as { __BOT?: boolean }).__BOT) {
@@ -573,7 +527,7 @@ export const drawguess: GameDef = {
           get error() { return s.error }, get tries() { return s.tries },
           get shown() { return s.guess && s.phase === 'show' ? s.guess.items[s.gi] : null },
           /** Le bot répond à la place de Claude : `(cible) => fiche`. */
-          set fake(f: Fake | null) { fake = f; if (f && s.error === 'nokey') { s.error = null; bubble(null); $q('#dgKeyItem').hidden = true } },
+          set fake(f: Fake | null) { fake = f },
           /** Un rond et deux oreilles, comme au doigt (les vrais événements du canvas). */
           scribble: () => { const pts = [[0.4, 0.4], [0.5, 0.3], [0.6, 0.4], [0.6, 0.6], [0.4, 0.6], [0.4, 0.4]]; pts.forEach(([x, y], i) => paint(s, 99, x * CW, y * CH, i === 0)); s.strokes.delete(99) },
           /** L'affiche (scripts/posters.mjs) : le défi du chat, un chat au feutre, il le reconnaît. */
@@ -617,7 +571,6 @@ export const drawguess: GameDef = {
     return () => {
       dead = true
       window.removeEventListener('resize', onResize)
-      gateRoot?.unmount(); gateRoot = null
       fake = null
       const s = me
       me = null

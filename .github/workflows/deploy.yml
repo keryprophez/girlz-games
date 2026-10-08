@@ -1,72 +1,54 @@
-name: Deploy sur GitHub Pages
+name: Mise en ligne sur Cloudflare
 
+# Une seule branche publie : `main` (https://girlz-games.tld83.workers.dev).
+# Ne jamais élargir `branches`, sinon chaque branche de travail écrase la prod.
+#
+# CI LÉGÈRE (9/10, le dépôt devient privé) : les minutes de GitHub Actions
+# d'un compte sont un seul quota pour tous ses dépôts privés (2 000 par mois
+# en Free). L'ancienne CI ouvrait tous les jeux dans un navigateur 3D à
+# chaque envoi (20 à 40 min, ~2 300 min le mois dernier). Ici : lint, tests,
+# build, déploiement (quelques minutes). Le smoke (tous les jeux) et les bots
+# des jeux touchés tournent dans la session AVANT l'envoi sur `main`
+# (CLAUDE.md, « Méthode de travail »).
 on:
   push:
-    # `main` est la branche par défaut du repo depuis le 23/09 : c'est elle,
-    # et elle seule, qui publie. (Avant, la branche claude/magic-farm-game-
-    # q66bw4 était la seule acceptée, et pousser les deux branches faisait
-    # s'annuler deux runs dans le groupe `pages` — 15/09.)
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - ".claude/**"
   workflow_dispatch:
-    inputs:
-      bots:
-        description: "Bots : vide = ceux des jeux touchés depuis la dernière mise en ligne, « tous » = tous"
-        required: false
-        default: ""
+
+# Jamais deux mises en ligne à la fois ; la plus récente attend au lieu
+# d'annuler l'autre : le dernier envoi finit toujours en ligne.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-  actions: read   # retrouver la dernière mise en ligne réussie (scripts/touched.mjs)
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # tout l'historique : comparer avec la dernière mise en ligne
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      # tsc (l'app et le Worker, strict) puis vite build
       - run: npm run build
-      # Smoke test : chaque jeu doit se monter sans erreur avant de déployer
-      - run: npm run test:smoke
-      # Bots de jeu : seulement ceux des jeux TOUCHÉS depuis la dernière mise
-      # en ligne réussie (2/10 : « on ne valide via bot que les jeux que l'on
-      # touche »). Un module commun ne déclenche aucun bot : le smoke ci-dessus
-      # a déjà ouvert tous les jeux. Lancement manuel avec « tous » : tous.
-      - id: touched
-        run: node scripts/touched.mjs --ci
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BEFORE: ${{ github.event.before }}
-          BOTS_FORCE: ${{ inputs.bots }}
-      # (se saute tout seul si le runner n'a pas de WebGL utilisable)
-      - if: steps.touched.outputs.run == 'true'
-        run: npm run test:play
-        env:
-          BOTS: ${{ steps.touched.outputs.bots }}
-      - uses: actions/configure-pages@v5
+      # Le premier run échoue ici tant que le secret CLOUDFLARE_API_TOKEN du
+      # dépôt n'existe pas : c'est normal, le poser puis relancer.
+      # Les secrets du Worker (ACCESS_CODE, ACCESS_SIGNING_SECRET,
+      # ANTHROPIC_API_KEY) se posent dans le tableau de bord Cloudflare et
+      # survivent aux déploiements : ils ne passent jamais par GitHub.
+      - name: Déployer le Worker
+        uses: cloudflare/wrangler-action@v4
         with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          # account_id est lu dans wrangler.jsonc : le token est le seul secret
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy

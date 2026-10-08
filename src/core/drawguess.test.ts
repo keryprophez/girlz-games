@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { candidates, looksLikeKey, matches, parseGuess, POOLS, SCHEMA, spoken, systemPrompt, userPrompt, WORDS } from './drawguess'
+import { candidates, isGuessError, matches, parseGuess, POOLS, SCHEMA, spoken, systemPrompt, userPrompt, WORDS } from './drawguess'
 
 describe('la fiche du devineur', () => {
   it('garde au plus trois propositions, des mots courts, une photo qui existe', () => {
@@ -59,8 +59,9 @@ describe('ce qu\'il dit, ce qu\'on lui dit', () => {
     expect(systemPrompt()).toContain('cat = chat')
     expect(SCHEMA.properties.propositions.items.properties.photo.enum).toContain('aucune')
   })
-  it('reconnaît la forme d\'une clé', () => {
-    expect(looksLikeKey('sk-ant-api03-' + 'a'.repeat(40))).toBe(true)
-    expect(looksLikeKey('bonjour')).toBe(false)
+  it('ne connaît que ses erreurs', () => {
+    expect(isGuessError('cle')).toBe(true)
+    expect(isGuessError('<script>')).toBe(false)
+    expect(isGuessError(undefined)).toBe(false)
   })
 })

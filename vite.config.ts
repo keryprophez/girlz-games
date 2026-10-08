@@ -2,9 +2,15 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// GitHub Pages sert le site sous /girlz-games/
+// Le Worker Cloudflare sert le site à la racine (9/10 : plus de GitHub
+// Pages, qui le servait sous /girlz-games/)
 export default defineConfig({
-  base: '/girlz-games/',
+  base: '/',
+  build: {
+    // Le code de l'app dans /app/ (derrière le code d'accès), les médias de
+    // public/assets/ dans /assets/ (servis sans le Worker) : voir wrangler.jsonc
+    assetsDir: 'app'
+  },
   plugins: [
     react(),
     VitePWA({
@@ -12,6 +18,11 @@ export default defineConfig({
       // l'accueil — jamais en pleine partie (25/09, voir main.tsx)
       registerType: 'prompt',
       includeAssets: ['icon.svg'],
+      workbox: {
+        // Le portail et l'API vont toujours au réseau : sans ça, le service
+        // worker répondrait la page de l'app à la place de la page du code
+        navigateFallbackDenylist: [/^\/acces/, /^\/api\//]
+      },
       manifest: {
         name: 'La Ferme Magique',
         short_name: 'Ferme Magique',

@@ -1152,12 +1152,29 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   fiche imposée de trois propositions avec leur photo de l'imagier). Défi :
   la photo du sujet épinglée (la fleur choisit parmi 14 sujets, l'éclair
   parmi 29, la flamme parmi tout, avec une seule réponse) ; Libre : elle
-  répond du pouce, sans score. La clé est celle du père, derrière la
-  « Question de grand », gardée sur la tablette ; seul le dessin part
-  (exception à la règle 3, écrite dans CLAUDE.md). Sans clé : un cadenas.
-  Le bot répond à la place de Claude. **Reste : le premier vrai essai sur
-  la tablette** (aucune clé dans la session : l'appel réel n'a jamais
-  tourné), puis régler le prompt sur de vrais dessins des filles.
+  répond du pouce, sans score. Seul le dessin part (exception à la règle 3,
+  écrite dans CLAUDE.md). Sans clé : un cadenas. Le bot répond à la place
+  de Claude. Le 9/10, la clé quitte la tablette : c'est le Worker qui
+  appelle Claude (voir ci-dessous). **Reste : le premier vrai essai** (la
+  clé posée au Worker), puis régler le prompt sur de vrais dessins des
+  filles.
+- ✅ **La Ferme sur Cloudflare** (9/10, le père : « une vraie web app
+  cloudflare, et plus une page github », sur le modèle de ses autres
+  sites, gabarit `tld-docs`) : le Worker `girlz-games` du compte tld83
+  (https://girlz-games.tld83.workers.dev) sert l'app, **toute derrière un
+  code d'accès** (repris de food-coach : cookie signé de 400 jours, 10
+  essais par minute, fermé tant que les secrets manquent) ; les médias de
+  `/assets/` passent sans le Worker (gratuits, hors quota). Une route à
+  nous : `POST /api/devine`, où la clé Anthropic est un secret du Worker —
+  plus rien à régler sur la tablette, le bouton « Clé » est parti. Dépôt
+  privé, CI légère (lint, tests, build, `wrangler deploy` : quelques
+  minutes, au lieu de 20 à 40) ; le smoke et les bots des jeux touchés
+  tournent dans la session avant l'envoi. On repart de zéro sur la
+  tablette (les créations de l'ancienne adresse ne suivent pas, choix du
+  père). **Reste au père** : le token Cloudflare dans GitHub, les trois
+  secrets du Worker, la clé dans un workspace Anthropic à plafond, puis
+  réinstaller l'icône depuis la nouvelle adresse, éteindre GitHub Pages et
+  passer le dépôt en privé.
 - ✅ **Cache-Cache : plus aucun changement de cachette** (6/10, le père :
   « enlève le changement de cachette complètement, c'est ce qui simplifie
   encore + ») : un animal qui courait d'une cachette à l'autre — après une

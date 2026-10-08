@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // La Ferme Magique : https://girlz-games.tld83.workers.dev (9/10, l'app
+  // quitte GitHub Pages). Pas de domaine à nous : l'adresse workers.dev EST la
+  // production, elle reste allumée ; le code d'accès la protège
+  // (worker/access.ts).
+  "name": "girlz-games",
+  // Compte Cloudflare `tld83`. Pas un secret (aucun droit attaché, visible de
+  // tout membre) : écrit ici pour que la CI n'ait besoin que du secret
+  // CLOUDFLARE_API_TOKEN (skill cloudflare-deploy).
+  "account_id": "6a37af72767a90d91ba88a08adcc9f84",
+  // La même date que food-coach et le gabarit tld-docs (workerd de wrangler
+  // 4.147.0). On la change exprès, avec wrangler, jamais seule.
+  "compatibility_date": "2026-09-21",
+  "main": "worker/index.ts",
+  "workers_dev": true,
+  // Des URL de préversion serviraient d'autres versions de l'app à d'autres
+  // adresses : éteintes. Toujours écrit explicitement.
+  "preview_urls": false,
+  // Les variables posées dans le tableau de bord (ACCESS_MAX_AGE_DAYS) sont
+  // effacées à chaque déploiement sans ceci. Les secrets (ACCESS_CODE,
+  // ACCESS_SIGNING_SECRET, ANTHROPIC_API_KEY) survivent dans tous les cas.
+  "keep_vars": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Tout passe par le Worker (le code d'accès) SAUF les médias de
+    // /assets/ (photos, sons, modèles 3D, affiches : rien de personnel) :
+    // servis directement, gratuits et hors du quota de requêtes du compte.
+    // Le code de l'app sort dans /app/ (vite.config.ts), derrière le portail.
+    "run_worker_first": ["/*", "!/assets/*"]
+  },
+  // Les limiteurs (par adresse IP). Les namespace_id sont à nous, uniques dans
+  // le compte Cloudflare : awa-communication 8301, food-coach 8302.
+  "ratelimits": [
+    // Les essais du code : 10 par minute
+    { "name": "ACCES_LIMITER", "namespace_id": "8303", "simple": { "limit": 10, "period": 60 } },
+    // Les dessins montrés à Claude : 12 par minute (trois essais par dessin,
+    // c'est déjà beaucoup pour une enfant ; un robot, lui, est freiné)
+    { "name": "DEVINE_LIMITER", "namespace_id": "8304", "simple": { "limit": 12, "period": 60 } }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

@@ -8,7 +8,7 @@ export default ts.config(
   js.configs.recommended,
   ...ts.configs.recommended,
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'worker/**/*.ts'],
     rules: {
       // Les jeux 3D vivent encore sur `any` (188 occurrences au 2/09) :
       // on le signale sans bloquer, la phase 1 les typera avec core/arcade.
