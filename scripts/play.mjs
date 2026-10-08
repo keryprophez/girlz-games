@@ -1437,6 +1437,56 @@ await scenario('ferme-a-construire', async () => {
 /* 🎂 La Pâtisserie : deux étages en cœur, le glaçage au doigt (flanc et
    nappage), une ligne de crème, une fraise et des vermicelles, trois
    bougies, « Souffle ! » : la chanson, la part, l'écran de fin. */
+/* 🎨 Devine mon dessin (8/10) : jamais de vrai appel à Claude ici (ni clé ni
+   coût) — sans clé, la bulle montre le cadenas et le bouton « Clé » paraît ;
+   puis le bot répond à la place de Claude (`__dg.fake`). En Libre : il
+   propose, « Non », il propose autre chose, « Oui », la fête. En Défi (cinq
+   dessins) : il se trompe puis trouve ; une fois il ne trouve pas, on passe
+   (« Suivant ») ; l'écran de fin compte les dessins devinés. Les traits sont
+   tracés à la souris, sur la vraie feuille. */
+await scenario('devine-mon-dessin', async () => {
+  await openGame('Devine mon dessin', '__dg', 'easy')
+  await page.waitForFunction(() => window.__dg.ready && window.__dg.phase === 'draw', null, { timeout: 60000, polling: 250 })
+  if (await page.evaluate(() => window.__dg.error) !== 'nokey') throw new Error('sans clé, pas de cadenas')
+  if (!(await page.locator('#dgKeyItem').isVisible())) throw new Error('sans clé, pas de bouton « Clé »')
+  const draw = async () => {
+    const b = await page.locator('#dgCv').boundingBox()
+    await page.mouse.move(b.x + b.width * 0.4, b.y + b.height * 0.4)
+    await page.mouse.down()
+    for (let k = 1; k <= 12; k++) { const a = k / 12 * Math.PI * 2; await page.mouse.move(b.x + b.width * (0.5 + Math.cos(a) * 0.12), b.y + b.height * (0.45 + Math.sin(a) * 0.15)) }
+    await page.mouse.up()
+    if (!(await page.evaluate(() => window.__dg.dirty))) throw new Error('le doigt ne dessine pas sur la feuille')
+  }
+  // « Fini » respire quand le dessin est prêt : un bouton animé ne paraît jamais « stable » (piège connu)
+  const fini = async () => { await page.locator('#dgDone button').click({ force: true }); await page.waitForFunction(() => window.__dg.phase !== 'draw', null, { timeout: 10000, polling: 100 }) }
+  // Sans clé, « Fini » ne part nulle part
+  await draw()
+  await page.locator('#dgDone button').click({ force: true })
+  await page.waitForTimeout(500)
+  if (await page.evaluate(() => window.__dg.phase) !== 'draw' || await page.evaluate(() => window.__dg.tries) !== 0) throw new Error('sans clé, le dessin est parti')
+  // Libre : « Non », une autre idée, « Oui »
+  await page.evaluate(() => { window.__dg.fake = () => ({ items: [{ article: 'un', mot: 'soleil', photo: null }, { article: 'un', mot: 'chat', photo: 'cat' }] }) })
+  await page.locator('.dg-mode[data-m="libre"]').click()
+  await draw(); await fini()
+  await page.waitForFunction(() => window.__dg.shown?.mot === 'soleil', null, { timeout: 20000, polling: 200 })
+  await page.locator('#dgNo').click()
+  await page.waitForFunction(() => window.__dg.shown?.mot === 'chat', null, { timeout: 20000, polling: 200 })
+  await page.locator('#dgYes').click()
+  await page.waitForFunction(() => window.__dg.round === 1, null, { timeout: 30000, polling: 250 })
+  // Défi : il se trompe, puis trouve ; au troisième dessin il ne trouve pas, on passe
+  await page.locator('.dg-mode[data-m="defi"]').click()
+  for (let r = 0; r < 5; r++) {
+    await page.waitForFunction(n => window.__dg.round === n && window.__dg.phase === 'draw', r, { timeout: 30000, polling: 250 })
+    const miss = r === 2
+    await page.evaluate(m => { window.__dg.fake = t => ({ items: [{ article: 'un', mot: 'chien', photo: 'dog' }, ...(m ? [] : [{ article: '', mot: 'ça', photo: t }])] }) }, miss)
+    await draw(); await fini()
+    if (miss) {
+      await page.waitForFunction(() => window.__dg.phase === 'draw', null, { timeout: 30000, polling: 250 })
+      await page.locator('#dgNext button').click()
+    }
+  }
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Il a reconnu'), null, { timeout: 60000, polling: 500 })
+})
 await scenario('patisserie', async () => {
   await openGame('La Pâtisserie', '__bk')
   await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })

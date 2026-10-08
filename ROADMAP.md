@@ -1145,6 +1145,19 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   l'on touche. Coût : de loin ni ombre ni détails (~540 appels de dessin,
   590 la nuit), de près une ombre serrée autour du point regardé (~270).
   **Reste : la tablette** (`?fps`, la nuit surtout).
+- ✅ **Devine mon dessin** (8/10, Jouer ; l'étude « mettre l'IA dans l'app »,
+  le père : « DEVINE MON DESSIN ! », maquette, « met un chat ») : elle
+  dessine sur la feuille de l'Atelier, le chat de la ferme devine — c'est
+  Claude qui regarde (`core/drawguess.ts` ; Opus 5.5, effort bas, une
+  fiche imposée de trois propositions avec leur photo de l'imagier). Défi :
+  la photo du sujet épinglée (la fleur choisit parmi 14 sujets, l'éclair
+  parmi 29, la flamme parmi tout, avec une seule réponse) ; Libre : elle
+  répond du pouce, sans score. La clé est celle du père, derrière la
+  « Question de grand », gardée sur la tablette ; seul le dessin part
+  (exception à la règle 3, écrite dans CLAUDE.md). Sans clé : un cadenas.
+  Le bot répond à la place de Claude. **Reste : le premier vrai essai sur
+  la tablette** (aucune clé dans la session : l'appel réel n'a jamais
+  tourné), puis régler le prompt sur de vrais dessins des filles.
 - ✅ **Cache-Cache : plus aucun changement de cachette** (6/10, le père :
   « enlève le changement de cachette complètement, c'est ce qui simplifie
   encore + ») : un animal qui courait d'une cachette à l'autre — après une

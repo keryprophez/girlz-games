@@ -146,6 +146,16 @@ export const BADGE: Record<string, string> = {
     <g fill="${C.woodDark}"><rect x="33" y="29" width="2.6" height="11" rx=".8"/><rect x="40" y="29" width="2.6" height="11" rx=".8"/><rect x="31.5" y="31.5" width="12.5" height="2.2"/><rect x="31.5" y="36" width="12.5" height="2.2"/></g>
     <path d="M38 8l1.6 4.4L44 14l-4.4 1.6L38 20l-1.6-4.4L32 14l4.4-1.6z" fill="${C.sun}"/>
   `),
+  // Devine mon dessin : une feuille, un chat dessiné au feutre, l'étincelle du devineur
+  drawguess: svg(`
+    <rect x="5" y="9" width="34" height="32" rx="3" fill="${C.cream}" transform="rotate(-5 22 25)"/>
+    <path d="M14 19l1-7 5 5M30 19l-1-7-5 5" fill="none" stroke="${C.mango}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" transform="rotate(-5 22 25)"/>
+    <circle cx="22" cy="25" r="9" fill="none" stroke="${C.mango}" stroke-width="2.6" transform="rotate(-5 22 25)"/>
+    <circle cx="18.8" cy="24" r="1.4" fill="${C.ink}"/><circle cx="25" cy="23.4" r="1.4" fill="${C.ink}"/>
+    <path d="M22 27.5l-1.4 1.4m1.4-1.4 1.6 1.2M13 27l5 .2m8-.8 5-.6" stroke="${C.ink}" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M38 4c1 5 2.8 7 8 9-5.2 2-7 4-8 9-1-5-2.8-7-8-9 5.2-2 7-4 8-9z" fill="${C.sun}"/>
+    <path d="M34 44l3-9 10-10 4 4-10 10z" fill="${C.coral}" transform="translate(-8 -2)"/>
+  `),
   // L'Animal qui répète : le cochon qui parle, bouche ouverte, ses ondes
   parrot: svg(`
     <path d="M9.5 17 12 6.5l8.5 6.5z" fill="${C.pink}"/>

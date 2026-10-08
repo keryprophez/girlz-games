@@ -10,7 +10,9 @@ Le projet est en pleine refonte (voir `AUDIT.md` du 2 septembre 2026) :
 ## ✨ Ce qu'il y a dedans
 
 **Jouer** — des jeux d'adresse en vraie 3D (Three.js + cannon-es) : la Tour de
-Glace ; Cache-Cache, une petite ferme en 3D qu'on fait tourner au doigt pour
+Glace ; Devine mon dessin, où l'on dessine au doigt et où le chat de la
+ferme devine ce que c'est (c'est Claude, l'IA d'Anthropic, qui regarde le
+dessin — et rien d'autre ne quitte la tablette) ; Cache-Cache, une petite ferme en 3D qu'on fait tourner au doigt pour
 trouver les animaux cachés (une queue qui dépasse de la meule, des oreilles
 au bord du puits), et la nuit, à la lampe torche — aux niveaux éclair et
 flamme, une ferme quatre fois plus grande (bois, lac, hameau, champs de maïs,

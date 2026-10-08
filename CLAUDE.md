@@ -32,7 +32,12 @@ des lieux du 2/09 (verdict par jeu) · `README.md` = présentation de l'app.
    Corollaire : dans Apprendre, **aucune sanction** (ni vies, ni chrono, ni
    bonus de vitesse) ; dans Créer, **aucune note** sur une création.
 3. **Pas de collecte de données enfants.** Photos et voix restent locales.
-   Aucun analytique tiers.
+   Aucun analytique tiers. **Une seule exception, choisie par le père le
+   8/10 : Devine mon dessin** envoie le DESSIN (réduit, sans prénom, sans
+   voix ni photo) à Claude, l'IA d'Anthropic, qui l'efface sous 30 jours
+   et ne s'en sert pas pour s'entraîner — avec la clé API du père, collée
+   derrière la « Question de grand » et gardée sur la tablette (jamais dans
+   le dépôt : le site est public). Rien d'autre ne part, nulle part.
 4. **Français uniquement** : textes, commentaires de code, messages de commit.
    Et on se tutoie.
 
@@ -181,6 +186,14 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            génoise, crème, confiture), la coupe d'une part
                            entamée (`biteFace`), le couteau, la fourchette et
                            la bouchée (`knife`, `fork`, `morsel`)
+             drawguess.ts ← LE DEVINEUR de Devine mon dessin (8/10) : la
+                           clé du père (`getKey`, sur la tablette), l'appel à
+                           Claude (`guessDrawing` : Opus 5.5, effort bas, le
+                           dessin en PNG, une FICHE imposée — trois
+                           propositions avec la photo de l'imagier qui leur
+                           correspond), `parseGuess` qui revérifie tout,
+                           `matches` (le défi trouvé ?), les sujets par
+                           niveau (`POOLS`, `candidates`) — testé, sauf l'appel
              farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
                            rond qu'on fait tourner, ses cachettes construites
                            (grange, meule, puits, charrette, tracteur, niche,
@@ -416,7 +429,11 @@ construire, 5/10 : le plateau de Cache-Cache vide, les pièces glissées du
 tiroir — par `pointerId`, écouté sur `window` —, chemins et clôtures au
 doigt, les animaux qui vont à leur place ; la ferme se garde dans
 `ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite) ·
-`bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le 6/10, on le
+`drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
+le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
+(la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé,
+un cadenas ; le bot répond à la place de Claude, `__dg.fake` : jamais de
+vrai appel en intégration) · `bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le 6/10, on le
 MANGE en six parts : ce qui reste est coupé par deux plans —
 `localClippingEnabled`, leur union sous un demi-tour enlevé, leur intersection
 au-delà ; le présentoir et les faces de coupe exclus —, la part est une copie
@@ -476,7 +493,7 @@ ligne quand on en paie un nouveau.
    → aucun bot. Sans jeu touché, la mise en ligne prend une douzaine de
    minutes. Tous les bots : lancement manuel du workflow avec « tous ».
    `node scripts/touched.mjs` dit lesquels joueront pour ta branche.
-   `npm run test:play` a **un bot par jeu** (6/10 : 38 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (8/10 : 39 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

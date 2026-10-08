@@ -62,6 +62,12 @@ const STAGE = {
     act: async p => { await p.evaluate(() => { localStorage.removeItem('ferme:construire'); window.__fb.demo() }) },
     after: 2500, zoom: 1.08, cy: 0.46
   },
+  // Devine mon dessin : un chat au feutre sur la feuille, le chat de la ferme le reconnaît (sa bulle, la photo)
+  drawguess: {
+    ready: () => window.__dg && window.__dg.ready, wait: 1500,
+    act: async p => { await p.evaluate(() => window.__dg.demo()) },
+    after: 2500, zoom: 1.04, cx: 0.52
+  },
   // L'Animal qui répète : le cochon sur sa botte, en pleine phrase
   parrot: {
     ready: () => window.__ar && window.__ar.phase !== 'load', wait: 1500,

@@ -14,6 +14,7 @@
     "sim:flipper": "PB_SIM=1 vitest run src/core/pinball.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@types/three": "^0.185.1",
     "cannon-es": "^0.20.0",
     "react": "^18.3.1",
