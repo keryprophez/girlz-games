@@ -1223,6 +1223,14 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .pl-potbtn{display:block;border:none;padding:0;border-radius:50%;background:transparent;cursor:pointer;
   pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .pl-pot .tool-cap{pointer-events:none;font-size:13px;}
+/* La flamme : le fer qui valide (11/10) — en bas, sous les pots */
+.pl-iron{position:absolute;right:max(18px,2vw);bottom:max(16px,2.4vh);z-index:4;}
+.pl-iron[hidden]{display:none !important;}
+.pl-iron button{width:min(96px,12vh);height:min(96px,12vh);border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;
+  background:linear-gradient(135deg,#FF8E7E,#E8584A);box-shadow:0 8px 20px rgba(160,50,40,.3),inset 0 -4px 0 rgba(0,0,0,.14);
+  transition:transform .2s var(--spring);}
+.pl-iron button:active{transform:scale(.9);}
+.pl-iron.pl-shake button{animation:dgShake .4s;}
 
 /* ============================================================
    LE MARCHÉ (euros)

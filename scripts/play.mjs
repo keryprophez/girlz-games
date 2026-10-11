@@ -946,6 +946,47 @@ await scenario('perles-miroir-trois-reflets', async () => {
   await finDe('Quel joli reflet', 120000)
 })
 
+/* 🔥 Perles Miroir à la flamme (11/10, Joyce) : on ne sait qu'en validant.
+   Une perle fausse ne clignote pas à la pose, la manche ne finit pas seule ;
+   « Repasser » montre la fausse et la compte, puis le fer passe. */
+await scenario('perles-miroir-flamme-au-fer', async () => {
+  await openGame('Perles Miroir', '__mi', 'exp')
+  const touch = async (c, r) => {
+    const p = await page.evaluate(({ c, r }) => window.__mi.at(c, r), { c, r })
+    await page.mouse.click(p.x, p.y)
+  }
+  const etat = () => page.evaluate(() => ({ phase: window.__mi.phase, faux: window.__mi.wrong.length, clignote: window.__mi.flagged.length, erreurs: window.__mi.mistakes }))
+  const fer = () => page.locator('.pl-iron button').click({ force: true })
+  for (let r = 0; r < 3; r++) {
+    await page.waitForFunction(k => window.__mi.round === k && window.__mi.phase === 'play', r, { timeout: 240000, polling: 1000 })
+    if (r > 0) { await page.evaluate(() => window.__mi.solve()); continue }
+    if (!(await page.evaluate(() => window.__mi.hard))) throw new Error('la flamme ne joue pas en mode « au fer »')
+    const blank = await page.evaluate(() => window.__mi.blank)
+    await touch(blank.c, blank.r)
+    const need = await page.evaluate(() => window.__mi.need)
+    const byColor = {}
+    for (const n of need) (byColor[n.color] ||= []).push(n)
+    for (const [color, cells] of Object.entries(byColor)) {
+      await page.locator(`.pl-potbtn[data-c="${color}"]`).click({ force: true })
+      for (const { c, r: row } of cells) await touch(c, row)
+    }
+    await page.waitForTimeout(1500)
+    let e = await etat()
+    if (e.phase !== 'play' || e.faux !== 1 || e.clignote || e.erreurs) throw new Error(`avant le fer, rien ne doit trahir la perle fausse : ${JSON.stringify(e)}`)
+    await fer()
+    await page.waitForFunction(() => window.__mi.flagged.length === 1, null, { timeout: 15000, polling: 250 })
+      .catch(async () => { throw new Error(`le fer ne montre pas la perle fausse : ${JSON.stringify(await etat())}`) })
+    e = await etat()
+    if (e.phase !== 'play' || e.erreurs !== 1) throw new Error(`après un fer faux : ${JSON.stringify(e)}`)
+    await touch(blank.c, blank.r)
+    await page.waitForFunction(() => window.__mi.wrong.length === 0 && window.__mi.flagged.length === 0, null, { timeout: 15000, polling: 250 })
+    await fer()
+    await page.waitForFunction(() => window.__mi.phase !== 'play', null, { timeout: 15000, polling: 250 })
+      .catch(async () => { throw new Error(`le reflet juste n'est pas repassé : ${JSON.stringify(await etat())}`) })
+  }
+  await finDe('Quel joli reflet', 240000)
+})
+
 /* 💶 Le Marché : quatre paiements exacts, pièces choisies de la plus grosse
    à la plus petite (le bot rend la monnaie comme un marchand). */
 await scenario('marche-quatre-paiements', async () => {

@@ -501,7 +501,7 @@ ligne quand on en paie un nouveau.
    d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
    d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
    modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (8/10 : 39 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle et les Bijoux deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (11/10 : 40 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux et les Perles Miroir deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

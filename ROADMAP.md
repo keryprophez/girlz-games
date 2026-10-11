@@ -1158,6 +1158,15 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   appelle Claude (voir ci-dessous). **Reste : le premier vrai essai** (la
   clé posée au Worker), puis régler le prompt sur de vrais dessins des
   filles.
+- ✅ **Perles Miroir à la flamme : on ne sait qu'en validant** (11/10,
+  Joyce : « un peu trop facile que ça clignote en blanc quand c'est
+  faux ») : à la flamme seulement, une perle fausse se pose sans clignoter
+  ni sonner autrement, et la manche ne finit plus toute seule. Le bouton du
+  fer, « Repasser » (en bas à droite), juge : juste, le fer passe ; faux,
+  les perles fausses clignotent jusqu'à ce qu'on les retire, les perles du
+  modèle qui n'ont pas encore leur reflet sautent, le bouton tremble, et
+  chaque perle fausse compte pour les étoiles. La fleur et l'éclair gardent
+  le clignotement à la pose. Un bot de plus : `perles-miroir-flamme-au-fer`.
 - ✅ **La Ferme sur Cloudflare** (9/10, le père : « une vraie web app
   cloudflare, et plus une page github », sur le modèle de ses autres
   sites, gabarit `tld-docs`) : le Worker `girlz-games` du compte tld83

@@ -29,7 +29,15 @@ import { PALETTE, makeRounds, isGiven, isComplete, missing, wantAt, sourceOf, ty
    à gauche ou à droite, un pot de trop. Flamme : plaque de 12, quatre
    couleurs, puis l'axe horizontal, puis les deux axes (un quart posé, trois
    à compléter). Les dessins sont dans `core/perles.ts`, la 3D dans
-   `core/hama3d.ts`. */
+   `core/hama3d.ts`.
+
+   À la flamme, on ne sait qu'en VALIDANT (11/10, Joyce : « un peu trop
+   facile que ça clignote en blanc quand c'est faux ») : une perle fausse se
+   pose sans clignoter ni sonner autrement, la manche ne finit pas toute
+   seule ; c'est le bouton du fer (« Repasser ») qui juge. Juste : le fer
+   passe. Faux : les perles fausses clignotent (jusqu'à ce qu'on les
+   retire), les perles du modèle qui n'ont pas encore leur reflet sautent,
+   et le bouton tremble ; chaque perle fausse compte pour les étoiles. */
 
 type Phase = 'load' | 'intro' | 'play' | 'win' | 'iron' | 'fly' | 'over'
 
@@ -61,6 +69,10 @@ interface State {
   pitch: number
   /** L'envol : départ de la pièce, dernier confetti. */
   fly: { t: number; burst: number; finished: boolean } | null
+  /** La flamme : pas d'alerte à la pose, on valide avec le fer. */
+  hard: boolean
+  /** Les perles montrées fausses par la dernière validation (elles clignotent). */
+  flagged: Set<number>
 }
 
 let me_: State | null = null
@@ -88,6 +100,14 @@ function potSpots(n: number): [number, number][] {
 }
 
 const $ = (me: State, sel: string) => me.root.querySelector<HTMLElement>(sel)!
+
+/** Le fer à repasser du bouton « Repasser » (la flamme). */
+const IRON = `<svg viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">
+  <path d="M15 19c0-5 3-8 8-8h12c2 0 3 1 3 3" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M4 34c1-9 8-15 19-15h17c2 0 3 1 3 3v12z" fill="#fff"/>
+  <rect x="3" y="33" width="41" height="5.5" rx="2.5" fill="#CFE3F2"/>
+  <circle cx="34" cy="26" r="2.6" fill="#4FB8E7"/>
+</svg>`
 const idx = (me: State, c: number, r: number) => r * me.rd.n + c
 const hex = (id: ColorId) => PALETTE[id].hex
 
@@ -183,13 +203,14 @@ function startRound(me: State) {
       const got = me.state[i]
       const bad = !isGiven(me.rd, c, r) && got !== wantAt(me.rd, c, r)
       sfx('tick', { vol: me.phase === 'intro' ? 0.16 : 0.42, rate: 1.25 + Math.random() * 0.35 })
-      if (bad && me.phase === 'play') sfx('drop', { vol: 0.28, rate: 0.8 })
+      if (bad && me.phase === 'play' && !me.hard) sfx('drop', { vol: 0.28, rate: 0.8 })
     }
     me.board = b
     me.pitch = k
   }
   const board = me.board
   board.clear()
+  me.flagged.clear()
   board.piece.position.set(0, 0, 0)
   board.piece.rotation.set(0, 0, 0)
   // L'axe (ou les deux) : une ficelle lumineuse
@@ -248,6 +269,7 @@ function touchCell(me: State, c: number, r: number, erase: boolean) {
   if (erase) {
     if (!me.state[i]) return
     me.state[i] = null
+    me.flagged.delete(i)
     board.take(c, r)
     sfx('pluck', { vol: 0.35, rate: 1.5 })
     return
@@ -255,7 +277,8 @@ function touchCell(me: State, c: number, r: number, erase: boolean) {
   if (me.state[i]) return
   me.state[i] = me.color
   board.put(c, r, hex(me.color), { drop: 2.4 })
-  if (me.color !== wantAt(me.rd, c, r)) {
+  // À la flamme, rien ne trahit une perle fausse avant la validation
+  if (me.color !== wantAt(me.rd, c, r) && !me.hard) {
     // Pas de sanction : elle se pose, elle clignote, on la retire d'un toucher
     me.mistakes++
     board.wrong(c, r, true)
@@ -263,9 +286,38 @@ function touchCell(me: State, c: number, r: number, erase: boolean) {
 }
 
 function checkDone(me: State) {
-  if (me.phase !== 'play' || me.strokes.size) return
+  // À la flamme, la manche ne finit pas toute seule : c'est le fer qui juge
+  if (me.phase !== 'play' || me.strokes.size || me.hard) return
   if (!isComplete(me.rd, me.state)) return
   win(me)
+}
+
+/** La flamme : le bouton du fer. Juste, le fer passe ; faux, on montre où. */
+function validate(me: State) {
+  if (me.phase !== 'play' || me.strokes.size) return
+  const { need, wrong } = missing(me.rd, me.state)
+  if (!need.length && !wrong.length) { win(me); return }
+  const board = me.board!, n = me.rd.n
+  // Chaque perle fausse compte (un oubli seul compte pour un)
+  me.mistakes += Math.max(1, wrong.length)
+  for (const w of wrong) {
+    board.wrong(w.c, w.r, true)
+    me.flagged.add(idx(me, w.c, w.r))
+  }
+  // Les perles du modèle qui attendent encore leur reflet sautent
+  const sources = new Set<number>()
+  for (const m of need) {
+    if (me.state[idx(me, m.c, m.r)]) continue
+    const [sc, sr] = sourceOf(me.rd, m.c, m.r)
+    sources.add(idx(me, sc, sr))
+  }
+  let k = 0
+  for (const i of sources) board.hop(i % n, Math.floor(i / n), 0.12 + (k++) * 0.035, 0.5)
+  sfx('drop', { vol: 0.4, rate: 0.8 })
+  const btn = $(me, '.pl-iron')
+  btn.classList.remove('pl-shake')
+  void btn.offsetWidth
+  btn.classList.add('pl-shake')
 }
 
 /** Le reflet est juste : la vague des paires, puis le fer. */
@@ -332,6 +384,9 @@ function step(me: State, dt: number) {
   me.fx?.update(dt)
 
   if (me.phase === 'intro' && me.pt > 1.1) me.phase = 'play'
+  // Le fer (la flamme) : là seulement quand on peut poser
+  const iron = me.root.querySelector<HTMLElement>('.pl-iron')
+  if (iron && iron.hidden === (me.hard && me.phase === 'play')) iron.hidden = !iron.hidden
   if (me.phase === 'win' && me.pt > 1.25) startIron(me)
   if (me.phase === 'iron' && me.iron && me.iron.update(dt)) startFly(me)
   if (me.phase === 'fly' && me.fly) {
@@ -399,6 +454,16 @@ export const mirror: GameDef = {
       if (!isGiven(me.rd, c, r) && !me.state[idx(me, c, r)]) free.push([c, r])
     }
     const st = me.stage, board = me.board
+    // À la flamme, une fois autant de perles posées qu'il en faut : le fer
+    if (me.hard) {
+      let placed = 0, wanted = 0
+      for (let r = 0; r < me.rd.n; r++) for (let c = 0; c < me.rd.n; c++) {
+        if (isGiven(me.rd, c, r)) continue
+        if (me.state[idx(me, c, r)]) placed++
+        if (wantAt(me.rd, c, r)) wanted++
+      }
+      if (placed >= wanted) return { tap: me.root.querySelector('.pl-iron button') }
+    }
     return free.length ? { choose: some(free, 3).map(([c, r]) => toScreen(st, board.world(c, r, 0.5))) } : null
   },
   mount(c) {
@@ -408,13 +473,15 @@ export const mirror: GameDef = {
         <div class="pl-scene"></div>
         <div class="pl-pots"></div>
         <div class="mem-dots pl-dots"></div>
+        <span class="tool-item pl-iron" hidden><button aria-label="Repasser">${IRON}</button><i class="tool-cap">Repasser</i></span>
       </div>`
     preloadSfx(['tick', 'drop', 'confirm', 'click', 'pluck', 'metal', 'whoosh'])
     const rounds = makeRounds(c.tier)
     const me: State = {
       root: c.root, running: true, rounds, round: 0, rd: rounds[0], mistakes: 0, phase: 'load', pt: 0,
       state: [], color: rounds[0].pots[0], stage: null, T: null, fx: null, board: null, threads: [], pots: [],
-      iron: null, strokes: new Map(), ray: null, pitch: 1, fly: null
+      iron: null, strokes: new Map(), ray: null, pitch: 1, fly: null,
+      hard: c.tier === 'exp', flagged: new Set()
     }
     me_ = me
     paintDots(me)
@@ -452,6 +519,7 @@ export const mirror: GameDef = {
       checkDone(me)
     }
     holder.addEventListener('pointerdown', onDown)
+    c.root.querySelector('.pl-iron button')!.addEventListener('click', () => validate(me))
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
@@ -495,6 +563,9 @@ export const mirror: GameDef = {
           get mistakes() { return me.mistakes },
           get need() { return missing(me.rd, me.state).need },
           get wrong() { return missing(me.rd, me.state).wrong },
+          /** Les perles qui clignotent (montrées fausses). */
+          get flagged() { return [...me.flagged].map(i => ({ c: i % me.rd.n, r: Math.floor(i / me.rd.n) })) },
+          get hard() { return me.hard },
           /** Une case vide du côté à compléter qui doit le rester (pour tester
               l'erreur) : la plus proche du milieu, loin de la barre du haut. */
           get blank() {
@@ -513,7 +584,8 @@ export const mirror: GameDef = {
             if (me.phase !== 'play') return
             for (const w of missing(me.rd, me.state).wrong) touchCell(me, w.c, w.r, true)
             for (const n of missing(me.rd, me.state).need) { me.color = n.color; touchCell(me, n.c, n.r, false) }
-            checkDone(me)
+            if (me.hard) validate(me)
+            else checkDone(me)
           }
         }
       }
