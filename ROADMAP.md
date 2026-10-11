@@ -1198,10 +1198,9 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   vraiment du travail ») : Apprendre garde neuf jeux, ceux où l'on
   travaille ; Jouer passe à onze (six colonnes, deux rangées).
 - ✅ **La Pâtisserie : le repas réparé** (11/10, Jade : « on n'a pas pu
-  manger le gâteau, il y a eu un truc bizarre » ; plan validé). Aucun
-  rapport de bug sur la tablette pour savoir quoi : trois causes trouvées,
-  toutes corrigées. 1) Couper le gâteau faisait préparer 35 rendus
-  (shaders) PENDANT le repas, par paquets de treize : la tablette pouvait
+  manger le gâteau, il y a eu un truc bizarre » ; plan validé). Le gâteau
+  rejoué dans le navigateur : trois causes trouvées, toutes corrigées.
+  1) Couper le gâteau faisait préparer 35 rendus (shaders) PENDANT le repas, par paquets de treize : la tablette pouvait
   se figer juste quand on voulait manger — ils se préparent pendant la
   chanson, une matière par image (0 pendant le repas). 2) Rien ne disait
   de toucher la part : la main venait après 15 à 30 s — elle vient tout de
@@ -1225,8 +1224,6 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   l'a laissée (la dernière jouée bordée) ; en jeu, son prénom en haut à
   gauche ramène aux cartes. Au passage, l'outil choisi reste allumé après
   la nuit (la gomme restait affichée, éteinte).
-- Mis de côté (11/10, le père) : **le carnet de bord des bugs** (les
-  erreurs, écrans noirs et gels notés sur la tablette, lus par `?journal`).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses
