@@ -100,6 +100,9 @@ const STAGE = {
     },
     after: 300, zoom: 1.3, cy: 0.46
   },
+  // Le Chien de berger : le troupeau qui entre dans l'enclos, le chien derrière
+  // (la ferme de l'éclair : la mare et les bottes)
+  sheepdog: { tier: 'med', ready: () => window.__sd && window.__sd.ready, wait: 1500, act: async p => { await p.evaluate(() => window.__sd.demo()) }, after: 2500, zoom: 1.12, cy: 0.42 },
   // Le Chœur sur scène : un choriste chante sous son projecteur
   simon: { tier: 'med', wait: 3000, act: async p => { await p.evaluate(() => window.__simon?.press?.(0)); await p.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 60000 }).catch(() => {}); await p.evaluate(() => window.__simon.press(window.__simon.seq[0])) }, after: 300 },
   // Une partie commencée contre la poule : quelques pions de chaque couleur
@@ -281,7 +284,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem,.sd-hud{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

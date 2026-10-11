@@ -28,9 +28,10 @@ import { parrot } from './parrot'
 import { farmbuild } from './farmbuild'
 import { bakery } from './bakery'
 import { drawguess } from './drawguess'
+import { sheepdog } from './sheepdog'
 
 export const GAMES: GameDef[] = [
-  icetower, ninja, pinball, hideseek, drawguess, maze, taquin, memory, simonGame,
+  icetower, ninja, pinball, hideseek, sheepdog, drawguess, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, bijoux, piano, fireworks, coloring, pizza, parrot, farmbuild, bakery
@@ -54,7 +55,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
-      icetower, ninja, pinball, hideseek, drawguess,
+      icetower, ninja, pinball, hideseek, sheepdog, drawguess,
       maze, taquin, memory, simonGame, connect4, mirror
     ]
   },

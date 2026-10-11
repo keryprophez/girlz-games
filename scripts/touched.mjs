@@ -47,6 +47,7 @@ const OWN = {
   'bijoux': ['src/games/bijoux.ts', 'src/core/bijoux3d.ts', 'src/core/hama3d.ts', 'src/core/perles.ts', 'src/core/royal.ts'],
   'habille-toi': ['src/games/dressup.ts', 'src/games/doll.ts', 'src/core/doll3d.ts', 'src/core/character.ts'],
   'cache-cache': ['src/games/hideseek.ts', 'src/core/farm3d.ts'],
+  'chien-de-berger': ['src/games/sheepdog.ts', 'src/core/herd.ts', 'src/core/farm3d.ts'],
   'animal-qui-repete': ['src/games/parrot.ts', 'src/core/voicefx.ts', 'src/core/mic.ts'],
   'ferme-a-construire': ['src/games/farmbuild.ts', 'src/core/farm3d.ts'],
   'patisserie': ['src/games/bakery.ts', 'src/core/cake3d.ts', 'src/core/souffle.ts'],

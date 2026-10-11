@@ -1650,6 +1650,40 @@ await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est t
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 
+/* 🐕 Le Chien de berger (11/10) : le doigt posé sur le chien glisse là où le
+   pilote de `core/herd.ts` l'enverrait (derrière le troupeau, vers
+   l'ouverture) ; la chèvre têtue (l'éclair) : une tape, il aboie. Trois
+   troupeaux, jusqu'à « Tout le troupeau est rentré ». */
+const berger = async (tier, speed) => {
+  await openGame('Le Chien de berger', '__sd', tier)
+  await page.waitForFunction(() => window.__sd.ready, null, { timeout: 90000, polling: 500 })
+  await page.evaluate(k => window.__sd.speed(k), speed)
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__sd.phase, herd: window.__sd.herd, out: window.__sd.out, jour: +window.__sd.dayLeft.toFixed(2) }))
+  const dog = await page.evaluate(() => window.__sd.dog)
+  await page.mouse.move(dog.x, dog.y)
+  await page.mouse.down()
+  const t0 = Date.now()
+  for (;;) {
+    const st = await page.evaluate(() => ({ ph: window.__sd.phase, t: window.__sd.target, goat: window.__sd.goat, dog: window.__sd.dog }))
+    if (st.ph === 'win') break
+    if (st.ph === 'night') throw new Error(`la nuit est tombée avant (${await etat()})`)
+    if (Date.now() - t0 > 900000) throw new Error(`troupeau pas rentré en 15 min (${await etat()})`)
+    if (st.ph === 'play') {
+      if (st.goat) {
+        await page.mouse.up()
+        await page.mouse.click(st.dog.x, st.dog.y)
+        await page.mouse.move(st.dog.x, st.dog.y)
+        await page.mouse.down()
+      } else await page.mouse.move(st.t.x, st.t.y, { steps: 2 })
+    }
+    await page.waitForTimeout(100)
+  }
+  await page.mouse.up()
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Tout le troupeau est rentré'), null, { timeout: 60000, polling: 500 })
+    .catch(async () => { throw new Error(`pas d'écran de fin (${await etat()})`) })
+}
+await scenario('chien-de-berger', () => berger('med', 4))
+
 await browser.close()
 if (failures.length) {
   console.error(`\n${failures.length} scénario(s) en échec : ${failures.join(', ')}`)

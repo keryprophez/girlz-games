@@ -2127,3 +2127,22 @@ body.playing .po-card{max-width:880px;}
 .dg-pips i.got{background:#FFF6D6;box-shadow:inset 0 0 0 3px #FFC94D;}
 .dg-pips i.miss{background:#EFEAE4;}
 .dg-pips i .ico{width:20px;height:20px;}
+
+/* Le Chien de berger (11/10) : le troupeau en haut (en couleur, les bêtes
+   rentrées), le soleil qui glisse sur la barre du jour, le fondu clair entre
+   deux troupeaux. Le HUD d'arcade est caché : le troupeau EST le score. */
+.sd-wrap{background:#BFE3F5;touch-action:none;overflow:hidden;}
+.sd-wrap canvas{display:block;width:100%;height:100%;}
+.sd-wrap>.hud{display:none;}
+.sd-hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;}
+.sd-herd{display:flex;gap:3px;padding:5px 12px;background:rgba(255,249,240,.88);backdrop-filter:blur(6px);border-radius:99px;box-shadow:0 4px 14px rgba(69,54,42,.18);}
+.sd-herd img,.sd-herd i{width:clamp(28px,3.8vmin,42px);height:clamp(28px,3.8vmin,42px);display:block;filter:grayscale(1) opacity(.35);transition:filter .3s;}
+.sd-herd i{border-radius:50%;background:#fff;}
+.sd-herd .in{filter:none;animation:sdIn .45s var(--spring);}
+@keyframes sdIn{40%{transform:scale(1.35) translateY(-4px);}}
+.sd-day{position:relative;width:min(44vw,420px);height:12px;border-radius:99px;box-shadow:0 2px 8px rgba(0,0,0,.15);
+  background:linear-gradient(90deg,#8FD3F5,#FFD36B 55%,#F2946A 80%,#3A3A6A);}
+.sd-sun{position:absolute;top:50%;left:0;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;
+  background:radial-gradient(circle,#FFF6C8 0 35%,#FFC94D 36% 62%,rgba(255,201,77,0) 64%);}
+.sd-fade{position:absolute;inset:0;z-index:4;background:#FFF9F0;opacity:0;pointer-events:none;transition:opacity .5s ease;}
+.sd-fade.on{opacity:1;}

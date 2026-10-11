@@ -1224,6 +1224,20 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   l'a laissée (la dernière jouée bordée) ; en jeu, son prénom en haut à
   gauche ramène aux cartes. Au passage, l'outil choisi reste allumé après
   la nuit (la gomme restait affichée, éteinte).
+- ✅ **Le Chien de berger** (11/10, Jouer, 3D ; trois jeux proposés, « Go
+  chien de berger », maquettes et plan validés). La petite ferme ronde de
+  Cache-Cache vue d'en haut, l'enclos au fond (le doigt reste sous le
+  troupeau). Le doigt posé sur l'herbe appelle le chien, les moutons le
+  fuient en restant groupés ; une tape, il aboie. Trois troupeaux dans la
+  journée : le soleil glisse sur une barre, la lumière va du matin au
+  soir doré ; à la nuit, c'est fini. La fleur : 4, 5 puis 6 moutons, une
+  large ouverture ; l'éclair : 5, 7, 9, la mare et des bottes au milieu,
+  la chèvre têtue ; la flamme : 7, 9, 12, une ouverture étroite, le
+  renard. Plus elle a été rapide, plus le troupeau suivant est dispersé.
+  À deux : deux chiens, un par doigt. Le troupeau (`core/herd.ts`) est
+  testé : le pilote rentre chaque troupeau des trois niveaux sur 24
+  graines. Bot, affiche, vignette, main. **Reste : y jouer sur la tablette
+  (`?fps`) et régler la longueur du jour si elles calent.**
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

@@ -223,6 +223,14 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            construction posée deux fois suffixe ses places,
                            `#2`) et `detail(on)` (fleurs, cailloux, fougères
                            éteints vus de loin)
+             herd.ts     ← LE TROUPEAU du Chien de berger (11/10) : les
+                           moutons fuient le chien en restant groupés (le
+                           modèle de Strömbom, 2014), broutent, longent la
+                           clôture de l'enclos jusqu'à l'ouverture ; la
+                           chèvre têtue (elle ne fuit qu'à l'aboiement), le
+                           renard qui éparpille ; les trois fermes (`LEVELS`,
+                           `herdOpts`) et `pilot` (le chemin du chien : le
+                           bot et la main) — logique pure, testée
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -452,7 +460,10 @@ et « Joyce » à l'ouverture, avec la photo de sa ferme (`snap`, prise en la
 quittant), gardée dans `ferme:construire:<qui>` ; « Annuler » et
 « Refaire » à côté de la gomme, une étape par geste (chaque chose a son
 numéro `u`, gardé avec elle), quarante au plus) ·
-`drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
+`sheepdog` (le Chien de berger, 11/10 : le plateau vide de Cache-Cache,
+sans sa cour, vu d'en haut ; le doigt posé appelle le chien, une tape le
+fait aboyer ; trois troupeaux dans la journée, le soleil sur une barre,
+la lumière qui suit, un fondu clair entre deux ; `core/herd.ts`) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
 le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
 (la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
 au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
@@ -522,7 +533,7 @@ ligne quand on en paie un nouveau.
    d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
    d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
    modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (11/10 : 41 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir et la Pâtisserie deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (11/10 : 42 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir et la Pâtisserie deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en
