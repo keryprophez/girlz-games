@@ -6,6 +6,7 @@ import { critterKit, type Critter, type CritterKind, type CritterKit } from '../
 import { critterPortraits, piecePortraits, portraitImg } from '../core/portraits'
 import { sfx, preloadSfx, cry, preloadCries, CRY, type AnimalVoice } from '../core/sfx'
 import { visible } from '../core/hand'
+import { BADGE } from '../core/badges'
 
 /* 🏡 LA FERME À CONSTRUIRE (5/10, Créer) — le plateau de Cache-Cache, vide :
    on y glisse, depuis le tiroir du bas, des bâtiments, de la nature, des
@@ -15,8 +16,10 @@ import { visible } from '../core/hand'
    efface. Les animaux vivent : ils se promènent et filent vers leur place
    (le canard à la mare, le cochon dans la boue, la poule au poulailler…),
    et répondent de leur vraie voix quand on les touche. Jour ou nuit.
-   La ferme se GARDE (une pour la famille, `ferme:construire`) : on la
-   retrouve en revenant. Pas de score, pas de fin, pas de niveau. */
+   Chaque fille a SA ferme (11/10 : une carte « Jade », une carte « Joyce »
+   à l'ouverture, avec la photo de sa ferme telle qu'elle l'a laissée) ;
+   elle se garde (`ferme:construire:<qui>`) et se continue. Annuler et
+   refaire, geste par geste. Pas de score, pas de fin, pas de niveau. */
 
 type Tab = 'batiments' | 'nature' | 'objets' | 'animaux'
 type Tool = 'none' | 'path' | 'fence' | 'erase'
@@ -43,13 +46,27 @@ const HOME: Partial<Record<CritterKind, PieceId[]>> = {
 const INSIDE: Partial<Record<CritterKind, PieceId>> = { duck: 'pond', pig: 'mud' }
 const MAX_PIECES = 36, MAX_ANIMALS = 20, MAX_STROKES = 24
 const R = PLATEAU_R, EDGE = R - 0.9
-const KEY = 'ferme:construire'
 
-interface SavedItem { a?: CritterKind; p?: PieceId; x: number; z: number; ry: number }
+/** Une ferme par fille (11/10) ; sa couleur borde sa carte. */
+type Who = 'jade' | 'joyce'
+const WHO: { id: Who; name: string; color: string }[] = [
+  { id: 'jade', name: 'Jade', color: '#5EC97B' },
+  { id: 'joyce', name: 'Joyce', color: '#B197FC' }
+]
+const KEY = (w: Who) => `ferme:construire:${w}`
+const PHOTO = (w: Who) => `ferme:construire:photo:${w}`
+const WHO_KEY = 'ferme:construire:qui'
+/** L'ancienne ferme de la famille (5/10) : on repart de zéro (11/10, le père). */
+const OLD_KEY = 'ferme:construire'
+const PIECES = new Set(TABS.batiments.items.concat(TABS.nature.items, TABS.objets.items).map(i => i[0]))
+
+interface SavedItem { u?: number; a?: CritterKind; p?: PieceId; x: number; z: number; ry: number }
 interface Saved { v: 1; night: boolean; items: SavedItem[]; paths: number[][]; fences: number[][] }
 
 interface Thing {
   kind: 'piece' | 'animal'
+  /** Son numéro (annuler, refaire : on la retrouve même après une nuit). */
+  u: number
   id: string
   g: import('three').Object3D
   foot: number
@@ -81,7 +98,7 @@ interface State {
   tool: Tool
   tab: Tab
   /** Ce que le doigt tient (une pièce du tiroir, une chose de la ferme). */
-  held: { thing: Thing; pid: number; fresh: boolean; over: boolean; dx: number; dz: number } | null
+  held: { thing: Thing; pid: number; fresh: boolean; over: boolean; dx: number; dz: number; from: { x: number; z: number } } | null
   /** Le trait en cours (chemin, clôture). */
   stroke: { pid: number; pts: number[]; mesh: import('three').Mesh | null; kind: 'path' | 'fence' } | null
   fx: Particles
@@ -94,36 +111,135 @@ interface State {
 let me: State | null = null
 let ctx: GameContext
 let saved: Saved = { v: 1, night: false, items: [], paths: [], fences: [] }
+let who: Who = 'jade'
+let nextU = 1
 
-/* ---------- La sauvegarde (une ferme pour la famille) ---------- */
+/* ---------- La sauvegarde (une ferme par fille) ---------- */
 
-function load(): Saved {
+function load(w: Who): Saved {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) || 'null') as Saved | null
+    const s = JSON.parse(localStorage.getItem(KEY(w)) || 'null') as Saved | null
     if (s && s.v === 1 && Array.isArray(s.items)) return { v: 1, night: !!s.night, items: s.items, paths: s.paths || [], fences: s.fences || [] }
   } catch { /* une ferme neuve */ }
   return { v: 1, night: false, items: [], paths: [], fences: [] }
 }
 let saveTimer = 0
 function save(s: State) {
-  saved = {
-    v: 1, night: s.night,
-    items: s.things.map(t => ({ ...(t.kind === 'animal' ? { a: t.id as CritterKind } : { p: t.id as PieceId }), x: r2(t.g.position.x), z: r2(t.g.position.z), ry: r2(t.ry) })),
-    paths: s.paths.map(p => p.pts), fences: s.fences.map(f => f.pts)
-  }
+  saved = { v: 1, night: s.night, items: s.things.map(t => itemOf(t)), paths: s.paths.map(p => p.pts), fences: s.fences.map(f => f.pts) }
   clearTimeout(saveTimer)
-  saveTimer = window.setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(saved)) } catch { /* plein : tant pis */ } }, 400)
+  const w = who
+  saveTimer = window.setTimeout(() => { try { localStorage.setItem(KEY(w), JSON.stringify(saved)) } catch { /* plein : tant pis */ } }, 400)
+}
+/** Tout de suite (on quitte cette ferme). */
+function flush() {
+  clearTimeout(saveTimer)
+  try { localStorage.setItem(KEY(who), JSON.stringify(saved)) } catch { /* plein */ }
 }
 const r2 = (x: number) => Math.round(x * 100) / 100
+/** Une chose telle qu'on la garde (à sa place, ou à une autre : là d'où on l'a prise). */
+const itemOf = (t: Thing, x = t.g.position.x, z = t.g.position.z): Kept =>
+  ({ u: t.u, ...(t.kind === 'animal' ? { a: t.id as CritterKind } : { p: t.id as PieceId }), x: r2(x), z: r2(z), ry: r2(t.ry) })
+
+/** La photo de la ferme pour sa carte : l'image telle qu'on la quitte,
+    réduite (400 px de large, en WebP : une vingtaine de Ko). Lue dans la
+    foulée du rendu : après, le tampon d'un canvas WebGL est vidé. */
+function snap(s: State) {
+  try {
+    const cv = s.stage.renderer.domElement
+    s.stage.renderer.render(s.stage.scene, s.stage.camera)
+    const w = 400, h = Math.max(1, Math.round(w * cv.height / Math.max(1, cv.width)))
+    const c2 = document.createElement('canvas')
+    c2.width = w; c2.height = h
+    c2.getContext('2d')!.drawImage(cv, 0, 0, w, h)
+    localStorage.setItem(PHOTO(who), c2.toDataURL('image/webp', 0.8))
+  } catch { /* pas de photo neuve : la carte garde l'ancienne */ }
+}
+
+/* ---------- Annuler, refaire (11/10) ----------
+   Chaque geste est une étape : poser, déplacer, tourner, jeter au panier,
+   tracer un chemin ou une clôture, gommer (un coup de gomme qui en efface
+   plusieurs : une seule étape). Jour / nuit n'en est pas une. Quarante
+   étapes au plus, oubliées quand on change de ferme ou qu'on sort. */
+type Kept = SavedItem & { u: number }
+type Line = { kind: 'path' | 'fence'; pts: number[]; i: number }
+type Act =
+  | { k: 'add'; it: Kept } | { k: 'del'; it: Kept }
+  | { k: 'move'; u: number; from: [number, number]; to: [number, number] }
+  | { k: 'turn'; u: number; from: number; to: number }
+  | ({ k: 'stroke' } & Line) | ({ k: 'erase' } & Line)
+const UNDO_MAX = 40
+const past: Act[][] = [], future: Act[][] = []
+let group: Act[] = []
+/** Ce que le geste en cours a changé ; `commit` en fait une étape (au doigt levé). */
+const rec = (a: Act) => { group.push(a) }
+function commit() {
+  if (!group.length) return
+  past.push(group)
+  if (past.length > UNDO_MAX) past.shift()
+  future.length = 0
+  group = []
+  showUndo()
+}
+function forget() { past.length = 0; future.length = 0; group = []; showUndo() }
+function showUndo() {
+  ctx.root.querySelector('#fbUndo')?.classList.toggle('off', !past.length)
+  ctx.root.querySelector('#fbRedo')?.classList.toggle('off', !future.length)
+}
+
+const byU = (s: State, u: number) => s.things.find(t => t.u === u)
+/** Une chose qui revient (la ferme gardée, une étape annulée). */
+function revive(s: State, it: SavedItem, drop: boolean): Thing | null {
+  if (it.a && ANIMALS.includes(it.a)) return addAnimal(s, it.a, it.x, it.z, it.ry, drop, it.u)
+  if (it.p && PIECES.has(it.p)) return addPiece(s, it.p, it.x, it.z, it.ry, drop, it.u)
+  return null
+}
+
+/** Une étape défaite (`back`) ou refaite. */
+async function apply(s: State, a: Act, back: boolean) {
+  if (a.k === 'add' || a.k === 'del') {
+    if ((a.k === 'add') !== back) { if (!byU(s, a.it.u)) { const t = revive(s, a.it, true); if (t) landed(s, t) } }
+    else { const t = byU(s, a.it.u); if (t) removeThing(s, t) }
+  } else if (a.k === 'move') {
+    const t = byU(s, a.u)
+    if (!t) return
+    const [x, z] = back ? a.from : a.to
+    t.g.position.set(x, 0, z)
+    t.drop = 0.5
+    if (t.c) t.goal = null
+    sfx('drop', { vol: 0.5 })
+  } else if (a.k === 'turn') {
+    const t = byU(s, a.u)
+    if (t) { t.ry = back ? a.from : a.to; sfx('click', { vol: 0.6 }) }
+  } else {
+    const list = a.kind === 'path' ? s.paths : s.fences
+    const at = list.findIndex(p => p.pts === a.pts)
+    if ((a.k === 'stroke') !== back) {
+      if (at >= 0) return
+      const mesh = a.kind === 'path' ? pathMesh(s, a.pts) : await fenceMesh(s, a.pts)
+      if (me !== s) { mesh.geometry.dispose(); return }
+      s.farm.root.add(mesh)
+      list.splice(Math.min(a.i, list.length), 0, { pts: a.pts, mesh })
+      sfx(a.kind === 'fence' ? 'drop' : 'cloth', { vol: 0.6 })
+    } else if (at >= 0) {
+      const [hit] = list.splice(at, 1)
+      s.farm.root.remove(hit.mesh)
+      hit.mesh.geometry.dispose()
+      sfx('cloth', { vol: 0.5 })
+    }
+  }
+}
 
 /* ---------- La ferme : poser, déplacer, jeter ---------- */
 
-function addPiece(s: State, id: PieceId, x: number, z: number, ry: number, drop = true): Thing {
+/** Un numéro neuf, ou celui qu'elle avait (sans jamais en redonner un pris). */
+function uid(u?: number) { const n = u ?? nextU; nextU = Math.max(nextU, n + 1); return n }
+
+function addPiece(s: State, id: PieceId, x: number, z: number, ry: number, drop = true, u?: number): Thing {
   const p = s.farm.make(id)
   p.g.position.set(x, 0, z)
   p.g.rotation.y = ry
   s.farm.root.add(p.g)
-  const t: Thing = { kind: 'piece', id, g: p.g, foot: p.foot, ry, drop: drop ? 1 : 0, jump: 0 }
+  const t: Thing = { kind: 'piece', u: uid(u), id, g: p.g, foot: p.foot, ry, drop: drop ? 1 : 0, jump: 0 }
   if (s.night && p.lamp) {
     const L = new s.T.PointLight(0xFFB45A, 3.2, 5.5, 1.4)
     L.position.set(p.lamp[0], p.lamp[1], p.lamp[2])
@@ -135,12 +251,12 @@ function addPiece(s: State, id: PieceId, x: number, z: number, ry: number, drop 
   return t
 }
 
-function addAnimal(s: State, kind: CritterKind, x: number, z: number, ry: number, drop = true): Thing {
+function addAnimal(s: State, kind: CritterKind, x: number, z: number, ry: number, drop = true, u?: number): Thing {
   const c = s.kit.make(kind, SIZE[kind] ?? 0.7)
   c.obj.position.set(x, 0, z)
   c.obj.rotation.y = ry
   s.farm.root.add(c.obj)
-  const t: Thing = { kind: 'animal', id: kind, g: c.obj, foot: 0.3, ry, c, goal: null, wait: 1 + Math.random() * 3, hop: Math.random() * 6, drop: drop ? 1 : 0, jump: 0 }
+  const t: Thing = { kind: 'animal', u: uid(u), id: kind, g: c.obj, foot: 0.3, ry, c, goal: null, wait: 1 + Math.random() * 3, hop: Math.random() * 6, drop: drop ? 1 : 0, jump: 0 }
   c.obj.traverse(o => { o.userData.thing = t })
   s.things.push(t)
   return t
@@ -253,6 +369,7 @@ function eraseAt(s: State, x: number, z: number) {
   for (const list of [s.paths, s.fences]) {
     const hit = list.find(p => near(p.pts))
     if (!hit) continue
+    rec({ k: 'erase', kind: list === s.paths ? 'path' : 'fence', pts: hit.pts, i: list.indexOf(hit) })
     list.splice(list.indexOf(hit), 1)
     s.farm.root.remove(hit.mesh)
     hit.mesh.geometry.dispose()
@@ -303,7 +420,7 @@ function grab(s: State, t: Thing, pid: number, fresh: boolean, cx: number, cy: n
   const g = ground(s, cx, cy)
   // Une neuve (du tiroir) se tient pile sous le doigt ; une de la ferme garde l'écart où on l'a prise
   const off = !fresh && g
-  s.held = { thing: t, pid, fresh, over: !!g, dx: off ? t.g.position.x - g.x : 0, dz: off ? t.g.position.z - g.z : 0 }
+  s.held = { thing: t, pid, fresh, over: !!g, dx: off ? t.g.position.x - g.x : 0, dz: off ? t.g.position.z - g.z : 0, from: { x: t.g.position.x, z: t.g.position.z } }
   if (t.c) t.goal = null
   ctx.root.querySelector('.fb-wrap')?.classList.add('holding')
 }
@@ -330,12 +447,19 @@ function dropHeld(s: State, cx: number, cy: number) {
   ctx.root.querySelector('.fb-wrap')?.classList.remove('holding')
   ctx.root.querySelector('#fbTrash')?.classList.remove('hot')
   const t = h.thing
-  if (overTrash(cx, cy) || (h.fresh && !h.over)) { removeThing(s, t); return }
+  if (overTrash(cx, cy) || (h.fresh && !h.over)) {
+    // Jetée : une chose de la ferme reviendra (annuler) là d'où on l'a prise
+    if (!h.fresh) rec({ k: 'del', it: itemOf(t, h.from.x, h.from.z) })
+    removeThing(s, t)
+    return
+  }
   const spot = freeSpot(s, t.g.position.x, t.g.position.z, t.foot, t, t.kind === 'piece')
   t.g.position.set(spot.x, 0, spot.z)
   t.drop = 0.5
   t.g.visible = true
   landed(s, t)
+  if (h.fresh) rec({ k: 'add', it: itemOf(t) })
+  else if (Math.hypot(spot.x - h.from.x, spot.z - h.from.z) > 0.05) rec({ k: 'move', u: t.u, from: [r2(h.from.x), r2(h.from.z)], to: [r2(spot.x), r2(spot.z)] })
 }
 
 /** Posé : un bruit, un nuage de poussière ; un animal dit bonjour. */
@@ -482,11 +606,8 @@ async function build(c: GameContext, arena: HTMLElement, night: boolean): Promis
     rot: -0.15, vRot: 0, zoom: 1, tgtZoom: 1, tool: 'none', tab: 'batiments', held: null, stroke: null,
     fx: particles(stage, 300), ray: new T.Raycaster(), t: 0, idle: 0, placed: 0
   }
-  // La ferme gardée revient telle quelle
-  for (const it of saved.items) {
-    if (it.a && ANIMALS.includes(it.a)) addAnimal(s, it.a, it.x, it.z, it.ry, false)
-    else if (it.p && TABS.batiments.items.concat(TABS.nature.items, TABS.objets.items).some(i => i[0] === it.p)) addPiece(s, it.p, it.x, it.z, it.ry, false)
-  }
+  // La ferme gardée revient telle quelle (chaque chose avec son numéro)
+  for (const it of saved.items) revive(s, it, false)
   for (const pts of saved.paths) if (pts.length >= 4) { const m = pathMesh(s, pts); farm.root.add(m); s.paths.push({ pts, mesh: m }) }
   for (const pts of saved.fences) if (pts.length >= 4) { const m = await fenceMesh(s, pts); farm.root.add(m); s.fences.push({ pts, mesh: m }) }
   if (!c.alive() || !stage.alive) { stage.dispose(); return null }
@@ -514,14 +635,20 @@ const TOOL_ICONS = {
   erase: svg('<path d="M10 30 26 12l12 11-15 17H14z" fill="#FF8FAB"/><path d="M10 30l8-9 12 11-6.5 8H14z" fill="#FFD3DE"/><path d="M8 40h32" stroke="#45362A" stroke-width="3" stroke-linecap="round"/>'),
   trash: svg('<path d="M10 18h28l-3 22H13z" fill="#C99A5F"/><path d="M10 18h28" stroke="#9C7340" stroke-width="3"/><path d="M16 18c0-7 4-11 8-11s8 4 8 11" fill="none" stroke="#9C7340" stroke-width="3"/><path d="M17 24v12M24 24v12M31 24v12" stroke="#9C7340" stroke-width="2"/>'),
   day: svg('<circle cx="24" cy="24" r="9" fill="#FFC94D"/><g stroke="#FFC94D" stroke-width="3.5" stroke-linecap="round"><path d="M24 6v5M24 37v5M6 24h5M37 24h5M11 11l3.5 3.5M33.5 33.5 37 37M11 37l3.5-3.5M33.5 14.5 37 11"/></g>', 34),
-  night: svg('<path d="M30 8a16 16 0 1 0 10 26A13 13 0 0 1 30 8z" fill="#8EA6FF"/><circle cx="14" cy="12" r="1.6" fill="#FFF6D0"/><circle cx="38" cy="14" r="1.3" fill="#FFF6D0"/>', 34)
+  night: svg('<path d="M30 8a16 16 0 1 0 10 26A13 13 0 0 1 30 8z" fill="#8EA6FF"/><circle cx="14" cy="12" r="1.6" fill="#FFF6D0"/><circle cx="38" cy="14" r="1.3" fill="#FFF6D0"/>', 34),
+  // Annuler, refaire (11/10) : une flèche qui revient, une qui repart
+  undo: svg('<path d="M19 11 8 21l11 10" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 21h17a9.5 9.5 0 0 1 0 19h-8" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round"/>'),
+  redo: svg('<g transform="matrix(-1 0 0 1 48 0)"><path d="M19 11 8 21l11 10" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 21h17a9.5 9.5 0 0 1 0 19h-8" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round"/></g>')
 }
+/** Une petite fille (sa couleur : son haut), pour sa carte et le bouton « changer de ferme ». */
+const girl = (color: string, sz = 40) => svg(`<path d="M11 45c1-8 6-11 13-11s12 3 13 11z" fill="${color}"/><circle cx="24" cy="22" r="11" fill="#FFD9B8"/><path d="M12.5 22c0-9 5-14 11.5-14S35.5 13 35.5 22c-3-5-6.5-7-11.5-7s-8.5 2-11.5 7z" fill="#6B3E26"/><circle cx="10" cy="21" r="4.5" fill="#6B3E26"/><circle cx="38" cy="21" r="4.5" fill="#6B3E26"/><circle cx="20" cy="23.5" r="1.5" fill="#45362A"/><circle cx="28" cy="23.5" r="1.5" fill="#45362A"/><path d="M21 28c2 1.5 4 1.5 6 0" fill="none" stroke="#C0605A" stroke-width="1.5" stroke-linecap="round"/>`, sz)
 
 export const farmbuild: GameDef = {
   id: 'farmbuild', name: 'La Ferme à construire', icon: '🏡', sq: 'sq-mint', cat: 'creatif', noTier: true,
   subtitle: 'Construis ta ferme et fais-y vivre les animaux',
-  // La main : glisser une pièce du tiroir jusque sur la ferme
+  // La main : choisir sa ferme (l'une des deux cartes) ; puis glisser une pièce du tiroir jusque sur la ferme
   hand: root => {
+    if (root.querySelector('.fb-wrap[data-who=""]')) return { choose: visible(root, '.fb-card') }
     if (!me || me.held || me.stroke) return null
     const items = visible(root, '.fb-item')
     if (!items.length) return null
@@ -530,9 +657,15 @@ export const farmbuild: GameDef = {
   mount(c) {
     ctx = c
     let dead = false
-    saved = load()
+    // L'ancienne ferme de la famille ne revient pas : chacune repart de zéro (11/10)
+    try { localStorage.removeItem(OLD_KEY) } catch { /* rien */ }
+    forget()
     c.root.innerHTML = `
-      <div class="arena g3-arena fb-wrap" id="fbWrap">
+      <div class="arena g3-arena fb-wrap" id="fbWrap" data-who="">
+        <div class="fb-who" id="fbWho">${WHO.map(w => `
+          <span class="tool-item fb-card-item"><button class="fb-card" data-who="${w.id}" aria-label="${w.name}" style="--c:${w.color}"><span class="fb-photo"></span></button><b class="fb-card-name">${girl(w.color, 44)}${w.name}</b></span>`).join('')}
+        </div>
+        <span class="tool-item fb-me"><button class="sn-tool" id="fbMe" aria-label="Changer de ferme"></button><i class="tool-cap" id="fbMeCap"></i></span>
         <span class="tool-item fb-dn"><button class="sn-tool" id="fbNight" aria-label="Jour ou nuit"></button><i class="tool-cap" id="fbNightCap"></i></span>
         <div class="fb-tray" id="fbTray">
           <div class="fb-tabs">${(Object.keys(TABS) as Tab[]).map(k => `<span class="tool-item"><button class="sn-tool fb-tab${k === 'batiments' ? ' sel' : ''}" data-tab="${k}" aria-label="${TABS[k].name}">${TAB_ICONS[k]}</button><i class="tool-cap">${TABS[k].name}</i></span>`).join('')}</div>
@@ -543,6 +676,8 @@ export const farmbuild: GameDef = {
             <span class="tool-item"><button class="sn-tool fb-tool" data-tool="path" aria-label="Chemin">${TOOL_ICONS.path}</button><i class="tool-cap">Chemin</i></span>
             <span class="tool-item"><button class="sn-tool fb-tool" data-tool="fence" aria-label="Clôture">${TOOL_ICONS.fence}</button><i class="tool-cap">Clôture</i></span>
             <span class="tool-item"><button class="sn-tool fb-tool" data-tool="erase" aria-label="Gomme">${TOOL_ICONS.erase}</button><i class="tool-cap">Gomme</i></span>
+            <span class="tool-item"><button class="sn-tool fb-undo off" id="fbUndo" aria-label="Annuler">${TOOL_ICONS.undo}</button><i class="tool-cap">Annuler</i></span>
+            <span class="tool-item"><button class="sn-tool fb-undo off" id="fbRedo" aria-label="Refaire">${TOOL_ICONS.redo}</button><i class="tool-cap">Refaire</i></span>
             <span class="tool-item"><button class="sn-tool fb-trash" id="fbTrash" aria-label="Panier">${TOOL_ICONS.trash}</button><i class="tool-cap">Panier</i></span>
           </div>
         </div>
@@ -563,8 +698,21 @@ export const farmbuild: GameDef = {
       c.root.querySelector('#fbNight')!.innerHTML = night ? TOOL_ICONS.day : TOOL_ICONS.night
       c.root.querySelector('#fbNightCap')!.textContent = night ? 'Jour' : 'Nuit'
     }
-    setNightBtn(saved.night)
     showTab('batiments')
+    /** Les deux cartes : la photo de chaque ferme (ou la grange dessinée, si elle est neuve), la dernière bordée. */
+    const showCards = () => {
+      let last: string | null = null
+      try { last = localStorage.getItem(WHO_KEY) } catch { /* rien */ }
+      for (const w of WHO) {
+        const b = c.root.querySelector<HTMLElement>(`.fb-card[data-who="${w.id}"]`)
+        if (!b) continue
+        b.classList.toggle('last', w.id === last)
+        let src: string | null = null
+        try { src = localStorage.getItem(PHOTO(w.id)) } catch { /* rien */ }
+        b.querySelector('.fb-photo')!.innerHTML = src ? `<img src="${src}" alt="" draggable="false">` : `<span class="fb-empty">${BADGE.farmbuild}</span>`
+      }
+    }
+    showCards()
     // Les vignettes (rendues une fois, gardées)
     const ids = (Object.values(TABS).flatMap(t => t.items.map(i => i[0])))
     Promise.all([
@@ -576,7 +724,7 @@ export const farmbuild: GameDef = {
       showTab(me?.tab ?? 'batiments')
     }).catch(() => { /* les boutons restent ronds */ })
 
-    let hideLoader = loader(arena, 'farmbuild')
+    let hideLoader = () => { /* rien à cacher : les cartes d'abord */ }
     let building = false
     const start = async (night: boolean) => {
       building = true
@@ -586,9 +734,35 @@ export const farmbuild: GameDef = {
       if (!s || dead) { if (s) disposeState(s); if (!s && !dead) c.toast('La 3D n\'est pas disponible ici'); return }
       me = s
       s.tab = (c.root.querySelector<HTMLElement>('.fb-tab.sel')?.dataset.tab as Tab) || 'batiments'
+      // L'outil choisi le reste (la nuit reconstruit la scène : la gomme restait allumée, éteinte)
+      s.tool = (c.root.querySelector<HTMLElement>('.fb-tool.sel')?.dataset.tool as Tool) || 'none'
       s.stage.start(dt => { if (me === s) frame(s, dt) })
     }
-    start(saved.night)
+    /** Sa carte touchée : sa ferme, telle qu'elle l'a laissée. */
+    const choose = (w: Who) => {
+      if (me || building) return
+      who = w
+      try { localStorage.setItem(WHO_KEY, w) } catch { /* rien */ }
+      saved = load(w)
+      forget()
+      arena.setAttribute('data-who', w)
+      const me0 = WHO.find(x => x.id === w)!
+      c.root.querySelector('#fbMe')!.innerHTML = girl(me0.color)
+      c.root.querySelector('#fbMeCap')!.textContent = me0.name
+      setNightBtn(saved.night)
+      sfx('confirm', { vol: 0.5 })
+      hideLoader = loader(arena, 'farmbuild')
+      start(saved.night)
+    }
+    /** On quitte sa ferme (pour l'autre, ou pour sortir) : gardée, photographiée. */
+    const leave = (s: State) => {
+      snap(s)
+      save(s)
+      flush()
+      forget()
+      me = null
+      disposeState(s)
+    }
 
     /* Le doigt : par pointerId (deux doigts = pincer) ; le glissé s'écoute sur window */
     const pts = new Map<number, { x: number; y: number }>()
@@ -678,7 +852,9 @@ export const farmbuild: GameDef = {
       s.vRot = Math.max(-3.2, Math.min(3.2, s.vRot * 0.5 + dx * k / dts * 0.5))
     }
 
-    const onUp = (e: PointerEvent) => {
+    // Un doigt levé : ce que son geste a changé devient UNE étape (annuler)
+    const onUp = (e: PointerEvent) => { up(e); commit() }
+    const up = (e: PointerEvent) => {
       const s = me
       if (!s) { pts.delete(e.pointerId); drawerDown = null; return }
       if (drawerDown && e.pointerId === drawerDown.pid) {
@@ -694,6 +870,7 @@ export const farmbuild: GameDef = {
             const spot = freeSpot(s, fwd.x + Math.cos(a) * r, fwd.z + Math.sin(a) * r, t.foot, t, t.kind === 'piece')
             t.g.position.set(spot.x, 0, spot.z)
             landed(s, t)
+            rec({ k: 'add', it: itemOf(t) })
           }
         }
         return
@@ -716,7 +893,11 @@ export const farmbuild: GameDef = {
       // Un toucher : la pièce pivote d'un quart de tour, l'animal répond
       const th = t.thing
       s.vRot = 0
-      if (th.kind === 'piece') { th.ry += Math.PI / 2; sfx('click', { vol: 0.6 }); save(s) }
+      if (th.kind === 'piece') {
+        th.ry += Math.PI / 2
+        rec({ k: 'turn', u: th.u, from: th.ry - Math.PI / 2, to: th.ry })
+        sfx('click', { vol: 0.6 }); save(s)
+      }
       else {
         th.jump = 0.5
         const v = CRY[th.id as CritterKind]
@@ -727,8 +908,12 @@ export const farmbuild: GameDef = {
     const finishStroke = async (s: State, st: NonNullable<State['stroke']>) => {
       const list = st.kind === 'path' ? s.paths : s.fences
       if (s.paths.length + s.fences.length >= MAX_STROKES) {
-        const old = (s.paths.length >= s.fences.length ? s.paths : s.fences).shift()
-        if (old) { s.farm.root.remove(old.mesh); old.mesh.geometry.dispose() }
+        const from = s.paths.length >= s.fences.length ? s.paths : s.fences
+        const old = from.shift()
+        if (old) {
+          rec({ k: 'erase', kind: from === s.paths ? 'path' : 'fence', pts: old.pts, i: 0 })
+          s.farm.root.remove(old.mesh); old.mesh.geometry.dispose()
+        }
       }
       const pts2 = st.pts.map(r2)
       let mesh = st.mesh
@@ -737,8 +922,27 @@ export const farmbuild: GameDef = {
       if (me !== s || !mesh) { mesh?.geometry.dispose(); return }
       s.farm.root.add(mesh)
       list.push({ pts: pts2, mesh })
+      rec({ k: 'stroke', kind: st.kind, pts: pts2, i: list.length - 1 })
+      commit()
       sfx(st.kind === 'fence' ? 'drop' : 'cloth', { vol: 0.6 })
       save(s)
+    }
+
+    /** Annuler (`back`) ou refaire une étape — une seule à la fois. */
+    let undoing = false
+    const undo = async (back: boolean) => {
+      const s = me
+      if (!s || undoing || s.held || s.stroke) return
+      const g = (back ? past : future).pop()
+      if (!g) { sfx('error', { vol: 0.3 }); return }
+      undoing = true
+      sfx('whoosh', { vol: 0.35, rate: back ? 0.8 : 1.25 })
+      try {
+        for (const a of back ? [...g].reverse() : g) await apply(s, a, back)
+      } finally { undoing = false }
+      ;(back ? future : past).push(g)
+      if (me === s) save(s)
+      showUndo()
     }
 
     const onWheel = (e: WheelEvent) => {
@@ -751,6 +955,17 @@ export const farmbuild: GameDef = {
     const onClick = async (e: MouseEvent) => {
       const s = me
       const t = e.target as HTMLElement
+      const card = t.closest<HTMLElement>('.fb-card')
+      if (card?.dataset.who) { choose(card.dataset.who as Who); return }
+      if (t.closest('#fbUndo')) { undo(true); return }
+      if (t.closest('#fbRedo')) { undo(false); return }
+      if (t.closest('#fbMe') && s && !building && !undoing) {
+        leave(s)
+        arena.setAttribute('data-who', '')
+        showCards()
+        sfx('switch', { vol: 0.6 })
+        return
+      }
       const tab = t.closest<HTMLElement>('.fb-tab')
       if (tab?.dataset.tab) { showTab(tab.dataset.tab as Tab); sfx('select', { vol: 0.5 }); return }
       const tool = t.closest<HTMLElement>('.fb-tool')
@@ -762,11 +977,11 @@ export const farmbuild: GameDef = {
         sfx('switch', { vol: 0.5 })
         return
       }
-      if (t.closest('#fbNight') && s && !building) {
+      if (t.closest('#fbNight') && s && !building && !undoing) {
         const night = !s.night
         save(s)
         saved.night = night
-        try { localStorage.setItem(KEY, JSON.stringify(saved)) } catch { /* rien */ }
+        flush()
         sfx('switch', { vol: 0.6 })
         setNightBtn(night)
         me = null
@@ -792,6 +1007,12 @@ export const farmbuild: GameDef = {
       }
       ;(window as unknown as { __fb: unknown }).__fb = {
         get ready() { return !!me && !building },
+        /** Les cartes sont là (aucune ferme ouverte) ; la ferme ouverte (à qui). */
+        get cards() { return !!c.root.querySelector('.fb-wrap[data-who=""]') },
+        get who() { return me ? who : null },
+        /** Les étapes qu'on peut annuler, refaire. */
+        get undo() { return past.length },
+        get redo() { return future.length },
         get night() { return me?.night },
         get tool() { return me?.tool },
         get pieces() { return me?.things.filter(t => t.kind === 'piece').map(t => ({ id: t.id, x: t.g.position.x, z: t.g.position.z, ry: t.ry })) ?? [] },
@@ -823,15 +1044,8 @@ export const farmbuild: GameDef = {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       c.root.removeEventListener('wheel', onWheel)
-      const s = me
-      me = null
-      if (s) {
-        // La ferme est gardée telle qu'on la quitte
-        save(s)
-        clearTimeout(saveTimer)
-        try { localStorage.setItem(KEY, JSON.stringify(saved)) } catch { /* plein */ }
-        disposeState(s)
-      }
+      // La ferme est gardée (et photographiée) telle qu'on la quitte
+      if (me) leave(me)
       hideLoader()
     }
   }

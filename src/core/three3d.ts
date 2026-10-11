@@ -83,6 +83,11 @@ export interface Stage {
   start(update: (dt: number, now: number) => void): void
   /** Enregistre une ressource GPU non attachée à la scène (texture, cible de rendu). */
   keep<R extends { dispose(): void }>(r: R): R
+  /** Un travail prévu va ralentir quelques images (des shaders qu'on prépare
+      exprès, 11/10 : la Pâtisserie pendant la chanson) : la qualité ne les
+      mesure pas — sinon elle baisserait pour rien. Deux secondes à partir
+      de maintenant, comme à l'ouverture. */
+  settle(): void
   /** Rendu personnalisé (l'Espace : ciel, scène HDR, halo, ACES) à la place de
       `renderer.render(scene, camera)`. */
   render?: () => void
@@ -259,6 +264,7 @@ export async function createStage(arena: HTMLElement, o: StageOpts): Promise<Sta
   const stage: Stage = {
     T, renderer, scene, camera, sun, arena, alive: true, timeScale: 1,
     keep(r) { extras.push(r); return r },
+    settle() { if (perf.t0) perf.t0 = performance.now() },
     start(update) {
       started = true
       last = performance.now()

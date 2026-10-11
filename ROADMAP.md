@@ -1193,6 +1193,40 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   remue plus et personne ne passe la tête en appelant quand on cale ; à
   l'éclair et à la flamme, plus de « presque » non plus (un toucher tout
   près ne fait rien glousser). La fleur garde le « presque ».
+- ✅ **Perles Miroir : d'Apprendre à Jouer** (11/10, le père : « elles
+  font ça toujours en mode apprentissage… le mode miroir, c'est pas
+  vraiment du travail ») : Apprendre garde neuf jeux, ceux où l'on
+  travaille ; Jouer passe à onze (six colonnes, deux rangées).
+- ✅ **La Pâtisserie : le repas réparé** (11/10, Jade : « on n'a pas pu
+  manger le gâteau, il y a eu un truc bizarre » ; plan validé). Aucun
+  rapport de bug sur la tablette pour savoir quoi : trois causes trouvées,
+  toutes corrigées. 1) Couper le gâteau faisait préparer 35 rendus
+  (shaders) PENDANT le repas, par paquets de treize : la tablette pouvait
+  se figer juste quand on voulait manger — ils se préparent pendant la
+  chanson, une matière par image (0 pendant le repas). 2) Rien ne disait
+  de toucher la part : la main venait après 15 à 30 s — elle vient tout de
+  suite (`handNow()`), et la fourchette attend au-dessus de la part, le
+  couteau au-dessus de la prochaine coupe. 3) Parler ou chanter près de la
+  tablette éteignait les bougies (une voix est aussi forte qu'un souffle) :
+  seul un bruit SANS NOTE souffle (`core/souffle.ts`), le micro est brut
+  (l'anti-bruit de Chrome efface justement un souffle). Et l'étape
+  **« Manger »** (la fourchette, sous les étapes) : les bougies allumées
+  d'abord (« Souffle ! » se dandine, la main le montre), sinon la chanson et
+  le repas — sans bougie, on mange aussi. Un bot de plus :
+  `patisserie-sans-bougie`. **Reste : souffler pour de vrai sur la
+  tablette** (le micro brut : le seuil se règle là-bas si besoin).
+- ✅ **La Ferme à construire : annuler, refaire, une ferme par fille**
+  (11/10, plan validé ; « laisse tomber la ferme actuelle, on repart à
+  zéro »). Deux flèches à côté de la gomme, « Annuler » et « Refaire » :
+  chaque geste est une étape (poser, déplacer, tourner, jeter, tracer,
+  gommer — un coup de gomme qui en efface plusieurs : une seule), quarante
+  au plus ; jour / nuit n'en est pas une. À l'ouverture, deux cartes :
+  « Jade » et « Joyce », chacune avec la photo de sa ferme telle qu'elle
+  l'a laissée (la dernière jouée bordée) ; en jeu, son prénom en haut à
+  gauche ramène aux cartes. Au passage, l'outil choisi reste allumé après
+  la nuit (la gomme restait affichée, éteinte).
+- Mis de côté (11/10, le père) : **le carnet de bord des bugs** (les
+  erreurs, écrans noirs et gels notés sur la tablette, lus par `?journal`).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

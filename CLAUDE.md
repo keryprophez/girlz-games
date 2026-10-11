@@ -121,7 +121,8 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            l'un après l'autre (`taps` : les deux pouces du
                            Flipper, le pot puis le picot des Bijoux), ou
                            `choose` (« l'un de ceux-là », sans appuyer :
-                           jamais la réponse dans Apprendre)
+                           jamais la réponse dans Apprendre) ; `handNow()`
+                           la fait venir tout de suite (11/10)
              pinball.ts  ← LA PHYSIQUE DU FLIPPER (1/10) : la bille dans le
                            plan de la table, pas fixe de 1/480 s (un batteur ne
                            se traverse jamais), batteurs en capsules qui
@@ -177,6 +178,11 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              mic.ts      ← LE MICRO (5/10) : ouvert à la demande, coupé pour
                            de bon (`stop` arrête la piste), il ne garde rien
                            (un morceau de son passé au jeu puis oublié)
+             souffle.ts  ← LE SOUFFLE (11/10, les bougies de la Pâtisserie) :
+                           un bruit fort SANS NOTE (`tonality` : une voix a
+                           une période, le vent n'en a pas ; `blowLevel`) —
+                           parler ou chanter ne souffle pas ; logique pure,
+                           testée
              cake3d.ts   ← LE GÂTEAU de la Pâtisserie (5/10), modelé ici : étages
                            ronds, en cœur ou carrés (`outlineOf`, extrudés,
                            sommets soudés), nappage qui coule (`pour` : les
@@ -362,7 +368,9 @@ animation). Ses cibles : un élément (`visible(root, sel)` ne garde que ceux
 qu'un doigt toucherait vraiment), un point d'écran (`toScreen` en 3D) ou une
 fraction de l'arène. Dans Apprendre, `choose` sur plusieurs cibles, jamais
 la bonne seule. Elle vient à la première partie, puis après 7 s sans toucher
-(15 s dans Créer) ; un toucher la chasse.
+(15 s dans Créer) ; un toucher la chasse. Quand le jeu attend un geste
+NOUVEAU en cours de route (le repas après la chanson de la Pâtisserie),
+`handNow()` la fait venir tout de suite — sinon l'enfant cale 30 s.
 
 **Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
 rampe par performance, timers simulés `game.after`, HUD en icônes dans
@@ -408,7 +416,9 @@ attend 4 s de fluidité. Les 2 premières secondes ne sont même pas MESURÉES
 (shaders, modèles : elles faisaient baisser la qualité à chaque ouverture),
 ni rien avec `?hq` (captures, mesures), ni pour les bots
 (`__BOT`), ni pour un jeu à rendu propre ; `?fps` affiche l'état. Un jeu
-n'a donc plus à faire sa propre baisse de qualité. Un jeu qui a son propre rendu
+n'a donc plus à faire sa propre baisse de qualité ; un travail PRÉVU qui
+ralentit quelques images (des shaders préparés exprès) se signale par
+`stage.settle()` : la qualité ne compte pas ces images-là. Un jeu qui a son propre rendu
 (l'Espace : ciel à part, cible HDR, halo en sept étages, ACES écrit à la main)
 le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
 la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
@@ -436,8 +446,12 @@ qu'il parle ; son bot parle par un faux micro, un WAV que `play.mjs`
 génère et que Chromium lit en boucle) · `farmbuild` (la Ferme à
 construire, 5/10 : le plateau de Cache-Cache vide, les pièces glissées du
 tiroir — par `pointerId`, écouté sur `window` —, chemins et clôtures au
-doigt, les animaux qui vont à leur place ; la ferme se garde dans
-`ferme:construire`, une pour la famille ; jour / nuit = la scène reconstruite) ·
+doigt, les animaux qui vont à leur place ; jour / nuit = la scène
+reconstruite ; depuis le 11/10, UNE FERME PAR FILLE — deux cartes « Jade »
+et « Joyce » à l'ouverture, avec la photo de sa ferme (`snap`, prise en la
+quittant), gardée dans `ferme:construire:<qui>` ; « Annuler » et
+« Refaire » à côté de la gomme, une étape par geste (chaque chose a son
+numéro `u`, gardé avec elle), quarante au plus) ·
 `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
 le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
 (la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
@@ -449,8 +463,15 @@ MANGE en six parts : ce qui reste est coupé par deux plans —
 au-delà ; le présentoir et les faces de coupe exclus —, la part est une copie
 des étages gardée entre ses deux bords, une bouchée un troisième plan qui
 avance depuis la pointe ; ce qui part avec la part reçoit ses matières à elle ;
-le micro ne s'ouvre qu'à l'étape des bougies, « Souffle ! » fait une rafale
-jusqu'à la dernière flamme ; son bot accélère le temps, `__bk.speed`). La Course,
+le micro ne s'ouvre qu'à l'étape des bougies, brut, et n'entend qu'un souffle
+(`core/souffle.ts`) ; « Souffle ! » fait une rafale jusqu'à la dernière
+flamme ; depuis le 11/10, « Manger » (la fourchette, sous les étapes) : les
+bougies allumées d'abord, sinon la chanson et le repas, même sans bougie ;
+pendant la chanson, la RÉPÉTITION du repas — chaque matière dessinée sous
+le comptoir telle qu'elle sera coupée, une par image : aucun shader à
+préparer pendant qu'on mange ; la fourchette attend au-dessus de la part,
+le couteau au-dessus de la prochaine coupe ; son bot accélère le temps,
+`__bk.speed`). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
@@ -501,7 +522,7 @@ ligne quand on en paie un nouveau.
    d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
    d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
    modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (11/10 : 40 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux et les Perles Miroir deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (11/10 : 41 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir et la Pâtisserie deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

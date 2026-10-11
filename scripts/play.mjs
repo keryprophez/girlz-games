@@ -1420,9 +1420,16 @@ await scenario('animal-qui-repete', async () => {
    puis la nuit. */
 await scenario('ferme-a-construire', async () => {
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.evaluate(() => localStorage.removeItem('ferme:construire'))
+  const oublie = () => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('ferme:construire')).forEach(k => localStorage.removeItem(k)))
+  await oublie()
   await openGame('La Ferme à construire', '__fb')
-  await page.waitForFunction(() => window.__fb.ready, null, { timeout: 120000, polling: 500 })
+  // Une carte par fille (11/10) : celle de Jade
+  const ferme = async qui => {
+    await page.waitForFunction(() => window.__fb.cards, null, { timeout: 30000, polling: 250 })
+    await page.locator(`.fb-card[data-who="${qui}"]`).click({ force: true })
+    await page.waitForFunction(q => window.__fb.ready && window.__fb.who === q, qui, { timeout: 120000, polling: 500 })
+  }
+  await ferme('jade')
   const etat = () => page.evaluate(() => JSON.stringify({ p: window.__fb.pieces.map(x => x.id), a: window.__fb.animals.map(x => x.id), ch: window.__fb.paths, cl: window.__fb.fences, n: window.__fb.night }))
   const cv = await page.locator('.fb-wrap canvas').boundingBox()
   const glisse = async (from, to, steps = 14) => {
@@ -1451,6 +1458,13 @@ await scenario('ferme-a-construire', async () => {
   await glisse(await page.evaluate(() => window.__fb.at(0)), await centre('#fbTrash'), 18)
   await page.waitForFunction(() => window.__fb.pieces.length === 1 && window.__fb.pieces[0].id === 'pond', null, { timeout: 10000 })
     .catch(async () => { throw new Error(`la grange n'est pas au panier (${await etat()})`) })
+  // Annuler (11/10) : la grange revient ; refaire : elle repart au panier
+  await page.locator('#fbUndo').click()
+  await page.waitForFunction(() => window.__fb.pieces.length === 2 && window.__fb.redo === 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`« Annuler » ne rend pas la grange (${await etat()})`) })
+  await page.locator('#fbRedo').click()
+  await page.waitForFunction(() => window.__fb.pieces.length === 1 && window.__fb.redo === 0, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`« Refaire » ne la rejette pas (${await etat()})`) })
   // Un chemin, une clôture, puis la gomme sur le chemin
   const trait = async (y) => glisse({ x: cv.x + cv.width * 0.25, y: cv.y + cv.height * y }, { x: cv.x + cv.width * 0.7, y: cv.y + cv.height * (y + 0.05) }, 20)
   await page.locator('.fb-tool[data-tool="path"]').click()
@@ -1463,16 +1477,37 @@ await scenario('ferme-a-construire', async () => {
   await trait(0.55)
   await page.waitForFunction(() => window.__fb.paths === 0 && window.__fb.fences === 1, null, { timeout: 10000 })
     .catch(async () => { throw new Error(`la gomme n'a pas effacé le chemin (${await etat()})`) })
-  // On sort, on revient : la ferme est gardée
+  // Le coup de gomme annulé : le chemin revient (une étape), refait : il repart
+  await page.locator('#fbUndo').click()
+  await page.waitForFunction(() => window.__fb.paths === 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`« Annuler » ne rend pas le chemin (${await etat()})`) })
+  await page.locator('#fbRedo').click()
+  await page.waitForFunction(() => window.__fb.paths === 0 && window.__fb.fences === 1, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`« Refaire » ne regomme pas (${await etat()})`) })
+  // On sort, on revient : la ferme de Jade est gardée, et sa carte a la photo de sa ferme
   await page.locator('.pbtn[aria-label="Menu"]').click()
   await openGame('La Ferme à construire', '__fb')
+  await page.waitForFunction(() => window.__fb.cards && document.querySelector('.fb-card[data-who="jade"].last img'), null, { timeout: 30000, polling: 250 })
+    .catch(async () => { throw new Error('la carte de Jade n’a pas la photo de sa ferme') })
+  await ferme('jade')
   await page.waitForFunction(() => window.__fb.ready && window.__fb.pieces.length === 1 && window.__fb.animals.length === 2 && window.__fb.fences === 1, null, { timeout: 120000, polling: 500 })
     .catch(async () => { throw new Error(`la ferme n'est pas gardée (${await etat()})`) })
+  // La ferme de Joyce est à elle : vide, puis un cochon ; celle de Jade n'a pas bougé
+  await page.locator('#fbMe').click()
+  await ferme('joyce')
+  if (await page.evaluate(() => window.__fb.pieces.length + window.__fb.animals.length + window.__fb.fences)) throw new Error(`la ferme de Joyce n'est pas neuve (${await etat()})`)
+  await page.locator('.fb-tab[data-tab="animaux"]').click()
+  await page.locator('.fb-item[data-id="pig"]').click()
+  await page.waitForFunction(() => window.__fb.animals.length === 1, null, { timeout: 10000 })
+  await page.locator('#fbMe').click()
+  await ferme('jade')
+  await page.waitForFunction(() => window.__fb.pieces.length === 1 && window.__fb.animals.length === 2 && !window.__fb.animals.some(a => a.id === 'pig'), null, { timeout: 30000, polling: 500 })
+    .catch(async () => { throw new Error(`la ferme de Jade a changé (${await etat()})`) })
   // La nuit
   await page.locator('#fbNight').click()
   await page.waitForFunction(() => window.__fb.ready && window.__fb.night && window.__fb.pieces.length === 1, null, { timeout: 120000, polling: 500 })
     .catch(async () => { throw new Error(`la nuit ne vient pas (${await etat()})`) })
-  await page.evaluate(() => localStorage.removeItem('ferme:construire'))
+  await oublie()
 })
 
 /* 🎂 La Pâtisserie : deux étages en cœur, le glaçage au doigt (flanc et
@@ -1571,6 +1606,12 @@ await scenario('patisserie', async () => {
   for (const d of [0.2, 0.45, 0.6]) await tap(await page.evaluate(d => window.__bk.top(undefined, d), d))
   await page.waitForFunction(() => window.__bk.lit >= 2, null, { timeout: 30000 })
     .catch(async () => { throw new Error(`les bougies ne s'allument pas (${await etat()})`) })
+  // « Manger » avec des bougies allumées (11/10) : pas de fête, le souffle se montre
+  await page.locator('.bk-step[data-step="decor"]').click({ force: true, timeout: 120000 })
+  await page.locator('#bkEat').click({ force: true, timeout: 120000 })
+  await page.waitForFunction(() => window.__bk.step === 'bougies' && document.querySelector('#bkBlow.ask'), null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`« Manger » ne montre pas le souffle (${await etat()})`) })
+  if (await page.evaluate(() => window.__bk.phase) !== 'make') throw new Error('« Manger » a lancé la fête avec des bougies allumées')
   await page.locator('#bkBlow').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__bk.lit === 0, null, { timeout: 60000 })
     .catch(async () => { throw new Error(`les bougies ne s'éteignent pas (${await etat()})`) })
@@ -1587,6 +1628,21 @@ await scenario('patisserie', async () => {
     if (at) await tap(at)
   }
   await finDe('Gâteau dévoré', 120000).catch(async () => { throw new Error(`le gâteau n'est pas fini (${await mange()})`) })
+})
+// Sans une bougie (11/10) : « Manger » lance la chanson, la répétition du repas, puis la première part
+await scenario('patisserie-sans-bougie', async () => {
+  await openGame('La Pâtisserie', '__bk')
+  await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })
+  await page.evaluate(() => window.__bk.speed(4))
+  await page.locator('#bkEat').click({ force: true, timeout: 120000 })
+  await page.waitForFunction(() => window.__bk.phase === 'party', null, { timeout: 10000, polling: 250 })
+    .catch(async () => { throw new Error(`« Manger » sans bougie ne lance pas la fête (${await page.evaluate(() => window.__bk.phase)})`) })
+  await page.waitForFunction(() => window.__bk.eat?.at, null, { timeout: 240000, polling: 500 })
+    .catch(async () => { throw new Error(`pas de part servie (${await page.evaluate(() => JSON.stringify({ ph: window.__bk.phase, w: window.__bk.warmLeft }))})`) })
+  if (await page.evaluate(() => window.__bk.warmLeft) !== 0) throw new Error('la répétition du repas n’est pas allée au bout pendant la chanson')
+  await page.mouse.click(...Object.values(await page.evaluate(() => window.__bk.eat.at)))
+  await page.waitForFunction(() => window.__bk.eat?.bites === 1, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`pas de bouchée (${await page.evaluate(() => JSON.stringify(window.__bk.eat))})`) })
 })
 
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))

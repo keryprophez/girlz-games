@@ -69,12 +69,14 @@ rien n'est gardé, le son ne quitte pas la tablette), et la Ferme à
 construire (on glisse grange, poulailler, pommier, mare, tracteur… et les
 douze animaux sur un plateau vide, on trace chemins et clôtures au doigt ;
 les animaux vont à leur place — le canard à la mare, le cochon dans la
-boue — ; de jour ou de nuit, et la ferme se garde), et la Pâtisserie (un
+boue — ; de jour ou de nuit ; chacune a SA ferme, retrouvée à sa carte avec
+la photo de sa ferme, et chaque geste s'annule ou se refait), et la Pâtisserie (un
 gâteau d'un à trois étages, rond, en cœur ou carré : le glaçage s'étale
 au doigt et le nappage coule, la poche à douille dépose des rosaces, des
 fraises, framboises, myrtilles, cerises et vermicelles, puis des bougies
-qu'on souffle pour de vrai ; « Joyeux anniversaire », puis on le mange,
-part par part, à la petite fourchette).
+qu'on souffle pour de vrai — un vrai souffle : parler ou chanter n'éteint
+rien ; « Joyeux anniversaire », puis on le mange, part par part, à la petite
+fourchette — avec ou sans bougies, le bouton « Manger » y mène).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

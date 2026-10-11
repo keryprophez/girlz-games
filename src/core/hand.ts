@@ -52,6 +52,14 @@ export const HAND_SVG = `<svg viewBox="0 0 64 72" aria-hidden="true">
 const W = 70, H = 79
 const TIP_X = 21 / 64 * W, TIP_Y = 3 / 72 * H
 
+/** La main du jeu en cours (une seule à la fois) : `handNow()` la fait venir. */
+let nudge: (() => void) | null = null
+/** Le jeu attend un geste NOUVEAU (11/10 : le repas de la Pâtisserie servi,
+    le bouton « Souffle ! » à montrer) : la main vient au prochain quart de
+    seconde, sans attendre que l'enfant ait calé 15 s. Sans effet si elle
+    est déjà là, ou si le jeu n'a rien à montrer à ce moment-là. */
+export function handNow() { nudge?.() }
+
 const seenKey = (id: string) => `ferme:main:${id}`
 function readSeen(id: string): boolean {
   try { return localStorage.getItem(seenKey(id)) === '1' } catch { return false }
@@ -96,6 +104,8 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
   }
   root.addEventListener('pointerdown', onDown, true)
   const offPause = onPause(p => { if (p) hide() })
+  const come = () => { if (!showing) last = -Infinity }
+  nudge = come
 
   /** La cible en coordonnées d'écran, ou null si elle n'est pas visible. */
   const where = (s: Spot): P | null => {
@@ -343,6 +353,7 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
     dead = true
     ctx.cancel(tick)
     offPause()
+    if (nudge === come) nudge = null
     root.removeEventListener('pointerdown', onDown, true)
     hide()
   }

@@ -2002,6 +2002,25 @@ body.playing .po-card{max-width:880px;}
 .fb-trash.hot{background:#E8574C;transform:scale(1.25) !important;}
 .fb-dn{position:absolute;right:18px;top:84px;z-index:6;}
 .fb-dn .sn-tool{width:60px;height:60px;}
+/* Une ferme par fille (11/10) : à l'ouverture, une carte chacune, la photo de sa ferme (sous la barre de jeu, 8 : la maison reste là) */
+.fb-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
+  padding:80px 24px 24px;background:linear-gradient(180deg,#BFE6F7 0%,#E4F4D6 100%);}
+.fb-wrap[data-who=""] .fb-who{display:flex;}
+.fb-wrap[data-who=""] .fb-tray,.fb-wrap[data-who=""] .fb-dn,.fb-wrap[data-who=""] .fb-me{display:none;}
+.fb-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
+  background:#EEF7E6;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
+.fb-card:active{transform:scale(.95);}
+.fb-card.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--mango),var(--e2);}
+.fb-photo,.fb-photo img{display:block;width:100%;height:100%;}
+.fb-photo img{object-fit:cover;pointer-events:none;}
+.fb-empty{display:grid;place-items:center;width:100%;height:100%;}
+.fb-empty svg{width:42%;height:auto;}
+.fb-card-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
+.fb-me{position:absolute;left:18px;top:84px;z-index:6;}
+.fb-me .sn-tool{width:60px;height:60px;}
+/* Annuler, refaire : pâles quand il n'y a rien à défaire ou à refaire */
+.fb-undo{width:clamp(46px,4.4vw,56px);height:clamp(46px,4.4vw,56px);transition:opacity .2s;}
+.fb-undo.off{opacity:.35;}
 
 /* ============================================================
    LA PÂTISSERIE (5/10) — à gauche les cinq étapes ; en bas la palette de
@@ -2014,6 +2033,8 @@ body.playing .po-card{max-width:880px;}
   background:rgba(255,250,244,.88);border-radius:26px;padding:12px 10px;box-shadow:0 6px 20px rgba(69,54,42,.16);transition:opacity .4s;}
 .bk-step{width:clamp(46px,4.6vw,58px);height:clamp(46px,4.6vw,58px);}
 .bk-step.sel{background:linear-gradient(135deg,var(--mango),var(--coral));}
+/* « Manger » (11/10) : sous les étapes, un peu à part — ce n'est pas une étape, c'est la fin */
+.bk-eat{width:clamp(46px,4.6vw,58px);height:clamp(46px,4.6vw,58px);margin-top:6px;background:#FFF4E0;}
 .bk-pal{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:10px;align-items:flex-end;
   background:rgba(255,250,244,.92);border-radius:26px;padding:10px 16px 8px;box-shadow:0 6px 20px rgba(69,54,42,.18);
   max-width:calc(100% - 240px);overflow-x:auto;scrollbar-width:none;transition:opacity .4s;}
@@ -2030,6 +2051,10 @@ body.playing .po-card{max-width:880px;}
 .bk-blow{width:clamp(76px,7vw,92px);height:clamp(76px,7vw,92px);animation:bkPulse 1.6s ease-in-out infinite;}
 @keyframes bkPulse{50%{transform:scale(1.08);}}
 .bk-blow.off{opacity:.4;animation:none;}
+/* « Manger » touché avec des bougies allumées : le bouton du souffle se montre (11/10) */
+.bk-blow.ask{animation:bkAsk .45s ease-in-out 4,bkPulse 1.6s ease-in-out 1.8s infinite;}
+@keyframes bkAsk{50%{transform:scale(1.22) rotate(-8deg);}}
+.bk-blow.ask.off{animation:none;}
 .bk-wrap[data-phase="party"] .bk-pal,.bk-wrap[data-phase="party"] .bk-steps,.bk-wrap[data-phase="party"] .bk-blowitem{opacity:0;pointer-events:none;}
 
 /* ============================================================

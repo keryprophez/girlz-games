@@ -49,7 +49,7 @@ const OWN = {
   'cache-cache': ['src/games/hideseek.ts', 'src/core/farm3d.ts'],
   'animal-qui-repete': ['src/games/parrot.ts', 'src/core/voicefx.ts', 'src/core/mic.ts'],
   'ferme-a-construire': ['src/games/farmbuild.ts', 'src/core/farm3d.ts'],
-  'patisserie': ['src/games/bakery.ts', 'src/core/cake3d.ts'],
+  'patisserie': ['src/games/bakery.ts', 'src/core/cake3d.ts', 'src/core/souffle.ts'],
   'devine-mon-dessin': ['src/games/drawguess.ts', 'src/core/drawguess.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux

@@ -58,8 +58,13 @@ const STAGE = {
   },
   // La Ferme à construire : une ferme toute faite (celle de la maquette)
   farmbuild: {
-    ready: () => window.__fb && window.__fb.ready, wait: 1500,
-    act: async p => { await p.evaluate(() => { localStorage.removeItem('ferme:construire'); window.__fb.demo() }) },
+    // Les cartes d'abord (11/10) : la ferme de Jade, vidée, puis la ferme de la maquette
+    ready: () => window.__fb && window.__fb.cards, wait: 800,
+    act: async p => {
+      await p.evaluate(() => { localStorage.removeItem('ferme:construire:jade'); document.querySelector('.fb-card[data-who="jade"]').click() })
+      await p.waitForFunction(() => window.__fb.ready, null, { timeout: 120000, polling: 500 })
+      await p.evaluate(() => window.__fb.demo())
+    },
     after: 2500, zoom: 1.08, cy: 0.46
   },
   // Devine mon dessin : un chat au feutre sur la feuille, le chat de la ferme le reconnaît (sa bulle, la photo)

@@ -8,7 +8,8 @@ import { getCtx, sCrunch, tone } from '../core/audio'
 import { playNote } from '../core/music'
 import { onPause } from '../core/session'
 import { openMic, type Mic } from '../core/mic'
-import { visible } from '../core/hand'
+import { blowLevel } from '../core/souffle'
+import { visible, handNow } from '../core/hand'
 
 /* 🎂 LA PÂTISSERIE (5/10, Créer) — un gâteau sur son présentoir, dans une
    petite pâtisserie (mur à rayures, fanions, bocaux, comptoir en marbre).
@@ -20,7 +21,12 @@ import { visible } from '../core/hand'
    - Décor   : fraises, framboises, myrtilles, cerises, perles ; les
                vermicelles tombent où passe le doigt
    - Bougies : on les plante (elles s'allument), puis on SOUFFLE pour de vrai
-               (le micro, ouvert à cette étape seulement) ou on touche « Souffle ! »
+               (le micro, ouvert à cette étape seulement : un bruit fort SANS
+               NOTE — parler ou chanter n'éteint rien, 11/10) ou on touche
+               « Souffle ! »
+   - Manger  : (11/10, la fourchette) s'il reste des bougies allumées, le
+               bouton « Souffle ! » se montre ; sinon, la chanson et le repas —
+               sans bougie, on peut manger aussi
    Puis « Joyeux anniversaire » au carillon, des confettis, et on le MANGE
    (6/10, demandé par Joyce : « comme la pizza ») : la première part se
    coupe toute seule et glisse sur sa petite assiette ; un toucher = une
@@ -122,6 +128,16 @@ interface State {
   t: number
   eat: Eat | null
   stand: import('three').Object3D[]
+  /** Pendant la chanson, la répétition du repas (voir `rehearse`). */
+  warm: Warm | null
+}
+
+/** La répétition du repas : ce qui reste à préparer (une tâche par image),
+    les copies préparées (sous le comptoir) et les ustensiles déjà prêts. */
+interface Warm {
+  jobs: (() => void)[]
+  g: import('three').Group
+  tools: { knife: import('three').Group; fork: import('three').Group; plate: import('three').Mesh } | null
 }
 
 let me: State | null = null
@@ -358,14 +374,13 @@ function updateBlowBtn(s: State) {
 
 async function startMic(s: State) {
   if (s.mic || !ctx.alive()) return
+  const sr = getCtx()?.sampleRate ?? 48000
   try {
-    const mic = await openMic(x => {
-      let sum = 0
-      for (let i = 0; i < x.length; i++) sum += x[i] * x[i]
-      const rms = Math.sqrt(sum / x.length)
-      // Un souffle : un bruit fort et continu (le micro tout près de la bouche)
-      s.blow = Math.max(s.blow * 0.6, Math.min(1, (rms - 0.04) / 0.12))
-    }, { raw: !!(window as unknown as { __BOT?: boolean }).__BOT })
+    // Un souffle : un bruit fort et continu, SANS NOTE (`core/souffle.ts`) —
+    // une voix qui parle ou chante n'éteint plus les bougies (11/10). Le son
+    // brut : l'anti-bruit de Chrome efface justement un souffle (c'est un
+    // bruit), et son gain automatique le gonfle ou l'écrase
+    const mic = await openMic(x => { s.blow = Math.max(s.blow * 0.6, blowLevel(x, sr)) }, { raw: true })
     if (me !== s || s.step !== 'bougies' || s.phase !== 'make') { mic.stop(); return }
     s.mic = mic
   } catch { /* sans micro, le bouton « Souffle ! » suffit */ }
@@ -384,8 +399,12 @@ function blowOut(s: State, it: Item) {
 /* ---------- La fête et la part ---------- */
 
 function party(s: State) {
+  // Une seule fête : la dernière bougie éteinte ET « Manger » touché juste
+  // après, et la chanson partait deux fois, l'une sur l'autre
+  if (s.phase !== 'make') return
   s.phase = 'party'; s.phaseT = 0
   stopMic(s)
+  rehearse(s)
   ctx.root.querySelector('.bk-wrap')?.setAttribute('data-phase', 'party')
   const ac = getCtx()
   const t0 = (ac?.currentTime ?? 0) + 0.3
@@ -404,6 +423,92 @@ function party(s: State) {
   for (const [c, d] of chords) { playNote('pad', c, t0 + ct * B, d * B, 0.05); ct += d }
   s.phaseT = -at * B
   for (let i = 0; i < 6; i++) ctx.after(i * 900, () => confetti(s))
+}
+
+/* ---------- Pendant la chanson, la répétition du repas ----------
+   Couper le gâteau donne des plans de coupe à chacune de ses matières : la
+   tablette doit alors préparer de nouveaux rendus (des shaders) — 35 pendant
+   le repas (mesuré le 11/10), par paquets de treize au premier coup de
+   couteau et à la quatrième part : de quoi la figer plusieurs secondes
+   juste quand l'enfant veut manger. La chanson dure douze secondes où rien
+   ne presse : chaque matière y est préparée telle qu'elle sera (le gâteau
+   coupé en union puis en intersection, la part, ses faces, la bouchée, les
+   ustensiles), une par image, sur des copies dessinées sous le comptoir. Le
+   moteur garde ces rendus tant que les copies vivent (gardées par la scène
+   jusqu'à la fin) : le repas les retrouve prêts. */
+
+/** Des plans qui gardent tout (la coupe des copies n'a pas d'importance : seul leur NOMBRE compte). */
+const keepAll = (T: T3, n: number) => Array.from({ length: n }, () => new T.Plane(new T.Vector3(0, 1, 0), 1e3))
+
+/** Le couteau (sa lame part du centre, le manche dehors), la fourchette et la petite assiette. */
+function makeTools(s: State) {
+  const T = s.T
+  const knife = new T.Group()
+  const k = s.kit.knife()
+  k.rotation.y = Math.PI; k.position.x = 1.08
+  knife.add(k)
+  const fork = s.kit.fork()
+  const plate = new T.Mesh(new T.CylinderGeometry(0.62, 0.55, 0.05, 48), new T.MeshPhysicalMaterial({ color: '#F6F2EC', roughness: 0.22, clearcoat: 0.7 }))
+  plate.receiveShadow = true; plate.castShadow = true
+  s.stage.keep(plate.geometry); s.stage.keep(plate.material as Mat)
+  return { knife, fork, plate }
+}
+
+function rehearse(s: State) {
+  const T = s.T
+  s.stage.renderer.localClippingEnabled = true
+  const g = new T.Group()
+  g.position.set(0, -0.8, 0.6) // sous le comptoir : dessiné, jamais vu
+  s.stage.scene.add(g)
+  const w: Warm = { jobs: [], g, tools: null }
+  s.warm = w
+  const add = (o: import('three').Object3D) => { o.traverse(x => { x.frustumCulled = false; x.castShadow = false }); g.add(o) }
+  /** Une copie de la matière, coupée par `n` plans ; la peinture (le cercle
+      qui s'étale) gardée pour celles qui restent sur le gâteau, comme les vraies. */
+  const cut = (m: Mat, n: number, inter: boolean, own: boolean) => {
+    const c = m.clone()
+    if (!own) { c.onBeforeCompile = m.onBeforeCompile; c.customProgramCacheKey = m.customProgramCacheKey }
+    c.clippingPlanes = n ? keepAll(T, n) : null
+    c.clipIntersection = inter
+    return s.stage.keep(c)
+  }
+  /** Le même objet (même géométrie, instancié ou non) sous une autre matière. */
+  const twin = (o: import('three').Mesh, m: Mat) => {
+    const im = o as import('three').InstancedMesh
+    if (!im.isInstancedMesh) return new T.Mesh(o.geometry, m)
+    const c = new T.InstancedMesh(o.geometry, m, 1)
+    c.setMatrixAt(0, new T.Matrix4())
+    if (im.instanceColor) c.setColorAt(0, new T.Color())
+    return c
+  }
+  // Ce qui sera coupé : une matière = un objet qui la porte (comme `startEat`)
+  const reps = new Map<Mat, { o: import('three').Mesh; tier: boolean }>()
+  const take = (root: import('three').Object3D, tier: boolean) => root.traverseVisible(o => {
+    if (isMesh(o)) for (const m of matsOf(o)) if (!reps.has(m)) reps.set(m, { o, tier })
+  })
+  for (const t of s.tiers) take(t.g, true)
+  for (const it of s.items) if (it.obj.position.y >= PLATE_Y + 0.01) take(it.obj, false)
+  // Les vermicelles, même sans un seul : leur matière se coupe aussi (dessinée à vide, elle se prépare quand même)
+  reps.set(s.spr.material as Mat, { o: s.spr, tier: false })
+  for (const [m, { o, tier }] of reps) {
+    // Le gâteau qui reste : deux plans, en union (moins d'un demi-tour mangé) puis en intersection
+    w.jobs.push(() => { add(twin(o, cut(m, 2, true, false))); add(twin(o, cut(m, 2, false, false))) })
+    // La part : ses étages entre trois plans, son dessus pour la bouchée ; ses vermicelles sous un plan
+    if (tier) w.jobs.push(() => { add(twin(o, cut(m, 3, false, true))); add(twin(o, cut(m, 0, false, true))) })
+    if (o === s.spr) w.jobs.push(() => add(twin(o, cut(m, 1, false, true))))
+  }
+  // Les faces de coupe (génoise) : telles quelles sur le gâteau, sous un plan sur la part
+  w.jobs.push(() => {
+    const [f] = s.kit.cutFaces(s.tiers[0], A0, A0 + DP)
+    add(f); add(twin(f, cut(f.material as Mat, 1, false, true)))
+  })
+  // Les ustensiles, les vrais : le repas les reprendra
+  w.jobs.push(() => {
+    const t = makeTools(s)
+    w.tools = t
+    g.add(t.knife, t.fork, t.plate)
+    for (const o of [t.knife, t.fork, t.plate]) o.traverse(x => { x.frustumCulled = false })
+  })
 }
 
 function confetti(s: State) {
@@ -457,22 +562,20 @@ function startEat(s: State) {
   matsOf(s.spr).forEach(m => mats.add(m))
   for (const m of mats) { m.clippingPlanes = world; m.clipIntersection = true }
   s.stage.renderer.localClippingEnabled = true
-  // Le couteau (sa lame part du centre, le manche dehors) et la fourchette
-  const knife = new T.Group()
-  const k = s.kit.knife()
-  k.rotation.y = Math.PI; k.position.x = 1.08
-  knife.add(k)
+  // La répétition est finie : ses copies quittent la scène (leurs matières
+  // restent en vie, et avec elles les rendus préparés) ; les ustensiles
+  // répétés servent pour de vrai
+  const tools = s.warm?.tools ?? makeTools(s)
+  if (s.warm) { s.stage.scene.remove(s.warm.g); s.warm.jobs = [] }
+  const { knife, fork, plate } = tools
+  for (const o of [knife, fork, plate]) o.traverse(x => { x.frustumCulled = true })
   knife.visible = false
   s.cake.add(knife)
-  const fork = s.kit.fork()
   fork.visible = false
   s.stage.scene.add(fork)
   // La petite assiette
-  const plate = new T.Mesh(new T.CylinderGeometry(0.62, 0.55, 0.05, 48), new T.MeshPhysicalMaterial({ color: '#F6F2EC', roughness: 0.22, clearcoat: 0.7 }))
   plate.position.set(PLATE.x, 0.025, PLATE.z)
-  plate.receiveShadow = true; plate.castShadow = true
   s.stage.scene.add(plate)
-  s.stage.keep(plate.geometry); s.stage.keep(plate.material as Mat)
   s.eat = { parts: 0, base: s.rot, local, world, mats: [...mats], faces: [], knife, fork, slice: null, camK: 0, anim: null }
   setCakePlanes(s)
   cutNext(s)
@@ -512,6 +615,8 @@ function serve(s: State) {
   const e = s.eat!
   const a0 = A0 + e.parts * DP
   e.parts++
+  // La dernière part n'a pas besoin du couteau : il cesse d'attendre
+  e.knife.visible = false
   setCakePlanes(s)
   e.slice = makeSlice(s, a0, a0 + DP)
   sfx('cloth', { vol: 0.45, rate: 0.8 })
@@ -608,8 +713,10 @@ function eatTap(s: State) {
   if (e.slice) {
     if (e.slice.t < 1) return
     const at = biteAt(s, e.slice)
+    // Elle attendait juste au-dessus : elle pique tout de suite
+    const waiting = e.fork.visible
     e.fork.visible = true
-    e.anim = { kind: 'fork', t: 0, at, from: at.clone().add(new s.T.Vector3(0.9, 1.1, 0.7)), morsel: null }
+    e.anim = { kind: 'fork', t: waiting ? 0.3 : 0, at, from: waiting ? e.fork.position.clone() : at.clone().add(new s.T.Vector3(0.9, 1.1, 0.7)), morsel: null }
     sfx('select', { vol: 0.3, rate: 1.4 })
   } else cutNext(s)
 }
@@ -639,6 +746,34 @@ function applyBite(s: State, at: V3) {
   e.slice = null
 }
 
+/** Rien ne bouge : l'ustensile du prochain geste attend en se balançant —
+    la fourchette au-dessus de la part servie (un toucher : une bouchée), le
+    couteau au-dessus du gâteau (un toucher : la part suivante). Avant, rien
+    ne disait qu'il fallait toucher : la main n'arrivait qu'après 15 s. */
+function waitTool(s: State, e: Eat) {
+  const T = s.T
+  const bob = Math.sin(s.t * 3.6)
+  const sl = e.slice
+  if (sl) {
+    if (sl.t < 1) return
+    e.fork.visible = true
+    e.fork.scale.setScalar(1)
+    e.fork.position.copy(biteAt(s, sl)).add(new T.Vector3(0.06, 0.42 + bob * 0.06, 0.05))
+    e.fork.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), new T.Vector3(-0.42 + bob * 0.08, -1, -0.3).normalize())
+  } else if (e.parts < PARTS) {
+    // Au-dessus de la coupe qu'il fera, telle qu'elle sera une fois le gâteau tourné : devant
+    const top = s.tierY[s.tierY.length - 1] + s.tiers[s.tiers.length - 1].h
+    e.knife.visible = true
+    e.knife.rotation.y = knifeYaw(s, e, e.base + e.parts * DP)
+    e.knife.position.y = top + KNIFE_UP + bob * 0.04
+  }
+}
+/** Le couteau (repère du gâteau) au-dessus de la prochaine coupe, regardée
+    depuis le monde comme quand le gâteau aura tourné jusqu'à `to`. */
+const knifeYaw = (s: State, e: Eat, to: number) => -(A0 + (e.parts + 1) * DP) + (to - s.rot)
+/** La hauteur du couteau au-dessus du gâteau : là où il attend, là d'où il descend. */
+const KNIFE_UP = 0.09
+
 /** Pendant qu'on mange, la caméra recule et glisse à droite : le gâteau ET la petite assiette. */
 const CAM0 = { p: [0, 2.05, 5.4], t: [0, 0.95, 0] }, CAM_EAT = { p: [0.5, 2.15, 6.7], t: [0.5, 0.72, 0.3] }
 
@@ -654,9 +789,12 @@ function stepEat(s: State, dt: number) {
     s.stage.camera.lookAt(L(CAM0.t, CAM_EAT.t, 0), L(CAM0.t, CAM_EAT.t, 1), L(CAM0.t, CAM_EAT.t, 2))
   }
   const a = e.anim
+  if (!a) waitTool(s, e)
   if (a?.kind === 'turn') {
     a.t = Math.min(1, a.t + dt / 0.7)
     s.rot = a.from + (a.to - a.from) * ease(a.t)
+    // Le couteau qui attendait ne tourne pas avec le gâteau : il reste au-dessus de sa coupe
+    if (e.knife.visible) e.knife.rotation.y = knifeYaw(s, e, a.to)
     if (a.t >= 1) {
       s.rot = a.to
       const k = e.parts
@@ -670,7 +808,7 @@ function stepEat(s: State, dt: number) {
     a.t += dt
     const i = Math.min(a.lines.length - 1, Math.floor(a.t / per)), p = (a.t - i * per) / per
     const top = s.tierY[s.tierY.length - 1] + s.tiers[s.tiers.length - 1].h
-    const hi = top + 0.45, lo = PLATE_Y + 0.004
+    const hi = top + KNIFE_UP, lo = PLATE_Y + 0.004
     const y = p < 0.45 ? hi + (lo - hi) * ease(p / 0.45) : p < 0.6 ? lo : lo + (hi - lo) * ease((p - 0.6) / 0.4)
     e.knife.visible = true
     e.knife.rotation.y = -a.lines[i]
@@ -703,6 +841,8 @@ function stepEat(s: State, dt: number) {
       f.visible = false
       tone(520, 0.09, 'triangle', 0.08); tone(780, 0.14, 'triangle', 0.08, 0.11)
       e.anim = null
+      // La première part finie : il faut maintenant toucher le gâteau (un geste nouveau)
+      if (!e.slice && e.parts === 1) handNow()
       if (!e.slice && e.parts >= PARTS) {
         s.phase = 'done'
         ctx.after(900, () => { if (me === s) ctx.finish({ title: 'Gâteau dévoré !', msg: 'Il n’en reste pas une miette', stars: 3 }) })
@@ -717,7 +857,11 @@ function stepEat(s: State, dt: number) {
     sl.g.position.lerpVectors(sl.from.p, sl.to.p, k)
     sl.g.position.y += Math.sin(k * Math.PI) * 0.45
     sl.g.rotation.y = sl.from.r + (sl.to.r - sl.from.r) * k
-    if (sl.t >= 1) sfx('confirm', { vol: 0.4 })
+    if (sl.t >= 1) {
+      sfx('confirm', { vol: 0.4 })
+      // La première part servie : on montre tout de suite qu'un toucher la mange
+      if (e.parts === 1) handNow()
+    }
   }
   // Les plans suivent le gâteau et la part
   s.cake.rotation.y = s.rot
@@ -783,6 +927,8 @@ function frame(s: State, dt: number) {
     if (Math.abs(want - s.rot) < 0.01) { s.rot = want; s.cake.rotation.y = want; startEat(s) }
   }
   if (s.phase === 'eat' || s.phase === 'done') stepEat(s, dt)
+  // La répétition du repas : une tâche par image, que la qualité ne compte pas
+  if (s.phase === 'party' && s.warm?.jobs.length) { s.warm.jobs.shift()!(); s.stage.settle() }
   s.fx.update(dt)
 }
 
@@ -871,7 +1017,7 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
     stage, T, kit, cake, tiers: [], tierY: [], nTiers: 2, shape: 'round', items: [], spr, sprN: 0,
     step: 'base', glaze: GLAZES[1][0], cream: CREAMS[0][0], drop: false, deco: 'fraise', candle: CANDLES[0][0],
     rot: 0.35, vRot: 0, phase: 'make', phaseT: 0, mic: null, blow: 0, gust: false, blowHeld: 0, blowNext: 0,
-    fx: particles(stage, 500), ray: new T.Raycaster(), t: 0, eat: null, stand: standMeshes
+    fx: particles(stage, 500), ray: new T.Raycaster(), t: 0, eat: null, stand: standMeshes, warm: null
   }
   buildBase(s)
   return s
@@ -928,6 +1074,7 @@ const SHAPE_ICON: Record<CakeShape, string> = {
 const SHAPE_NAME: Record<CakeShape, string> = { round: 'Rond', heart: 'Cœur', square: 'Carré' }
 const pot = (c: string) => svg(`<path d="M12 18h24v16a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8z" fill="${c}" stroke="rgba(69,54,42,.35)" stroke-width="1.5"/><path d="M14 18c2 5 4 6 6 2 2 6 5 6 7 1 2 4 5 4 7-3" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>`)
 const BLOW = svg('<circle cx="16" cy="24" r="11" fill="#FFD3B5"/><circle cx="12.5" cy="21" r="1.6" fill="#45362A"/><ellipse cx="22" cy="27" rx="3.2" ry="2.6" fill="#E2557E"/><path d="M29 22c4 0 6-2 9-1M29 27c5 0 7 1 11 0M29 32c4 0 6 2 9 1" fill="none" stroke="#7FC8E8" stroke-width="2.8" stroke-linecap="round"/>', 48)
+const EAT_ICON = svg('<path d="M5 40h25V21z" fill="#E9B872"/><path d="M5 40 30 21v5L11 40z" fill="#F58FB8"/><path d="M15.5 33.5H30" stroke="#FFF4E0" stroke-width="2.6"/><circle cx="26.5" cy="20" r="3.4" fill="#E2453C"/><path d="M36 6v8a4 4 0 0 0 8 0V6M40 6v9" fill="none" stroke="#9CA6B0" stroke-width="2.4" stroke-linecap="round"/><rect x="38.5" y="17" width="3" height="25" rx="1.5" fill="#9CA6B0"/>')
 const SPRINKLE_ICON = svg(['#FF6B81', '#FFC94D', '#5EC97B', '#4FB8E7', '#B197FC'].map((c, i) => `<rect x="${10 + i * 6}" y="${14 + (i % 2) * 14}" width="4" height="12" rx="2" fill="${c}" transform="rotate(${-30 + i * 15} ${12 + i * 6} ${20 + (i % 2) * 14})"/>`).join(''))
 
 /* ---------- Le jeu ---------- */
@@ -970,7 +1117,7 @@ export const bakery: GameDef = {
     let dead = false
     c.root.innerHTML = `
       <div class="arena g3-arena bk-wrap" id="bkWrap" data-step="base">
-        <div class="bk-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool bk-step${st === 'base' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}</div>
+        <div class="bk-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool bk-step${st === 'base' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}<span class="tool-item"><button class="sn-tool bk-eat" id="bkEat" aria-label="Manger">${EAT_ICON}</button><i class="tool-cap">Manger</i></span></div>
         <div class="bk-pal" id="bkPal"></div>
         <span class="tool-item bk-blowitem"><button class="sn-tool bk-blow off" id="bkBlow" aria-label="Souffle">${BLOW}</button><i class="tool-cap">Souffle !</i></span>
       </div>`
@@ -1005,6 +1152,24 @@ export const bakery: GameDef = {
       updateBlowBtn(s)
     }
 
+    /** « Manger » : les bougies encore allumées d'abord (« Souffle ! » se
+        montre, la main le désigne) ; sinon la chanson, puis le repas. */
+    const askToEat = () => {
+      const s = me
+      if (!s || s.phase !== 'make') return
+      if (litCandles(s).length) {
+        if (s.step !== 'bougies') setStep('bougies')
+        const b = c.root.querySelector<HTMLElement>('#bkBlow')
+        // Il se dandine, puis reprend son pouls (la classe reste : le test la voit)
+        if (b) { b.classList.remove('ask'); void b.offsetWidth; b.classList.add('ask') }
+        sfx('select', { vol: 0.5 })
+        handNow()
+        return
+      }
+      sfx('confirm', { vol: 0.4 })
+      party(s)
+    }
+
     const hideLoader = loader(arena, 'bakery')
     ;(async () => {
       const s = await build(c, arena)
@@ -1023,6 +1188,7 @@ export const bakery: GameDef = {
       const s = me
       if (!s) return
       const t = e.target as HTMLElement
+      if (t.closest('#bkEat')) { askToEat(); return }
       const stepB = t.closest<HTMLElement>('.bk-step')
       if (stepB?.dataset.step) { setStep(stepB.dataset.step as Step); sfx('select', { vol: 0.5 }); return }
       const o = t.closest<HTMLElement>('.bk-opt')
@@ -1114,6 +1280,8 @@ export const bakery: GameDef = {
         /** Ce qui est posé : sorte et place (repère du gâteau). */
         items() { return me?.items.map(it => [it.kind, ...it.obj.position.toArray().map(v => +v.toFixed(2))]) ?? [] },
         get lit() { return me ? litCandles(me).length : 0 },
+        /** La répétition du repas : ce qui reste à préparer (null : pas commencée). */
+        get warmLeft() { return me?.warm ? me.warm.jobs.length : null },
         /** Le temps du jeu accéléré (la 3D logicielle des bots fait une image par seconde) : la fête et le repas sont longs. */
         speed(k: number) { if (me) me.stage.timeScale = k },
         /** Pendant qu'on mange : parts coupées, bouchées de la part servie, où toucher (null : attendre). */
