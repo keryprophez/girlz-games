@@ -41,6 +41,8 @@ export const GAMES: GameDef[] = [
    - Jouer     = on s'amuse, on peut perdre (action, puzzles, plateau)
    - Apprendre = pédagogique, jamais de sanction
    - Créer     = pas de score du tout
+   Les Perles Miroir sont passées d'Apprendre à Jouer le 11/10 (le père :
+   « ce n'est pas vraiment du travail » — Apprendre, c'est pour travailler).
    La coupe du 2 septembre (voir AUDIT.md) a retiré balloon, popcorn, fish,
    battleship, quiz, socks et puzzle du catalogue. Leurs bonnes idées sont
    à greffer : mode « Compte » de
@@ -53,12 +55,12 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
       icetower, ninja, pinball, hideseek, drawguess,
-      maze, taquin, memory, simonGame, connect4
+      maze, taquin, memory, simonGame, connect4, mirror
     ]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences]
+    games: [clock, potager, market, intrus, geoGame, space, patterns, letters, sentences]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',

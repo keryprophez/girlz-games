@@ -162,6 +162,8 @@ body.ingame .hm-meadow{display:none;}
 .gc.gc-poster .nm{padding:0 6px;}
 .hm-grid.n7:has(.gc-poster),.hm-grid.n8:has(.gc-poster){grid-template-columns:repeat(4,minmax(0,clamp(160px,19.5vw,250px)));gap:clamp(10px,1.3vw,16px);}
 .hm-grid.n9:has(.gc-poster),.hm-grid.n10:has(.gc-poster){grid-template-columns:repeat(5,minmax(0,clamp(130px,16.3vw,210px)));gap:clamp(10px,1.3vw,16px);}
+/* Onze ou douze jeux (Jouer, 11/10) : six colonnes, toujours deux rangées sans défilement */
+.hm-grid.n11:has(.gc-poster),.hm-grid.n12:has(.gc-poster){grid-template-columns:repeat(6,minmax(0,clamp(112px,14vw,185px)));gap:clamp(8px,1.1vw,14px);}
 .hm-grid.n5:has(.gc-poster),.hm-grid.n6:has(.gc-poster){grid-template-columns:repeat(3,minmax(0,clamp(180px,23.5vw,300px)));gap:clamp(10px,1.3vw,16px);}
 @media(max-width:640px){.hm-grid:has(.gc-poster){grid-template-columns:repeat(2,1fr) !important;}}
 /* La vignette touchée grandit jusqu'à remplir l'écran (23/09) */

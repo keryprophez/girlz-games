@@ -27,7 +27,9 @@ ramassant les graines cachées au fond des impasses ; et des classiques : Taquin
 3D), Memory (de vraies cartes qui se retournent), le Chœur de la ferme (les
 animaux chantent avec leurs vraies voix, à toi de rejouer la chanson) et
 Puissance 4, avec les personnages 3D de la ferme (vache, poule, cochon,
-canard, mouton…) en pions.
+canard, mouton…) en pions ; les Perles Miroir (une plaque à picots en 3D :
+on pose les perles qui complètent le reflet d'un papillon, d'une fraise ou
+d'une tête de cochon, puis le fer les fait fondre et l'objet s'envole).
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
 le Potager (LE jeu des calculs : on choisit ses opérations, + − × ÷, puis la
@@ -40,9 +42,7 @@ qui retient ce qui est déjà su), le Marché (vrais euros), l'Intrus, le Tour d
 Voyage dans l'Espace (le vrai système solaire du jour : le Soleil qui bout,
 la Terre et ses villes la nuit, les anneaux de Saturne, les lunes de Jupiter ;
 une fusée qu'on suit en vol, le temps qui file, un mode « Trouve »),
-Suites logiques, les Perles Miroir (une plaque à picots en 3D : on pose
-les perles qui complètent le reflet d'un papillon, d'une fraise ou d'une tête
-de cochon, puis le fer les fait fondre et l'objet s'envole), Chasse
+Suites logiques, Chasse
 aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul).
 
