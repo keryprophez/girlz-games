@@ -1,13 +1,15 @@
 // Le WORKER de la Ferme (9/10 : l'app quitte GitHub Pages pour Cloudflare,
 // compte tld83, https://girlz-games.tld83.workers.dev). Tout passe d'abord
 // par ici (`run_worker_first`), sauf les médias de `/assets/` : rien de l'app
-// n'est servi avant le code d'accès. Une seule route à nous : le devineur.
+// n'est servi avant le code d'accès. Deux routes à nous, qui montrent un
+// dessin à Claude : le devineur, et « Mon dessin prend vie » (18/10).
 import { accessPage, type PageState } from './access-page'
 import {
   allowed, isDevBypass, isUnlocked, readConfig, safeNext, sameCode, sessionCookie, sessionValue,
   type AccessEnv
 } from './access'
 import { devine, type Ask, type DevineEnv } from './devine'
+import { vivant, type AskVivant } from './vivant'
 import { withSecurityHeaders } from './headers'
 
 export type Env = AccessEnv & DevineEnv & { ASSETS: Fetcher }
@@ -85,7 +87,7 @@ async function checkCode(request: Request, url: URL, env: Env): Promise<Response
   return redirect(next, { 'set-cookie': sessionCookie(value, config.maxAgeS) })
 }
 
-async function route(request: Request, url: URL, env: Env, ask?: Ask): Promise<Response> {
+async function route(request: Request, url: URL, env: Env, ask?: Ask, askV?: AskVivant): Promise<Response> {
   const { pathname } = url
   if (pathname === '/acces') return codePage(request, url, env)
   if (pathname === '/api/acces') return checkCode(request, url, env)
@@ -95,16 +97,17 @@ async function route(request: Request, url: URL, env: Env, ask?: Ask): Promise<R
     if (!config || !(await isUnlocked(request, config))) return locked(request, url)
   }
   if (pathname === '/api/devine') return devine(request, env, ask)
+  if (pathname === '/api/vivant') return vivant(request, env, askV)
   // Jamais la page de l'app pour un chemin d'API inconnu
   if (pathname.startsWith('/api/')) return new Response(null, { status: 404 })
   return env.ASSETS.fetch(request)
 }
 
-/** Le point d'entrée, avec le devineur remplaçable (tests). */
-export async function handle(request: Request, env: Env, ask?: Ask): Promise<Response> {
+/** Le point d'entrée, avec les appels à Claude remplaçables (tests). */
+export async function handle(request: Request, env: Env, ask?: Ask, askV?: AskVivant): Promise<Response> {
   const url = new URL(request.url)
   try {
-    return withSecurityHeaders(await route(request, url, env, ask), url.pathname)
+    return withSecurityHeaders(await route(request, url, env, ask, askV), url.pathname)
   } catch (error) {
     console.error(error)
     return withSecurityHeaders(new Response('Erreur', { status: 500 }), url.pathname)

@@ -340,7 +340,7 @@ function sample(f: Float32Array, w: number, h: number, x: number, y: number): nu
  */
 export function inflate(sil: Silhouette, o: { step?: number; puff?: number } = {}): PlushMesh {
   const { w, h, mask, dist } = sil
-  const g = o.step ?? 2, puff = o.puff ?? 0.5
+  const g = o.step ?? 2, puff = o.puff ?? 0.58
   const mf = new Float32Array(w * h)
   for (let i = 0; i < w * h; i++) mf[i] = mask[i]
   const soft = blur(mf, w, h, 1)
@@ -351,7 +351,7 @@ export function inflate(sil: Silhouette, o: { step?: number; puff?: number } = {
   const k = puff * Math.sqrt(dmax)
   const hm = new Float32Array(w * h)
   // Jamais plus épais que rond : une patte reste un boudin, pas une planche de chant
-  for (let i = 0; i < w * h; i++) hm[i] = mask[i] ? Math.min(k * Math.sqrt(dist[i]), 1.1 * dist[i] + 0.5) : 0
+  for (let i = 0; i < w * h; i++) hm[i] = mask[i] ? Math.min(k * Math.sqrt(dist[i]), 1.2 * dist[i] + 0.5) : 0
   // La crête du milieu (là où la distance plie) adoucie, sans déborder du tissu
   const num = blur(hm, w, h, 1.6), den = blur(mf, w, h, 1.6)
   const height = new Float32Array(w * h)

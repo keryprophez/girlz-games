@@ -32,11 +32,12 @@ des lieux du 2/09 (verdict par jeu) · `README.md` = présentation de l'app.
    Corollaire : dans Apprendre, **aucune sanction** (ni vies, ni chrono, ni
    bonus de vitesse) ; dans Créer, **aucune note** sur une création.
 3. **Pas de collecte de données enfants.** Photos et voix restent locales.
-   Aucun analytique tiers. **Une seule exception, choisie par le père le
-   8/10 : Devine mon dessin** envoie le DESSIN (réduit, sans prénom, sans
+   Aucun analytique tiers. **Deux exceptions, choisies par le père :
+   Devine mon dessin (8/10) et Mon dessin prend vie (18/10, la Ferme à
+   construire)** envoient le DESSIN (réduit, sans prénom, sans
    voix ni photo) à Claude, l'IA d'Anthropic, qui l'efface sous 30 jours
    et ne s'en sert pas pour s'entraîner — par NOTRE Worker
-   (`worker/devine.ts`), avec la clé API du père, un secret du Worker
+   (`worker/devine.ts`, `worker/vivant.ts`), avec la clé API du père, un secret du Worker
    Cloudflare (`ANTHROPIC_API_KEY`, posé dans le tableau de bord) : jamais
    dans l'app, ni sur la tablette, ni dans le dépôt (9/10, « je veux pas
    ajouter la clef sur la tablette »). Rien d'autre ne part, nulle part.
@@ -194,6 +195,23 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            génoise, crème, confiture), la coupe d'une part
                            entamée (`biteFace`), le couteau, la fourchette et
                            la bouchée (`knife`, `fork`, `morsel`)
+             plush.ts    ← LA PELUCHE de Mon dessin prend vie (18/10) : son
+                           dessin gonflé — la silhouette (ses VRAIS trous de
+                           contour bouchés grâce à ses traits, `bridges` :
+                           le début et la fin d'un même trait, ou d'un trait
+                           et du suivant ; jamais l'écart entre deux pattes),
+                           le tissu de chaque zone (`fabric`), l'épaisseur
+                           (racine de la distance au bord, jamais plus que
+                           rond) et le maillage cousu, devant et dos
+                           (`inflate`) — logique pure, testée ; `plush3d.ts`
+                           l'habille (couleurs, broderie en relief, points de
+                           couture, duvet teinté) : `plushParts` (calculé une
+                           fois) puis `buildPlush` (par scène)
+             vivant.ts   ← CE QUE CLAUDE DIT D'UN ANIMAL DESSINÉ (18/10) : la
+                           fiche imposée (`SCHEMA` : allure, regard, cri parmi
+                           les dix vrais cris, taille), `parseVivant`, et
+                           `askVivant` (`POST /api/vivant`) — lu aussi par le
+                           Worker ; sans réponse, `DEFAULT` (il sautille)
              drawguess.ts ← LE DEVINEUR de Devine mon dessin (8/10) : la
                            FICHE imposée (`SCHEMA` : trois propositions avec
                            la photo de l'imagier qui leur correspond), les
@@ -239,7 +257,9 @@ worker/          LE WORKER CLOUDFLARE (9/10, il sert l'app : wrangler.jsonc)
                  D'ACCÈS de toute l'app, repris de food-coach : cookie signé,
                  fermé tant que les secrets manquent) · devine.ts (l'appel
                  à Claude : Opus 5.5, effort bas, la fiche imposée, le repli
-                 serveur, la clé en secret) · headers.ts · worker.test.ts
+                 serveur, la clé en secret ; `readDrawing` et `askModel`,
+                 partagés) · vivant.ts (Mon dessin prend vie, 18/10) ·
+                 headers.ts · worker.test.ts
 scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
 scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
 scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
@@ -459,7 +479,16 @@ reconstruite ; depuis le 11/10, UNE FERME PAR FILLE — deux cartes « Jade »
 et « Joyce » à l'ouverture, avec la photo de sa ferme (`snap`, prise en la
 quittant), gardée dans `ferme:construire:<qui>` ; « Annuler » et
 « Refaire » à côté de la gomme, une étape par geste (chaque chose a son
-numéro `u`, gardé avec elle), quarante au plus) ·
+numéro `u`, gardé avec elle), quarante au plus ; depuis le 18/10, MON
+DESSIN PREND VIE : « Dessiner » en tête des Animaux ouvre une feuille
+(`games/farmdraw.ts` : ses traits gardés tels quels, rejoués au pixel
+près), « Fini » et son animal devient une peluche à lui (`core/plush.ts`)
+qui se gonfle devant nous puis vit sur la ferme — toujours face à nous,
+retourné quand il change de sens (son dos : son dessin en miroir) ; Claude
+dit son allure, son sens, son cri, sa taille (`core/vivant.ts`) ; six par
+ferme ; la feuille ouverte, la ferme ne se redessine plus
+(`stage.render` vide) ; son bot répond à la place de Claude,
+`__fb.fakeVivant`) ·
 `sheepdog` (le Chien de berger, 11/10 : le plateau vide de Cache-Cache,
 sans sa cour, vu d'en haut ; le doigt posé appelle le chien, une tape le
 fait aboyer ; trois troupeaux dans la journée, le soleil sur une barre,

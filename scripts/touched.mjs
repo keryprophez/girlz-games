@@ -49,7 +49,7 @@ const OWN = {
   'cache-cache': ['src/games/hideseek.ts', 'src/core/farm3d.ts'],
   'chien-de-berger': ['src/games/sheepdog.ts', 'src/core/herd.ts', 'src/core/farm3d.ts'],
   'animal-qui-repete': ['src/games/parrot.ts', 'src/core/voicefx.ts', 'src/core/mic.ts'],
-  'ferme-a-construire': ['src/games/farmbuild.ts', 'src/core/farm3d.ts'],
+  'ferme-a-construire': ['src/games/farmbuild.ts', 'src/games/farmdraw.ts', 'src/core/farm3d.ts', 'src/core/plush.ts', 'src/core/plush3d.ts', 'src/core/vivant.ts'],
   'patisserie': ['src/games/bakery.ts', 'src/core/cake3d.ts', 'src/core/souffle.ts'],
   'devine-mon-dessin': ['src/games/drawguess.ts', 'src/core/drawguess.ts'],
 }

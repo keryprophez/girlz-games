@@ -7,6 +7,9 @@ import { critterPortraits, piecePortraits, portraitImg } from '../core/portraits
 import { sfx, preloadSfx, cry, preloadCries, CRY, type AnimalVoice } from '../core/sfx'
 import { visible } from '../core/hand'
 import { BADGE } from '../core/badges'
+import { buildPlush, plushParts, type Plush, type PlushParts } from '../core/plush3d'
+import { askVivant, DEFAULT, type Allure, type Taille, type Vivant } from '../core/vivant'
+import { createSheet, DRAW_ICONS, exportPng, plushStrokes, renderStrokes, type Drawn, type DrawStroke, type Sheet } from './farmdraw'
 
 /* 🏡 LA FERME À CONSTRUIRE (5/10, Créer) — le plateau de Cache-Cache, vide :
    on y glisse, depuis le tiroir du bas, des bâtiments, de la nature, des
@@ -45,6 +48,12 @@ const HOME: Partial<Record<CritterKind, PieceId[]>> = {
 /** Les pièces dans lesquelles un animal peut entrer (le canard nage, le cochon se roule). */
 const INSIDE: Partial<Record<CritterKind, PieceId>> = { duck: 'pond', pig: 'mud' }
 const MAX_PIECES = 36, MAX_ANIMALS = 20, MAX_STROKES = 24
+/** Mon dessin prend vie (18/10) : six animaux dessinés par ferme au plus. */
+const MAX_DRAWN = 6
+/** Sa taille selon Claude, son pas selon son allure, la cadence de son pas. */
+const DRAWN_SIZE: Record<Taille, number> = { petit: 0.55, moyen: 0.8, grand: 1.1 }
+const DRAWN_SPEED: Record<Allure, number> = { marche: 0.55, saute: 0.75, vole: 0.85, rampe: 0.32, nage: 0.45 }
+const DRAWN_GAIT: Record<Allure, number> = { marche: 10, saute: 6.5, vole: 4, rampe: 6, nage: 7 }
 const R = PLATEAU_R, EDGE = R - 0.9
 
 /** Une ferme par fille (11/10) ; sa couleur borde sa carte. */
@@ -60,7 +69,7 @@ const WHO_KEY = 'ferme:construire:qui'
 const OLD_KEY = 'ferme:construire'
 const PIECES = new Set(TABS.batiments.items.concat(TABS.nature.items, TABS.objets.items).map(i => i[0]))
 
-interface SavedItem { u?: number; a?: CritterKind; p?: PieceId; x: number; z: number; ry: number }
+interface SavedItem { u?: number; a?: CritterKind; p?: PieceId; w?: Drawn; x: number; z: number; ry: number }
 interface Saved { v: 1; night: boolean; items: SavedItem[]; paths: number[][]; fences: number[][] }
 
 interface Thing {
@@ -78,6 +87,17 @@ interface Thing {
   hop?: number
   /** Une pièce : sa lanterne allumée la nuit. */
   lamp?: import('three').PointLight
+  /** Un animal dessiné (18/10) : sa peluche, son dessin, son sens (1 : vers la
+      droite de l'écran), sa taille du moment, sa naissance (1 → 0 : il se
+      gonfle), son tempo à lui, et s'il attend la réponse de Claude. */
+  plush?: Plush
+  drawn?: Drawn
+  dir?: number
+  yaw?: number
+  size?: number
+  birth?: number
+  seed?: number
+  asking?: boolean
   /** Les animations : la chute à la pose, le saut. */
   drop: number
   jump: number
@@ -110,6 +130,10 @@ interface State {
 
 let me: State | null = null
 let ctx: GameContext
+/** La feuille de « Mon dessin prend vie » (la main la regarde). */
+let sheet: Sheet | null = null
+/** Le bot répond à la place de Claude (jamais de vrai appel en intégration) ; `null` : pas de réponse. */
+let fakeVivant: (() => Vivant | null) | null = null
 let saved: Saved = { v: 1, night: false, items: [], paths: [], fences: [] }
 let who: Who = 'jade'
 let nextU = 1
@@ -138,7 +162,7 @@ function flush() {
 const r2 = (x: number) => Math.round(x * 100) / 100
 /** Une chose telle qu'on la garde (à sa place, ou à une autre : là d'où on l'a prise). */
 const itemOf = (t: Thing, x = t.g.position.x, z = t.g.position.z): Kept =>
-  ({ u: t.u, ...(t.kind === 'animal' ? { a: t.id as CritterKind } : { p: t.id as PieceId }), x: r2(x), z: r2(z), ry: r2(t.ry) })
+  ({ u: t.u, ...(t.drawn ? { w: t.drawn } : t.kind === 'animal' ? { a: t.id as CritterKind } : { p: t.id as PieceId }), x: r2(x), z: r2(z), ry: r2(t.ry) })
 
 /** La photo de la ferme pour sa carte : l'image telle qu'on la quitte,
     réduite (400 px de large, en WebP : une vingtaine de Ko). Lue dans la
@@ -189,6 +213,7 @@ function showUndo() {
 const byU = (s: State, u: number) => s.things.find(t => t.u === u)
 /** Une chose qui revient (la ferme gardée, une étape annulée). */
 function revive(s: State, it: SavedItem, drop: boolean): Thing | null {
+  if (it.w && Array.isArray(it.w.s)) return addDrawn(s, it.w, it.x, it.z, it.ry, drop, it.u)
   if (it.a && ANIMALS.includes(it.a)) return addAnimal(s, it.a, it.x, it.z, it.ry, drop, it.u)
   if (it.p && PIECES.has(it.p)) return addPiece(s, it.p, it.x, it.z, it.ry, drop, it.u)
   return null
@@ -205,7 +230,7 @@ async function apply(s: State, a: Act, back: boolean) {
     const [x, z] = back ? a.from : a.to
     t.g.position.set(x, 0, z)
     t.drop = 0.5
-    if (t.c) t.goal = null
+    if (t.kind === 'animal') t.goal = null
     sfx('drop', { vol: 0.5 })
   } else if (a.k === 'turn') {
     const t = byU(s, a.u)
@@ -262,9 +287,63 @@ function addAnimal(s: State, kind: CritterKind, x: number, z: number, ry: number
   return t
 }
 
+/* ---------- Mon dessin prend vie (18/10) ----------
+   Son dessin devient une peluche (`core/plush3d.ts`) qui vit sur la ferme
+   comme les autres animaux : elle se promène, on la prend, on la jette au
+   panier, on l'annule. Elle nous fait toujours face, comme un personnage
+   de livre animé, et se retourne (son dos montre son dessin en miroir)
+   quand elle change de sens. Claude dit comment elle vit (`core/vivant.ts`) :
+   son allure, son sens, son cri, sa taille. */
+
+/** Le calcul de chaque peluche, fait une fois (la nuit, une étape annulée : la scène se refait, pas le calcul). */
+const partsOf = new WeakMap<Drawn, PlushParts | null>()
+function drawnParts(w: Drawn): PlushParts | null {
+  if (!partsOf.has(w)) partsOf.set(w, plushParts(renderStrokes(w.s), plushStrokes(w.s)))
+  return partsOf.get(w) ?? null
+}
+
+function addDrawn(s: State, w: Drawn, x: number, z: number, ry: number, drop = true, u?: number): Thing | null {
+  const parts = drawnParts(w)
+  if (!parts) return null
+  const plush = buildPlush(s.T, parts, 1)
+  const g = new s.T.Group()
+  g.add(plush.obj)
+  g.position.set(x, 0, z)
+  s.farm.root.add(g)
+  const v = w.v ?? DEFAULT
+  const t: Thing = {
+    kind: 'animal', u: uid(u), id: 'drawn', g, foot: 0.32, ry, goal: null, wait: 1 + Math.random() * 3, hop: Math.random() * 6,
+    drop: drop ? 1 : 0, jump: 0, plush, drawn: w, dir: 1, size: DRAWN_SIZE[v.taille], seed: Math.random() * 6
+  }
+  plush.obj.scale.setScalar(t.size!)
+  g.traverse(o => { o.userData.thing = t })
+  s.things.push(t)
+  return t
+}
+
+/** Il dit bonjour : son cri (un animal de la ferme, ou le cri que Claude a donné à son dessin), sinon un petit bruit. */
+function hello(t: Thing, max: number, vol: number) {
+  const v = t.drawn ? t.drawn.v?.cri ?? undefined : CRY[t.id as CritterKind]
+  if (!v || !cry(v, { max, vol })) sfx('pluck', { vol })
+}
+
+/** Ce que Claude a dit d'un dessin arrive : il s'éveille, dit bonjour, part se promener. */
+function awaken(s: State, w: Drawn, v: Vivant) {
+  w.v = v
+  for (const t of s.things) {
+    if (t.drawn !== w) continue
+    t.asking = false
+    t.wait = 0.8
+    t.jump = 0.5
+    hello(t, 1.4, 0.8)
+  }
+  save(s)
+}
+
 function removeThing(s: State, t: Thing) {
   s.things = s.things.filter(x => x !== t)
   s.farm.root.remove(t.g)
+  t.plush?.dispose()
   t.g.traverse(o => {
     const m = o as import('three').Mesh
     // Les pièces ont leurs géométries fondues à elles ; les instances et les
@@ -421,7 +500,7 @@ function grab(s: State, t: Thing, pid: number, fresh: boolean, cx: number, cy: n
   // Une neuve (du tiroir) se tient pile sous le doigt ; une de la ferme garde l'écart où on l'a prise
   const off = !fresh && g
   s.held = { thing: t, pid, fresh, over: !!g, dx: off ? t.g.position.x - g.x : 0, dz: off ? t.g.position.z - g.z : 0, from: { x: t.g.position.x, z: t.g.position.z } }
-  if (t.c) t.goal = null
+  if (t.kind === 'animal') t.goal = null
   ctx.root.querySelector('.fb-wrap')?.classList.add('holding')
 }
 
@@ -470,8 +549,7 @@ function landed(s: State, t: Thing) {
     sfx(t.id === 'pond' || t.id === 'mud' ? 'pluck' : 'drop', { vol: 0.7 })
     s.fx.burst(w, { count: 16, color: ['#C9A57A', '#E8D8B8'], speed: 1.6, spread: 1.4, life: 0.7, size: 0.14, gravity: -2 })
   } else {
-    const v = CRY[t.id as CritterKind]
-    if (!v || !cry(v, { max: 1, vol: 0.6 })) sfx('pluck', { vol: 0.6 })
+    hello(t, 1, 0.6)
     t.jump = 0.5
   }
   s.placed++
@@ -495,12 +573,15 @@ function fromDrawer(s: State, id: string): Thing | null {
 
 /* ---------- La vie des animaux ---------- */
 
+/** Sa place préférée, et la pièce où il peut entrer (un animal dessiné qui nage : la mare). */
+const homeOf = (t: Thing) => t.drawn ? (t.drawn.v?.allure === 'nage' ? ['pond' as PieceId] : undefined) : HOME[t.id as CritterKind]
+const insideOf = (t: Thing) => t.drawn ? (t.drawn.v?.allure === 'nage' ? 'pond' as PieceId : undefined) : INSIDE[t.id as CritterKind]
+
 function pickGoal(s: State, t: Thing) {
-  const kind = t.id as CritterKind
-  const homes = s.things.filter(o => o.kind === 'piece' && HOME[kind]?.includes(o.id as PieceId))
+  const homes = s.things.filter(o => o.kind === 'piece' && homeOf(t)?.includes(o.id as PieceId))
   if (homes.length && Math.random() < 0.6) {
     const h = homes[Math.floor(Math.random() * homes.length)]
-    if (INSIDE[kind] === h.id) {
+    if (insideOf(t) === h.id) {
       const a = Math.random() * Math.PI * 2, d = Math.random() * h.foot * 0.45
       t.goal = { x: h.g.position.x + Math.cos(a) * d, z: h.g.position.z + Math.sin(a) * d }
     } else {
@@ -516,41 +597,106 @@ function pickGoal(s: State, t: Thing) {
 
 function stepAnimal(s: State, t: Thing, dt: number) {
   const o = t.g, kind = t.id as CritterKind
-  if (s.held?.thing === t) { o.rotation.z = Math.sin(s.t * 14) * 0.15; return }
+  const v = t.drawn ? t.drawn.v ?? DEFAULT : null
+  if (s.held?.thing === t) { o.rotation.z = Math.sin(s.t * 14) * 0.15; if (v) showDrawn(s, t, v, dt, 0, 0, false, true); return }
   o.rotation.z = 0
+  const x0 = o.position.x, z0 = o.position.z
   if (!t.goal) {
     t.wait = (t.wait ?? 0) - dt
-    if (t.wait <= 0) pickGoal(s, t)
+    // Un dessin qui vient de naître attend que Claude dise comment il vit
+    if (t.wait <= 0 && !t.asking) pickGoal(s, t)
   } else {
     const dx = t.goal.x - o.position.x, dz = t.goal.z - o.position.z
     const d = Math.hypot(dx, dz)
     if (d < 0.08) { t.goal = null; t.wait = 2 + Math.random() * 5 }
     else {
-      const sp = Math.min(d, (kind === 'chick' || kind === 'rabbit' ? 0.9 : 0.6) * dt)
+      const sp = Math.min(d, (v ? DRAWN_SPEED[v.allure] : kind === 'chick' || kind === 'rabbit' ? 0.9 : 0.6) * dt)
       const want = Math.atan2(dx, dz)
       let da = want - t.ry
       da = Math.atan2(Math.sin(da), Math.cos(da))
       t.ry += da * Math.min(1, dt * 6)
       o.position.x += dx / d * sp; o.position.z += dz / d * sp
-      t.hop = (t.hop ?? 0) + dt * 11
+      t.hop = (t.hop ?? 0) + dt * (v ? DRAWN_GAIT[v.allure] : 11)
     }
   }
   // Il contourne les pièces (sauf celle où il a le droit d'entrer) et reste sur le plateau
+  const inside = insideOf(t)
   for (const p of s.things) {
-    if (p.kind !== 'piece' || INSIDE[kind] === p.id || p.id === 'mud' || p.id === 'veggie') continue
+    if (p.kind !== 'piece' || inside === p.id || p.id === 'mud' || p.id === 'veggie') continue
     const dx = o.position.x - p.g.position.x, dz = o.position.z - p.g.position.z
     const d = Math.hypot(dx, dz), need = p.foot * 0.8 + 0.2
     if (d < need && d > 1e-3) { o.position.x = p.g.position.x + dx / d * need; o.position.z = p.g.position.z + dz / d * need }
   }
   const r = Math.hypot(o.position.x, o.position.z)
   if (r > EDGE) { o.position.x *= EDGE / r; o.position.z *= EDGE / r; t.goal = null }
-  // Le canard flotte sur la mare
-  const swim = kind === 'duck' && s.things.some(p => p.id === 'pond' && Math.hypot(o.position.x - p.g.position.x, o.position.z - p.g.position.z) < p.foot * 0.6)
+  // Le canard (et un dessin qui nage) flotte sur la mare
+  const swim = (kind === 'duck' || inside === 'pond') && s.things.some(p => p.id === 'pond' && Math.hypot(o.position.x - p.g.position.x, o.position.z - p.g.position.z) < p.foot * 0.6)
+  if (v) { showDrawn(s, t, v, dt, o.position.x - x0, o.position.z - z0, swim, false); return }
   const bob = t.goal ? Math.abs(Math.sin(t.hop ?? 0)) * 0.05 : 0
   const jump = t.jump > 0 ? Math.sin((1 - t.jump / 0.5) * Math.PI) * 0.35 : 0
   if (t.jump > 0) t.jump = Math.max(0, t.jump - dt)
   if (t.drop <= 0) o.position.y = (swim ? -0.06 + Math.sin(s.t * 2) * 0.01 : 0) + bob + jump
   o.rotation.y = t.ry
+}
+
+/** Un dessin vivant à l'écran : face à nous, retourné dans son sens, son pas
+    (il marche en se dandinant, saute, vole, rampe, nage), sa naissance. */
+function showDrawn(s: State, t: Thing, v: Vivant, dt: number, mx: number, mz: number, swim: boolean, held: boolean) {
+  const o = t.g, inner = t.plush!.obj, seed = t.seed ?? 0
+  const size = DRAWN_SIZE[v.taille]
+  t.size = (t.size ?? size) + (size - (t.size ?? size)) * Math.min(1, dt * 3)
+  // Son sens à l'écran (le plateau a tourné de `rot`) : il se retourne quand il change de côté
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot)
+  const wx = mx * c + mz * sn, wz = -mx * sn + mz * c
+  const moving = Math.hypot(mx, mz) > 1e-5
+  if (moving && Math.abs(wx) > Math.abs(wz) * 0.3) t.dir = wx > 0 ? 1 : -1
+  const flip = v.regard === 'face' ? 0 : ((t.dir ?? 1) > 0) === (v.regard === 'droite') ? 0 : Math.PI
+  // Un peu de trois quarts quand il vient vers nous ou s'éloigne
+  const depth = moving ? Math.max(-1, Math.min(1, wz / Math.max(1e-5, Math.hypot(wx, wz)))) * 0.3 : 0
+  const want = -s.rot + flip + depth
+  const yaw = t.yaw ?? want
+  t.yaw = yaw + Math.atan2(Math.sin(want - yaw), Math.cos(want - yaw)) * Math.min(1, dt * 6)
+  o.rotation.y = t.yaw
+  // Son pas
+  const ph = t.hop ?? 0
+  let y = 0, sx = 1, sy = 1, rz = 0
+  if (v.allure === 'saute' && moving) {
+    const a = Math.abs(Math.sin(ph))
+    y = a * 0.3 * t.size
+    sy = 1 + a * 0.06 - (1 - a) ** 6 * 0.14
+  } else if (v.allure === 'marche' && moving) {
+    rz = Math.sin(ph) * 0.11
+    y = Math.abs(Math.sin(ph)) * 0.035
+  } else if (v.allure === 'rampe' && moving) {
+    sx = 1 + Math.sin(ph) * 0.1
+    sy = 1 - Math.sin(ph) * 0.07
+  } else if (v.allure === 'vole') {
+    // Il vole toujours, un peu au-dessus de l'herbe ; il penche dans son virage
+    y = 0.5 + Math.sin(s.t * 2.2 + seed) * 0.08
+    rz = Math.sin(s.t * 1.6 + seed) * 0.06 - (moving ? (t.dir ?? 1) * 0.08 : 0)
+  } else if (v.allure === 'nage' && swim) {
+    y = -0.1 + Math.sin(s.t * 2 + seed) * 0.02
+    rz = Math.sin(s.t * 1.3 + seed) * 0.07
+  } else if (v.allure === 'nage' && moving) {
+    rz = Math.sin(ph) * 0.08
+    y = Math.abs(Math.sin(ph)) * 0.03
+  }
+  // Immobile, il respire
+  if (!moving && v.allure !== 'vole') sy *= 1 + Math.sin(s.t * 2.4 + seed) * 0.018
+  if (!held) {
+    const jump = t.jump > 0 ? Math.sin((1 - t.jump / 0.5) * Math.PI) * 0.35 : 0
+    if (t.jump > 0) t.jump = Math.max(0, t.jump - dt)
+    if (t.drop <= 0) o.position.y = y + jump
+    o.rotation.z = rz
+  }
+  // Sa naissance : le dessin, à plat, se gonfle d'un coup (et rebondit)
+  let sz = 1
+  if ((t.birth ?? 0) > 0) {
+    t.birth = Math.max(0, (t.birth ?? 0) - dt / 0.9)
+    const k = 1 - t.birth
+    sz = 0.03 + 0.97 * (k >= 1 ? 1 : 1 - Math.pow(2, -9 * k) * Math.cos(k * Math.PI * 3.4))
+  }
+  inner.scale.set(t.size * sx, t.size * sy, t.size * sz)
 }
 
 /* ---------- Chaque image ---------- */
@@ -579,7 +725,8 @@ function frame(s: State, dt: number) {
     } else if (s.held?.thing !== t) t.g.scale.set(1, 1, 1)
     // Le quart de tour d'une pièce touchée : elle y va en douceur
     if (t.kind === 'piece') t.g.rotation.y += (t.ry - t.g.rotation.y) * Math.min(1, dt * 14)
-    if (t.c) { s.kit.blink(t.c, dt); stepAnimal(s, t, dt) }
+    if (t.c) s.kit.blink(t.c, dt)
+    if (t.kind === 'animal') stepAnimal(s, t, dt)
   }
   s.farm.step(dt, s.t)
   s.fx.update(dt)
@@ -649,8 +796,10 @@ export const farmbuild: GameDef = {
   // La main : choisir sa ferme (l'une des deux cartes) ; puis glisser une pièce du tiroir jusque sur la ferme
   hand: root => {
     if (root.querySelector('.fb-wrap[data-who=""]')) return { choose: visible(root, '.fb-card') }
+    // La feuille ouverte : tracer un cœur, puis toucher « Fini »
+    if (sheet?.open) return sheet.hand()
     if (!me || me.held || me.stroke) return null
-    const items = visible(root, '.fb-item')
+    const items = visible(root, '.fb-item[data-id]')
     if (!items.length) return null
     return { drag: [items[Math.floor(Math.random() * Math.min(3, items.length))], { fx: 0.5, fy: 0.42 }], ghost: true }
   },
@@ -683,7 +832,60 @@ export const farmbuild: GameDef = {
         </div>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#fbWrap')!
-    preloadSfx(['drop', 'pluck', 'whoosh', 'click', 'cloth', 'error', 'switch'])
+    preloadSfx(['drop', 'pluck', 'whoosh', 'click', 'cloth', 'error', 'switch', 'open', 'close', 'select', 'tick'])
+
+    /* Mon dessin prend vie : « Fini » sur la feuille, la peluche naît devant
+       nous ; Claude dit comment elle vit (une seule fois par dessin et par
+       ouverture : celui resté sans réponse redemande à la prochaine) */
+    const asked = new WeakSet<Drawn>()
+    const ask = (w: Drawn) => {
+      if (asked.has(w)) return
+      asked.add(w)
+      const answer = (v: Vivant | null) => {
+        const s = me
+        if (dead || !s) return
+        if (v) awaken(s, w, v)
+        else for (const t of s.things) if (t.drawn === w && t.asking) { t.asking = false; t.wait = 0.5 }
+      }
+      // Douze secondes sans réponse : il part avec son allure par défaut (la réponse peut encore venir)
+      c.after(12000, () => { for (const t of me?.things ?? []) if (t.drawn === w) t.asking = false })
+      if ((window as unknown as { __BOT?: boolean }).__BOT) { const f = fakeVivant; c.after(700, () => answer(f ? f() : null)); return }
+      askVivant(exportPng(renderStrokes(w.s))).then(answer, () => answer(null))
+    }
+    const born = (strokes: DrawStroke[], cv: HTMLCanvasElement): boolean => {
+      const s = me
+      if (!s) return false
+      const w: Drawn = { s: strokes.map(st => ({ ...st, p: st.p.slice() })) }
+      const parts = plushParts(cv, plushStrokes(w.s))
+      if (!parts) return false
+      partsOf.set(w, parts)
+      // Devant nous, au milieu (là où la feuille s'envole)
+      const spot = freeSpot(s, Math.sin(-s.rot) * 1.6, Math.cos(-s.rot) * 1.6, 0.32, null, false)
+      const t = addDrawn(s, w, spot.x, spot.z, 0, false)
+      if (!t) return false
+      still(false)
+      t.birth = 1; t.asking = true; t.wait = 99
+      // Le premier tissu prépare son shader : la qualité ne compte pas ces images-là
+      s.stage.settle()
+      // On s'approche un peu pour le voir se gonfler
+      s.tgtZoom = Math.max(s.tgtZoom, 1.3)
+      s.idle = 0
+      sfx('cloth', { vol: 0.7 })
+      c.after(320, () => {
+        if (me !== s) return
+        s.fx.burst(s.farm.root.localToWorld(t.g.position.clone().setY(0.5)), { count: 28, color: parts.colors.length ? parts.colors : ['#FFD43B'], speed: 2.2, spread: 1.2, life: 0.9, size: 0.13, gravity: -3 })
+        sfx('pluck', { vol: 0.7 })
+      })
+      rec({ k: 'add', it: itemOf(t) })
+      commit()
+      save(s)
+      ask(w)
+      return true
+    }
+    // La feuille ouverte, la ferme ne se redessine plus : sa dernière image
+    // reste derrière le voile (le GPU de la tablette est tout à la feuille)
+    const still = (on: boolean) => { if (me) me.stage.render = on ? () => { /* image figée */ } : undefined }
+    sheet = createSheet(arena, { done: born, closed: () => still(false), opened: () => still(true) })
     preloadCries(ANIMALS.map(k => CRY[k]).filter((v): v is AnimalVoice => !!v))
     const pics: Record<string, string> = {}
     const showTab = (tab: Tab) => {
@@ -691,7 +893,9 @@ export const farmbuild: GameDef = {
       c.root.querySelectorAll<HTMLElement>('.fb-tab').forEach(b => b.classList.toggle('sel', b.dataset.tab === tab))
       const box = c.root.querySelector<HTMLElement>('#fbItems')!
       // Tant que les vignettes se fabriquent (la toute première fois), l'icône de l'onglet
-      box.innerHTML = TABS[tab].items.map(([id, n]) => `<span class="tool-item"><button class="sn-tool fb-item" data-id="${id}" aria-label="${n}">${pics[id] ? portraitImg(pics[id], 80) : TAB_ICONS[tab]}</button><i class="tool-cap">${n}</i></span>`).join('')
+      // Les animaux commencent par « Dessiner » (18/10) : son animal à elle
+      const pen = tab === 'animaux' ? `<span class="tool-item"><button class="sn-tool fb-item fb-pen" id="fbPen" aria-label="Dessiner">${DRAW_ICONS.pen}</button><i class="tool-cap">Dessiner</i></span>` : ''
+      box.innerHTML = pen + TABS[tab].items.map(([id, n]) => `<span class="tool-item"><button class="sn-tool fb-item" data-id="${id}" aria-label="${n}">${pics[id] ? portraitImg(pics[id], 80) : TAB_ICONS[tab]}</button><i class="tool-cap">${n}</i></span>`).join('')
       box.scrollLeft = 0
     }
     const setNightBtn = (night: boolean) => {
@@ -733,6 +937,8 @@ export const farmbuild: GameDef = {
       hideLoader()
       if (!s || dead) { if (s) disposeState(s); if (!s && !dead) c.toast('La 3D n\'est pas disponible ici'); return }
       me = s
+      // Un dessin resté sans réponse (pas de réseau la dernière fois) redemande
+      for (const t of s.things) if (t.drawn && !t.drawn.v) ask(t.drawn)
       s.tab = (c.root.querySelector<HTMLElement>('.fb-tab.sel')?.dataset.tab as Tab) || 'batiments'
       // L'outil choisi le reste (la nuit reconstruit la scène : la gomme restait allumée, éteinte)
       s.tool = (c.root.querySelector<HTMLElement>('.fb-tool.sel')?.dataset.tool as Tool) || 'none'
@@ -900,8 +1106,7 @@ export const farmbuild: GameDef = {
       }
       else {
         th.jump = 0.5
-        const v = CRY[th.id as CritterKind]
-        if (!v || !cry(v, { max: 1.2, vol: 0.8 })) sfx('pluck')
+        hello(th, 1.2, 0.8)
       }
     }
 
@@ -958,8 +1163,19 @@ export const farmbuild: GameDef = {
       const card = t.closest<HTMLElement>('.fb-card')
       if (card?.dataset.who) { choose(card.dataset.who as Who); return }
       if (t.closest('#fbUndo')) { undo(true); return }
+      if (t.closest('#fbPen') && s && !building) {
+        if (s.things.filter(x => x.drawn).length >= MAX_DRAWN) {
+          const b = c.root.querySelector<HTMLElement>('#fbPen')
+          b?.classList.remove('nope'); void b?.offsetWidth; b?.classList.add('nope')
+          sfx('error', { vol: 0.4 })
+          return
+        }
+        sheet?.show()
+        return
+      }
       if (t.closest('#fbRedo')) { undo(false); return }
       if (t.closest('#fbMe') && s && !building && !undoing) {
+        sheet?.hide()
         leave(s)
         arena.setAttribute('data-who', '')
         showCards()
@@ -1017,6 +1233,26 @@ export const farmbuild: GameDef = {
         get tool() { return me?.tool },
         get pieces() { return me?.things.filter(t => t.kind === 'piece').map(t => ({ id: t.id, x: t.g.position.x, z: t.g.position.z, ry: t.ry })) ?? [] },
         get animals() { return me?.things.filter(t => t.kind === 'animal').map(t => ({ id: t.id, x: t.g.position.x, z: t.g.position.z })) ?? [] },
+        /** Les animaux dessinés : où, comment ils vivent, s'ils attendent Claude, leur sens. */
+        get drawn() { return me?.things.filter(t => t.drawn).map(t => ({ x: t.g.position.x, z: t.g.position.z, y: t.g.position.y, v: t.drawn!.v ?? null, asking: !!t.asking, dir: t.dir, birth: t.birth ?? 0 })) ?? [] },
+        get sheet() { return !!sheet?.open },
+        /** Ce que « Claude » répond au prochain dessin (null : pas de réponse). */
+        set fakeVivant(f: (() => Vivant | null) | null) { fakeVivant = f },
+        /** Le dessin n° i part vers un côté de l'écran (-1 : la gauche, 1 : la droite). */
+        walk(i: number, side: number) {
+          const s = me, t = s?.things.filter(x => x.drawn)[i]
+          if (!s || !t) return
+          // Le côté de l'écran, ramené dans le repère du plateau (qui a tourné de `rot`)
+          const wx = side * 2.6, c = Math.cos(s.rot), sn = Math.sin(s.rot)
+          t.goal = { x: Math.max(-EDGE + 1, Math.min(EDGE - 1, wx * c)), z: Math.max(-EDGE + 1, Math.min(EDGE - 1, wx * sn + 1.6)) }
+          t.asking = false
+        },
+        /** Où il regarde (à l'écran) : 1 son dessin tel quel, -1 son dos (en miroir). */
+        facing(i: number) {
+          const s = me, t = s?.things.filter(x => x.drawn)[i]
+          if (!s || !t) return 0
+          return Math.cos((t.yaw ?? 0) + s.rot) > 0 ? 1 : -1
+        },
         get paths() { return me?.paths.length ?? 0 },
         get fences() { return me?.fences.length ?? 0 },
         /** Où toucher la chose n° i (pièces puis animaux, dans l'ordre de pose). */
@@ -1044,6 +1280,9 @@ export const farmbuild: GameDef = {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       c.root.removeEventListener('wheel', onWheel)
+      sheet?.dispose()
+      sheet = null
+      fakeVivant = null
       // La ferme est gardée (et photographiée) telle qu'on la quitte
       if (me) leave(me)
       hideLoader()

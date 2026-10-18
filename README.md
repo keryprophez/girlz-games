@@ -72,7 +72,10 @@ construire (on glisse grange, poulailler, pommier, mare, tracteur… et les
 douze animaux sur un plateau vide, on trace chemins et clôtures au doigt ;
 les animaux vont à leur place — le canard à la mare, le cochon dans la
 boue — ; de jour ou de nuit ; chacune a SA ferme, retrouvée à sa carte avec
-la photo de sa ferme, et chaque geste s'annule ou se refait), et la Pâtisserie (un
+la photo de sa ferme, et chaque geste s'annule ou se refait ; et son
+animal à elle : elle le dessine, il devient une peluche qui vit sur sa
+ferme, et Claude dit s'il marche, saute, vole, rampe ou nage, et quel cri
+lui va), et la Pâtisserie (un
 gâteau d'un à trois étages, rond, en cœur ou carré : le glaçage s'étale
 au doigt et le nappage coule, la poche à douille dépose des rosaces, des
 fraises, framboises, myrtilles, cerises et vermicelles, puis des bougies

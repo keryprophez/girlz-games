@@ -1431,7 +1431,7 @@ await scenario('ferme-a-construire', async () => {
   }
   await ferme('jade')
   const etat = () => page.evaluate(() => JSON.stringify({ p: window.__fb.pieces.map(x => x.id), a: window.__fb.animals.map(x => x.id), ch: window.__fb.paths, cl: window.__fb.fences, n: window.__fb.night }))
-  const cv = await page.locator('.fb-wrap canvas').boundingBox()
+  const cv = await page.locator('.fb-wrap > canvas').boundingBox()
   const glisse = async (from, to, steps = 14) => {
     await page.mouse.move(from.x, from.y); await page.mouse.down()
     for (let i = 1; i <= steps; i++) await page.mouse.move(from.x + (to.x - from.x) * i / steps, from.y + (to.y - from.y) * i / steps)
@@ -1507,6 +1507,90 @@ await scenario('ferme-a-construire', async () => {
   await page.locator('#fbNight').click()
   await page.waitForFunction(() => window.__fb.ready && window.__fb.night && window.__fb.pieces.length === 1, null, { timeout: 120000, polling: 500 })
     .catch(async () => { throw new Error(`la nuit ne vient pas (${await etat()})`) })
+  await oublie()
+})
+
+/* 🧸 Mon dessin prend vie (18/10, la Ferme à construire) : « Fini » sur la
+   feuille vide ne fait rien ; un animal tracé à la souris devient peluche ;
+   le bot répond à la place de Claude (`__fb.fakeVivant` : jamais de vrai
+   appel) ; il se retourne selon son sens ; annuler, refaire ; un second
+   dessin sans réponse vit quand même ; gardé à la sortie, et la nuit. */
+await scenario('ferme-a-construire-dessin', async () => {
+  const oublie = () => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('ferme:construire')).forEach(k => localStorage.removeItem(k)))
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await oublie()
+  await openGame('La Ferme à construire', '__fb')
+  const ferme = async () => {
+    await page.waitForFunction(() => window.__fb.cards, null, { timeout: 30000, polling: 250 })
+    await page.locator('.fb-card[data-who="jade"]').click({ force: true })
+    await page.waitForFunction(() => window.__fb.ready && window.__fb.who === 'jade', null, { timeout: 120000, polling: 500 })
+  }
+  await ferme()
+  const etat = () => page.evaluate(() => JSON.stringify({ d: window.__fb.drawn, f: window.__fb.sheet, u: window.__fb.undo }))
+  await page.evaluate(() => { window.__fb.fakeVivant = () => ({ allure: 'saute', regard: 'gauche', cri: 'chat', taille: 'petit' }) })
+  await page.locator('.fb-tab[data-tab="animaux"]').click()
+  await page.locator('#fbPen').click()
+  await page.waitForFunction(() => window.__fb.sheet, null, { timeout: 10000 })
+  // « Fini » sur la feuille vide : rien ne naît, la feuille reste
+  await page.locator('.fb-ddone button').click({ force: true })
+  await page.waitForTimeout(500)
+  if (await page.evaluate(() => window.__fb.drawn.length || !window.__fb.sheet)) throw new Error(`la feuille vide a fait une peluche (${await etat()})`)
+  // Un rond, deux pattes, un œil (peu de points : la 3D logicielle est lente)
+  const dessine = async () => {
+    const b = await page.locator('.fb-dpaper canvas').boundingBox()
+    const at = (x, y) => [b.x + b.width * x, b.y + b.height * y]
+    const trait = async pts => {
+      await page.mouse.move(...at(...pts[0])); await page.mouse.down()
+      for (const p of pts.slice(1)) await page.mouse.move(...at(...p))
+      await page.mouse.up()
+    }
+    await trait(Array.from({ length: 17 }, (_, k) => { const a = k / 16 * Math.PI * 2.05; return [0.5 + Math.cos(a) * 0.2, 0.45 + Math.sin(a) * 0.2] }))
+    await trait([[0.42, 0.62], [0.41, 0.8], [0.45, 0.8]])
+    await trait([[0.58, 0.62], [0.59, 0.8], [0.63, 0.8]])
+    await page.locator('.at-color[data-c="#3A2E25"]').click()
+    await trait([[0.42, 0.4], [0.425, 0.405]])
+  }
+  await dessine()
+  await page.locator('.fb-ddone button').click({ force: true })
+  await page.waitForFunction(() => window.__fb.drawn.length === 1 && !window.__fb.sheet, null, { timeout: 15000, polling: 250 })
+    .catch(async () => { throw new Error(`pas de peluche après « Fini » (${await etat()})`) })
+  // « Claude » répond : il s'éveille (un petit qui saute, qui regarde à gauche)
+  await page.waitForFunction(() => { const d = window.__fb.drawn[0]; return d.v?.allure === 'saute' && !d.asking && d.birth === 0 }, null, { timeout: 20000, polling: 250 })
+    .catch(async () => { throw new Error(`la réponse n'arrive pas (${await etat()})`) })
+  // Il se retourne selon son sens : vers la gauche on voit son dessin, vers la droite son dos
+  for (const [side, want] of [[-1, 1], [1, -1]]) {
+    await page.evaluate(sd => window.__fb.walk(0, sd), side)
+    await page.waitForFunction(w => window.__fb.facing(0) === w, want, { timeout: 15000, polling: 250 })
+      .catch(async () => { throw new Error(`il ne se retourne pas vers ${side} (${await etat()})`) })
+  }
+  // Annuler : il s'en va ; refaire : il revient, avec ce que Claude a dit de lui
+  await page.locator('#fbUndo').click()
+  await page.waitForFunction(() => window.__fb.drawn.length === 0, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`« Annuler » ne l'enlève pas (${await etat()})`) })
+  await page.locator('#fbRedo').click()
+  await page.waitForFunction(() => window.__fb.drawn.length === 1 && window.__fb.drawn[0].v?.cri === 'chat', null, { timeout: 15000 })
+    .catch(async () => { throw new Error(`« Refaire » ne le rend pas (${await etat()})`) })
+  // Un second dessin, sans réponse : il vit quand même (il sautille, sans cri)
+  await page.evaluate(() => { window.__fb.fakeVivant = () => null })
+  await page.locator('#fbPen').click()
+  await page.waitForFunction(() => window.__fb.sheet, null, { timeout: 10000 })
+  await dessine()
+  await page.locator('.fb-ddone button').click({ force: true })
+  await page.waitForFunction(() => window.__fb.drawn.length === 2 && !window.__fb.drawn[1].asking && window.__fb.drawn[1].v === null, null, { timeout: 20000, polling: 250 })
+    .catch(async () => { throw new Error(`le dessin sans réponse reste figé (${await etat()})`) })
+  const p0 = await page.evaluate(() => window.__fb.drawn[1])
+  await page.waitForFunction(p => { const d = window.__fb.drawn[1]; return Math.hypot(d.x - p.x, d.z - p.z) > 0.3 }, p0, { timeout: 30000, polling: 250 })
+    .catch(async () => { throw new Error(`le dessin sans réponse ne bouge pas (${await etat()})`) })
+  // On sort, on revient : les deux sont gardés (le premier avec sa fiche)
+  await page.locator('.pbtn[aria-label="Menu"]').click()
+  await openGame('La Ferme à construire', '__fb')
+  await ferme()
+  await page.waitForFunction(() => window.__fb.drawn.length === 2 && window.__fb.drawn.filter(d => d.v?.cri === 'chat').length === 1, null, { timeout: 60000, polling: 500 })
+    .catch(async () => { throw new Error(`les dessins ne sont pas gardés (${await etat()})`) })
+  // La nuit refait la scène : ils sont toujours là
+  await page.locator('#fbNight').click()
+  await page.waitForFunction(() => window.__fb.ready && window.__fb.night && window.__fb.drawn.length === 2, null, { timeout: 120000, polling: 500 })
+    .catch(async () => { throw new Error(`la nuit perd les dessins (${await etat()})`) })
   await oublie()
 })
 

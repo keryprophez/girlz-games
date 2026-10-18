@@ -1238,6 +1238,33 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   testé : le pilote rentre chaque troupeau des trois niveaux sur 24
   graines. Bot, affiche, vignette, main. **Reste : y jouer sur la tablette
   (`?fps`) et régler la longueur du jour si elles calent.**
+- ✅ **En ligne pour de vrai** (18/10) : aucune mise en ligne n'avait
+  marché depuis le passage sur Cloudflare (le 8/10) — le secret GitHub
+  `CLOUDFLARE_API_TOKEN` manquait, `wrangler deploy` s'arrêtait là ; la
+  tablette restait sur l'ancienne adresse GitHub Pages, figée au 8/10 (ni
+  le Chien de berger, ni le repas de la Pâtisserie…). Le père a posé le
+  token puis les trois secrets du Worker ; le portail demande le code.
+- ✅ **Mon dessin prend vie** (18/10, la Ferme à construire ; le père :
+  « réfléchis à une utilisation sympa de mon API Claude dans l'app »,
+  trois idées proposées, « son animal en 3D, pas un des 14 », maquette A
+  ou B, « Go B. Son dessin lui-même gonflé en peluche 3D », « un poil
+  plus dodue et go prod ») : « Dessiner » en tête des Animaux ouvre une
+  feuille ; « Fini », et son animal devient une peluche — sa silhouette
+  exacte, ses traits brodés, des points de couture, un duvet — qui se
+  gonfle devant nous puis vit sur la ferme : face à nous comme dans un
+  livre animé, retournée quand elle change de sens. Claude regarde le
+  dessin et dit son allure (marche, saute, vole, rampe, nage), son sens,
+  son cri parmi les dix vrais cris, sa taille (`POST /api/vivant` ; seul
+  le dessin part, deuxième exception de la règle 3). Six par ferme,
+  gardés avec ses traits (rejoués au pixel près). Maquette validée sur
+  quatre dessins « façon enfant » (chat au contour seul, licorne en
+  gribouillis, oiseau aux pattes-bâtons, monstre au contour ouvert).
+  **Reste : le premier vrai dessin des filles** (le père n'a pas voulu de
+  dessins de test), `?fps` sur la tablette avec six peluches, puis
+  l'étape suivante si elle plaît : Claude nomme la tête, les pattes, la
+  queue (des bouts numérotés sur le dessin), et elles marchent patte par
+  patte ; il dirait aussi quelles zones fermées sont dans l'animal (deux
+  traits presque collés en ferment parfois une de trop).
 
 - ✅ **« La Princesse est hyper saccadée »** (30/09, testé sur la tablette ;
   correctif validé, « oui, corrige et publie ») : la garde-robe rendait ses

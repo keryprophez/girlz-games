@@ -18,8 +18,8 @@ export interface Plush {
 
 /** La silhouette se calcule à cette taille (le plus grand côté, en pixels). */
 const WORK = 384
-/** La texture du tissu (le plus grand côté). */
-const TEX = 1024
+/** La texture du tissu (le plus grand côté) : à l'écran, une peluche fait 200 à 400 pixels de haut. */
+const TEX = 768
 
 /** La boîte des traits sur la feuille, avec une marge (`null` : feuille vide). */
 function inkBox(cv: HTMLCanvasElement) {
@@ -134,33 +134,48 @@ export function prepare(drawing: HTMLCanvasElement, strokes?: Stroke[]) {
   return { box, k, ww, wh, img, gaps, sil, fab: fabric(img, sil), mesh: inflate(sil, { step: 3 }) }
 }
 
-/**
- * Son dessin (la feuille, traits sur fond transparent) devenu peluche, haute
- * de `height` (unités de scène ; un dessin très allongé est réduit pour
- * tenir). `strokes` : ses traits tels qu'elle les a tracés (pixels de la
- * feuille) — seuls ses vrais trous de contour sont alors bouchés. `null` :
- * rien de dessiné.
- */
-export function plushFromDrawing(T: T3, drawing: HTMLCanvasElement, o: { height?: number; strokes?: Stroke[] } = {}): Plush | null {
-  const prep = prepare(drawing, o.strokes)
+/** Ce que la peluche garde de son dessin, calculé une fois (la scène, elle,
+    se reconstruit : la nuit, une étape annulée) : son maillage, son tissu,
+    son relief, et ses trois couleurs les plus présentes (les confettis). */
+export interface PlushParts { mesh: PlushMesh; color: HTMLCanvasElement; relief: HTMLCanvasElement; colors: string[] }
+
+/** Son dessin (la feuille, traits sur fond transparent) prêt à devenir
+    peluche. `strokes` : ses traits tels qu'elle les a tracés (pixels de la
+    feuille) — seuls ses vrais trous de contour sont alors bouchés. `null` :
+    rien de dessiné. */
+export function plushParts(drawing: HTMLCanvasElement, strokes?: Stroke[]): PlushParts | null {
+  const prep = prepare(drawing, strokes)
   if (!prep) return null
-  const { box, ww, wh, fab, mesh } = prep
+  const { box, ww, wh, fab, mesh, img, sil } = prep
   const tk = TEX / Math.max(ww, wh), tw = Math.round(ww * tk), th = Math.round(wh * tk)
   const { cv, stitches } = paintFabric(drawing, box, fab, ww, wh, mesh, tw, th)
   const relief = paintRelief(drawing, box, stitches, tw, th)
-  const map = new T.CanvasTexture(cv)
+  const bins = new Map<number, number>()
+  for (let i = 0; i < ww * wh; i++) {
+    if (!sil.ink[i] || !sil.mask[i]) continue
+    const key = (img.data[i * 4] >> 4) << 8 | (img.data[i * 4 + 1] >> 4) << 4 | img.data[i * 4 + 2] >> 4
+    bins.set(key, (bins.get(key) ?? 0) + 1)
+  }
+  const colors = [...bins].sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([k]) => '#' + [k >> 8, (k >> 4) & 15, k & 15].map(v => (v * 17).toString(16).padStart(2, '0')).join(''))
+  return { mesh, color: cv, relief, colors }
+}
+
+/** La peluche dans une scène, haute de `height` (unités de scène ; un dessin
+    très allongé est réduit pour tenir), l'origine entre ses pieds. */
+export function buildPlush(T: T3, parts: PlushParts, height = 1): Plush {
+  const { mesh } = parts
+  const map = new T.CanvasTexture(parts.color)
   map.colorSpace = T.SRGBColorSpace
   map.anisotropy = 4
-  const normalMap = new T.CanvasTexture(relief)
+  const normalMap = new T.CanvasTexture(parts.relief)
   const mat = new T.MeshPhysicalMaterial({
     map, normalMap, normalScale: new T.Vector2(0.9, 0.9), roughness: 0.9, metalness: 0,
     // Le duvet a la couleur du tissu (un velours sombre ne blanchit pas)
     sheen: 1, sheenRoughness: 0.45, sheenColor: new T.Color(0.9, 0.9, 0.9), sheenColorMap: map
   })
-
   const bw = mesh.box.x1 - mesh.box.x0, bh = mesh.box.y1 - mesh.box.y0
-  const want = o.height ?? 1
-  const s = want / Math.max(bh, bw * 0.7)
+  const s = height / Math.max(bh, bw * 0.7)
   const pos = mesh.pos.slice()
   for (let i = 0; i < pos.length; i++) pos[i] *= s
   const geo = new T.BufferGeometry()
@@ -176,4 +191,10 @@ export function plushFromDrawing(T: T3, drawing: HTMLCanvasElement, o: { height?
     obj, mesh: m, height: bh * s,
     dispose() { geo.dispose(); mat.dispose(); map.dispose(); normalMap.dispose() }
   }
+}
+
+/** Les deux d'un coup (la maquette). */
+export function plushFromDrawing(T: T3, drawing: HTMLCanvasElement, o: { height?: number; strokes?: Stroke[] } = {}): Plush | null {
+  const parts = plushParts(drawing, o.strokes)
+  return parts && buildPlush(T, parts, o.height)
 }

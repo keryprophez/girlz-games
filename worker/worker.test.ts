@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { COOKIE, readConfig, safeNext, sameCode, sessionValue, isUnlocked, type AccessConfig } from './access'
 import { handle, type Env } from './index'
 import { askClaude, isPngBase64, type Ask } from './devine'
+import { askVivantClaude, type AskVivant } from './vivant'
 import { GuessFailure } from '../src/core/drawguess'
 
 const ORIGIN = 'https://girlz-games.tld83.workers.dev'
@@ -182,5 +183,40 @@ describe('l\'appel à Claude (réponses de l\'API simulées)', () => {
     }
     expect((await askClaude('sk-ant-test', PNG, null, f)).items[0].mot).toBe('pomme')
     expect(calls).toBe(2)
+  })
+})
+
+describe('mon dessin prend vie', () => {
+  const post = (body: unknown, headers: Record<string, string> = {}) => {
+    const text = JSON.stringify(body)
+    return new Request(ORIGIN + '/api/vivant', {
+      method: 'POST', body: text,
+      headers: { 'content-type': 'application/json', 'content-length': String(text.length), origin: ORIGIN, ...headers }
+    })
+  }
+  const fakeV: AskVivant = async () => ({ allure: 'vole', regard: 'gauche', cri: null, taille: 'petit' })
+  const asked = async (body: unknown, more: Partial<Env> = {}, ask: AskVivant = fakeV) =>
+    handle(post(body, { Cookie: await cookie() }), env(more), undefined, ask)
+
+  it('rend la fiche (sans cri : « aucun »)', async () => {
+    const res = await asked({ png: PNG })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ allure: 'vole', regard: 'gauche', cri: 'aucun', taille: 'petit' })
+  })
+  it('derrière le code d’accès, la clé, la même porte que le devineur', async () => {
+    expect((await handle(post({ png: PNG }), env(), undefined, fakeV)).status).toBe(401)
+    expect((await asked({ png: PNG }, { ANTHROPIC_API_KEY: undefined })).status).toBe(503)
+    expect((await asked({ png: 'bonjour' })).status).toBe(400)
+    expect((await asked({ png: PNG }, { DEVINE_LIMITER: { limit: async () => ({ success: false }) } })).status).toBe(429)
+  })
+  it('l’appel à Claude lit la fiche et la revérifie', async () => {
+    const reply = (text: string): typeof fetch => async () => new Response(JSON.stringify({
+      id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn', stop_sequence: null,
+      content: [{ type: 'text', text }], usage: { input_tokens: 1, output_tokens: 1 }
+    }), { status: 200, headers: { 'content-type': 'application/json' } })
+    const fiche = JSON.stringify({ allure: 'marche', regard: 'droite', cri: 'chat', taille: 'moyen' })
+    expect(await askVivantClaude('sk-ant-test', PNG, reply(fiche))).toEqual({ allure: 'marche', regard: 'droite', cri: 'chat', taille: 'moyen' })
+    const bad = JSON.stringify({ allure: 'danse', regard: 'droite', cri: 'chat', taille: 'moyen' })
+    expect(await askVivantClaude('sk-ant-test', PNG, reply(bad)).then(() => 'ok', (e: GuessFailure) => e.why)).toBe('autre')
   })
 })

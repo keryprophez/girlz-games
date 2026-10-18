@@ -5,7 +5,8 @@
 // dans le dépôt. La route est derrière le code d'accès (`index.ts`).
 //
 // Rien n'est gardé ici : le dessin passe, la réponse repart, aucun journal ne
-// contient l'image (règle 3 du CLAUDE.md).
+// contient l'image (règle 3 du CLAUDE.md). La porte (`readDrawing`) et
+// l'appel (`askModel`) servent aussi à « Mon dessin prend vie » (`vivant.ts`).
 import Anthropic from '@anthropic-ai/sdk'
 import {
   candidates, GuessFailure, MODEL, parseGuess, SCHEMA, systemPrompt, userPrompt,
@@ -29,17 +30,21 @@ const MAX_BYTES = 1_500_000
 const TIERS: readonly (Tier | 'libre')[] = ['easy', 'med', 'exp', 'libre']
 const STATUS: Record<GuessError, number> = { cle: 503, limite: 429, refus: 422, reseau: 502, autre: 502 }
 
-function json(body: unknown, status = 200): Response {
+export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8' } })
 }
-const fail = (why: GuessError, status = STATUS[why]) => json({ error: why }, status)
+export const fail = (why: GuessError, status = STATUS[why]) => json({ error: why }, status)
 
 /** Le base64 d'une image PNG (sans l'en-tête `data:`), et rien d'autre. */
 export function isPngBase64(s: unknown): s is string {
   return typeof s === 'string' && s.length <= MAX_BYTES && s.startsWith('iVBORw0KGgo') && /^[A-Za-z0-9+/]+={0,2}$/.test(s)
 }
 
-export async function devine(request: Request, env: DevineEnv, ask: Ask = askClaude): Promise<Response> {
+/** La porte d'un dessin (le devineur, et « Mon dessin prend vie ») : le jeu
+    lui-même seulement, une taille raisonnable, la clé posée, la limite par
+    minute, du JSON avec une image PNG. Rend le corps lu et la clé, ou la
+    réponse d'erreur. */
+export async function readDrawing(request: Request, env: DevineEnv): Promise<{ key: string; body: Record<string, unknown> & { png: string } } | Response> {
   if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } })
   // Seul le jeu lui-même peut demander (le navigateur envoie toujours Origin sur un POST)
   const origin = request.headers.get('Origin')
@@ -50,38 +55,52 @@ export async function devine(request: Request, env: DevineEnv, ask: Ask = askCla
   const key = env.ANTHROPIC_API_KEY?.trim()
   if (!key) return fail('cle')
   if (!(await allowed(request, env.DEVINE_LIMITER))) return fail('limite')
-  let body: { png?: unknown; tier?: unknown }
+  let body: Record<string, unknown>
   try {
     body = await request.json()
   } catch {
     return fail('autre', 400)
   }
-  const tier = TIERS.find(t => t === body?.tier)
-  if (!isPngBase64(body?.png) || !tier) return fail('autre', 400)
+  if (!body || !isPngBase64(body.png)) return fail('autre', 400)
+  return { key, body: body as Record<string, unknown> & { png: string } }
+}
+
+/** Une erreur de l'appel en réponse du Worker (les mots du jeu). */
+export function failed(e: unknown, who: string): Response {
+  if (e instanceof GuessFailure) return fail(e.why)
+  console.error(`${who} : erreur inattendue`, e instanceof Error ? e.name : typeof e)
+  return fail('autre')
+}
+
+export async function devine(request: Request, env: DevineEnv, ask: Ask = askClaude): Promise<Response> {
+  const got = await readDrawing(request, env)
+  if (got instanceof Response) return got
+  const { key, body } = got
+  const tier = TIERS.find(t => t === body.tier)
+  if (!tier) return fail('autre', 400)
   try {
     const g = await ask(key, body.png, tier === 'libre' ? null : candidates(tier))
     // La même forme que la fiche imposée : le jeu la revérifie avec `parseGuess`
     return json({ propositions: g.items.map(i => ({ ...i, photo: i.photo ?? 'aucune' })) })
   } catch (e) {
-    if (e instanceof GuessFailure) return fail(e.why)
-    console.error('Devineur : erreur inattendue', e instanceof Error ? e.name : typeof e)
-    return fail('autre')
+    return failed(e, 'Devineur')
   }
 }
 
-/** L'appel à Claude (Opus 5.5, effort bas, la fiche imposée), et ses erreurs en mots du jeu. */
-export async function askClaude(key: string, png: string, cands: string[] | null, fetchImpl?: typeof fetch): Promise<Guess> {
+/** Montre le dessin à Claude (Opus 5.5, effort bas, une fiche imposée) et
+    rend la fiche lue (du JSON, à revérifier) ; ses erreurs en mots du jeu. */
+export async function askModel(key: string, o: { system: string; schema: object; png: string; text: string; maxTokens: number }, fetchImpl?: typeof fetch): Promise<unknown> {
   const client = new Anthropic({ apiKey: key, maxRetries: 1, timeout: 45_000, ...(fetchImpl ? { fetch: fetchImpl } : {}) })
   const body = {
     model: MODEL,
-    max_tokens: 2000,
-    system: [{ type: 'text' as const, text: systemPrompt(), cache_control: { type: 'ephemeral' as const } }],
-    output_config: { effort: 'low' as const, format: { type: 'json_schema' as const, schema: SCHEMA as unknown as Record<string, unknown> } },
+    max_tokens: o.maxTokens,
+    system: [{ type: 'text' as const, text: o.system, cache_control: { type: 'ephemeral' as const } }],
+    output_config: { effort: 'low' as const, format: { type: 'json_schema' as const, schema: o.schema as Record<string, unknown> } },
     messages: [{
       role: 'user' as const,
       content: [
-        { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/png' as const, data: png } },
-        { type: 'text' as const, text: userPrompt(cands) }
+        { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/png' as const, data: o.png } },
+        { type: 'text' as const, text: o.text }
       ]
     }]
   }
@@ -100,8 +119,12 @@ export async function askClaude(key: string, png: string, cands: string[] | null
   }
   if (res.stop_reason === 'refusal') throw new GuessFailure('refus')
   const text = res.content.find(b => b.type === 'text')?.text
-  let raw: unknown
-  try { raw = text ? JSON.parse(text) : null } catch { raw = null }
+  try { return text ? JSON.parse(text) : null } catch { return null }
+}
+
+/** Le devineur : trois propositions, revérifiées. */
+export async function askClaude(key: string, png: string, cands: string[] | null, fetchImpl?: typeof fetch): Promise<Guess> {
+  const raw = await askModel(key, { system: systemPrompt(), schema: SCHEMA, png, text: userPrompt(cands), maxTokens: 2000 }, fetchImpl)
   const g = parseGuess(raw)
   if (!g) throw new GuessFailure('autre')
   return g
@@ -119,6 +142,6 @@ function errorOf(e: unknown): GuessError {
   if (e instanceof Anthropic.RateLimitError) return 'limite'
   if (e instanceof Anthropic.BadRequestError && isSpendLimit(e)) return 'limite'
   if (e instanceof Anthropic.APIConnectionError) return 'reseau'
-  console.error('Devineur : erreur de l\'API', e instanceof Anthropic.APIError ? e.status : e instanceof Error ? e.name : typeof e)
+  console.error('Claude : erreur de l\'API', e instanceof Anthropic.APIError ? e.status : e instanceof Error ? e.name : typeof e)
   return 'autre'
 }
