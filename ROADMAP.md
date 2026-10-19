@@ -1322,6 +1322,24 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   millier d'écailles en instances ; l'holographique et le verni sont des
   matières « de luxe », que la qualité automatique simplifie si besoin),
   **puis Les Monuments de Jade.**
+  ✅ **Les Monuments** (19/10, « Go. », Jade) : le jeu entier, dans Créer
+  (11 jeux). Deux cartes (Jade, Joyce), puis les huit monuments en grandes
+  images (sa photo s'il est commencé). On le CONSTRUIT : la pièce suivante
+  attend à côté en flottant, on la glisse sur sa forme en transparent qui
+  respire ; près de sa place elle s'emboîte (clac, poussière, secousse),
+  lâchée loin elle revient attendre, sans sanction. Le Golden Gate : deux
+  tours, le tablier, puis le grand câble se TRACE au doigt sur un pointillé
+  et les suspentes tombent une à une ; des voitures le traversent ensuite.
+  Puis on le « pimpe » : Peindre (la pièce touchée, « Comme avant »),
+  Lumières (cinq guirlandes qui scintillent, jour / nuit avec étoiles et
+  lune), Déco (drapeau, nœud, ballon, étoile, cœur), Visiteurs (les huit
+  animaux de la ferme, leur cri ; l'eau ne prend que le canard) ; un
+  toucher reprend. « Fini » : la nuit, le bouquet, la caméra en fait le
+  tour. Un livre de monuments par fille. Écarts au plan : pas de grue (le
+  doigt porte la pièce, c'est plus direct à 6 ans), pas de paillettes en
+  déco. Vignette, affiche (la Tour Eiffel rose, de nuit), main, bot
+  `monuments`. **Reste : `?fps` sur la tablette** (la Tour Eiffel : des
+  milliers de poutres en instances ; trois lampes la nuit).
     **Maquettes faites le 19/10** (six images au format de la tablette, trois
   par jeu ; les vrais modules : `core/satchel3d.ts`, le cartable et ses
   six matières, ses écussons, badges et porte-clés ; `core/monuments3d.ts`,

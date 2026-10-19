@@ -135,6 +135,17 @@ export const BADGE: Record<string, string> = {
     <circle cx="16" cy="19.5" r="1.6" fill="${C.white}"/><circle cx="21" cy="22.5" r="1.6" fill="${C.white}"/><circle cx="27" cy="19.5" r="1.6" fill="${C.white}"/><circle cx="32" cy="22.5" r="1.6" fill="${C.white}"/>
     <rect x="13.5" y="28" width="6" height="7" rx="1.6" fill="${C.sun}"/>
     <rect x="28.5" y="28" width="6" height="7" rx="1.6" fill="${C.sun}"/>`),
+  // Les Monuments : la Tour Eiffel sur son pré, une étincelle de « pimpé »
+  monuments: svg(`
+    <ellipse cx="24" cy="42" rx="19" ry="3.6" fill="${C.meadow}"/>
+    <path d="M10 41c4-6 7.5-11 9.2-19h9.6c1.7 8 5.2 13 9.2 19h-6.4c-1.6-4.2-4-6.4-7.6-6.4s-6 2.2-7.6 6.4z" fill="${C.woodDark}"/>
+    <path d="M12.8 41c3.6-5.4 6.4-10 8-16.6h6.4c1.6 6.6 4.4 11.2 8 16.6h-2.4c-1.8-4.6-4.6-8-8.8-8s-7 3.4-8.8 8z" fill="${C.wood}"/>
+    <rect x="16.6" y="27.4" width="14.8" height="3" rx="1" fill="${C.woodDark}"/>
+    <path d="M20.6 22.4 22.4 7h3.2l1.8 15.4z" fill="${C.wood}"/>
+    <rect x="18.8" y="20.6" width="10.4" height="2.6" rx="1" fill="${C.woodDark}"/>
+    <rect x="23" y="2.8" width="2" height="5.4" rx="1" fill="${C.woodDark}"/>
+    <path d="M38 6l1.6 4.4L44 12l-4.4 1.6L38 18l-1.6-4.4L32 12l4.4-1.6z" fill="${C.sun}"/>
+    <circle cx="9" cy="14" r="2.2" fill="${C.pink}"/>`),
   bakery: svg(`
     <ellipse cx="24" cy="42" rx="19" ry="3.6" fill="${C.wood}"/>
     <rect x="8" y="27" width="32" height="14" rx="3" fill="${C.pink}"/>

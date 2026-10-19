@@ -84,7 +84,14 @@ dents), et Mon cartable (le cartable à rabat, le sac à dos ou le cartable
 réversibles qu'on caresse pour dessiner, les couleurs pièce par pièce,
 les motifs, des écussons brodés, des badges et des porte-clés ; on y range
 la trousse, les cahiers, la règle, la gourde et la pomme, et la petite
-fille d'Habille-toi part à l'école avec ; un cartable par fille).
+fille d'Habille-toi part à l'école avec ; un cartable par fille), et Les
+Monuments (la Pyramide, la Tour Eiffel, le Golden Gate, la Tour de Pise, un
+château de conte, le Taj Mahal, Big Ben et les statues de l'île de Pâques :
+on les construit pièce par pièce sur leur forme en transparent, on trace au
+doigt le grand câble du pont, puis on les peint, on les couvre de
+guirlandes, de drapeaux et de cœurs, les animaux de la ferme viennent les
+voir, et la nuit tombe sur un feu d'artifice ; un livre de monuments par
+fille).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

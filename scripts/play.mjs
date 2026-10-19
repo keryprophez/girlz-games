@@ -1796,6 +1796,107 @@ await scenario('cartable', async () => {
   if (!await page.evaluate(() => !!localStorage.getItem('ferme:cartable:photo:joyce'))) throw new Error('le cartable n\'est pas photographié pour sa carte')
 })
 
+/* 🗼 Les Monuments (19/10) : le Golden Gate de Jade, de bout en bout — une
+   pièce lâchée loin de sa place revient l'attendre, les deux tours et le
+   tablier glissés à leur place, le câble tracé au doigt (les suspentes
+   tombent), le monument gardé quand on le quitte et retrouvé debout, une
+   couleur au pinceau, les guirlandes, la nuit, un drapeau planté puis
+   repris, rien sur l'eau sauf le canard, et « Fini » : le bouquet. */
+await scenario('monuments', async () => {
+  await openGame('Les Monuments', '__mn')
+  await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('ferme:monuments')) localStorage.removeItem(k) })
+  await page.waitForFunction(() => window.__mn.cards, null, { timeout: 60000, polling: 500 })
+  await page.locator('.mn-card[data-who="jade"]').click()
+  await page.waitForFunction(() => window.__mn.grid, null, { timeout: 60000, polling: 300 })
+  const ouvrir = async () => {
+    await page.locator('.mn-mcard[data-mon="goldengate"]').click()
+    await page.waitForFunction(() => window.__mn.ready, null, { timeout: 120000, polling: 300 })
+  }
+  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__mn.step, ph: window.__mn.phase, b: window.__mn.built, s: window.__mn.saved }))
+  const piece = async () => {
+    await page.waitForFunction(() => window.__mn.piece(), null, { timeout: 30000, polling: 150 })
+      .catch(async () => { throw new Error(`aucune pièce n'arrive (${await etat()})`) })
+    return page.evaluate(() => window.__mn.piece())
+  }
+  const glisse = async (a, b) => {
+    await page.mouse.move(a.x, a.y); await page.mouse.down()
+    for (let i = 1; i <= 10; i++) { await page.mouse.move(a.x + (b.x - a.x) * i / 10, a.y + (b.y - a.y) * i / 10); await page.waitForTimeout(30) }
+    await page.mouse.up()
+  }
+  await ouvrir()
+  // Lâchée loin de sa place : elle revient attendre, rien n'est posé
+  let p = await piece()
+  await glisse(p.from, { x: p.to.x, y: p.to.y - 260 })
+  await page.waitForTimeout(1200)
+  if (await page.evaluate(() => window.__mn.built) !== 0) throw new Error(`une pièce lâchée loin s'est posée quand même (${await etat()})`)
+  // Les deux tours, le tablier, puis le câble à tracer
+  for (let n = 1; n <= 3; n++) {
+    p = await piece()
+    if (p.trace) throw new Error(`le câble arrive avant le tablier (${await etat()})`)
+    await glisse(p.from, p.to)
+    await page.waitForFunction(n => window.__mn.built >= n, n, { timeout: 20000, polling: 150 })
+      .catch(async () => { throw new Error(`la pièce n° ${n} ne se pose pas (${await etat()})`) })
+  }
+  p = await piece()
+  if (!p.trace) throw new Error(`pas de câble à tracer (${await etat()})`)
+  const t = p.trace
+  await page.mouse.move(t[0].x, t[0].y); await page.mouse.down()
+  for (let i = 1; i < t.length; i += 2) { await page.mouse.move(t[i].x, t[i].y); await page.waitForTimeout(16) }
+  await page.mouse.move(t[t.length - 1].x, t[t.length - 1].y); await page.mouse.up()
+  await page.waitForFunction(() => window.__mn.built === window.__mn.total && window.__mn.step === 'peindre', null, { timeout: 30000, polling: 200 })
+    .catch(async () => { throw new Error(`le pont ne se termine pas (${await etat()})`) })
+  // Quitter puis revenir : il est toujours debout, et sa carte a sa photo
+  await page.locator('#mnBack').click({ force: true })
+  await page.waitForFunction(() => window.__mn.grid, null, { timeout: 30000, polling: 300 })
+  if (!await page.evaluate(() => !!localStorage.getItem('ferme:monuments:photo:jade:goldengate'))) throw new Error('le pont n\'est pas photographié pour sa carte')
+  await ouvrir()
+  if (await page.evaluate(() => window.__mn.built) !== 4) throw new Error(`le pont n'est plus debout en revenant (${await etat()})`)
+  // Peindre : une couleur, là où le pinceau touche vraiment le pont
+  await page.locator('.mn-opt[data-color]').nth(2).click({ force: true })
+  let q = await page.evaluate(() => window.__mn.mon())
+  await page.mouse.click(q.x, q.y)
+  await page.waitForFunction(() => Object.keys(window.__mn.saved.colors).length >= 1, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le pinceau ne peint pas (${await etat()})`) })
+  // Les lumières : les guirlandes roses, la nuit
+  await page.locator('.mn-step[data-step="lumieres"]').click({ force: true })
+  await page.locator('.mn-opt[data-light="rose"]').click({ force: true })
+  await page.locator('.mn-opt[data-night="1"]').click({ force: true })
+  await page.waitForFunction(() => window.__mn.saved.lights === 'rose' && window.__mn.saved.night, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`pas de guirlandes ni de nuit (${await etat()})`) })
+  // Un drapeau planté sur le pont, repris d'un toucher, replanté ; dans l'eau, plouf : rien
+  await page.locator('.mn-step[data-step="deco"]').click({ force: true })
+  await page.locator('.mn-opt[data-deco="drapeau"]').click({ force: true })
+  const w = await page.evaluate(() => window.__mn.w)
+  const eau = await page.evaluate(w => window.__mn.pt(w * 0.3, 0, 0.9), w)
+  await page.mouse.click(eau.x, eau.y)
+  await page.waitForTimeout(400)
+  if (await page.evaluate(() => window.__mn.saved.deco.length) !== 0) throw new Error(`un drapeau flotte sur l'eau (${await etat()})`)
+  q = await page.evaluate(() => window.__mn.mon())
+  await page.mouse.click(q.x, q.y)
+  await page.waitForFunction(() => window.__mn.saved.deco.length === 1, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le drapeau ne se pose pas (${await etat()})`) })
+  const d = await page.evaluate(() => window.__mn.decoPt(0))
+  await page.mouse.click(d.x, d.y)
+  await page.waitForFunction(() => window.__mn.saved.deco.length === 0, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le drapeau ne se reprend pas (${await etat()})`) })
+  await page.mouse.click(q.x, q.y)
+  // Les visiteurs : le cochon refuse l'eau, le canard y nage ; le cochon va sur l'île
+  await page.locator('.mn-step[data-step="visiteurs"]').click({ force: true })
+  await page.locator('.mn-opt[data-vis="pig"]').click({ force: true })
+  await page.mouse.click(eau.x, eau.y)
+  await page.waitForTimeout(400)
+  if (await page.evaluate(() => window.__mn.saved.vis.length) !== 0) throw new Error(`le cochon marche sur l'eau (${await etat()})`)
+  q = await page.evaluate(w => window.__mn.pt(-w / 2 - 0.6, 0.5, 0), w)
+  await page.mouse.click(q.x, q.y)
+  await page.locator('.mn-opt[data-vis="duck"]').click({ force: true })
+  await page.mouse.click(eau.x, eau.y)
+  await page.waitForFunction(() => window.__mn.saved.vis.length === 2 && window.__mn.saved.deco.length === 1, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`il manque un visiteur (${await etat()})`) })
+  // Fini : le bouquet au-dessus du pont
+  await page.locator('#mnFini').click({ force: true })
+  await finDe('Quel beau monument', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 // L'éclair (6/10) : la grande ferme de jour, des animaux cachés en entier à fouiller
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))

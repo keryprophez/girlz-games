@@ -201,10 +201,12 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            brodés, badges, porte-clés ; chaque pièce dit ce
                            qu'elle est (`userData.part`, `userData.deco`) ;
                            tout ce qu'un cartable crée part avec lui (`dispose`)
-             monuments3d.ts ← LES MONUMENTS (19/10, la maquette ; le jeu de
-                           Jade suivra) : huit monuments en PIÈCES à poser
-                           (`Piece`), leur forme en transparent (`ghost`) ; la
-                           Tour Eiffel en vrai treillis de poutres (instances)
+             monuments3d.ts ← LES MONUMENTS (19/10, le jeu de Jade) : huit
+                           monuments en PIÈCES à poser (`Piece`), leur forme
+                           en transparent (`ghost`), un câble à tracer
+                           (`Piece.trace`, le Golden Gate), la route du pont
+                           (`road`, ses voitures) ; la Tour Eiffel en vrai
+                           treillis de poutres (instances)
              plush.ts    ← LA PELUCHE de Mon dessin prend vie (18/10) : son
                            dessin gonflé — la silhouette (ses VRAIS trous de
                            contour bouchés grâce à ses traits, `bridges` :
@@ -501,7 +503,19 @@ dedans ; une affaire manquée de peu est prise quand même : la règle est
 fine) ; les paillettes se CARESSENT (vers le haut elles se retournent, vers
 le bas elles reviennent) ; « Fini » : la petite fille d'Habille-toi le met
 sur son dos et part à l'école ; un cartable par fille, comme la Ferme à
-construire, avec sa photo ; son bot : `cartable`) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
+construire, avec sa photo ; son bot : `cartable`) · `monuments` (Les
+Monuments, 19/10, Créer, demandé par Jade : `core/monuments3d.ts`, huit
+monuments dans leur décor — parc, désert, baie, île ; on le CONSTRUIT pièce
+par pièce : la pièce attend à côté, on la glisse sur sa forme en
+transparent, elle s'emboîte près de sa place (poussière, secousse), revient
+attendre si on la lâche loin ; le câble du Golden Gate se TRACE au doigt
+sur un pointillé, puis les suspentes tombent ; puis on le « pimpe » :
+Peindre (la pièce touchée), Lumières (guirlandes, jour / nuit), Déco,
+Visiteurs (les animaux de la ferme ; sur l'eau, seul le canard) ; un
+toucher reprend ; « Fini » : la nuit, le bouquet, la caméra en fait le
+tour (devant un pont, elle se balance) ; rien de haut en deçà du tour de
+la caméra ; un livre de monuments par fille, chacun sa photo sur sa carte ;
+son bot : `monuments`) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
 le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
 (la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
 au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
@@ -578,7 +592,7 @@ ligne quand on en paie un nouveau.
    d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
    d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
    modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (19/10 : 43 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir, la Pâtisserie et la Ferme à construire deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (19/10 : 44 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir, la Pâtisserie et la Ferme à construire deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

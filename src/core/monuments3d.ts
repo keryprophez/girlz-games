@@ -21,8 +21,10 @@ export const MONUMENT_NAME: Record<MonumentId, string> = {
   chateau: 'Château', taj: 'Taj Mahal', bigben: 'Big Ben', moai: 'Île de Pâques'
 }
 
-/** Une pièce : posée à sa place finale ; `paint` : ce que le pinceau recolore. */
-export interface Piece { obj: Grp; paint: Mat[] }
+/** Une pièce : posée à sa place finale ; `paint` : ce que le pinceau recolore ;
+    `trace` : elle se pose en suivant ce chemin au doigt (les câbles du Golden
+    Gate), dans le repère de son parent — elle grandit le long du chemin. */
+export interface Piece { obj: Grp; paint: Mat[]; trace?: V3[] }
 export interface Monument {
   id: MonumentId
   /** Le monument entier (toutes les pièces, à leur place). */
@@ -32,6 +34,9 @@ export interface Monument {
   h: number; w: number
   /** Où accrocher des guirlandes (points du monument, à relier). */
   lights: V3[][]
+  /** Une route sur le monument (le tablier du pont) : sa hauteur, sa demi-longueur, ses deux voies. */
+  road?: { y: number; half: number; lanes: [number, number] }
+  /** Libère tout ce que ce monument a créé. */
   dispose(): void
 }
 
@@ -40,7 +45,9 @@ const rng = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return
 export async function monumentKit(T: T3) {
   const { RoundedBoxGeometry } = await import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
   const kept: { dispose(): void }[] = []
-  const k = <X extends { dispose(): void }>(x: X) => { kept.push(x); return x }
+  /** Où vont les ressources créées : le kit, ou le monument en construction (libérées avec lui). */
+  let bin = kept
+  const k = <X extends { dispose(): void }>(x: X) => { bin.push(x); return x }
 
   const canvas = (w: number, h: number, f: (x: CanvasRenderingContext2D) => void) => {
     const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d')!); return c
@@ -291,11 +298,12 @@ export async function monumentKit(T: T3) {
         for (let x = -L / 2 + 0.1; x < L / 2; x += 0.1) if (Math.abs(Math.abs(x) - TX) > 0.06) B.push([v(x, DY + 0.07, sz * 0.88), v(x, sag(x), sz), 0.005])
       }
       parts.push(beams(B, cableM))
-      pieces.push({ obj: group(...parts), paint: [cableM] })
+      // On le trace au doigt, d'une ancre à l'autre (le câble de devant ; celui de derrière suit)
+      pieces.push({ obj: group(...parts), paint: [cableM], trace: Array.from({ length: 81 }, (_, i) => { const x = -L / 2 + i / 80 * L; return v(x, sag(x), 0.2) }) })
     }
     const obj = group(...pieces.map(p => p.obj))
     const lights: V3[][] = [-0.2, 0.2].map(sz => Array.from({ length: 60 }, (_, i) => { const x = -L / 2 + i / 59 * L, ax = Math.abs(x); return v(x, (ax <= TX ? DY + 0.12 + (TH - DY - 0.14) * Math.pow(ax / TX, 2) : TH - 0.02 - (TH - DY - 0.1) * Math.min(1, (ax - TX) / (L / 2 - TX))) + 0.02, sz) }))
-    return { id: 'goldengate', obj, pieces, h: TH, w: L, lights, dispose() {} }
+    return { id: 'goldengate', obj, pieces, h: TH, w: L, lights, road: { y: DY + 0.085, half: L / 2, lanes: [-0.075, 0.075] }, dispose() {} }
   }
 
   /* ======================= LA TOUR DE PISE ======================= */
@@ -539,16 +547,23 @@ export async function monumentKit(T: T3) {
   }
 
   const build = (id: MonumentId): Monument => {
-    const m = id === 'eiffel' ? eiffel() : id === 'pyramide' ? pyramide() : id === 'goldengate' ? goldenGate() : id === 'pise' ? pise()
-      : id === 'chateau' ? chateau() : id === 'taj' ? taj() : id === 'bigben' ? bigben() : moai()
-    return m
+    const mine: { dispose(): void }[] = []
+    const prev = bin
+    bin = mine
+    try {
+      const m = id === 'eiffel' ? eiffel() : id === 'pyramide' ? pyramide() : id === 'goldengate' ? goldenGate() : id === 'pise' ? pise()
+        : id === 'chateau' ? chateau() : id === 'taj' ? taj() : id === 'bigben' ? bigben() : moai()
+      m.dispose = () => { mine.forEach(x => x.dispose()); mine.length = 0 }
+      return m
+    } finally { bin = prev }
   }
   /** La forme du monument, en transparent : là où les pièces viendront. */
   const ghostMat = k(new T.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.6, depthWrite: false }))
-  const ghost = (p: Piece) => {
+  const ghost = (p: Piece, mat: Mat = ghostMat) => {
     const g = p.obj.clone(true)
-    g.traverse(o => { const m = o as import('three').Mesh; if (m.isMesh) { m.material = ghostMat; m.castShadow = false; m.receiveShadow = false } })
+    g.visible = true
+    g.traverse(o => { const m = o as import('three').Mesh; if (m.isMesh) { m.material = mat; m.castShadow = false; m.receiveShadow = false } })
     return g
   }
-  return { T, build, ghost, dispose() { kept.forEach(x => x.dispose()) } }
+  return { T, build, ghost, RoundedBoxGeometry, dispose() { kept.forEach(x => x.dispose()) } }
 }
