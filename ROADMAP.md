@@ -1306,7 +1306,23 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
     visiteurs. Fin : la nuit tombe, il s'illumine. Gardé, un par fille.
     **La Tour Eiffel en treillis : la maquette d'abord** (le risque de la
     « 3D à 5 triangles »).
-  **Maquettes faites le 19/10** (six images au format de la tablette, trois
+  ✅ **Mon cartable** (19/10, maquettes « oui », Joyce d'abord) : le jeu
+  entier, dans Créer (10 jeux). Le cartable dans un coin de classe ; six
+  étapes (Modèle, Matière, Couleurs, Motifs, Déco, Remplir) et « Fini ». Les
+  paillettes réversibles se caressent (vers le haut elles se retournent, un
+  dessin reste dessiné, gardé en bits) ; la couleur se pose sur la pièce
+  qu'on touche (sur les paillettes, la face touchée) ; écussons et badges
+  là où l'on touche, repris d'un toucher ; trois porte-clés au plus qui se
+  balancent ; Remplir : le rabat s'ouvre (la fermeture éclair du sac à
+  dos), six affaires arrivent sur le pupitre, un toucher et elles filent
+  dedans, clac, il se ferme ; « Fini » : la petite fille d'Habille-toi
+  arrive, le cartable saute sur son dos, elle part à l'école. Un cartable
+  par fille (deux cartes, sa photo). Vignette, affiche, main, bot
+  `cartable`. **Reste : `?fps` sur la tablette** (les paillettes : un
+  millier d'écailles en instances ; l'holographique et le verni sont des
+  matières « de luxe », que la qualité automatique simplifie si besoin),
+  **puis Les Monuments de Jade.**
+    **Maquettes faites le 19/10** (six images au format de la tablette, trois
   par jeu ; les vrais modules : `core/satchel3d.ts`, le cartable et ses
   six matières, ses écussons, badges et porte-clés ; `core/monuments3d.ts`,
   les huit monuments en pièces à poser, la forme en transparent) — **en

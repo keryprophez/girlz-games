@@ -50,6 +50,7 @@ const OWN = {
   'animal-qui-repete': ['src/games/parrot.ts', 'src/core/voicefx.ts', 'src/core/mic.ts'],
   'ferme-a-construire': ['src/games/farmbuild.ts', 'src/games/farmdraw.ts', 'src/core/farm3d.ts', 'src/core/plush.ts', 'src/core/plush3d.ts', 'src/core/vivant.ts'],
   'patisserie': ['src/games/bakery.ts', 'src/core/cake3d.ts', 'src/core/souffle.ts'],
+  'cartable': ['src/games/cartable.ts', 'src/core/satchel3d.ts'],
   'devine-mon-dessin': ['src/games/drawguess.ts', 'src/core/drawguess.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux

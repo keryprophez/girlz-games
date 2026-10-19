@@ -56,6 +56,17 @@ const STAGE = {
     act: async p => { await p.evaluate(() => window.__bk.demo()) },
     after: 2500, zoom: 1.12, cy: 0.42
   },
+  // Mon cartable : celui de Joyce à paillettes, un cœur dessiné dedans, un cochon porte-clés
+  cartable: {
+    ready: () => window.__ct && window.__ct.cards, wait: 800,
+    act: async p => {
+      await p.evaluate(() => { localStorage.removeItem('ferme:cartable:joyce'); document.querySelector('.ct-card[data-who="joyce"]').click() })
+      await p.waitForFunction(() => window.__ct.ready, null, { timeout: 120000, polling: 500 })
+      await p.evaluate(() => window.__ct.demo())
+      await p.waitForFunction(() => window.__ct.ready, null, { timeout: 120000, polling: 500 })
+    },
+    after: 3000, zoom: 1.18, cx: 0.53, cy: 0.5
+  },
   // La Ferme à construire : une ferme toute faite (celle de la maquette)
   farmbuild: {
     // Les cartes d'abord (11/10) : la ferme de Jade, vidée, puis la ferme de la maquette
@@ -283,7 +294,7 @@ const STAGE = {
 
 /* Ce qui n'est pas le jeu : la barre maison/pause, le score, les cœurs, la
    main qui montre où taper, le carton titre. */
-const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem,.sd-hud{display:none !important;}`
+const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.pr-switch,.bj-tools,.bj-go,.nj-waves,.geo-bar,.geo-dots,.mem-dots,.topbar,.tq-moves,.sp3-hud,.sp3-clock,.sp3-nav,.sp3-labels,.pz-pics,.cc-tray,.bj-shapes,.bj-choices,.bj-galbar,.ar-tray,.ar-revitem,.ar-mic,.fb-tray,.fb-dn,.bk-steps,.bk-pal,.bk-blowitem,.sd-hud,.ct-steps,.ct-pal,.ct-me{display:none !important;}`
 
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }

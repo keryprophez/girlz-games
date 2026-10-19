@@ -127,6 +127,14 @@ export const BADGE: Record<string, string> = {
     <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
   // Le Flipper : la table en bois vue de haut, deux animaux-bumpers, la bille, les deux batteurs
   // La Pâtisserie : le gâteau à deux étages, ses coulures, une bougie allumée
+  cartable: svg(`
+    <path d="M18.5 12.5c0-3.6 2.4-6 5.5-6s5.5 2.4 5.5 6h-3.2c0-1.9-1-3-2.3-3s-2.3 1.1-2.3 3z" fill="${C.woodDark}"/>
+    <rect x="7" y="13" width="34" height="28" rx="6" fill="${C.lilacDark}"/>
+    <rect x="7" y="13" width="34" height="26" rx="6" fill="${C.lilac}"/>
+    <path d="M7 19c0-3.3 2.7-6 6-6h22c3.3 0 6 2.7 6 6v8c0 3.3-2.7 5-6 5H13c-3.3 0-6-1.7-6-5z" fill="${C.pink}"/>
+    <circle cx="16" cy="19.5" r="1.6" fill="${C.white}"/><circle cx="21" cy="22.5" r="1.6" fill="${C.white}"/><circle cx="27" cy="19.5" r="1.6" fill="${C.white}"/><circle cx="32" cy="22.5" r="1.6" fill="${C.white}"/>
+    <rect x="13.5" y="28" width="6" height="7" rx="1.6" fill="${C.sun}"/>
+    <rect x="28.5" y="28" width="6" height="7" rx="1.6" fill="${C.sun}"/>`),
   bakery: svg(`
     <ellipse cx="24" cy="42" rx="19" ry="3.6" fill="${C.wood}"/>
     <rect x="8" y="27" width="32" height="14" rx="3" fill="${C.pink}"/>

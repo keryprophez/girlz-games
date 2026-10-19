@@ -79,7 +79,12 @@ au doigt et le nappage coule, la poche à douille dépose des rosaces, des
 fraises, framboises, myrtilles, cerises et vermicelles, et des bougies ;
 « Manger » : les bougies sortent, six coups de couteau, et on le mange
 part par part, comme la pizza — la crème file, croc, croc, la marque des
-dents).
+dents), et Mon cartable (le cartable à rabat, le sac à dos ou le cartable
+à roulettes, dans un coin de classe : six matières dont les paillettes
+réversibles qu'on caresse pour dessiner, les couleurs pièce par pièce,
+les motifs, des écussons brodés, des badges et des porte-clés ; on y range
+la trousse, les cahiers, la règle, la gourde et la pomme, et la petite
+fille d'Habille-toi part à l'école avec ; un cartable par fille).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

@@ -1727,6 +1727,75 @@ await scenario('patisserie-sans-bougie', async () => {
     .catch(async () => { throw new Error(`la part n'est pas avalée (${await page.evaluate(() => JSON.stringify(window.__bk.eat))})`) })
 })
 
+/* 🎒 Mon cartable (19/10) : le cartable de Joyce, de bout en bout — le
+   modèle, les paillettes caressées vers le haut (elles se retournent), la
+   couleur du corps au doigt, un motif, un écusson posé puis repris, un
+   porte-clés, les six affaires rangées, et « Fini » : elle part à l'école. */
+await scenario('cartable', async () => {
+  await openGame('Mon cartable', '__ct')
+  await page.evaluate(() => { localStorage.removeItem('ferme:cartable:joyce'); localStorage.removeItem('ferme:cartable:photo:joyce') })
+  await page.waitForFunction(() => window.__ct.cards, null, { timeout: 60000, polling: 500 })
+  await page.locator('.ct-card[data-who="joyce"]').click()
+  const pret = () => page.waitForFunction(() => window.__ct.ready, null, { timeout: 120000, polling: 300 })
+  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__ct.step, look: window.__ct.look, fl: window.__ct.flipped, pk: window.__ct.packed }))
+  await pret()
+  // Le modèle : le sac à dos, puis le cartable à rabat
+  await page.locator('.ct-opt[data-model="dos"]').click({ force: true }); await pret()
+  if (await page.evaluate(() => window.__ct.look.model) !== 'dos') throw new Error(`pas de sac à dos (${await etat()})`)
+  await page.locator('.ct-opt[data-model="rabat"]').click({ force: true }); await pret()
+  // Les paillettes : on les caresse vers le haut, elles se retournent
+  await page.locator('.ct-step[data-step="matiere"]').click({ force: true })
+  await page.locator('.ct-opt[data-fabric="paillettes"]').click({ force: true }); await pret()
+  const [a, b] = await page.evaluate(() => window.__ct.stroke())
+  await page.mouse.move(a.x, a.y); await page.mouse.down()
+  for (let i = 1; i <= 12; i++) { await page.mouse.move(a.x + (b.x - a.x) * i / 12, a.y + (b.y - a.y) * i / 12); await page.waitForTimeout(50) }
+  await page.mouse.up()
+  await page.waitForFunction(() => window.__ct.flipped > 10, null, { timeout: 30000, polling: 300 })
+    .catch(async () => { throw new Error(`les paillettes ne se retournent pas (${await etat()})`) })
+  // La couleur : le bleu, sur le corps (sous le rabat)
+  await page.locator('.ct-step[data-step="couleurs"]').click({ force: true })
+  await page.locator('.ct-opt[data-color="#4FB8E7"]').click({ force: true })
+  const sz = await page.evaluate(() => window.__ct.size)
+  const corps = await page.evaluate(sz => window.__ct.pt(0, -0.38 * sz.H, sz.D / 2), sz)
+  await page.mouse.click(corps.x, corps.y); await pret()
+  await page.waitForFunction(() => window.__ct.look.body === '#4FB8E7', null, { timeout: 30000, polling: 300 })
+    .catch(async () => { throw new Error(`le corps n'est pas peint (${await etat()})`) })
+  if (await page.evaluate(() => window.__ct.flipped) <= 10) throw new Error('les paillettes retournées sont perdues en repeignant')
+  // Le motif
+  await page.locator('.ct-step[data-step="motifs"]').click({ force: true })
+  await page.locator('.ct-opt[data-motif="pois"]').click({ force: true }); await pret()
+  // La déco : une étoile brodée posée sur le rabat, reprise, reposée ; un porte-clés
+  await page.locator('.ct-step[data-step="deco"]').click({ force: true })
+  await page.locator('.ct-opt[data-patch="etoile"]').click({ force: true })
+  const ou = await page.evaluate(() => window.__ct.pt(0.28, 0.08))
+  await page.mouse.click(ou.x, ou.y); await pret()
+  await page.waitForFunction(() => window.__ct.look.patches.length === 1, null, { timeout: 30000, polling: 300 })
+    .catch(async () => { throw new Error(`l'écusson ne se pose pas (${await etat()})`) })
+  await page.mouse.click(ou.x, ou.y); await pret()
+  await page.waitForFunction(() => window.__ct.look.patches.length === 0, null, { timeout: 30000, polling: 300 })
+    .catch(async () => { throw new Error(`l'écusson ne se reprend pas (${await etat()})`) })
+  await page.mouse.click(ou.x, ou.y); await pret()
+  await page.locator('.ct-opt[data-charm="chick"]').click({ force: true }); await pret()
+  if (await page.evaluate(() => window.__ct.look.charms.length) !== 1) throw new Error(`pas de porte-clés (${await etat()})`)
+  // Remplir : il s'ouvre, les six affaires y filent, il se referme
+  await page.locator('.ct-step[data-step="remplir"]').click({ force: true })
+  await page.waitForFunction(() => window.__ct.open > 0.9, null, { timeout: 60000, polling: 300 })
+  await page.waitForTimeout(3000) // la caméra se pose au-dessus
+  for (let n = 1; n <= 6; n++) {
+    const it = await page.evaluate(() => window.__ct.item())
+    if (!it) throw new Error(`plus d'affaire à ranger (${await etat()})`)
+    await page.mouse.click(it.x, it.y)
+    await page.waitForFunction(n => window.__ct.packed >= n, n, { timeout: 60000, polling: 200 })
+      .catch(async () => { throw new Error(`l'affaire n° ${n} ne se range pas (${await etat()})`) })
+  }
+  await page.waitForFunction(() => window.__ct.open === 0, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`le cartable ne se referme pas (${await etat()})`) })
+  // Fini : la petite fille le met sur son dos et part à l'école
+  await page.locator('#ctFini').click({ force: true })
+  await finDe('Prête pour', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
+  if (!await page.evaluate(() => !!localStorage.getItem('ferme:cartable:photo:joyce'))) throw new Error('le cartable n\'est pas photographié pour sa carte')
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 // L'éclair (6/10) : la grande ferme de jour, des animaux cachés en entier à fouiller
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))

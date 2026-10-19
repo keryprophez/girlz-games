@@ -2080,6 +2080,46 @@ body.playing .po-card{max-width:880px;}
 .bk-dot{display:block;width:58%;height:58%;border-radius:50%;margin:auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 0 0 2px rgba(69,54,42,.12);}
 /* « Manger » touché avec des bougies allumées : le bouton du souffle se montre (11/10) */
 .bk-wrap[data-phase="prep"] .bk-pal,.bk-wrap[data-phase="prep"] .bk-steps{opacity:0;pointer-events:none;}
+/* Mon cartable (19/10) : les étapes de la Pâtisserie, les cartes de la Ferme à construire */
+.ct-wrap{background:#F6E3D6;touch-action:none;overflow:hidden;}
+.ct-wrap canvas{display:block;width:100%;height:100%;}
+.ct-steps{position:absolute;left:16px;top:84px;z-index:6;display:flex;flex-direction:column;gap:10px;
+  background:rgba(255,250,244,.88);border-radius:26px;padding:12px 10px;box-shadow:0 6px 20px rgba(69,54,42,.16);transition:opacity .4s;}
+.ct-step,.ct-fini{width:clamp(46px,4.6vw,58px);height:clamp(46px,4.6vw,58px);}
+.ct-step.sel{background:linear-gradient(135deg,var(--mango),var(--coral));}
+.ct-fini{margin-top:6px;background:#FFF4E0;}
+.ct-pal{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:10px;align-items:flex-end;
+  background:rgba(255,250,244,.92);border-radius:26px;padding:10px 16px 8px;box-shadow:0 6px 20px rgba(69,54,42,.18);
+  max-width:calc(100% - 240px);overflow-x:auto;scrollbar-width:none;transition:opacity .4s;}
+.ct-pal::-webkit-scrollbar{display:none;}
+.ct-pal .tool-item{flex:none;}
+.ct-wrap[data-pal="0"] .ct-pal{display:none;}
+.ct-opt{width:clamp(46px,4.6vw,58px);height:clamp(46px,4.6vw,58px);}
+.ct-opt.big{width:clamp(56px,5.8vw,74px);height:clamp(56px,5.8vw,74px);border-radius:20px;padding:0;overflow:hidden;background:#FFF8F0;}
+.ct-opt.big img{width:100%;height:100%;object-fit:cover;pointer-events:none;}
+.ct-opt.sel{box-shadow:0 0 0 4px #FFC94D;}
+/* Déco : treize ornements, tous visibles sans faire défiler */
+.ct-pal[data-step="deco"]{gap:8px;padding:10px 12px 8px;}
+.ct-pal[data-step="deco"] .ct-opt.big{width:clamp(50px,5vw,62px);height:clamp(50px,5vw,62px);}
+.ct-sep{width:2px;align-self:stretch;background:rgba(69,54,42,.12);border-radius:2px;flex:none;}
+.ct-dot{display:block;width:58%;height:58%;border-radius:50%;margin:auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 0 0 2px rgba(69,54,42,.12);}
+.ct-me{position:absolute;right:18px;top:84px;z-index:6;}
+.ct-me .sn-tool{width:60px;height:60px;}
+.ct-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
+  padding:80px 24px 24px;background:linear-gradient(180deg,#F8EEDD 0%,#FBD9B4 100%);}
+.ct-wrap[data-who=""] .ct-who{display:flex;}
+.ct-wrap[data-who=""] .ct-steps,.ct-wrap[data-who=""] .ct-pal,.ct-wrap[data-who=""] .ct-me{display:none;}
+.ct-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
+  background:#FFF8F0;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
+.ct-card:active{transform:scale(.95);}
+.ct-card.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--mango),var(--e2);}
+.ct-photo,.ct-photo img{display:block;width:100%;height:100%;}
+.ct-photo img{object-fit:cover;pointer-events:none;}
+.ct-empty{display:grid;place-items:center;width:100%;height:100%;}
+.ct-empty svg{width:42%;height:auto;}
+.ct-card-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
+/* Fini : la petite fille part à l'école, plus rien d'autre à l'écran */
+.ct-wrap[data-phase="outro"] .ct-steps,.ct-wrap[data-phase="outro"] .ct-pal,.ct-wrap[data-phase="outro"] .ct-me{opacity:0;pointer-events:none;}
 
 /* ============================================================
    DEVINE MON DESSIN (8/10) — la feuille de l'Atelier à gauche, le chat de

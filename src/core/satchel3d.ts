@@ -42,22 +42,51 @@ export interface BagLook {
 
 export interface Bag {
   obj: Grp
-  /** Les paillettes du rabat : à retourner (0 : face A, 1 : face B), par (u, v) du rabat. */
+  /** Les paillettes du rabat (le cartable à rabat ou à roulettes). */
   sequins: Sequins | null
+  /** Ouvert de 0 à 1 : le rabat se lève (la fermeture éclair s'ouvre), la bouche paraît. */
+  open(k: number): void
+  /** Où entrent les affaires qu'on range (repère du cartable). */
+  mouth: V3
+  /** Sa largeur, sa hauteur, son épaisseur. */
+  W: number; H: number; D: number
   /** Les porte-clés se balancent quand le cartable bouge (vitesse de rotation en rad/s). */
   step(dt: number, spin: number): void
   dispose(): void
 }
 
+/** Les paillettes réversibles : chacune sa place (repère du cartable, rabat fermé) et sa face voulue. */
 export interface Sequins {
   count: number
-  /** Où est chacune, dans le repère du rabat : x (largeur) et s (longueur, du haut vers le bas). */
-  at: [number, number][]
-  /** Son état voulu (0 ou 1) ; elle y va en tournant sur sa charnière. */
-  want: Float32Array
-  /** La longueur du rabat et sa demi-largeur (pour dessiner dedans). */
-  L: number
-  halfW: number
+  pos: Float32Array
+  /** 0 : face A (la couleur du rabat), 1 : face B ; elle y va en tournant sur sa charnière. */
+  want: Uint8Array
+  /** Les paillettes à moins de r du point (repère du cartable) passent sur la face w ; combien ont changé. */
+  stroke(p: V3, r: number, w: 0 | 1): number
+  /** La face de la paillette la plus proche du point. */
+  faceAt(p: V3): 0 | 1
+  /** Leurs faces, gardées en une chaîne (base 64), et relues. */
+  bits(): string
+  setBits(b: string): void
+  /** Toutes à leur face voulue, sans tourner. */
+  snap(): void
+}
+
+/** Les faces des paillettes en base 64 (un bit chacune). */
+export function packBits(w: Uint8Array) {
+  const by = new Uint8Array(Math.ceil(w.length / 8))
+  w.forEach((v, i) => { if (v) by[i >> 3] |= 1 << (i & 7) })
+  let str = ''
+  by.forEach(b => { str += String.fromCharCode(b) })
+  return btoa(str)
+}
+export function unpackBits(b: string, n: number) {
+  const out = new Uint8Array(n)
+  try {
+    const str = atob(b)
+    for (let i = 0; i < n; i++) out[i] = (str.charCodeAt(i >> 3) >> (i & 7)) & 1
+  } catch { /* une chaîne abîmée : toutes sur la face A */ }
+  return out
 }
 
 export const METAL: Record<BagLook['metal'], string> = { or: '#E2B85C', argent: '#D5DAE0', rose: '#E7A391' }
@@ -69,7 +98,9 @@ export async function bagKit(T: T3) {
   const { RoundedBoxGeometry } = await import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
   const U = await import('three/examples/jsm/utils/BufferGeometryUtils.js')
   const kept: { dispose(): void }[] = []
-  const k = <X extends { dispose(): void }>(x: X) => { kept.push(x); return x }
+  /** Où vont les ressources créées : le kit, ou le cartable en cours de construction (libérées avec lui). */
+  let bin = kept
+  const k = <X extends { dispose(): void }>(x: X) => { bin.push(x); return x }
 
   /* ---- Les textures, faites une fois ---- */
   const canvas = (w: number, h: number, draw: (x: CanvasRenderingContext2D) => void) => {
@@ -159,9 +190,9 @@ export async function bagKit(T: T3) {
   }), 6), false, 2)
 
   /** Un motif sur fond (une tuile de 0,5 de côté). */
-  const motifTex = (base: string, m: Motif, col: string, under: 'jean' | 'holo' | null) => {
+  const motifCanvas = (base: string, m: Motif, col: string, under: 'jean' | 'holo' | null) => {
     const S = 512
-    const cv = canvas(S, S, x => {
+    return canvas(S, S, x => {
       x.fillStyle = base; x.fillRect(0, 0, S, S)
       if (under === 'jean') { x.globalCompositeOperation = 'multiply'; x.drawImage(twillCv, 0, 0, S, S); x.drawImage(twillCv, 0, 0, S, S); x.globalCompositeOperation = 'source-over' }
       if (under === 'holo') { x.globalAlpha = 0.75; x.drawImage(holoCv, 0, 0, S, S); x.globalAlpha = 1 }
@@ -202,7 +233,12 @@ export async function bagKit(T: T3) {
         x.globalAlpha = 1
       }
     })
-    return tex(cv, true, 1)
+  }
+  const motifTex = (base: string, m: Motif, col: string, under: 'jean' | 'holo' | null) => tex(motifCanvas(base, m, col, under), true, 1)
+  /** La vignette d'un motif (la même tuile que sur le cartable). */
+  const motifSwatch = (base: string, m: Motif, col: string, px = 96) => {
+    const c = canvas(px, px, x => x.drawImage(motifCanvas(base, m, col, null), 0, 0, 512, 512, 0, 0, px * 2, px * 2))
+    return c.toDataURL('image/png')
   }
 
   /** La matière d'une pièce : son tissu, sa couleur, son motif. */
@@ -481,7 +517,7 @@ export async function bagKit(T: T3) {
     } else {
       const { critterKit } = await import('./critters')
       const ck = critterKit(T)
-      kept.push(ck)
+      bin.push(ck)
       const c = ck.make(kind, 0.22)
       body = c.obj
       body.position.y = end - 0.17
@@ -491,32 +527,47 @@ export async function bagKit(T: T3) {
     return g
   }
 
-  /* ---- Le cartable entier ---- */
+  /* ---- Le cartable entier ----
+     Chaque pièce dit ce qu'elle est (`userData.part` : corps, rabat,
+     bretelles, metal, paillettes) — le pinceau colorie ce qu'on touche ;
+     écussons, badges et porte-clés disent leur place dans le look
+     (`userData.deco`) — un toucher les reprend. Tout ce qui est créé ici est
+     libéré avec le cartable (`dispose`). */
   async function build(look: BagLook): Promise<Bag> {
+    const mine: { dispose(): void }[] = []
+    const prevBin = bin
+    bin = mine
+    try { return await make(look, mine) } finally { bin = prevBin }
+  }
+  async function make(look: BagLook, mine: { dispose(): void }[]): Promise<Bag> {
     const obj = new T.Group()
-    const mats: Mat[] = []
-    const own = <M extends Mat>(m: M) => { mats.push(m); return m }
     const seqFabric = look.fabric === 'paillettes'
     const baseFabric: BagFabric = seqFabric ? 'toile' : look.fabric
-    const bodyMat = own(fabricMat(baseFabric, look.body, look.motif, look.motifColor))
-    const flapMat = seqFabric ? own(fabricMat('toile', look.flap)) : own(fabricMat(baseFabric, look.flap, look.motif, look.motifColor))
-    const strapMat = own(fabricMat(look.fabric === 'verni' || look.fabric === 'jean' ? look.fabric : 'toile', look.straps))
-    const metal = own(metalMat(look.metal))
-    const lining = own(k(new T.MeshStandardMaterial({ color: '#3B3247', roughness: 0.9 })))
+    const bodyMat = fabricMat(baseFabric, look.body, look.motif, look.motifColor)
+    const flapMat = seqFabric ? fabricMat('toile', look.flap) : fabricMat(baseFabric, look.flap, look.motif, look.motifColor)
+    const strapMat = fabricMat(look.fabric === 'verni' || look.fabric === 'jean' ? look.fabric : 'toile', look.straps)
+    const metal = metalMat(look.metal)
+    const lining = k(new T.MeshStandardMaterial({ color: '#3B3247', roughness: 0.95 }))
     const thread = look.fabric === 'jean' ? '#E39A3B' : new T.Color(look.flap).lerp(new T.Color('#FFFFFF'), 0.55).getStyle()
-    const add = (g: Geo, m: Mat, x = 0, y = 0, z = 0) => {
+    const partOf = new Map<Mat, string>([[bodyMat, 'corps'], [flapMat, 'rabat'], [strapMat, 'bretelles'], [metal, 'metal']])
+    /** Une pièce, dans `into` (le cartable, ou le rabat qui s'ouvre). */
+    const add = (g: Geo, m: Mat, x = 0, y = 0, z = 0, into: Grp = obj) => {
       const mesh = new T.Mesh(k(g), m)
       mesh.position.set(x, y, z)
       mesh.castShadow = true; mesh.receiveShadow = true
-      obj.add(mesh)
+      mesh.userData.part = partOf.get(m) ?? 'corps'
+      into.add(mesh)
       return mesh
     }
     let sequins: Sequins | null = null
     let seqMesh: import('three').InstancedMesh | null = null
     const roulettes = look.model === 'roulettes'
-    /** Où poser écussons et badges (x, y sur le devant) : la surface du devant. */
-    let frontAt: (x: number, y: number) => [number, number, number, number, number, number]
+    /** Où poser écussons et badges (x, y sur le devant) : la surface, sa normale, et s'il est sur le rabat. */
+    let frontAt: (x: number, y: number) => { p: [number, number, number]; onFlap: boolean }
     let W = 1, H = 0.78, D = 0.36
+    let open: (k: number) => void
+    const mouth = new T.Vector3()
+    let flapG: Grp = obj
 
     if (look.model === 'dos') {
       W = 0.92; H = 1.06; D = 0.4
@@ -527,14 +578,14 @@ export async function bagKit(T: T3) {
       const pz = frontZ(W, H, D, r, 0, py) - 0.02
       add(rbox(pw, ph, pd, 0.07, 6), flapMat, 0, py, pz + pd / 2 - 0.02)
       // Les fermetures éclair : le ruban, les dents, la tirette
-      const zipTape = own(k(new T.MeshStandardMaterial({ color: new T.Color(look.body).multiplyScalar(0.55), roughness: 0.85 })))
+      const zipTape = k(new T.MeshStandardMaterial({ color: new T.Color(look.body).multiplyScalar(0.55), roughness: 0.85 }))
       const toothGeo = k(new T.BoxGeometry(0.0065, 0.022, 0.007))
       const zipPath = (pts: V3[]) => {
         const c = new T.CatmullRomCurve3(pts)
         const tape = new T.Mesh(k(new T.TubeGeometry(c, 80, 0.014, 6)), zipTape)
-        tape.scale.set(1, 1, 1)
+        tape.userData.part = 'corps'
         obj.add(tape)
-        // Les dents, en travers, alternées
+        // Les dents, en travers
         const n = Math.floor(c.getLength() / 0.011)
         const im = new T.InstancedMesh(toothGeo, metal, n)
         const m4 = new T.Matrix4(), q = new T.Quaternion(), tg = new T.Vector3(), one = new T.Vector3(1, 1, 1), p = new T.Vector3()
@@ -544,6 +595,7 @@ export async function bagKit(T: T3) {
           c.getPointAt(t, p); p.z += 0.01
           im.setMatrixAt(i, m4.compose(p, q, one))
         }
+        im.userData.part = 'metal'
         obj.add(im)
         return c
       }
@@ -557,15 +609,40 @@ export async function bagKit(T: T3) {
       const pTop: V3[] = []
       for (let i = 0; i <= 12; i++) { const x = (i / 12 - 0.5) * (pw - 0.12); pTop.push(new T.Vector3(x, py + ph / 2 - 0.05, pz + pd - 0.015)) }
       const pocketC = zipPath(pTop)
+      const pulls: Grp[] = []
       for (const [c, t] of [[archC, 0.62], [pocketC, 0.8]] as [import('three').CatmullRomCurve3, number][]) {
-        const p = c.getPointAt(t)
+        const p = c.getPointAt(t), g = new T.Group()
+        g.position.copy(p)
         const slider = new T.Mesh(k(new RoundedBoxGeometry(0.05, 0.03, 0.022, 2, 0.008)), metal)
-        slider.position.set(p.x, p.y, p.z + 0.016)
+        slider.position.set(0, 0, 0.016)
         const pull = new T.Mesh(k(new RoundedBoxGeometry(0.034, 0.075, 0.008, 2, 0.006)), metal)
-        pull.position.set(p.x, p.y - 0.05, p.z + 0.022); pull.rotation.x = -0.18
+        pull.position.set(0, -0.05, 0.022); pull.rotation.x = -0.18
         const ring = new T.Mesh(k(new T.TorusGeometry(0.012, 0.004, 6, 16)), metal)
-        ring.position.set(p.x, p.y - 0.068, p.z + 0.024)
-        for (const o of [slider, pull, ring]) { o.castShadow = true; obj.add(o) }
+        ring.position.set(0, -0.068, 0.024)
+        for (const o of [slider, pull, ring]) { o.castShadow = true; o.userData.part = 'metal'; g.add(o) }
+        obj.add(g)
+        pulls.push(g)
+      }
+      // Ouvrir : la tirette fait le tour de l'arche, la fente s'ouvre, sombre
+      const slit = new T.Mesh(k(new T.TubeGeometry(archC, 80, 1, 8)), lining)
+      slit.scale.set(1, 1, 1)
+      const slitGeo = slit.geometry as import('three').TubeGeometry
+      const base = Float32Array.from(slitGeo.getAttribute('position').array as Float32Array)
+      const centers = archC.getSpacedPoints(80)
+      slit.visible = false
+      obj.add(slit)
+      mouth.set(0, H / 2 - 0.12, D / 2 - 0.02)
+      open = k2 => {
+        pulls[0].position.copy(archC.getPointAt(0.62 - 0.6 * Math.min(1, k2)))
+        slit.visible = k2 > 0.01
+        // La fente : le ruban gonflé autour de l'arche, de 0 à 4 cm
+        const pos = slitGeo.getAttribute('position') as import('three').BufferAttribute
+        const rr = 0.045 * Math.min(1, k2), seg = 9
+        for (let i = 0; i < pos.count; i++) {
+          const c = centers[Math.min(centers.length - 1, Math.floor(i / seg))]
+          pos.setXYZ(i, c.x + (base[i * 3] - c.x) * rr, c.y + (base[i * 3 + 1] - c.y) * rr, c.z + 0.004 + (base[i * 3 + 2] - c.z) * rr * 0.4)
+        }
+        pos.needsUpdate = true
       }
       // La poignée du haut, en boucle
       const loop = ribbon([new T.Vector3(-0.09, H / 2 - 0.05, -0.04), new T.Vector3(-0.06, H / 2 + 0.06, -0.03), new T.Vector3(0.06, H / 2 + 0.06, -0.03), new T.Vector3(0.09, H / 2 - 0.05, -0.04)], 0.05, 0.016)
@@ -576,45 +653,52 @@ export async function bagKit(T: T3) {
       obj.add(stitches(seam.map(v => new T.Vector3(Math.max(-pw / 2 + 0.03, Math.min(pw / 2 - 0.03, v.x * 1.25)), Math.max(py - ph / 2 + 0.03, Math.min(py + ph / 2 - 0.03, (v.y - py) * 1.25 + py)), v.z)), thread))
       frontAt = (x, y) => {
         const inPocket = Math.abs(x) < pw / 2 - 0.05 && Math.abs(y - py) < ph / 2 - 0.05
-        return [x, y, inPocket ? pz + pd - 0.004 : frontZ(W, H, D, r, x, y), 0, 0, 1]
+        return { p: [x, y, inPocket ? pz + pd - 0.004 : frontZ(W, H, D, r, x, y)], onFlap: false }
       }
     } else {
       const rb = 0.07
       add(rbox(W, H, D, rb, 6), bodyMat)
-      // Le rabat, sur sa charnière (pour l'ouvrir)
+      // La bouche du cartable : sombre, sous le rabat
+      const mouthM = add(rbox(W - 0.16, 0.01, D - 0.12, 0.004, 2), lining, 0, H / 2 + 0.002, 0)
+      mouthM.userData.part = 'corps'
+      mouth.set(0, H / 2, 0)
+      // Le rabat, sur sa charnière (en haut du dos)
       const f = flapShape(W, H, D, rb, H * 0.62)
-      const flap = new T.Mesh(k(flapGeo(f, 0.018)), flapMat)
-      flap.castShadow = true; flap.receiveShadow = true
-      obj.add(flap)
-      // Ses surpiqûres, tout autour, à 2 cm du bord
+      const hinge = new T.Group()
+      hinge.position.set(0, H / 2, f.z0)
+      obj.add(hinge)
+      flapG = new T.Group()
+      flapG.position.set(0, -H / 2, -f.z0)
+      hinge.add(flapG)
+      open = k2 => { hinge.rotation.x = -2.25 * Math.min(1, k2) }
+      add(flapGeo(f, 0.018), flapMat, 0, 0, 0, flapG)
+      // Ses surpiqûres, tout autour, à 3 cm du bord
       const seam: V3[] = []
       const inset = 0.03
       for (let i = 0; i <= 30; i++) { const s = 0.02 + i / 30 * (f.L - 0.02 - inset); const [x, y, z] = f.at(s, f.xm(s) - inset, 0.021); seam.push(new T.Vector3(x, y, z)) }
-      for (let i = 1; i < 20; i++) { const x = (1 - i / 10) * (f.halfW - inset - 0.13) ; const [px, py, pz] = f.at(f.L - inset - (f.halfW - inset - Math.abs(x) < 0.13 ? 0.13 - Math.sqrt(Math.max(0, 0.0169 - (0.13 - (f.halfW - inset - Math.abs(x))) ** 2)) : 0), x, 0.021); seam.push(new T.Vector3(px, py, pz)) }
+      for (let i = 1; i < 20; i++) { const x = (1 - i / 10) * (f.halfW - inset - 0.13); const [px, py, pz] = f.at(f.L - inset - (f.halfW - inset - Math.abs(x) < 0.13 ? 0.13 - Math.sqrt(Math.max(0, 0.0169 - (0.13 - (f.halfW - inset - Math.abs(x))) ** 2)) : 0), x, 0.021); seam.push(new T.Vector3(px, py, pz)) }
       for (let i = 30; i >= 0; i--) { const s = 0.02 + i / 30 * (f.L - 0.02 - inset); const [x, y, z] = f.at(s, -(f.xm(s) - inset), 0.021); seam.push(new T.Vector3(x, y, z)) }
-      obj.add(stitches(seam, thread))
+      flapG.add(stitches(seam, thread))
       // Les deux fermoirs à tourniquet : la plaque sur le rabat, la patte sur le corps
       for (const sx of [-0.25, 0.25]) {
         const [x, y, z] = f.at(f.L - 0.075, sx, 0.02)
-        const plate = add(rbox(0.13, 0.085, 0.014, 0.012, 3), metal, x, y, z + 0.004)
-        plate.castShadow = true
+        add(rbox(0.13, 0.085, 0.014, 0.012, 3), metal, x, y, z + 0.004, flapG)
         const knob = add(new T.CylinderGeometry(0.016, 0.016, 0.02, 20), metal, x, y - 0.075, D / 2 + 0.016)
         knob.rotation.x = Math.PI / 2
         add(rbox(0.11, 0.04, 0.012, 0.01, 3), metal, x, y - 0.075, D / 2 + 0.004)
       }
-      // La poignée : un arceau de cuir sur le dessus, ses deux pattes
+      // La poignée : un arceau de cuir sur le dessus du rabat, ses deux pattes
       const top = H / 2 + 0.02
-      const handle = new T.Mesh(k(new T.TubeGeometry(new T.CatmullRomCurve3([
+      const handle = add(new T.TubeGeometry(new T.CatmullRomCurve3([
         new T.Vector3(-0.17, top, -0.02), new T.Vector3(-0.15, top + 0.09, -0.02), new T.Vector3(0, top + 0.15, -0.02), new T.Vector3(0.15, top + 0.09, -0.02), new T.Vector3(0.17, top, -0.02)
-      ]), 40, 0.02, 12)), strapMat)
+      ]), 40, 0.02, 12), strapMat, 0, 0, 0, flapG)
       handle.castShadow = true
-      obj.add(handle)
-      for (const sx of [-0.17, 0.17]) add(rbox(0.07, 0.022, 0.06, 0.01, 2), strapMat, sx, top - 0.004, -0.02)
+      for (const sx of [-0.17, 0.17]) add(rbox(0.07, 0.022, 0.06, 0.01, 2), strapMat, sx, top - 0.004, -0.02, flapG)
       frontAt = (x, y) => {
         // Sur le rabat (le devant) tant qu'il descend jusque-là, sinon sur le corps
         const sOn = H / 2 - rb - y + (D / 2 - rb - f.z0) + Math.PI / 2 * rb
-        if (sOn < f.L - 0.02 && Math.abs(x) < f.xm(sOn) - 0.02) { const p = f.at(sOn, x, 0.02); return [p[0], p[1], p[2], 0, 0, 1] }
-        return [x, y, D / 2 + 0.002, 0, 0, 1]
+        if (sOn < f.L - 0.02 && Math.abs(x) < f.xm(sOn) - 0.02) { const p = f.at(sOn, x, 0.02); return { p: [p[0], p[1], p[2]], onFlap: true } }
+        return { p: [x, y, D / 2 + 0.002], onFlap: false }
       }
       // Les paillettes, sur le rabat
       if (seqFabric) {
@@ -623,43 +707,61 @@ export async function bagKit(T: T3) {
         for (let s = 0.05, row = 0; s < f.L - 0.015; s += st * 0.8, row++) {
           for (let x = -f.halfW + 0.02 + (row % 2) * st / 2; x < f.halfW - 0.02; x += st) if (Math.abs(x) < f.xm(s) - 0.012) at.push([x, s])
         }
+        const n = at.length
         const disc = k(new T.CylinderGeometry(0.0175, 0.0175, 0.0025, 18))
         disc.translate(0, 0, 0.0155) // la charnière en haut de l'écaille
-        const sm = own(k(new T.MeshStandardMaterial({ color: '#FFFFFF', metalness: 0.85, roughness: 0.22 })))
-        seqMesh = new T.InstancedMesh(disc, sm, at.length)
-        seqMesh.castShadow = false; seqMesh.receiveShadow = true
-        obj.add(seqMesh)
-        sequins = { count: at.length, at, want: new Float32Array(at.length), L: f.L, halfW: f.halfW }
-        const state = new Float32Array(at.length)
+        const sm = k(new T.MeshStandardMaterial({ color: '#FFFFFF', metalness: 0.85, roughness: 0.22 }))
+        const im = new T.InstancedMesh(disc, sm, n)
+        seqMesh = im
+        im.castShadow = false; im.receiveShadow = true
+        im.userData.part = 'paillettes'
+        flapG.add(im)
+        const pos = new Float32Array(n * 3), nrmA = new Float32Array(n * 3)
+        at.forEach(([x, s2], i) => { const p = f.at(s2, x, 0.02); pos.set([p[0], p[1], p[2]], i * 3); nrmA.set([p[3], p[4], p[5]], i * 3) })
+        const want = new Uint8Array(n), state = new Float32Array(n)
         const r = rng(11)
-        const jit = Float32Array.from({ length: at.length * 2 }, () => r() - 0.5)
+        const jit = Float32Array.from({ length: n * 2 }, () => r() - 0.5)
         const cA = new T.Color(look.flap), cB = new T.Color(look.sequinB), c = new T.Color()
-        const m4 = new T.Matrix4(), q = new T.Quaternion(), qa = new T.Quaternion(), e = new T.Euler(), one = new T.Vector3(1, 1, 1), pos = new T.Vector3(), nrm = new T.Vector3()
+        const m4 = new T.Matrix4(), q = new T.Quaternion(), qa = new T.Quaternion(), e = new T.Euler(), one = new T.Vector3(1, 1, 1), pv = new T.Vector3(), nrm = new T.Vector3(), Y = new T.Vector3(0, 1, 0)
         const place = (i: number) => {
-          const [x, s] = at[i]
-          const p = f.at(s, x, 0.02)
-          pos.set(p[0], p[1], p[2]); nrm.set(p[3], p[4], p[5])
+          pv.fromArray(pos, i * 3); nrm.fromArray(nrmA, i * 3)
           // Couchée sur le rabat, la charnière vers le haut de la pente ; retournée : de l'autre côté de sa charnière
-          q.setFromUnitVectors(new T.Vector3(0, 1, 0), nrm)
+          q.setFromUnitVectors(Y, nrm)
           const flip = state[i]
           e.set(-0.2 - flip * (Math.PI - 0.4) + jit[i * 2] * 0.12, 0, jit[i * 2 + 1] * 0.25)
-          qa.setFromEuler(e)
-          q.multiply(qa)
-          seqMesh!.setMatrixAt(i, m4.compose(pos, q, one))
-          seqMesh!.setColorAt(i, c.copy(flip < 0.5 ? cA : cB).multiplyScalar(0.9 + jit[i * 2] * 0.2))
+          q.multiply(qa.setFromEuler(e))
+          im.setMatrixAt(i, m4.compose(pv, q, one))
+          im.setColorAt(i, c.copy(flip < 0.5 ? cA : cB).multiplyScalar(0.9 + jit[i * 2] * 0.2))
         }
-        for (let i = 0; i < at.length; i++) place(i)
-        seqMesh.userData.place = (dt: number) => {
-          let dirty = false
-          for (let i = 0; i < at.length; i++) {
-            const w = sequins!.want[i]
+        const dirty = () => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true }
+        for (let i = 0; i < n; i++) place(i)
+        im.userData.place = (dt: number) => {
+          let moved = false
+          for (let i = 0; i < n; i++) {
+            const w = want[i]
             if (state[i] === w) continue
             state[i] = w > state[i] ? Math.min(w, state[i] + dt * 7) : Math.max(w, state[i] - dt * 7)
-            place(i); dirty = true
+            place(i); moved = true
           }
-          if (dirty) { seqMesh!.instanceMatrix.needsUpdate = true; if (seqMesh!.instanceColor) seqMesh!.instanceColor.needsUpdate = true }
+          if (moved) dirty()
         }
-        seqMesh.userData.snap = () => { state.set(sequins!.want); for (let i = 0; i < at.length; i++) place(i); seqMesh!.instanceMatrix.needsUpdate = true; if (seqMesh!.instanceColor) seqMesh!.instanceColor.needsUpdate = true }
+        const near = (p: V3, i: number) => Math.hypot(pos[i * 3] - p.x, pos[i * 3 + 1] - p.y, pos[i * 3 + 2] - p.z)
+        sequins = {
+          count: n, pos, want,
+          stroke(p, rr, w) {
+            let ch = 0
+            for (let i = 0; i < n; i++) if (want[i] !== w && near(p, i) < rr) { want[i] = w; ch++ }
+            return ch
+          },
+          faceAt(p) {
+            let best = 0, bd = Infinity
+            for (let i = 0; i < n; i++) { const d = near(p, i); if (d < bd) { bd = d; best = i } }
+            return want[best] ? 1 : 0
+          },
+          bits: () => packBits(want),
+          setBits(b) { want.set(unpackBits(b, n)) },
+          snap() { state.set(want); for (let i = 0; i < n; i++) place(i); dirty() }
+        }
       }
     }
 
@@ -677,53 +779,54 @@ export async function bagKit(T: T3) {
 
     // Le cartable à roulettes : la canne, la poignée, les roues
     if (roulettes) {
-      const alu = own(k(new T.MeshStandardMaterial({ color: '#BFC6CF', metalness: 1, roughness: 0.3 })))
-      const rubber = own(k(new T.MeshStandardMaterial({ color: '#2E2A30', roughness: 0.8 })))
+      const alu = k(new T.MeshStandardMaterial({ color: '#BFC6CF', metalness: 1, roughness: 0.3 }))
+      const rubber = k(new T.MeshStandardMaterial({ color: '#2E2A30', roughness: 0.8 }))
+      const hubM = fabricMat('verni', look.straps)
+      partOf.set(hubM, 'bretelles'); partOf.set(alu, 'metal'); partOf.set(rubber, 'metal')
       for (const sx of [-0.3, 0.3]) {
         add(new T.CylinderGeometry(0.018, 0.018, H + 0.62, 16), alu, sx, 0.25, -D / 2 - 0.05)
         const wheel = add(new T.CylinderGeometry(0.085, 0.085, 0.05, 28), rubber, sx * 1.22, -H / 2 - 0.02, -D / 2 - 0.02)
         wheel.rotation.z = Math.PI / 2
-        const hub = add(new T.CylinderGeometry(0.04, 0.04, 0.056, 20), own(fabricMat('verni', look.straps)), sx * 1.22, -H / 2 - 0.02, -D / 2 - 0.02)
+        const hub = add(new T.CylinderGeometry(0.04, 0.04, 0.056, 20), hubM, sx * 1.22, -H / 2 - 0.02, -D / 2 - 0.02)
         hub.rotation.z = Math.PI / 2
       }
-      const grip = add(new T.CapsuleGeometry(0.03, 0.56, 4, 14), own(fabricMat('verni', look.straps)), 0, H / 2 + 0.56, -D / 2 - 0.05)
+      const grip = add(new T.CapsuleGeometry(0.03, 0.56, 4, 14), hubM, 0, H / 2 + 0.56, -D / 2 - 0.05)
       grip.rotation.z = Math.PI / 2
       add(rbox(0.7, 0.04, 0.12, 0.015, 2), alu, 0, -H / 2 - 0.01, -D / 2 - 0.02)
       for (const sx of [-0.36, 0.36]) add(rbox(0.06, 0.04, 0.06, 0.015, 2), rubber, sx, -H / 2 - 0.03, D / 2 - 0.06)
     }
 
-    // Écussons et badges, sur le devant
-    for (const pc of look.patches) {
+    // Écussons et badges, sur le devant (ceux du rabat s'ouvrent avec lui)
+    look.patches.forEach((pc, i) => {
       const p = patch(pc.kind, pc.size ?? 0.17)
-      const [x, y, z] = frontAt(pc.x, pc.y)
-      p.position.set(x, y, z + 0.002)
+      const at = frontAt(pc.x, pc.y)
+      p.position.set(at.p[0], at.p[1], at.p[2] + 0.002)
       p.rotation.z = pc.rot ?? 0
-      obj.add(p)
-    }
-    for (const bd of look.badges) {
+      p.userData.deco = { type: 'patch', i }
+      ;(at.onFlap ? flapG : obj).add(p)
+    })
+    look.badges.forEach((bd, i) => {
       const b = badge(bd.kind, bd.color)
-      const [x, y, z] = frontAt(bd.x, bd.y)
-      b.position.set(x, y, z + 0.008)
-      obj.add(b)
-    }
-    void lining
+      const at = frontAt(bd.x, bd.y)
+      b.position.set(at.p[0], at.p[1], at.p[2] + 0.008)
+      b.userData.deco = { type: 'badge', i }
+      ;(at.onFlap ? flapG : obj).add(b)
+    })
 
-    // Les porte-clés, accrochés à la poignée (au côté pour le sac à dos)
+    // Les porte-clés : à un anneau sur le côté droit, l'un devant l'autre
     const swing: { g: Grp; a: number; v: number; b: number; w: number }[] = []
-    let ci = 0
-    for (const ch of look.charms) {
+    for (let ci = 0; ci < look.charms.length; ci++) {
       const g = new T.Group()
-      g.add(await charm(ch, metal))
-      // À un anneau sur le côté droit, l'un devant l'autre
+      g.add(await charm(look.charms[ci], metal))
       if (look.model === 'dos') g.position.set(W / 2 + 0.012, H / 2 - 0.3, D / 2 - 0.16 - ci * 0.1)
       else g.position.set(W / 2 + 0.012, H / 2 - 0.1, D / 2 - 0.1 - ci * 0.11)
+      g.userData.deco = { type: 'charm', i: ci }
       obj.add(g)
-      swing.push({ g, a: 0.1 * (ci % 2 ? 1 : -1), v: 0, b: 0, w: 0 })
-      ci++
+      swing.push({ g, a: 0, v: 0, b: 0, w: 0 })
     }
 
     return {
-      obj, sequins,
+      obj, sequins, open, mouth, W, H, D,
       step(dt, spin) {
         for (const s of swing) {
           // Un pendule : la rotation du cartable le pousse, il revient en se balançant
@@ -735,9 +838,9 @@ export async function bagKit(T: T3) {
         }
         seqMesh?.userData.place?.(dt)
       },
-      dispose() { mats.forEach(m => m.dispose()) }
+      dispose() { mine.forEach(x => x.dispose()); mine.length = 0 }
     }
   }
 
-  return { T, build, patch, badge, dispose() { kept.forEach(x => x.dispose()) } }
+  return { T, build, patch, badge, charm, motifSwatch, dispose() { kept.forEach(x => x.dispose()) } }
 }

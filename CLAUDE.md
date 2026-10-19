@@ -191,6 +191,20 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            depuis le 19/10, la BOUCHÉE vue de profil (`biteOf` :
                            la bouche et ses dents, `inBite`, `biteRim` — testé)
                            et la paroi en arc qu'elle laisse (`biteWall`)
+             satchel3d.ts ← LE CARTABLE de Mon cartable (19/10), modelé ici : le
+                           cartable à rabat (le rabat épouse le corps arrondi —
+                           une distance signée —, sur sa charnière : `open`),
+                           le sac à dos (sa fermeture éclair qui s'ouvre), le
+                           cartable à roulettes ; six matières dont les
+                           PAILLETTES RÉVERSIBLES (`Sequins` : `stroke`, `faceAt`,
+                           gardées en bits, `packBits`) ; motifs, écussons
+                           brodés, badges, porte-clés ; chaque pièce dit ce
+                           qu'elle est (`userData.part`, `userData.deco`) ;
+                           tout ce qu'un cartable crée part avec lui (`dispose`)
+             monuments3d.ts ← LES MONUMENTS (19/10, la maquette ; le jeu de
+                           Jade suivra) : huit monuments en PIÈCES à poser
+                           (`Piece`), leur forme en transparent (`ghost`) ; la
+                           Tour Eiffel en vrai treillis de poutres (instances)
              plush.ts    ← LA PELUCHE de Mon dessin prend vie (18/10) : son
                            dessin gonflé — la silhouette (ses VRAIS trous de
                            contour bouchés grâce à ses traits, `bridges` :
@@ -479,7 +493,15 @@ ferme ; la feuille ouverte, la ferme ne se redessine plus
 `__fb.fakeVivant` ; depuis le 19/10, un gros bouton « Dessiner » sous
 Jour / Nuit, toujours là, que la main montre une fois par ouverture tant
 que sa ferme n'a pas de dessin — la tuile du tiroir des Animaux ne se
-trouvait pas) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
+trouvait pas) · `cartable` (Mon cartable, 19/10, Créer, demandé par Joyce :
+`core/satchel3d.ts` dans un coin de classe ; Modèle, Matière, Couleurs (une
+couleur, puis la pièce qu'on touche), Motifs, Déco (posée où l'on touche,
+reprise d'un toucher), Remplir (le rabat s'ouvre, les affaires filent
+dedans ; une affaire manquée de peu est prise quand même : la règle est
+fine) ; les paillettes se CARESSENT (vers le haut elles se retournent, vers
+le bas elles reviennent) ; « Fini » : la petite fille d'Habille-toi le met
+sur son dos et part à l'école ; un cartable par fille, comme la Ferme à
+construire, avec sa photo ; son bot : `cartable`) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
 le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
 (la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
 au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
@@ -556,7 +578,7 @@ ligne quand on en paie un nouveau.
    d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
    d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
    modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (19/10 : 42 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir, la Pâtisserie et la Ferme à construire deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (19/10 : 43 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir, la Pâtisserie et la Ferme à construire deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en
