@@ -2006,7 +2006,7 @@ body.playing .po-card{max-width:880px;}
 .fb-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
   padding:80px 24px 24px;background:linear-gradient(180deg,#BFE6F7 0%,#E4F4D6 100%);}
 .fb-wrap[data-who=""] .fb-who{display:flex;}
-.fb-wrap[data-who=""] .fb-tray,.fb-wrap[data-who=""] .fb-dn,.fb-wrap[data-who=""] .fb-me{display:none;}
+.fb-wrap[data-who=""] .fb-tray,.fb-wrap[data-who=""] .fb-dn,.fb-wrap[data-who=""] .fb-me,.fb-wrap[data-who=""] .fb-penitem{display:none;}
 .fb-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
   background:#EEF7E6;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
 .fb-card:active{transform:scale(.95);}
@@ -2021,11 +2021,15 @@ body.playing .po-card{max-width:880px;}
 /* Annuler, refaire : pâles quand il n'y a rien à défaire ou à refaire */
 .fb-undo{width:clamp(46px,4.4vw,56px);height:clamp(46px,4.4vw,56px);transition:opacity .2s;}
 .fb-undo.off{opacity:.35;}
-/* Mon dessin prend vie (18/10) : la tuile « Dessiner » du tiroir, puis la
+/* Mon dessin prend vie (18/10) : le gros bouton « Dessiner » sous Jour /
+   Nuit (19/10 : la tuile du tiroir des Animaux ne se trouvait pas), puis la
    feuille par-dessus la ferme voilée (la palette dessous, « Fini » dans le
    coin de la feuille) ; « Fini » : elle file vers la ferme */
-.fb-pen{display:grid;place-items:center;background:linear-gradient(135deg,#FFF4D6,#FFE0EC);}
-.fb-pen svg{width:72%;height:72%;}
+.fb-penitem{position:absolute;right:14px;top:178px;z-index:6;}
+.fb-pen{width:clamp(70px,7vw,84px);height:clamp(70px,7vw,84px);display:grid;place-items:center;
+  background:linear-gradient(135deg,#FFF4D6,#FFD3E6);box-shadow:0 0 0 4px #fff,0 8px 20px rgba(69,54,42,.22);}
+.fb-pen svg{width:78%;height:78%;}
+.fb-pen.nope{animation:fbNope .4s;}
 .fb-draw{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   background:rgba(255,249,240,.66);backdrop-filter:blur(2px);transition:opacity .35s,transform .38s var(--spring);}
 .fb-draw[hidden]{display:none;}
@@ -2074,16 +2078,8 @@ body.playing .po-card{max-width:880px;}
 .bk-opt.sel{box-shadow:0 0 0 4px #FFC94D;}
 .bk-sep{width:2px;align-self:stretch;background:rgba(69,54,42,.12);border-radius:2px;flex:none;}
 .bk-dot{display:block;width:58%;height:58%;border-radius:50%;margin:auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 0 0 2px rgba(69,54,42,.12);}
-.bk-blowitem{position:absolute;right:22px;bottom:22px;z-index:6;display:none;}
-.bk-wrap[data-step="bougies"] .bk-blowitem{display:flex;}
-.bk-blow{width:clamp(76px,7vw,92px);height:clamp(76px,7vw,92px);animation:bkPulse 1.6s ease-in-out infinite;}
-@keyframes bkPulse{50%{transform:scale(1.08);}}
-.bk-blow.off{opacity:.4;animation:none;}
 /* « Manger » touché avec des bougies allumées : le bouton du souffle se montre (11/10) */
-.bk-blow.ask{animation:bkAsk .45s ease-in-out 4,bkPulse 1.6s ease-in-out 1.8s infinite;}
-@keyframes bkAsk{50%{transform:scale(1.22) rotate(-8deg);}}
-.bk-blow.ask.off{animation:none;}
-.bk-wrap[data-phase="party"] .bk-pal,.bk-wrap[data-phase="party"] .bk-steps,.bk-wrap[data-phase="party"] .bk-blowitem{opacity:0;pointer-events:none;}
+.bk-wrap[data-phase="prep"] .bk-pal,.bk-wrap[data-phase="prep"] .bk-steps{opacity:0;pointer-events:none;}
 
 /* ============================================================
    DEVINE MON DESSIN (8/10) — la feuille de l'Atelier à gauche, le chat de
@@ -2155,22 +2151,3 @@ body.playing .po-card{max-width:880px;}
 .dg-pips i.got{background:#FFF6D6;box-shadow:inset 0 0 0 3px #FFC94D;}
 .dg-pips i.miss{background:#EFEAE4;}
 .dg-pips i .ico{width:20px;height:20px;}
-
-/* Le Chien de berger (11/10) : le troupeau en haut (en couleur, les bêtes
-   rentrées), le soleil qui glisse sur la barre du jour, le fondu clair entre
-   deux troupeaux. Le HUD d'arcade est caché : le troupeau EST le score. */
-.sd-wrap{background:#BFE3F5;touch-action:none;overflow:hidden;}
-.sd-wrap canvas{display:block;width:100%;height:100%;}
-.sd-wrap>.hud{display:none;}
-.sd-hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;}
-.sd-herd{display:flex;gap:3px;padding:5px 12px;background:rgba(255,249,240,.88);backdrop-filter:blur(6px);border-radius:99px;box-shadow:0 4px 14px rgba(69,54,42,.18);}
-.sd-herd img,.sd-herd i{width:clamp(28px,3.8vmin,42px);height:clamp(28px,3.8vmin,42px);display:block;filter:grayscale(1) opacity(.35);transition:filter .3s;}
-.sd-herd i{border-radius:50%;background:#fff;}
-.sd-herd .in{filter:none;animation:sdIn .45s var(--spring);}
-@keyframes sdIn{40%{transform:scale(1.35) translateY(-4px);}}
-.sd-day{position:relative;width:min(44vw,420px);height:12px;border-radius:99px;box-shadow:0 2px 8px rgba(0,0,0,.15);
-  background:linear-gradient(90deg,#8FD3F5,#FFD36B 55%,#F2946A 80%,#3A3A6A);}
-.sd-sun{position:absolute;top:50%;left:0;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;
-  background:radial-gradient(circle,#FFF6C8 0 35%,#FFC94D 36% 62%,rgba(255,201,77,0) 64%);}
-.sd-fade{position:absolute;inset:0;z-index:4;background:#FFF9F0;opacity:0;pointer-events:none;transition:opacity .5s ease;}
-.sd-fade.on{opacity:1;}

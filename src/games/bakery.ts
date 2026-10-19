@@ -4,11 +4,7 @@ import { particles, type Particles } from '../core/scene3d'
 import { cakeKit, radiusAt, type CakeKit, type CakeShape, type Tier } from '../core/cake3d'
 import { withRenderer } from '../core/portraits'
 import { sfx, preloadSfx } from '../core/sfx'
-import { getCtx, sCrunch, tone } from '../core/audio'
-import { playNote } from '../core/music'
-import { onPause } from '../core/session'
-import { openMic, type Mic } from '../core/mic'
-import { blowLevel } from '../core/souffle'
+import { sCrunch, tone } from '../core/audio'
 import { visible, handNow } from '../core/hand'
 
 /* 🎂 LA PÂTISSERIE (5/10, Créer) — un gâteau sur son présentoir, dans une
@@ -20,14 +16,11 @@ import { visible, handNow } from '../core/hand'
    - Crème   : la poche à douille — le doigt dépose des rosaces (ou des gouttes)
    - Décor   : fraises, framboises, myrtilles, cerises, perles ; les
                vermicelles tombent où passe le doigt
-   - Bougies : on les plante (elles s'allument), puis on SOUFFLE pour de vrai
-               (le micro, ouvert à cette étape seulement : un bruit fort SANS
-               NOTE — parler ou chanter n'éteint rien, 11/10) ou on touche
-               « Souffle ! »
-   - Manger  : (11/10, la fourchette) s'il reste des bougies allumées, le
-               bouton « Souffle ! » se montre ; sinon, la chanson et le repas —
-               sans bougie, on peut manger aussi
-   Puis « Joyeux anniversaire » au carillon, des confettis, et on le MANGE
+   - Bougies : on les plante, allumées (une décoration : plus de souffle,
+               plus de micro ni de chanson depuis le 19/10 — le père : « vire
+               toute l'animation des bougies, on s'en fout »)
+   - Manger  : (la fourchette) les bougies sortent du gâteau une à une, il
+               se remet de face, et on le MANGE
    (6/10, demandé par Joyce : « comme la pizza ») : la première part se
    coupe toute seule et glisse sur sa petite assiette ; un toucher = une
    bouchée à la fourchette (la pointe d'abord, la coupe se voit), deux par
@@ -115,27 +108,25 @@ interface State {
   candle: string
   rot: number
   vRot: number
-  phase: 'make' | 'blow' | 'party' | 'eat' | 'done'
+  phase: 'make' | 'prep' | 'eat' | 'done'
   phaseT: number
-  mic: Mic | null
-  blow: number
-  /** « Souffle ! » touché : une rafale qui dure jusqu'à la dernière flamme. */
-  gust: boolean
-  blowHeld: number
-  blowNext: number
+  /** « Manger » touché : les bougies qui sortent du gâteau (t < 0 : pas encore), et l'angle où il se remet de face. */
+  leaving: { obj: import('three').Object3D; t: number; y0: number; popped: boolean }[]
+  prepWant: number
   fx: Particles
   ray: import('three').Raycaster
   t: number
   eat: Eat | null
   stand: import('three').Object3D[]
-  /** Pendant la chanson, la répétition du repas (voir `rehearse`). */
+  /** Pendant que les bougies sortent, la répétition du repas (voir `rehearse`). */
   warm: Warm | null
 }
 
-/** La répétition du repas : ce qui reste à préparer (une tâche par image),
-    les copies préparées (sous le comptoir) et les ustensiles déjà prêts. */
+/** La répétition du repas : les copies à préparer (sous le comptoir), si
+    leurs rendus sont prêts, et les ustensiles déjà prêts. */
 interface Warm {
   jobs: (() => void)[]
+  ready: boolean
   g: import('three').Group
   tools: { knife: import('three').Group; fork: import('three').Group; plate: import('three').Mesh } | null
 }
@@ -336,7 +327,6 @@ function onPlace(s: State, cx: number, cy: number, drag: boolean) {
     flame.scale.setScalar(0.001)
     const it = addItem(s, 'bougie', g, p, { candle: { flame, lit: 0.001 } })
     if (it) { sfx('click', { vol: 0.5 }); tone(1500, 0.05, 'triangle', 0.06, 0.18) }
-    updateBlowBtn(s)
   }
 }
 
@@ -364,78 +354,39 @@ function sprinkle(s: State, cx: number, cy: number) {
   if (Math.random() < 0.3) tone(2200 + Math.random() * 800, 0.025, 'sine', 0.03)
 }
 
-/* ---------- Souffler ---------- */
+/* ---------- « Manger » : les bougies sortent, le repas se prépare ----------
+   (19/10) Plus de souffle, de chanson ni de fête : « Manger », et les
+   bougies sortent du gâteau une à une ; il se remet de face — et RIEN
+   d'autre ne le fait tourner pendant ce temps : avant, il tournait tout
+   seul pendant la fête en même temps qu'il se remettait de face, les deux
+   s'équilibraient à 0,12 radian du but, et à vitesse normale le repas ne
+   commençait jamais (les bots, en temps accéléré, ne le voyaient pas). */
 
-const litCandles = (s: State) => s.items.filter(it => it.candle && it.candle.lit > 0)
+const candlesOf = (s: State) => s.items.filter(it => it.candle)
 
-function updateBlowBtn(s: State) {
-  ctx.root.querySelector('#bkBlow')?.classList.toggle('off', !litCandles(s).length)
-}
-
-async function startMic(s: State) {
-  if (s.mic || !ctx.alive()) return
-  const sr = getCtx()?.sampleRate ?? 48000
-  try {
-    // Un souffle : un bruit fort et continu, SANS NOTE (`core/souffle.ts`) —
-    // une voix qui parle ou chante n'éteint plus les bougies (11/10). Le son
-    // brut : l'anti-bruit de Chrome efface justement un souffle (c'est un
-    // bruit), et son gain automatique le gonfle ou l'écrase
-    const mic = await openMic(x => { s.blow = Math.max(s.blow * 0.6, blowLevel(x, sr)) }, { raw: true })
-    if (me !== s || s.step !== 'bougies' || s.phase !== 'make') { mic.stop(); return }
-    s.mic = mic
-  } catch { /* sans micro, le bouton « Souffle ! » suffit */ }
-}
-function stopMic(s: State) { s.mic?.stop(); s.mic = null; s.blow = 0 }
-
-/** Une bougie s'éteint : sa flamme se couche, un filet de fumée. */
-function blowOut(s: State, it: Item) {
-  if (!it.candle) return
-  it.candle.lit = -1
-  const w = it.candle.flame.getWorldPosition(new s.T.Vector3())
-  s.fx.burst(w, { count: 8, color: ['#CFC6BE', '#E8E2DC'], speed: 0.25, spread: 0.2, life: 1.4, size: 0.06, gravity: -0.4 })
-  tone(220 + Math.random() * 60, 0.12, 'sine', 0.05)
-}
-
-/* ---------- La fête et la part ---------- */
-
-function party(s: State) {
-  // Une seule fête : la dernière bougie éteinte ET « Manger » touché juste
-  // après, et la chanson partait deux fois, l'une sur l'autre
+function prepEat(s: State) {
   if (s.phase !== 'make') return
-  s.phase = 'party'; s.phaseT = 0
-  stopMic(s)
+  s.phase = 'prep'; s.phaseT = 0
+  ctx.root.querySelector('.bk-wrap')?.setAttribute('data-phase', 'prep')
+  const out = candlesOf(s)
+  s.items = s.items.filter(it => !it.candle)
+  s.leaving = out.map((it, i) => ({ obj: it.obj, t: -0.15 - i * 0.13, y0: it.obj.position.y, popped: false }))
+  s.prepWant = Math.round(s.rot / (Math.PI * 2)) * Math.PI * 2
+  s.vRot = 0
   rehearse(s)
-  ctx.root.querySelector('.bk-wrap')?.setAttribute('data-phase', 'party')
-  const ac = getCtx()
-  const t0 = (ac?.currentTime ?? 0) + 0.3
-  // « Joyeux anniversaire » : la mélodie au carillon, les accords en dessous (3/4, 0,42 s le temps)
-  const B = 0.42
-  const tune: [number, number][] = [
-    [67, 0.75], [67, 0.25], [69, 1], [67, 1], [72, 1], [71, 2],
-    [67, 0.75], [67, 0.25], [69, 1], [67, 1], [74, 1], [72, 2],
-    [67, 0.75], [67, 0.25], [79, 1], [76, 1], [72, 1], [71, 1], [69, 2],
-    [77, 0.75], [77, 0.25], [76, 1], [72, 1], [74, 1], [72, 3]
-  ]
-  let at = 0
-  for (const [n, d] of tune) { playNote('bell', n, t0 + at * B, Math.max(0.3, d * B), 0.16); at += d }
-  const chords: [number[], number][] = [[[48, 52, 55], 3], [[43, 47, 50], 3], [[43, 47, 50], 3], [[48, 52, 55], 3], [[48, 52, 55], 3], [[41, 45, 48], 3], [[48, 52, 55], 3], [[43, 47, 50], 3], [[48, 52, 55], 3]]
-  let ct = 0
-  for (const [c, d] of chords) { playNote('pad', c, t0 + ct * B, d * B, 0.05); ct += d }
-  s.phaseT = -at * B
-  for (let i = 0; i < 6; i++) ctx.after(i * 900, () => confetti(s))
 }
 
-/* ---------- Pendant la chanson, la répétition du repas ----------
+/* ---------- Pendant que les bougies sortent, la répétition du repas ----------
    Couper le gâteau donne des plans de coupe à chacune de ses matières : la
    tablette doit alors préparer de nouveaux rendus (des shaders) — 35 pendant
    le repas (mesuré le 11/10), par paquets de treize au premier coup de
    couteau et à la quatrième part : de quoi la figer plusieurs secondes
-   juste quand l'enfant veut manger. La chanson dure douze secondes où rien
-   ne presse : chaque matière y est préparée telle qu'elle sera (le gâteau
-   coupé en union puis en intersection, la part, ses faces, la bouchée, les
-   ustensiles), une par image, sur des copies dessinées sous le comptoir. Le
-   moteur garde ces rendus tant que les copies vivent (gardées par la scène
-   jusqu'à la fin) : le repas les retrouve prêts. */
+   juste quand l'enfant veut manger. Chaque matière est donc préparée avant,
+   telle qu'elle sera (le gâteau coupé en union puis en intersection, la
+   part, ses faces, la bouchée, les ustensiles), sur des copies posées sous
+   le comptoir — en arrière-plan (`compileAsync`, 19/10 : la chanson qui
+   leur laissait douze secondes est partie). Le moteur garde ces rendus tant
+   que les copies vivent : le repas les retrouve prêts. */
 
 /** Des plans qui gardent tout (la coupe des copies n'a pas d'importance : seul leur NOMBRE compte). */
 const keepAll = (T: T3, n: number) => Array.from({ length: n }, () => new T.Plane(new T.Vector3(0, 1, 0), 1e3))
@@ -460,7 +411,7 @@ function rehearse(s: State) {
   const g = new T.Group()
   g.position.set(0, -0.8, 0.6) // sous le comptoir : dessiné, jamais vu
   s.stage.scene.add(g)
-  const w: Warm = { jobs: [], g, tools: null }
+  const w: Warm = { jobs: [], ready: false, g, tools: null }
   s.warm = w
   const add = (o: import('three').Object3D) => { o.traverse(x => { x.frustumCulled = false; x.castShadow = false }); g.add(o) }
   /** Une copie de la matière, coupée par `n` plans ; la peinture (le cercle
@@ -509,15 +460,13 @@ function rehearse(s: State) {
     g.add(t.knife, t.fork, t.plate)
     for (const o of [t.knife, t.fork, t.plate]) o.traverse(x => { x.frustumCulled = false })
   })
-}
-
-function confetti(s: State) {
-  if (me !== s) return
-  const top = s.tierY[s.tierY.length - 1] + 0.8
-  s.fx.burst(new s.T.Vector3((Math.random() - 0.5) * 1.6, top, (Math.random() - 0.5) * 0.6), {
-    count: 60, color: ['#FF6B81', '#FFC94D', '#5EC97B', '#4FB8E7', '#B197FC'], speed: 2.4, spread: 2.2, life: 2.4, size: 0.07, gravity: 1.6
-  })
-  sfx('confirm', { vol: 0.25, rate: 1.2 })
+  // Toutes les copies d'un coup, et leurs rendus préparés en arrière-plan
+  // (sans l'extension qui le permet, d'un bloc : pendant que les bougies
+  // sortent, pas pendant qu'on mange) ; la qualité ne compte pas ces images
+  for (const job of w.jobs.splice(0)) job()
+  s.stage.settle()
+  const done = () => { w.ready = true }
+  s.stage.renderer.compileAsync(g, s.stage.camera, s.stage.scene).then(done, done)
 }
 
 /* ---------- On mange le gâteau, part par part ----------
@@ -885,9 +834,12 @@ function eatTarget(s: State) {
 function frame(s: State, dt: number) {
   s.t += dt
   s.phaseT += dt
-  // Le plateau tourne au doigt (avec son élan) ; pendant la fête, tout seul
-  if (s.phase === 'party') s.rot += dt * 0.35
-  else if (s.phase === 'make' || s.phase === 'blow') { s.rot += s.vRot * dt; s.vRot *= Math.pow(0.01, dt) }
+  // Le plateau tourne au doigt (avec son élan) ; « Manger », il se remet de face (et rien d'autre ne le tourne)
+  if (s.phase === 'make') { s.rot += s.vRot * dt; s.vRot *= Math.pow(0.01, dt) }
+  else if (s.phase === 'prep') {
+    s.rot += (s.prepWant - s.rot) * Math.min(1, dt * 4)
+    if (Math.abs(s.prepWant - s.rot) < 0.004) s.rot = s.prepWant
+  }
   s.cake.rotation.y = s.rot
   for (const t of s.tiers) t.step(dt)
   for (const it of s.items) {
@@ -900,35 +852,28 @@ function frame(s: State, dt: number) {
     const c = it.candle
     if (!c) continue
     if (c.lit > 0 && c.lit < 1) c.lit = Math.min(1, c.lit + dt * 3)
+    // La flamme danse
     const f = c.flame
-    if (c.lit > 0) {
-      // La flamme danse ; quand on souffle, elle se couche
-      const b = s.blow
-      f.scale.set(c.lit * (1 + Math.sin(s.t * 17 + o.id) * 0.06), c.lit * (1 + Math.sin(s.t * 13 + o.id) * 0.1 - b * 0.4), c.lit)
-      f.rotation.z = Math.sin(s.t * 7 + o.id) * 0.08 + b * 0.7
-    } else if (c.lit < 0) { c.lit = Math.max(-2, c.lit - dt * 6); f.scale.setScalar(Math.max(0.001, (c.lit + 2) / 1 * 0.2)) }
+    f.scale.set(c.lit * (1 + Math.sin(s.t * 17 + o.id) * 0.06), c.lit * (1 + Math.sin(s.t * 13 + o.id) * 0.1), c.lit)
+    f.rotation.z = Math.sin(s.t * 7 + o.id) * 0.08
   }
-  // Le souffle : tenu un quart de seconde, il éteint les bougies une à une
-  if (s.gust) { s.blow = 1; if (!litCandles(s).length) s.gust = false }
-  if (s.phase === 'make' && s.step === 'bougies' && litCandles(s).length) {
-    if (s.blow > 0.45) s.blowHeld += dt; else s.blowHeld = Math.max(0, s.blowHeld - dt * 2)
-    if (s.blowHeld > 0.25 && s.t > s.blowNext) {
-      const lit = litCandles(s)
-      blowOut(s, lit[Math.floor(Math.random() * lit.length)])
-      s.blowNext = s.t + 0.14
-      if (!litCandles(s).length) { updateBlowBtn(s); ctx.after(700, () => { if (me === s) party(s) }) }
-    }
+  // « Manger » : les bougies sortent du gâteau, une à une (un petit « pop »)
+  for (const l of s.leaving) {
+    l.t += dt
+    if (l.t < 0) continue
+    if (!l.popped) { l.popped = true; sfx('pluck', { vol: 0.55, rate: 1.25 + Math.random() * 0.35 }) }
+    const k = Math.min(1, l.t / 0.42)
+    l.obj.position.y = l.y0 + k * 0.55
+    l.obj.scale.setScalar(Math.max(0.001, 1 - k * k))
+    if (k >= 1) l.obj.parent?.remove(l.obj)
   }
-  s.blow *= Math.pow(0.2, dt)
-  // Après la chanson, le gâteau se remet de face ; la première part se coupe toute seule
-  if (s.phase === 'party' && s.phaseT > 1.2) {
-    const want = Math.round(s.rot / (Math.PI * 2)) * Math.PI * 2
-    s.rot += (want - s.rot) * Math.min(1, dt * 3)
-    if (Math.abs(want - s.rot) < 0.01) { s.rot = want; s.cake.rotation.y = want; startEat(s) }
+  s.leaving = s.leaving.filter(l => l.obj.parent)
+  // Les bougies parties, le gâteau de face, le repas préparé (huit secondes au plus) : la première part se coupe toute seule
+  if (s.phase === 'prep' && !s.leaving.length && s.rot === s.prepWant && (s.warm?.ready || s.phaseT > 8)) {
+    s.cake.rotation.y = s.rot
+    startEat(s)
   }
   if (s.phase === 'eat' || s.phase === 'done') stepEat(s, dt)
-  // La répétition du repas : une tâche par image, que la qualité ne compte pas
-  if (s.phase === 'party' && s.warm?.jobs.length) { s.warm.jobs.shift()!(); s.stage.settle() }
   s.fx.update(dt)
 }
 
@@ -1016,7 +961,7 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
   const s: State = {
     stage, T, kit, cake, tiers: [], tierY: [], nTiers: 2, shape: 'round', items: [], spr, sprN: 0,
     step: 'base', glaze: GLAZES[1][0], cream: CREAMS[0][0], drop: false, deco: 'fraise', candle: CANDLES[0][0],
-    rot: 0.35, vRot: 0, phase: 'make', phaseT: 0, mic: null, blow: 0, gust: false, blowHeld: 0, blowNext: 0,
+    rot: 0.35, vRot: 0, phase: 'make', phaseT: 0, leaving: [], prepWant: 0,
     fx: particles(stage, 500), ray: new T.Raycaster(), t: 0, eat: null, stand: standMeshes, warm: null
   }
   buildBase(s)
@@ -1073,7 +1018,6 @@ const SHAPE_ICON: Record<CakeShape, string> = {
 }
 const SHAPE_NAME: Record<CakeShape, string> = { round: 'Rond', heart: 'Cœur', square: 'Carré' }
 const pot = (c: string) => svg(`<path d="M12 18h24v16a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8z" fill="${c}" stroke="rgba(69,54,42,.35)" stroke-width="1.5"/><path d="M14 18c2 5 4 6 6 2 2 6 5 6 7 1 2 4 5 4 7-3" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>`)
-const BLOW = svg('<circle cx="16" cy="24" r="11" fill="#FFD3B5"/><circle cx="12.5" cy="21" r="1.6" fill="#45362A"/><ellipse cx="22" cy="27" rx="3.2" ry="2.6" fill="#E2557E"/><path d="M29 22c4 0 6-2 9-1M29 27c5 0 7 1 11 0M29 32c4 0 6 2 9 1" fill="none" stroke="#7FC8E8" stroke-width="2.8" stroke-linecap="round"/>', 48)
 const EAT_ICON = svg('<path d="M5 40h25V21z" fill="#E9B872"/><path d="M5 40 30 21v5L11 40z" fill="#F58FB8"/><path d="M15.5 33.5H30" stroke="#FFF4E0" stroke-width="2.6"/><circle cx="26.5" cy="20" r="3.4" fill="#E2453C"/><path d="M36 6v8a4 4 0 0 0 8 0V6M40 6v9" fill="none" stroke="#9CA6B0" stroke-width="2.4" stroke-linecap="round"/><rect x="38.5" y="17" width="3" height="25" rx="1.5" fill="#9CA6B0"/>')
 const SPRINKLE_ICON = svg(['#FF6B81', '#FFC94D', '#5EC97B', '#4FB8E7', '#B197FC'].map((c, i) => `<rect x="${10 + i * 6}" y="${14 + (i % 2) * 14}" width="4" height="12" rx="2" fill="${c}" transform="rotate(${-30 + i * 15} ${12 + i * 6} ${20 + (i % 2) * 14})"/>`).join(''))
 
@@ -1099,8 +1043,8 @@ const sideOf = (s: State, i: number) => {
 
 export const bakery: GameDef = {
   id: 'bakery', name: 'La Pâtisserie', icon: '🎂', sq: 'sq-pink', cat: 'creatif', noTier: true,
-  subtitle: 'Fais un gâteau, décore-le, souffle les bougies… et mange-le !',
-  // La main : selon l'étape, choisir dans la palette, toucher le gâteau, tracer la crème, souffler
+  subtitle: 'Fais un gâteau, décore-le, plante les bougies… et mange-le !',
+  // La main : selon l'étape, choisir dans la palette, toucher le gâteau, tracer la crème, planter une bougie
   hand: root => {
     const s = me
     if (s?.phase === 'eat') { const p = eatTarget(s); return p ? { tap: p } : null }
@@ -1109,7 +1053,6 @@ export const bakery: GameDef = {
     if (s.step === 'glacage') return { tap: Math.random() < 0.5 ? sideOf(s, 0) : topOf(s, s.tiers.length - 1, 0) }
     if (s.step === 'creme') { const a = topOf(s, 0, 0.82); return { drag: [{ x: a.x - 90, y: a.y + 6 }, { x: a.x + 90, y: a.y + 6 }] } }
     if (s.step === 'decor') return { tap: topOf(s, s.tiers.length - 1, 0.3) }
-    if (litCandles(s).length) { const b = root.querySelector('#bkBlow'); return b ? { tap: b } : null }
     return { tap: topOf(s, s.tiers.length - 1, 0.35) }
   },
   mount(c) {
@@ -1119,7 +1062,6 @@ export const bakery: GameDef = {
       <div class="arena g3-arena bk-wrap" id="bkWrap" data-step="base">
         <div class="bk-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool bk-step${st === 'base' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}<span class="tool-item"><button class="sn-tool bk-eat" id="bkEat" aria-label="Manger">${EAT_ICON}</button><i class="tool-cap">Manger</i></span></div>
         <div class="bk-pal" id="bkPal"></div>
-        <span class="tool-item bk-blowitem"><button class="sn-tool bk-blow off" id="bkBlow" aria-label="Souffle">${BLOW}</button><i class="tool-cap">Souffle !</i></span>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#bkWrap')!
     preloadSfx(['cloth', 'pluck', 'click', 'error', 'confirm', 'chop', 'select'])
@@ -1147,27 +1089,14 @@ export const bakery: GameDef = {
       arena.setAttribute('data-step', st)
       c.root.querySelectorAll<HTMLElement>('.bk-step').forEach(b => b.classList.toggle('sel', b.dataset.step === st))
       showPal()
-      // Le micro ne s'ouvre qu'aux bougies
-      if (st === 'bougies') startMic(s); else stopMic(s)
-      updateBlowBtn(s)
     }
 
-    /** « Manger » : les bougies encore allumées d'abord (« Souffle ! » se
-        montre, la main le désigne) ; sinon la chanson, puis le repas. */
+    /** « Manger » : les bougies sortent, il se remet de face, la première part se coupe. */
     const askToEat = () => {
       const s = me
       if (!s || s.phase !== 'make') return
-      if (litCandles(s).length) {
-        if (s.step !== 'bougies') setStep('bougies')
-        const b = c.root.querySelector<HTMLElement>('#bkBlow')
-        // Il se dandine, puis reprend son pouls (la classe reste : le test la voit)
-        if (b) { b.classList.remove('ask'); void b.offsetWidth; b.classList.add('ask') }
-        sfx('select', { vol: 0.5 })
-        handNow()
-        return
-      }
       sfx('confirm', { vol: 0.4 })
-      party(s)
+      prepEat(s)
     }
 
     const hideLoader = loader(arena, 'bakery')
@@ -1204,11 +1133,6 @@ export const bakery: GameDef = {
         sfx('select', { vol: 0.4 })
         showPal()
         return
-      }
-      if (t.closest('#bkBlow') && s.phase === 'make' && litCandles(s).length) {
-        // Toucher « Souffle ! » : une rafale, jusqu'à la dernière flamme
-        s.gust = true; s.blowHeld = 0.3
-        sfx('whoosh', { vol: 0.5 })
       }
     }
     c.root.addEventListener('click', onClick)
@@ -1257,14 +1181,6 @@ export const bakery: GameDef = {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
-    // Pause (onglet caché, minuteur parental) : le micro se coupe ; il revient aux bougies
-    const offPause = onPause(p => {
-      const s = me
-      if (!s) return
-      if (p) stopMic(s)
-      else if (s.step === 'bougies' && s.phase === 'make') startMic(s)
-    })
-
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __bk: unknown }).__bk = {
@@ -1279,9 +1195,9 @@ export const bakery: GameDef = {
         get sprinkles() { return me?.sprN ?? 0 },
         /** Ce qui est posé : sorte et place (repère du gâteau). */
         items() { return me?.items.map(it => [it.kind, ...it.obj.position.toArray().map(v => +v.toFixed(2))]) ?? [] },
-        get lit() { return me ? litCandles(me).length : 0 },
-        /** La répétition du repas : ce qui reste à préparer (null : pas commencée). */
-        get warmLeft() { return me?.warm ? me.warm.jobs.length : null },
+        get candles() { return me ? candlesOf(me).length + me.leaving.length : 0 },
+        /** La répétition du repas : 0 quand ses rendus sont prêts (null : pas commencée). */
+        get warmLeft() { const w = me?.warm; return w ? (w.ready ? 0 : 1) : null },
         /** Le temps du jeu accéléré (la 3D logicielle des bots fait une image par seconde) : la fête et le repas sont longs. */
         speed(k: number) { if (me) me.stage.timeScale = k },
         /** Pendant qu'on mange : parts coupées, bouchées de la part servie, où toucher (null : attendre). */
@@ -1321,7 +1237,6 @@ export const bakery: GameDef = {
     return () => {
       if (dead) return
       dead = true
-      offPause()
       c.root.removeEventListener('click', onClick)
       c.root.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointermove', onMove)
@@ -1330,7 +1245,6 @@ export const bakery: GameDef = {
       const s = me
       me = null
       if (s) {
-        stopMic(s)
         s.kit.dispose()
         try { s.stage.dispose() } catch { /* déjà démonté */ }
       }

@@ -179,11 +179,6 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
              mic.ts      ← LE MICRO (5/10) : ouvert à la demande, coupé pour
                            de bon (`stop` arrête la piste), il ne garde rien
                            (un morceau de son passé au jeu puis oublié)
-             souffle.ts  ← LE SOUFFLE (11/10, les bougies de la Pâtisserie) :
-                           un bruit fort SANS NOTE (`tonality` : une voix a
-                           une période, le vent n'en a pas ; `blowLevel`) —
-                           parler ou chanter ne souffle pas ; logique pure,
-                           testée
              cake3d.ts   ← LE GÂTEAU de la Pâtisserie (5/10), modelé ici : étages
                            ronds, en cœur ou carrés (`outlineOf`, extrudés,
                            sommets soudés), nappage qui coule (`pour` : les
@@ -241,14 +236,6 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            construction posée deux fois suffixe ses places,
                            `#2`) et `detail(on)` (fleurs, cailloux, fougères
                            éteints vus de loin)
-             herd.ts     ← LE TROUPEAU du Chien de berger (11/10) : les
-                           moutons fuient le chien en restant groupés (le
-                           modèle de Strömbom, 2014), broutent, longent la
-                           clôture de l'enclos jusqu'à l'ouverture ; la
-                           chèvre têtue (elle ne fuit qu'à l'aboiement), le
-                           renard qui éparpille ; les trois fermes (`LEVELS`,
-                           `herdOpts`) et `pilot` (le chemin du chien : le
-                           bot et la main) — logique pure, testée
 src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
 src/games/       1 fichier par jeu + index.ts (le catalogue)
 public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
@@ -397,7 +384,7 @@ qu'un doigt toucherait vraiment), un point d'écran (`toScreen` en 3D) ou une
 fraction de l'arène. Dans Apprendre, `choose` sur plusieurs cibles, jamais
 la bonne seule. Elle vient à la première partie, puis après 7 s sans toucher
 (15 s dans Créer) ; un toucher la chasse. Quand le jeu attend un geste
-NOUVEAU en cours de route (le repas après la chanson de la Pâtisserie),
+NOUVEAU en cours de route (la première part servie de la Pâtisserie),
 `handNow()` la fait venir tout de suite — sinon l'enfant cale 30 s.
 
 **Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
@@ -488,11 +475,10 @@ retourné quand il change de sens (son dos : son dessin en miroir) ; Claude
 dit son allure, son sens, son cri, sa taille (`core/vivant.ts`) ; six par
 ferme ; la feuille ouverte, la ferme ne se redessine plus
 (`stage.render` vide) ; son bot répond à la place de Claude,
-`__fb.fakeVivant`) ·
-`sheepdog` (le Chien de berger, 11/10 : le plateau vide de Cache-Cache,
-sans sa cour, vu d'en haut ; le doigt posé appelle le chien, une tape le
-fait aboyer ; trois troupeaux dans la journée, le soleil sur une barre,
-la lumière qui suit, un fondu clair entre deux ; `core/herd.ts`) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
+`__fb.fakeVivant` ; depuis le 19/10, un gros bouton « Dessiner » sous
+Jour / Nuit, toujours là, que la main montre une fois par ouverture tant
+que sa ferme n'a pas de dessin — la tuile du tiroir des Animaux ne se
+trouvait pas) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
 le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
 (la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
 au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
@@ -503,16 +489,19 @@ MANGE en six parts : ce qui reste est coupé par deux plans —
 au-delà ; le présentoir et les faces de coupe exclus —, la part est une copie
 des étages gardée entre ses deux bords, une bouchée un troisième plan qui
 avance depuis la pointe ; ce qui part avec la part reçoit ses matières à elle ;
-le micro ne s'ouvre qu'à l'étape des bougies, brut, et n'entend qu'un souffle
-(`core/souffle.ts`) ; « Souffle ! » fait une rafale jusqu'à la dernière
-flamme ; depuis le 11/10, « Manger » (la fourchette, sous les étapes) : les
-bougies allumées d'abord, sinon la chanson et le repas, même sans bougie ;
-pendant la chanson, la RÉPÉTITION du repas — chaque matière dessinée sous
-le comptoir telle qu'elle sera coupée, une par image : aucun shader à
-préparer pendant qu'on mange ; la fourchette attend au-dessus de la part,
-le couteau au-dessus de la prochaine coupe ; son bot accélère le temps,
-`__bk.speed`). La Course,
-le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève ») ; le Ninja est repassé en 2D le même jour
+depuis le 19/10 (« vire toute l'animation des bougies »), plus de souffle,
+de micro, de chanson ni de fête : les bougies sont une décoration, et
+« Manger » (la fourchette, sous les étapes) les fait sortir une à une, le
+gâteau se remet de face (rien d'autre ne le tourne : sinon il n'y arrive
+jamais), et pendant ce temps la RÉPÉTITION du repas — chaque matière posée
+sous le comptoir telle qu'elle sera coupée, ses rendus préparés en
+arrière-plan (`renderer.compileAsync`) : aucun shader à préparer pendant
+qu'on mange ; la fourchette attend au-dessus de la part, le couteau
+au-dessus de la prochaine coupe ; son bot accélère le temps, `__bk.speed`,
+sauf `patisserie-sans-bougie`, à vitesse normale). La Course,
+le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève »), le
+Chien de berger le 19/10 (« les filles trouvent ça nul », avec son troupeau
+`core/herd.ts`) ; le Ninja est repassé en 2D le même jour
 (« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
 ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
 retirées le soir même — « mille fois moins bien que la version isométrique
@@ -562,7 +551,7 @@ ligne quand on en paie un nouveau.
    d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
    d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
    modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (11/10 : 42 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir et la Pâtisserie deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
+   `npm run test:play` a **un bot par jeu** (19/10 : 42 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir, la Pâtisserie et la Ferme à construire deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
    son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
    `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
    `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en

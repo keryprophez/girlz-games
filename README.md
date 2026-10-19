@@ -17,9 +17,7 @@ trouver les animaux cachés (une queue qui dépasse de la meule, des oreilles
 au bord du puits), et la nuit, à la lampe torche — aux niveaux éclair et
 flamme, une ferme quatre fois plus grande (bois, lac, hameau, champs de maïs,
 de blé et de tournesols) qu'on parcourt comme une carte — glisser, pincer
-jusqu'au ras du sol, tourner, incliner — pour y fouiller les cachettes ; le Chien de berger, où l'on guide du doigt le chien de la ferme pour rentrer
-les moutons dans l'enclos avant la nuit — une tape, il aboie (la chèvre
-têtue n'écoute que ça), et à la flamme, le renard rôde ; le Flipper de la grange, un pouce par batteur, la vache, le cochon et
+jusqu'au ras du sol, tourner, incliner — pour y fouiller les cachettes ; le Flipper de la grange, un pouce par batteur, la vache, le cochon et
 le mouton en bumpers qui crient, une rampe jusqu'au grenier et le multibille ;
 Ninja Verger, en 2D, où l'on tranche des fruits illustrés
 d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe
@@ -78,10 +76,9 @@ ferme, et Claude dit s'il marche, saute, vole, rampe ou nage, et quel cri
 lui va), et la Pâtisserie (un
 gâteau d'un à trois étages, rond, en cœur ou carré : le glaçage s'étale
 au doigt et le nappage coule, la poche à douille dépose des rosaces, des
-fraises, framboises, myrtilles, cerises et vermicelles, puis des bougies
-qu'on souffle pour de vrai — un vrai souffle : parler ou chanter n'éteint
-rien ; « Joyeux anniversaire », puis on le mange, part par part, à la petite
-fourchette — avec ou sans bougies, le bouton « Manger » y mène).
+fraises, framboises, myrtilles, cerises et vermicelles, et des bougies ;
+« Manger » : les bougies sortent, et on le mange, part par part, à la
+petite fourchette).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

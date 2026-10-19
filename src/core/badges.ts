@@ -125,32 +125,6 @@ export const BADGE: Record<string, string> = {
     <rect x="11" y="31" width="7" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="21" y="35" width="8" height="2.2" rx="1.1" fill="${C.sun}"/>
     <rect x="13" y="38.5" width="6" height="2.2" rx="1.1" fill="${C.sun}"/>`),
-  /* Le Chien de berger : un mouton tout en laine et la tête du chien,
-     devant la barrière de l'enclos */
-  sheepdog: svg(`
-    <ellipse cx="24" cy="42" rx="19" ry="3.4" fill="${C.meadowDark}"/>
-    <rect x="6" y="14" width="3.2" height="27" rx="1.4" fill="${C.woodDark}"/>
-    <rect x="38.8" y="14" width="3.2" height="27" rx="1.4" fill="${C.woodDark}"/>
-    <rect x="5" y="18" width="38" height="3.2" rx="1.6" fill="${C.wood}"/>
-    <rect x="5" y="27" width="38" height="3.2" rx="1.6" fill="${C.wood}"/>
-    <rect x="13" y="34" width="3" height="7.5" rx="1.4" fill="${C.ink}"/>
-    <rect x="20" y="34" width="3" height="7.5" rx="1.4" fill="${C.ink}"/>
-    <circle cx="13" cy="28" r="6" fill="${C.cream}"/>
-    <circle cx="19" cy="24" r="6.5" fill="${C.white}"/>
-    <circle cx="24.5" cy="29" r="5.6" fill="${C.cream}"/>
-    <circle cx="18" cy="32" r="6" fill="${C.white}"/>
-    <ellipse cx="9" cy="29.5" rx="3.6" ry="4.6" fill="${C.ink}"/>
-    <ellipse cx="5.6" cy="27" rx="2.6" ry="1.4" fill="${C.ink}" transform="rotate(-20 5.6 27)"/>
-    <circle cx="8.2" cy="28.2" r="1" fill="${C.white}"/>
-    <ellipse cx="34" cy="39.5" rx="7" ry="2.6" fill="${C.mangoDark}"/>
-    <circle cx="34" cy="29" r="8" fill="${C.mango}"/>
-    <ellipse cx="26.8" cy="29.5" rx="2.8" ry="5.4" fill="${C.mangoDark}" transform="rotate(18 26.8 29.5)"/>
-    <ellipse cx="41.2" cy="29.5" rx="2.8" ry="5.4" fill="${C.mangoDark}" transform="rotate(-18 41.2 29.5)"/>
-    <ellipse cx="34" cy="33.5" rx="4.4" ry="3.4" fill="${C.cream}"/>
-    <ellipse cx="34" cy="31.4" rx="1.8" ry="1.3" fill="${C.ink}"/>
-    <ellipse cx="34.8" cy="36.6" rx="1.4" ry="1.9" fill="${C.coral}"/>
-    <circle cx="30.8" cy="27.4" r="1.5" fill="${C.ink}"/><circle cx="37.2" cy="27.4" r="1.5" fill="${C.ink}"/>
-    <circle cx="31.3" cy="26.9" r=".5" fill="${C.white}"/><circle cx="37.7" cy="26.9" r=".5" fill="${C.white}"/>`),
   // Le Flipper : la table en bois vue de haut, deux animaux-bumpers, la bille, les deux batteurs
   // La Pâtisserie : le gâteau à deux étages, ses coulures, une bougie allumée
   bakery: svg(`

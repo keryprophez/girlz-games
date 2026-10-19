@@ -1528,7 +1528,6 @@ await scenario('ferme-a-construire-dessin', async () => {
   await ferme()
   const etat = () => page.evaluate(() => JSON.stringify({ d: window.__fb.drawn, f: window.__fb.sheet, u: window.__fb.undo }))
   await page.evaluate(() => { window.__fb.fakeVivant = () => ({ allure: 'saute', regard: 'gauche', cri: 'chat', taille: 'petit' }) })
-  await page.locator('.fb-tab[data-tab="animaux"]').click()
   await page.locator('#fbPen').click()
   await page.waitForFunction(() => window.__fb.sheet, null, { timeout: 10000 })
   // « Fini » sur la feuille vide : rien ne naît, la feuille reste
@@ -1596,7 +1595,8 @@ await scenario('ferme-a-construire-dessin', async () => {
 
 /* 🎂 La Pâtisserie : deux étages en cœur, le glaçage au doigt (flanc et
    nappage), une ligne de crème, une fraise et des vermicelles, trois
-   bougies, « Souffle ! » : la chanson, la part, l'écran de fin. */
+   bougies ; « Manger » : les bougies sortent (19/10 : plus de souffle ni de
+   chanson), les six parts, l'écran de fin. */
 /* 🎨 Devine mon dessin (8/10) : jamais de vrai appel à Claude ici (ni clé ni
    coût) — sans clé, la bulle montre le cadenas et le bouton « Clé » paraît ;
    puis le bot répond à la place de Claude (`__dg.fake`). En Libre : il
@@ -1650,7 +1650,7 @@ await scenario('devine-mon-dessin', async () => {
 await scenario('patisserie', async () => {
   await openGame('La Pâtisserie', '__bk')
   await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })
-  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__bk.step, ph: window.__bk.phase, t: window.__bk.tiers, b0: window.__bk.body(0), g1: window.__bk.glazed(window.__bk.tiers - 1), cr: window.__bk.count('rosace'), fr: window.__bk.count('fraise'), sp: window.__bk.sprinkles, lit: window.__bk.lit }))
+  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__bk.step, ph: window.__bk.phase, t: window.__bk.tiers, b0: window.__bk.body(0), g1: window.__bk.glazed(window.__bk.tiers - 1), cr: window.__bk.count('rosace'), fr: window.__bk.count('fraise'), sp: window.__bk.sprinkles, bougies: window.__bk.candles }))
   const tap = async p => { await page.mouse.click(p.x, p.y) }
   await page.locator('.bk-opt[data-tiers="2"]').click({ force: true, timeout: 120000 })
   await page.locator('.bk-opt[data-shape="heart"]').click({ force: true, timeout: 120000 })
@@ -1685,23 +1685,17 @@ await scenario('patisserie', async () => {
   await page.mouse.up()
   await page.waitForFunction(() => window.__bk.sprinkles > 0, null, { timeout: 10000 })
     .catch(async () => { throw new Error(`pas de vermicelles (${await etat()})`) })
-  // Les bougies, puis on souffle
+  // Les bougies : une décoration
   await page.locator('.bk-step[data-step="bougies"]').click({ force: true, timeout: 120000 })
   for (const d of [0.2, 0.45, 0.6]) await tap(await page.evaluate(d => window.__bk.top(undefined, d), d))
-  await page.waitForFunction(() => window.__bk.lit >= 2, null, { timeout: 30000 })
-    .catch(async () => { throw new Error(`les bougies ne s'allument pas (${await etat()})`) })
-  // « Manger » avec des bougies allumées (11/10) : pas de fête, le souffle se montre
-  await page.locator('.bk-step[data-step="decor"]').click({ force: true, timeout: 120000 })
-  await page.locator('#bkEat').click({ force: true, timeout: 120000 })
-  await page.waitForFunction(() => window.__bk.step === 'bougies' && document.querySelector('#bkBlow.ask'), null, { timeout: 10000 })
-    .catch(async () => { throw new Error(`« Manger » ne montre pas le souffle (${await etat()})`) })
-  if (await page.evaluate(() => window.__bk.phase) !== 'make') throw new Error('« Manger » a lancé la fête avec des bougies allumées')
-  await page.locator('#bkBlow').click({ force: true, timeout: 120000 })
-  await page.waitForFunction(() => window.__bk.lit === 0, null, { timeout: 60000 })
-    .catch(async () => { throw new Error(`les bougies ne s'éteignent pas (${await etat()})`) })
-  // La chanson, puis on MANGE tout le gâteau (6 parts, 2 bouchées chacune) : le temps du
-  // jeu suit les images (une par seconde sous la 3D logicielle), on l'accélère
+  await page.waitForFunction(() => window.__bk.candles >= 2, null, { timeout: 30000 })
+    .catch(async () => { throw new Error(`les bougies ne se plantent pas (${await etat()})`) })
+  // « Manger » : les bougies sortent, puis on MANGE tout le gâteau (6 parts, 2 bouchées chacune) :
+  // le temps du jeu suit les images (une par seconde sous la 3D logicielle), on l'accélère
   await page.evaluate(() => window.__bk.speed(4))
+  await page.locator('#bkEat').click({ force: true, timeout: 120000 })
+  await page.waitForFunction(() => window.__bk.candles === 0, null, { timeout: 60000, polling: 250 })
+    .catch(async () => { throw new Error(`les bougies ne sortent pas (${await etat()})`) })
   const mange = () => page.evaluate(() => JSON.stringify(window.__bk.eat))
   await page.waitForFunction(() => window.__bk.eat?.at, null, { timeout: 240000, polling: 500 })
     .catch(async () => { throw new Error(`la première part n'est pas servie (${await etat()})`) })
@@ -1713,17 +1707,17 @@ await scenario('patisserie', async () => {
   }
   await finDe('Gâteau dévoré', 120000).catch(async () => { throw new Error(`le gâteau n'est pas fini (${await mange()})`) })
 })
-// Sans une bougie (11/10) : « Manger » lance la chanson, la répétition du repas, puis la première part
+// Sans une bougie, et à VITESSE NORMALE (19/10) : le repas ne commençait jamais en temps réel
+// (le gâteau tournait en même temps qu'il se remettait de face) — en temps accéléré, on ne le voyait pas
 await scenario('patisserie-sans-bougie', async () => {
   await openGame('La Pâtisserie', '__bk')
   await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })
-  await page.evaluate(() => window.__bk.speed(4))
   await page.locator('#bkEat').click({ force: true, timeout: 120000 })
-  await page.waitForFunction(() => window.__bk.phase === 'party', null, { timeout: 10000, polling: 250 })
-    .catch(async () => { throw new Error(`« Manger » sans bougie ne lance pas la fête (${await page.evaluate(() => window.__bk.phase)})`) })
+  await page.waitForFunction(() => window.__bk.phase === 'prep' || window.__bk.phase === 'eat', null, { timeout: 10000, polling: 250 })
+    .catch(async () => { throw new Error(`« Manger » ne prépare pas le repas (${await page.evaluate(() => window.__bk.phase)})`) })
   await page.waitForFunction(() => window.__bk.eat?.at, null, { timeout: 240000, polling: 500 })
     .catch(async () => { throw new Error(`pas de part servie (${await page.evaluate(() => JSON.stringify({ ph: window.__bk.phase, w: window.__bk.warmLeft }))})`) })
-  if (await page.evaluate(() => window.__bk.warmLeft) !== 0) throw new Error('la répétition du repas n’est pas allée au bout pendant la chanson')
+  if (await page.evaluate(() => window.__bk.warmLeft) !== 0) throw new Error('le repas a commencé avant que ses rendus soient prêts')
   await page.mouse.click(...Object.values(await page.evaluate(() => window.__bk.eat.at)))
   await page.waitForFunction(() => window.__bk.eat?.bites === 1, null, { timeout: 60000, polling: 300 })
     .catch(async () => { throw new Error(`pas de bouchée (${await page.evaluate(() => JSON.stringify(window.__bk.eat))})`) })
@@ -1734,39 +1728,6 @@ await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est t
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 
-/* 🐕 Le Chien de berger (11/10) : le doigt posé sur le chien glisse là où le
-   pilote de `core/herd.ts` l'enverrait (derrière le troupeau, vers
-   l'ouverture) ; la chèvre têtue (l'éclair) : une tape, il aboie. Trois
-   troupeaux, jusqu'à « Tout le troupeau est rentré ». */
-const berger = async (tier, speed) => {
-  await openGame('Le Chien de berger', '__sd', tier)
-  await page.waitForFunction(() => window.__sd.ready, null, { timeout: 90000, polling: 500 })
-  await page.evaluate(k => window.__sd.speed(k), speed)
-  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__sd.phase, herd: window.__sd.herd, out: window.__sd.out, jour: +window.__sd.dayLeft.toFixed(2) }))
-  const dog = await page.evaluate(() => window.__sd.dog)
-  await page.mouse.move(dog.x, dog.y)
-  await page.mouse.down()
-  const t0 = Date.now()
-  for (;;) {
-    const st = await page.evaluate(() => ({ ph: window.__sd.phase, t: window.__sd.target, goat: window.__sd.goat, dog: window.__sd.dog }))
-    if (st.ph === 'win') break
-    if (st.ph === 'night') throw new Error(`la nuit est tombée avant (${await etat()})`)
-    if (Date.now() - t0 > 900000) throw new Error(`troupeau pas rentré en 15 min (${await etat()})`)
-    if (st.ph === 'play') {
-      if (st.goat) {
-        await page.mouse.up()
-        await page.mouse.click(st.dog.x, st.dog.y)
-        await page.mouse.move(st.dog.x, st.dog.y)
-        await page.mouse.down()
-      } else await page.mouse.move(st.t.x, st.t.y, { steps: 2 })
-    }
-    await page.waitForTimeout(100)
-  }
-  await page.mouse.up()
-  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Tout le troupeau est rentré'), null, { timeout: 60000, polling: 500 })
-    .catch(async () => { throw new Error(`pas d'écran de fin (${await etat()})`) })
-}
-await scenario('chien-de-berger', () => berger('med', 4))
 
 await browser.close()
 if (failures.length) {

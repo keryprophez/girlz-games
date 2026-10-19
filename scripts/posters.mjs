@@ -102,7 +102,6 @@ const STAGE = {
   },
   // Le Chien de berger : le troupeau qui entre dans l'enclos, le chien derrière
   // (la ferme de l'éclair : la mare et les bottes)
-  sheepdog: { tier: 'med', ready: () => window.__sd && window.__sd.ready, wait: 1500, act: async p => { await p.evaluate(() => window.__sd.demo()) }, after: 2500, zoom: 1.12, cy: 0.42 },
   // Le Chœur sur scène : un choriste chante sous son projecteur
   simon: { tier: 'med', wait: 3000, act: async p => { await p.evaluate(() => window.__simon?.press?.(0)); await p.waitForFunction(() => window.__simon.playerTurn, null, { timeout: 60000 }).catch(() => {}); await p.evaluate(() => window.__simon.press(window.__simon.seq[0])) }, after: 300 },
   // Une partie commencée contre la poule : quelques pions de chaque couleur

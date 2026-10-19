@@ -134,6 +134,8 @@ let ctx: GameContext
 let sheet: Sheet | null = null
 /** Le bot répond à la place de Claude (jamais de vrai appel en intégration) ; `null` : pas de réponse. */
 let fakeVivant: (() => Vivant | null) | null = null
+/** La main a déjà montré « Dessiner » (une fois par ouverture). */
+let penShown = false
 let saved: Saved = { v: 1, night: false, items: [], paths: [], fences: [] }
 let who: Who = 'jade'
 let nextU = 1
@@ -798,6 +800,8 @@ export const farmbuild: GameDef = {
     if (root.querySelector('.fb-wrap[data-who=""]')) return { choose: visible(root, '.fb-card') }
     // La feuille ouverte : tracer un cœur, puis toucher « Fini »
     if (sheet?.open) return sheet.hand()
+    // « Dessiner » (19/10, le père ne l'avait pas trouvé) : montré une fois par ouverture tant que sa ferme n'a pas de dessin
+    if (me && !penShown && !me.things.some(t => t.drawn)) { const b = root.querySelector('#fbPen'); if (b) { penShown = true; return { tap: b } } }
     if (!me || me.held || me.stroke) return null
     const items = visible(root, '.fb-item[data-id]')
     if (!items.length) return null
@@ -806,6 +810,7 @@ export const farmbuild: GameDef = {
   mount(c) {
     ctx = c
     let dead = false
+    penShown = false
     // L'ancienne ferme de la famille ne revient pas : chacune repart de zéro (11/10)
     try { localStorage.removeItem(OLD_KEY) } catch { /* rien */ }
     forget()
@@ -816,6 +821,7 @@ export const farmbuild: GameDef = {
         </div>
         <span class="tool-item fb-me"><button class="sn-tool" id="fbMe" aria-label="Changer de ferme"></button><i class="tool-cap" id="fbMeCap"></i></span>
         <span class="tool-item fb-dn"><button class="sn-tool" id="fbNight" aria-label="Jour ou nuit"></button><i class="tool-cap" id="fbNightCap"></i></span>
+        <span class="tool-item fb-penitem"><button class="sn-tool fb-pen" id="fbPen" aria-label="Dessiner">${DRAW_ICONS.pen}</button><i class="tool-cap">Dessiner</i></span>
         <div class="fb-tray" id="fbTray">
           <div class="fb-tabs">${(Object.keys(TABS) as Tab[]).map(k => `<span class="tool-item"><button class="sn-tool fb-tab${k === 'batiments' ? ' sel' : ''}" data-tab="${k}" aria-label="${TABS[k].name}">${TAB_ICONS[k]}</button><i class="tool-cap">${TABS[k].name}</i></span>`).join('')}</div>
           <i class="fb-sep"></i>
@@ -893,9 +899,7 @@ export const farmbuild: GameDef = {
       c.root.querySelectorAll<HTMLElement>('.fb-tab').forEach(b => b.classList.toggle('sel', b.dataset.tab === tab))
       const box = c.root.querySelector<HTMLElement>('#fbItems')!
       // Tant que les vignettes se fabriquent (la toute première fois), l'icône de l'onglet
-      // Les animaux commencent par « Dessiner » (18/10) : son animal à elle
-      const pen = tab === 'animaux' ? `<span class="tool-item"><button class="sn-tool fb-item fb-pen" id="fbPen" aria-label="Dessiner">${DRAW_ICONS.pen}</button><i class="tool-cap">Dessiner</i></span>` : ''
-      box.innerHTML = pen + TABS[tab].items.map(([id, n]) => `<span class="tool-item"><button class="sn-tool fb-item" data-id="${id}" aria-label="${n}">${pics[id] ? portraitImg(pics[id], 80) : TAB_ICONS[tab]}</button><i class="tool-cap">${n}</i></span>`).join('')
+      box.innerHTML = TABS[tab].items.map(([id, n]) => `<span class="tool-item"><button class="sn-tool fb-item" data-id="${id}" aria-label="${n}">${pics[id] ? portraitImg(pics[id], 80) : TAB_ICONS[tab]}</button><i class="tool-cap">${n}</i></span>`).join('')
       box.scrollLeft = 0
     }
     const setNightBtn = (night: boolean) => {

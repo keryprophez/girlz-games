@@ -1244,6 +1244,25 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   tablette restait sur l'ancienne adresse GitHub Pages, figée au 8/10 (ni
   le Chien de berger, ni le repas de la Pâtisserie…). Le père a posé le
   token puis les trois secrets du Worker ; le portail demande le code.
+- ✅ **Retours du 19/10** (le père) :
+  - **la Pâtisserie** (« quand on a soufflé les bougies, on n'arrive plus à
+    le manger », « dès le moindre son, ça fait comme si on avait soufflé »,
+    la chanson et l'animation « trop nulles », « vire toute l'animation des
+    bougies ») : la cause du repas bloqué — pendant la fête, le gâteau
+    tournait tout seul en même temps qu'il se remettait de face, les deux
+    s'équilibraient à 0,12 radian du but et le repas ne commençait jamais à
+    vitesse normale (les bots accéléraient le temps). Plus de souffle, de
+    micro (`core/souffle.ts` est parti), de chanson ni de confettis : les
+    bougies décorent ; « Manger » les fait sortir une à une, le gâteau se
+    remet de face, les rendus du repas se préparent en arrière-plan
+    (`compileAsync`), et on mange. `patisserie-sans-bougie` joue à vitesse
+    normale ;
+  - **le Chien de berger** (« les filles trouvent ça nul ») : sorti, avec
+    son troupeau (`core/herd.ts`), sa vignette, son affiche et son bot ;
+    Jouer repasse à onze jeux ;
+  - **« Dessiner » introuvable** dans la Ferme à construire (la tuile était
+    en tête du tiroir des Animaux) : un gros bouton sous Jour / Nuit,
+    toujours là, que la main montre une fois par ouverture.
 - ✅ **Mon dessin prend vie** (18/10, la Ferme à construire ; le père :
   « réfléchis à une utilisation sympa de mon API Claude dans l'app »,
   trois idées proposées, « son animal en 3D, pas un des 14 », maquette A
