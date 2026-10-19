@@ -1690,7 +1690,8 @@ await scenario('patisserie', async () => {
   for (const d of [0.2, 0.45, 0.6]) await tap(await page.evaluate(d => window.__bk.top(undefined, d), d))
   await page.waitForFunction(() => window.__bk.candles >= 2, null, { timeout: 30000 })
     .catch(async () => { throw new Error(`les bougies ne se plantent pas (${await etat()})`) })
-  // « Manger » : les bougies sortent, puis on MANGE tout le gâteau (6 parts, 2 bouchées chacune) :
+  // « Manger » : les bougies sortent, six coups de couteau, puis on MANGE tout le gâteau (19/10 :
+  // un toucher prend une part, elle vient à nous, croc, croc, avalée) ;
   // le temps du jeu suit les images (une par seconde sous la 3D logicielle), on l'accélère
   await page.evaluate(() => window.__bk.speed(4))
   await page.locator('#bkEat').click({ force: true, timeout: 120000 })
@@ -1698,7 +1699,8 @@ await scenario('patisserie', async () => {
     .catch(async () => { throw new Error(`les bougies ne sortent pas (${await etat()})`) })
   const mange = () => page.evaluate(() => JSON.stringify(window.__bk.eat))
   await page.waitForFunction(() => window.__bk.eat?.at, null, { timeout: 240000, polling: 500 })
-    .catch(async () => { throw new Error(`la première part n'est pas servie (${await etat()})`) })
+    .catch(async () => { throw new Error(`le gâteau n'est pas coupé (${await etat()} ${await mange()})`) })
+  if (await page.evaluate(() => window.__bk.eat.cuts) !== 6) throw new Error(`le couteau n'a pas fait six coupes (${await mange()})`)
   for (let n = 0; n < 30 && await page.evaluate(() => window.__bk.phase) === 'eat'; n++) {
     await page.waitForFunction(() => window.__bk.eat?.at || window.__bk.phase !== 'eat', null, { timeout: 120000, polling: 300 })
       .catch(async () => { throw new Error(`on ne peut plus toucher (${await mange()})`) })
@@ -1716,11 +1718,13 @@ await scenario('patisserie-sans-bougie', async () => {
   await page.waitForFunction(() => window.__bk.phase === 'prep' || window.__bk.phase === 'eat', null, { timeout: 10000, polling: 250 })
     .catch(async () => { throw new Error(`« Manger » ne prépare pas le repas (${await page.evaluate(() => window.__bk.phase)})`) })
   await page.waitForFunction(() => window.__bk.eat?.at, null, { timeout: 240000, polling: 500 })
-    .catch(async () => { throw new Error(`pas de part servie (${await page.evaluate(() => JSON.stringify({ ph: window.__bk.phase, w: window.__bk.warmLeft }))})`) })
+    .catch(async () => { throw new Error(`le gâteau n'est pas coupé (${await page.evaluate(() => JSON.stringify({ ph: window.__bk.phase, w: window.__bk.warmLeft, e: window.__bk.eat }))})`) })
   if (await page.evaluate(() => window.__bk.warmLeft) !== 0) throw new Error('le repas a commencé avant que ses rendus soient prêts')
   await page.mouse.click(...Object.values(await page.evaluate(() => window.__bk.eat.at)))
-  await page.waitForFunction(() => window.__bk.eat?.bites === 1, null, { timeout: 60000, polling: 300 })
+  await page.waitForFunction(() => window.__bk.eat?.bites >= 2, null, { timeout: 60000, polling: 300 })
     .catch(async () => { throw new Error(`pas de bouchée (${await page.evaluate(() => JSON.stringify(window.__bk.eat))})`) })
+  await page.waitForFunction(() => window.__bk.eat?.eaten === 1, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`la part n'est pas avalée (${await page.evaluate(() => JSON.stringify(window.__bk.eat))})`) })
 })
 
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))

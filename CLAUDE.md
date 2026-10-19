@@ -187,9 +187,10 @@ src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.t
                            rosaces et gouttes de crème, fraise, framboise,
                            myrtille, cerise, vermicelles, perles, bougies et
                            flamme, présentoir ; les faces de coupe (`cutFaces` :
-                           génoise, crème, confiture), la coupe d'une part
-                           entamée (`biteFace`), le couteau, la fourchette et
-                           la bouchée (`knife`, `fork`, `morsel`)
+                           génoise, crème, confiture), le couteau (`knife`) ;
+                           depuis le 19/10, la BOUCHÉE vue de profil (`biteOf` :
+                           la bouche et ses dents, `inBite`, `biteRim` — testé)
+                           et la paroi en arc qu'elle laisse (`biteWall`)
              plush.ts    ← LA PELUCHE de Mon dessin prend vie (18/10) : son
                            dessin gonflé — la silhouette (ses VRAIS trous de
                            contour bouchés grâce à ses traits, `bridges` :
@@ -483,22 +484,26 @@ le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
 (la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
 au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
 répond à la place de Claude, `__dg.fake` : jamais de vrai appel en
-intégration) · `bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le 6/10, on le
-MANGE en six parts : ce qui reste est coupé par deux plans —
-`localClippingEnabled`, leur union sous un demi-tour enlevé, leur intersection
-au-delà ; le présentoir et les faces de coupe exclus —, la part est une copie
-des étages gardée entre ses deux bords, une bouchée un troisième plan qui
-avance depuis la pointe ; ce qui part avec la part reçoit ses matières à elle ;
-depuis le 19/10 (« vire toute l'animation des bougies »), plus de souffle,
-de micro, de chanson ni de fête : les bougies sont une décoration, et
-« Manger » (la fourchette, sous les étapes) les fait sortir une à une, le
-gâteau se remet de face (rien d'autre ne le tourne : sinon il n'y arrive
-jamais), et pendant ce temps la RÉPÉTITION du repas — chaque matière posée
-sous le comptoir telle qu'elle sera coupée, ses rendus préparés en
-arrière-plan (`renderer.compileAsync`) : aucun shader à préparer pendant
-qu'on mange ; la fourchette attend au-dessus de la part, le couteau
-au-dessus de la prochaine coupe ; son bot accélère le temps, `__bk.speed`,
-sauf `patisserie-sans-bougie`, à vitesse normale). La Course,
+intégration) · `bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le
+19/10 (« vire toute l'animation des bougies »), plus de souffle, de micro,
+de chanson ni de fête : les bougies sont une décoration, et « Manger » (la
+fourchette, sous les étapes) les fait sortir une à une, le gâteau se remet
+de face (rien d'autre ne le tourne : sinon il n'y arrive jamais) ; le même
+jour, on le MANGE COMME LA PIZZA (« l'animation pour manger est vraiment
+éclatée ») : six coups de couteau, les six parts s'écartent ; un toucher
+sur l'une, dans l'ordre qu'on veut : elle monte, des fils de glaçage et de
+crème la retiennent à ses voisines puis cassent (accrochés au coin et au
+dessus : les côtés d'une part qu'on tire vers nous ne se voient pas), elle
+vient devant nous de profil, croc, croc — l'encoche festonnée des dents —
+puis elle disparaît dans les miettes. Chaque part est une COPIE des étages
+gardée entre ses deux bords (`localClippingEnabled`, son ombre coupée
+aussi : `clipShadows`) et trouée par ses bouchées (un bout de shader, les
+ronds de la bouche et des dents dans le plan de la part) ; ce qui est posé
+dessus part avec elle. Pendant que les bougies sortent, la RÉPÉTITION du
+repas — chaque matière posée sous le comptoir telle qu'elle sera, ses rendus
+préparés en arrière-plan (`renderer.compileAsync`) : aucun shader à
+préparer pendant qu'on mange (compté : 0) ; son bot accélère le temps,
+`__bk.speed`, sauf `patisserie-sans-bougie`, à vitesse normale). La Course,
 le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève »), le
 Chien de berger le 19/10 (« les filles trouvent ça nul », avec son troupeau
 `core/herd.ts`) ; le Ninja est repassé en 2D le même jour

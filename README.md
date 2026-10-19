@@ -77,8 +77,9 @@ lui va), et la Pâtisserie (un
 gâteau d'un à trois étages, rond, en cœur ou carré : le glaçage s'étale
 au doigt et le nappage coule, la poche à douille dépose des rosaces, des
 fraises, framboises, myrtilles, cerises et vermicelles, et des bougies ;
-« Manger » : les bougies sortent, et on le mange, part par part, à la
-petite fourchette).
+« Manger » : les bougies sortent, six coups de couteau, et on le mange
+part par part, comme la pizza — la crème file, croc, croc, la marque des
+dents).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

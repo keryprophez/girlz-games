@@ -1263,6 +1263,51 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
   - **« Dessiner » introuvable** dans la Ferme à construire (la tuile était
     en tête du tiroir des Animaux) : un gros bouton sous Jour / Nuit,
     toujours là, que la main montre une fois par ouverture.
+- ✅ **On mange le gâteau comme la pizza** (19/10, le père : « l'animation
+  pour manger le gâteau est vraiment éclatée… la croquette, la physique de
+  la fourchette, fais un truc vraiment mieux » ; deux options proposées, « A ») :
+  plus de gâteau qui tourne, de fourchette, de petite assiette ni de bouchée
+  sur la fourchette. « Manger » : les bougies sortent, six coups de couteau,
+  les parts s'écartent. Un toucher sur une part, dans l'ordre qu'on veut :
+  elle monte, des fils de glaçage et de crème la retiennent puis cassent
+  (comme le fromage de la pizza), elle vient devant nous de profil (ses
+  couches), CROC, CROC — l'encoche festonnée des dents —, puis elle disparaît
+  dans les miettes. Chaque part : une copie des étages entre ses deux bords,
+  trouée par ses bouchées (`biteOf`, `biteWall` dans `core/cake3d.ts`,
+  testés). La répétition du repas prépare tous ses rendus pendant que les
+  bougies sortent : 0 shader compilé pendant qu'on mange (compté). Testé en
+  rond à deux étages et en cœur à trois. La chanson d'anniversaire était
+  déjà partie le matin même. **Reste : y jouer sur la tablette** (`?fps`
+  pendant une bouchée : un bout de shader de plus sur chaque part).
+- 📋 **Deux nouveaux jeux demandés par les filles** (19/10, propositions
+  faites, plan validé : « un par fille », dans l'ordre : le gâteau, puis
+  les maquettes des deux jeux EN MÊME TEMPS — pour que chacune voie le sien
+  le même jour —, puis un jeu après l'autre) — dans Créer (9 → 11 jeux) :
+  - **« Mon cartable »** (Joyce) : sur le modèle de la Pâtisserie, les
+    étapes à gauche et le cartable en grand en 3D dans un coin de classe.
+    Modèle (à rabat, sac à dos, à roulettes) · Matière (toile, cuir verni,
+    jean, peluche, holographique, et les PAILLETTES RÉVERSIBLES qu'on
+    retourne au doigt pour dessiner) · Couleurs (par pièce) · Motifs ·
+    Accessoires (porte-clés qui se balancent — les animaux de la ferme en
+    petit —, écussons brodés, badges, nœud) · Remplir (trousse, cahiers,
+    règle, gourde, goûter ; on referme, clac). Fin : la petite fille
+    d'Habille-toi le met sur son dos et part à l'école ; un toucher la
+    passe. Gardé, un par fille ;
+  - **« Les Monuments »** (Jade) : on choisit sur de grandes images, sans
+    texte. La Pyramide (des blocs sur des rondins, rangée par rangée), la
+    Tour Eiffel (une grue apporte les poutres : pieds, étages, flèche), le
+    Golden Gate (« le pont de Californie » : les tours, le grand câble tracé
+    au doigt, les suspentes, la route, les voitures), et — choix du père —
+    la Tour de Pise, un château de conte, le Taj Mahal, Big Ben et une
+    statue de l'île de Pâques. La forme en transparent montre où va chaque
+    pièce ; près de sa place, elle s'emboîte (clac, poussière) ; trop loin,
+    elle revient, sans sanction. Puis on le « pimpe » : peinture, guirlandes
+    de lumières, drapeaux, nœuds, paillettes, les animaux de la ferme en
+    visiteurs. Fin : la nuit tombe, il s'illumine. Gardé, un par fille.
+    **La Tour Eiffel en treillis : la maquette d'abord** (le risque de la
+    « 3D à 5 triangles »).
+  **Prochaine étape : les maquettes au format de la tablette, montrées
+  avant de coder.**
 - ✅ **Mon dessin prend vie** (18/10, la Ferme à construire ; le père :
   « réfléchis à une utilisation sympa de mon API Claude dans l'app »,
   trois idées proposées, « son animal en 3D, pas un des 14 », maquette A

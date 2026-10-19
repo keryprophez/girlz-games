@@ -49,15 +49,12 @@ export interface CakeKit {
   candle(stripe: string): Grp
   /** Les deux faces de coupe que laisse la part (entre les angles a0 et a1) dans l'étage. */
   cutFaces(t: Tier, a0: number, a1: number): Mesh[]
-  /** La coupe d'une part entamée (entre a0 et a1) à la distance d du centre :
-      génoise, crème et confiture, en travers ; null si l'étage est déjà mangé là. */
-  biteFace(t: Tier, a0: number, a1: number, d: number): Mesh | null
+  /** La paroi que laisse une bouchée dans l'étage posé en y0 (génoise, crème
+      et confiture), le long de l'arc festonné par les dents, d'un bord à
+      l'autre de la part `mid` (demi-angle `half`) ; null si l'étage n'est pas touché. */
+  biteWall(t: Tier, b: Bite, mid: number, y0: number, half: number): Mesh | null
   /** Le couteau à gâteau : la lame dans le plan xy, le long de +x, le fil en bas (y = 0). */
   knife(): Grp
-  /** La petite fourchette : les dents vers le bas (-y), le manche en haut. */
-  fork(): Grp
-  /** Une bouchée de gâteau (génoise en couches, le dessus de la couleur `top`). */
-  morsel(top: Mat): Mesh
   /** Des vermicelles semés sur un disque de rayon r (y = 0). */
   sprinkles(n: number, r: number, seed?: number): import('three').InstancedMesh
   /** Des perles de sucre en couronne (rayon r, y = 0). */
@@ -144,6 +141,59 @@ export function radiusAt(pts: [number, number][], a: number) {
 
 /** Un hasard qu'on peut rejouer (les coulures d'un étage restent les mêmes). */
 const rng = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646 }
+
+/* ---- Une bouchée (19/10, « la croquette, c'est vraiment nul ») : la part
+   vue de profil, le grand rond de la bouche mord le coin du dessus de sa
+   pointe, et sur son bord les petits ronds des dents — ce qui reste garde
+   une encoche en arc, en festons. Repère de la PART, dans son plan vertical : u le long de la
+   bissectrice (0 à la pointe), y la hauteur. ---- */
+export interface Bite {
+  /** Le centre de la bouche (u, y), devant la pointe et au-dessus. */
+  c: [number, number]
+  R: number
+  /** Les dents : centre (u, y) et rayon. */
+  teeth: [number, number, number][]
+}
+export const TEETH = 14
+/** La bouchée n° k (0 : la pointe, 1 : presque tout) d'une part de longueur L,
+    entre les hauteurs y0 et y1 : la bouche arrive d'en haut, devant la
+    pointe, et mord son coin du dessus. Chacune contient la précédente, dents
+    comprises : la paroi de la dernière suffit. */
+export function biteOf(L: number, y0: number, y1: number, k: number, seed = 1): Bite {
+  const H = y1 - y0
+  const c: [number, number] = [-0.12 * L, y1 + 0.12 * H]
+  const rs = 0.065
+  const R1 = 0.62 * Math.max(0.9 * L, H)
+  const R = k === 0 ? R1 : Math.max(0.98 * L, R1 + rs * 1.4)
+  const rnd = rng(seed * 31 + k * 7 + 1)
+  // Les dents, du bas de la pointe (vers −y) au dessus de la part (vers +u)
+  const step = 1.75 / (TEETH - 1)
+  const teeth: [number, number, number][] = []
+  for (let i = 0; i < TEETH; i++) {
+    const a = -Math.PI / 4 + (i - (TEETH - 1) / 2) * step
+    const r = rs * (0.85 + rnd() * 0.3)
+    teeth.push([c[0] + Math.cos(a) * R, c[1] + Math.sin(a) * R, r])
+  }
+  return { c, R, teeth }
+}
+/** Jusqu'où la bouchée enlève, vue du centre de la bouche dans la direction a (0 : vers le bord de la part). */
+export function biteRim(b: Bite, a: number) {
+  const du = Math.cos(a), dy = Math.sin(a)
+  let r = b.R
+  for (const [u, y, rr] of b.teeth) {
+    // Le rayon c + t·d sort du rond de la dent en t = p + √(p² − q)
+    const mu = u - b.c[0], my = y - b.c[1]
+    const p = du * mu + dy * my, q = mu * mu + my * my - rr * rr
+    const disc = p * p - q
+    if (disc >= 0) r = Math.max(r, p + Math.sqrt(disc))
+  }
+  return r
+}
+/** Le point (u, y) de la part est-il dans la bouchée ? */
+export function inBite(b: Bite, u: number, y: number) {
+  if (Math.hypot(u - b.c[0], y - b.c[1]) < b.R) return true
+  return b.teeth.some(([tu, ty, r]) => Math.hypot(u - tu, y - ty) < r)
+}
 
 export async function cakeKit(T: T3): Promise<CakeKit> {
   const own: { dispose(): void }[] = []
@@ -554,40 +604,60 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
     m.receiveShadow = true
     return m
   })
-  /* La coupe d'une part entamée : la droite perpendiculaire à la bissectrice,
-     à la distance d, rognée par le contour de l'étage et par les deux bords de la part */
-  const biteFace: CakeKit['biteFace'] = (t, a0, a1, d) => {
-    const m = (a0 + a1) / 2
-    const ux = Math.cos(m), uz = Math.sin(m), vx = -uz, vz = ux
-    const cx = ux * d, cz = uz * d
-    if (d <= 0.02 || !inside(t.outline, cx, cz)) return null
-    // Les croisements de la droite avec le contour : le plus proche de chaque côté
-    let lo = -Infinity, hi = Infinity
-    const P = t.outline
-    for (let i = 0; i < P.length; i++) {
-      const [x1, z1] = P[i], [x2, z2] = P[(i + 1) % P.length]
-      const ex = x2 - x1, ez = z2 - z1
-      const den = vx * ez - vz * ex
-      if (Math.abs(den) < 1e-9) continue
-      const s0 = ((x1 - cx) * ez - (z1 - cz) * ex) / den, u = ((x1 - cx) * vz - (z1 - cz) * vx) / den
-      if (u < 0 || u > 1) continue
-      if (s0 < 0) lo = Math.max(lo, s0); else hi = Math.min(hi, s0)
+  /* La paroi d'une bouchée : le creux en arc que laisse la bouche (dents
+     comprises), d'un bord de la part à l'autre, dans la hauteur de l'étage
+     (posé en y0) et dans son contour — un peu rentrée là où elle touche le
+     bord arrondi de la génoise et les deux bords de la part. */
+  const biteWall: CakeKit['biteWall'] = (t, b, mid, y0, half) => {
+    const ux = Math.cos(mid), uz = Math.sin(mid), wx = -uz, wz = ux
+    const inTier = (u: number, s: number) => {
+      const x = ux * u + wx * s, z = uz * u + wz * s, d = Math.hypot(x, z)
+      const out = d > 1e-6 ? (d + 0.02) / d : 1
+      return inside(t.outline, x * out, z * out)
     }
-    const half = d * Math.tan((a1 - a0) / 2)
-    // Rentré un peu là où il touche le bord arrondi de la génoise
-    lo = Math.max(lo + 0.03, -half); hi = Math.min(hi - 0.03, half)
-    if (hi - lo < 0.01) return null
-    const g = new T.PlaneGeometry(hi - lo, t.h)
-    g.translate((hi + lo) / 2, t.h / 2, 0)
-    // Le plan regarde vers le centre (vers la pointe mangée)
-    g.rotateY(Math.PI / 2 - m + Math.PI)
-    g.translate(cx, 0, cz)
-    const mesh = new T.Mesh(k(g), spongeMat)
+    /** La largeur de l'étage à la distance u de la pointe, d'un côté (sg = ±1). */
+    const width = (u: number, sg: number) => {
+      let lo = 0, hi = Math.max(0, u * Math.tan(half) - 0.003)
+      if (!inTier(u, 0)) return -1
+      if (inTier(u, sg * hi)) return hi
+      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; if (inTier(u, sg * m)) lo = m; else hi = m }
+      return lo
+    }
+    const N = 160, M = 6
+    type Row = { u: number; y: number; a: number; b: number }
+    const pos: number[] = [], uv: number[] = []
+    let prev: Row | null = null, acc = 0
+    for (let i = 0; i <= N; i++) {
+      const a = -Math.PI / 2 + i / N * Math.PI
+      const r = biteRim(b, a)
+      const u = b.c[0] + Math.cos(a) * r, y = b.c[1] + Math.sin(a) * r - y0
+      const wa = u > 0.01 && y >= 0 && y <= t.h ? width(u, -1) : -1, wb = wa >= 0 ? width(u, 1) : -1
+      const row: Row | null = wa >= 0 && wb >= 0 && wa + wb > 0.004 ? { u, y, a: -wa, b: wb } : null
+      if (row && prev) {
+        const p0 = prev, p1 = row
+        const at = (q: Row, j: number) => { const sv = q.a + (q.b - q.a) * j / M; return [ux * q.u + wx * sv, q.y, uz * q.u + wz * sv] }
+        const ds = Math.hypot(p1.u - p0.u, p1.y - p0.y) * 0.6
+        for (let j = 0; j < M; j++) {
+          const a0 = at(p0, j), a1 = at(p0, j + 1), b0 = at(p1, j), b1 = at(p1, j + 1)
+          pos.push(...a0, ...b0, ...b1, ...a0, ...b1, ...a1)
+          const v0 = p0.y / t.h, v1 = p1.y / t.h, s0 = j / M, s1 = (j + 1) / M
+          uv.push(acc + s0 * 0.1, v0, acc + ds + s0 * 0.1, v1, acc + ds + s1 * 0.1, v1, acc + s0 * 0.1, v0, acc + ds + s1 * 0.1, v1, acc + s1 * 0.1, v0)
+        }
+        acc += ds
+      }
+      prev = row
+    }
+    if (!pos.length) return null
+    const g = new T.BufferGeometry()
+    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3))
+    g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2))
+    g.computeVertexNormals()
+    const mesh = new T.Mesh(g, spongeMat)
     mesh.receiveShadow = true
     return mesh
   }
 
-  /* ---- Le couteau et la fourchette, en inox ---- */
+  /* ---- Le couteau, en inox ---- */
   const steel = phys({ color: '#E4E7EB', metalness: 1, roughness: 0.22 })
   const handleMat = phys({ color: '#FFF4EA', roughness: 0.35, clearcoat: 0.6 })
   const knife = (): Grp => {
@@ -606,26 +676,6 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
     g.add(handle)
     return g
   }
-  const forkGeo = (() => {
-    const parts: Geo[] = []
-    const box = (w: number, h: number, dd: number, x: number, y: number) => { const b = new T.BoxGeometry(w, h, dd); b.translate(x, y, 0); parts.push(b) }
-    for (let i = 0; i < 4; i++) box(0.011, 0.13, 0.008, -0.033 + i * 0.022, -0.075)
-    box(0.08, 0.035, 0.009, 0, 0)
-    box(0.034, 0.1, 0.009, 0, 0.06)
-    box(0.042, 0.42, 0.012, 0, 0.32)
-    const m = mergeG(parts.map(x => x.toNonIndexed()))
-    parts.forEach(x => x.dispose())
-    return m ? k(m) : k(new T.BoxGeometry(0.05, 0.6, 0.01))
-  })()
-  const fork = (): Grp => {
-    const g = new T.Group()
-    const m = new T.Mesh(forkGeo, steel)
-    m.castShadow = true
-    g.add(m)
-    return g
-  }
-  const morselGeo = k(new T.BoxGeometry(0.11, 0.09, 0.09))
-  const morsel: CakeKit['morsel'] = top => new T.Mesh(morselGeo, [spongeMat, spongeMat, top, spongeMat, spongeMat, spongeMat])
 
   /* ---- Le présentoir en porcelaine, son liseré doré ---- */
   const stand = (): Grp => {
@@ -646,7 +696,7 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
   }
 
   return {
-    T, tier, rosette, strawberry, raspberry, blueberry, cherry, candle, sprinkles, pearls, stand, cutFaces, biteFace, knife, fork, morsel,
+    T, tier, rosette, strawberry, raspberry, blueberry, cherry, candle, sprinkles, pearls, stand, cutFaces, biteWall, knife,
     dispose() { own.forEach(x => x.dispose()) }
   }
 }
