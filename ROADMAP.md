@@ -1306,8 +1306,11 @@ le lot 1 (4, 6, 5, 8) est fait (« go lot 1 ») :
     visiteurs. Fin : la nuit tombe, il s'illumine. Gardé, un par fille.
     **La Tour Eiffel en treillis : la maquette d'abord** (le risque de la
     « 3D à 5 triangles »).
-  **Prochaine étape : les maquettes au format de la tablette, montrées
-  avant de coder.**
+  **Maquettes faites le 19/10** (six images au format de la tablette, trois
+  par jeu ; les vrais modules : `core/satchel3d.ts`, le cartable et ses
+  six matières, ses écussons, badges et porte-clés ; `core/monuments3d.ts`,
+  les huit monuments en pièces à poser, la forme en transparent) — **en
+  attente du go**, puis un jeu après l'autre.
 - ✅ **Mon dessin prend vie** (18/10, la Ferme à construire ; le père :
   « réfléchis à une utilisation sympa de mon API Claude dans l'app »,
   trois idées proposées, « son animal en 3D, pas un des 14 », maquette A
