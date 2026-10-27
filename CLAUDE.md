@@ -90,7 +90,7 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `sprites.ts` · `portraits.ts` · `pictures.ts` · `lineart.ts` · `diskcache.ts` | photos des imagiers ; personnages 3D rendus en images ; images du Puzzle ; pages à colorier ; cache sur le disque |
 | `critters.ts` · `doll3d.ts` + `character.ts` | les animaux de la ferme en formes rondes (`FARM`, `FARM_MORE`) ; la petite fille d'Habille-toi et son look |
 | `farm3d.ts` | la ferme en diorama (Cache-Cache, la Ferme à construire) : cachettes, places, pièces, carte ×4 |
-| `facts.ts` | la mémoire des calculs du Potager (aides, révisions espacées, « presque ») — testé |
+| `facts.ts` | la mémoire d'Apprendre : celle des calculs du Potager (aides, révisions espacées, « presque ») et, depuis le 27/10, les séries sans remise de l'Horloge, du Tour du Monde, des Lettres et du Marché (`recall(jeu)`, `ferme:memoire:<jeu>` ; un raté revient trois questions plus loin) — testé |
 | `plants.ts` | les dix plantes illustrées du Potager |
 | `cosmos.ts` · `rocket3d.ts` | le système solaire de l'Espace (rendu HDR à part) et sa fusée |
 | `winter.ts` | le paysage d'hiver de la Tour de Glace, l'heure qui suit la hauteur |

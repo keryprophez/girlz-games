@@ -36,7 +36,7 @@ construire, Mon cartable, les Monuments.
    Pizzeria et la Pâtisserie fusionnées en **La Cuisine** (`variants` dans la
    coquille : la pizza ou le gâteau à l'ouverture) ; CLAUDE.md et cette
    ROADMAP réduits de moitié.
-2. **Les bugs** trouvés le 27/10 (relecture de tout le code par trois agents) :
+2. ✅ **Les bugs** trouvés le 27/10 (relecture de tout le code par trois agents) :
    minuteurs qui survivent à un changement de mode, Devine mon dessin, écran
    de fin relancé par une tape de trop, chargement infini si la 3D échoue,
    Lettres, graines de la glace, Intrus, Espace, micro qui reste ouvert,
@@ -47,9 +47,11 @@ construire, Mon cartable, les Monuments.
    toucher) ; `core/touchcam.ts` (les doigts lus une fois pour toutes : objets
    qu'on tourne, plateau de la ferme ; le globe et l'Espace seulement si rien
    ne change à l'usage).
-4. **Levier 4** : la mémoire du Potager (`facts.ts`) rendue générique, pour
+4. ✅ **Levier 4** : la mémoire du Potager (`facts.ts`) rendue générique, pour
    l'Horloge, le Tour du Monde, les Lettres et le Marché (tirage sans remise,
-   un raté revient trois questions plus loin, rien ne fane).
+   un raté revient trois questions plus loin, rien ne fane). À la fleur du
+   Tour du Monde, une manche est maintenant moitié animaux, moitié pays (au
+   lieu d'un pile ou face à chaque question) — à confirmer par le père.
 
 ## Ensuite — huit nouveaux jeux (choisis le 27/10, plan présenté)
 
