@@ -8,6 +8,7 @@ import { createStage, loader, dotTex, type Stage, type T3 } from '../core/three3
 import { particles, camShake, type Particles, type CamShake } from '../core/scene3d'
 import { critterKit, type Critter, type CritterKit, type CritterKind } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
+import { Fingers, Spinner, perWidth, coast, turned } from '../core/touchcam'
 import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, type Size } from '../core/farm3d'
 
 /* 🙈 Cache-Cache à la ferme (1/10, proposition 13, validée par le père :
@@ -1055,11 +1056,7 @@ function step(me: State, dt: number) {
     }
   }
   // La ferme tourne : au doigt, avec son élan ; pendant la fête, toute seule
-  if (!me.drag) {
-    me.rot += me.vRot * dt
-    me.vRot *= Math.pow(0.004, dt)
-    if (Math.abs(me.vRot) < 0.01) me.vRot = 0
-  }
+  if (!me.drag) coast(me, dt, 0.004, 0.01)
   if (me.phase === 'outro') me.rot += 0.55 * dt
   // Le doigt levé, la vue glisse encore un peu (l'élan de la carte)
   if (!me.drag && (me.vPan.x || me.vPan.z)) {
@@ -1266,28 +1263,23 @@ export const hideseek: GameDef = {
          se mesure en temps réel, borné, et s'éteint vite. La nuit, la lampe
          suit le doigt. --- */
       const el = stage.renderer.domElement
-      const pts = new Map<number, { x: number; y: number }>()
+      const pts = new Fingers()
+      const spin = new Spinner({ max: 3.2, perPx: perWidth(el, 120, 0.36) })
       let tap: { x: number; y: number; t: number; moved: number; multi: boolean } | null = null
-      let lastT = 0
       let mode: 'turn' | 'pan' | 'hold' = 'turn'
       /** Deux doigts : leur écart, leur angle, leur milieu et leurs hauteurs au départ du geste, et le geste choisi. */
       let two: { d0: number; a0: number; m: { x: number; y: number }; m0: { x: number; y: number }; ys: number[]; zoom0: number; rot0: number; el0: number; kind: 'pinch' | 'tilt' | null } | null = null
-      const pair = () => {
-        const [a, b] = [...pts.values()]
-        return { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, ys: [a.y, b.y] }
-      }
+      const pair = () => pts.pair()!
       const startTwo = (kind: 'pinch' | 'tilt' | null) => {
         const p = pair()
         two = { d0: p.d, a0: p.ang, m: p.m, m0: p.m, ys: p.ys, zoom0: me.tgtZoom, rot0: me.rot, el0: me.tgtElev, kind }
       }
-      const turned = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b))
       $('ccCentre')?.addEventListener('click', () => { if (cc === me) { recenter(me); sfx('whoosh', { vol: 0.3, rate: 1.2 }) } })
       $('ccHelp').addEventListener('click', () => { if (cc === me) hint(me) })
       const onDown = (e: PointerEvent) => {
         if (cc !== me || e.target !== el) return
-        pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-        me.vRot = 0; me.vPan.set(0, 0, 0)
-        lastT = performance.now()
+        pts.down(e)
+        spin.start(me); me.vPan.set(0, 0, 0)
         // L'heure de l'événement, pas celle où on le traite : une image lente entre l'appui et le lever ne transforme pas un toucher en appui long
         if (pts.size === 1) { tap = { x: e.clientX, y: e.clientY, t: e.timeStamp, moved: 0, multi: false }; mode = me.big ? 'pan' : 'turn' }
         else if (tap) tap.multi = true
@@ -1296,30 +1288,26 @@ export const hideseek: GameDef = {
         aimTorch(me, e.clientX, e.clientY)
       }
       const onMove = (e: PointerEvent) => {
-        const p = pts.get(e.pointerId)
-        if (!p || cc !== me) return
-        const dx = e.clientX - p.x, dy = e.clientY - p.y
-        p.x = e.clientX; p.y = e.clientY
+        if (cc !== me) return
+        const m = pts.move(e)
+        if (!m) return
+        const { dx, dy } = m
         if (tap) tap.moved += Math.abs(dx) + Math.abs(dy)
         aimTorch(me, e.clientX, e.clientY)
         if (me.phase !== 'seek') return
         if (pts.size === 1) {
           if (mode === 'hold') return
-          const now = performance.now()
-          const dts = Math.max(8, now - lastT) / 1000
-          lastT = now
           if (mode === 'pan') {
             // Un toucher qui tremble ne promène pas la vue
             if (tap && tap.moved < 8) return
+            const dts = spin.step()
             const x0 = me.tgtPan.x, z0 = me.tgtPan.z
             panBy(me, dx, dy)
             const vx = (me.tgtPan.x - x0) / dts, vz = (me.tgtPan.z - z0) / dts
             me.vPan.set(me.vPan.x * 0.5 + vx * 0.5, 0, me.vPan.z * 0.5 + vz * 0.5).clampLength(0, 40)
             return
           }
-          const k = 1 / Math.max(120, el.clientWidth * 0.36)
-          me.rot += dx * k
-          me.vRot = Math.max(-3.2, Math.min(3.2, me.vRot * 0.5 + dx * k / dts * 0.5))
+          spin.turn(me, dx)
         } else if (pts.size === 2 && two) {
           const q = pair()
           me.vRot = 0
@@ -1344,13 +1332,13 @@ export const hideseek: GameDef = {
       }
       const onUp = (e: PointerEvent) => {
         if (!pts.has(e.pointerId) || cc !== me) return
-        pts.delete(e.pointerId)
+        pts.up(e)
         if (pts.size < 2) two = null
         me.drag = pts.size > 0
         // Le doigt qui reste après deux doigts ne fait rien (pas de tour ni de glissé surprise)
-        if (pts.size > 0) { me.vRot = 0; me.vPan.set(0, 0, 0); lastT = performance.now(); mode = 'hold'; return }
+        if (pts.size > 0) { spin.hold(me); me.vPan.set(0, 0, 0); mode = 'hold'; return }
         // Un doigt qui s'est arrêté avant de se lever ne lance rien
-        if (performance.now() - lastT > 90) { me.vRot = 0; me.vPan.set(0, 0, 0) }
+        if (spin.still()) { me.vRot = 0; me.vPan.set(0, 0, 0) }
         const t = tap
         tap = null
         if (e.type === 'pointercancel' || !t || t.multi || t.moved > 14 || e.timeStamp - t.t > 650) return

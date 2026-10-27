@@ -431,6 +431,27 @@ body.playing .g3-bar{max-width:820px;}
 .at-trash.arm svg path:first-child,.at-trash.arm svg rect{fill:#fff;}
 .at-trash.arm svg path:last-child{stroke:#E8574C;}
 @keyframes atArm{0%,100%{rotate:-7deg}50%{rotate:7deg}}
+/* Une création par fille (`core/mine.ts`, 27/10 : la Ferme à construire, Mon cartable, les
+   Monuments) — à l'ouverture, une carte chacune avec la photo de sa création (`.doll` : la petite
+   fille), la dernière bordée ; sous la barre de jeu (8 : la maison reste là). Chaque jeu pose
+   son fond (`--mine-bg`), le fond des cartes (`--mine-card`), la bordure de la dernière
+   (`--mine-last`) et la place de « Changer » et de la poubelle. */
+.mine-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
+  padding:80px 24px 24px;background:var(--mine-bg);}
+[data-who=""]>.mine-who{display:flex;}
+.mine-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
+  background:var(--mine-card,#FFF8F0);box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
+.mine-card.doll{width:clamp(180px,24vw,300px);aspect-ratio:1;border-radius:32px;overflow:visible;display:grid;place-items:center;}
+.mine-card.doll svg{width:62%;height:auto;}
+.mine-card:active{transform:scale(.95);}
+.mine-card.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--mine-last,var(--mango)),var(--e2);}
+.mine-photo,.mine-photo img{display:block;width:100%;height:100%;}
+.mine-photo img{object-fit:cover;pointer-events:none;}
+.mine-empty{display:grid;place-items:center;width:100%;height:100%;}
+.mine-empty svg{width:42%;height:auto;}
+.mine-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
+.mine-me,.mine-trash{position:absolute;z-index:6;transition:opacity .4s;}
+.mine-me .sn-tool,.mine-trash .sn-tool{width:60px;height:60px;}
 .at-paper.at-crumple{animation:atCrumple .43s ease-in forwards;}
 @keyframes atCrumple{0%{transform:none;filter:none}60%{transform:scale(.55) rotate(18deg);border-radius:40%;filter:brightness(.92)}
   100%{transform:translate(-40vw,30vh) scale(.08) rotate(160deg);border-radius:50%;opacity:0}}
@@ -1978,22 +1999,11 @@ body.playing .po-card{max-width:880px;}
 .fb-trash.hot{background:#E8574C;transform:scale(1.25) !important;}
 .fb-dn{position:absolute;right:18px;top:84px;z-index:6;}
 .fb-dn .sn-tool{width:60px;height:60px;}
-/* Une ferme par fille (11/10) : à l'ouverture, une carte chacune, la photo de sa ferme (sous la barre de jeu, 8 : la maison reste là) */
-.fb-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
-  padding:80px 24px 24px;background:linear-gradient(180deg,#BFE6F7 0%,#E4F4D6 100%);}
-.fb-wrap[data-who=""] .fb-who{display:flex;}
-.fb-wrap[data-who=""] .fb-tray,.fb-wrap[data-who=""] .fb-dn,.fb-wrap[data-who=""] .fb-me,.fb-wrap[data-who=""] .fb-penitem{display:none;}
-.fb-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
-  background:#EEF7E6;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
-.fb-card:active{transform:scale(.95);}
-.fb-card.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--mango),var(--e2);}
-.fb-photo,.fb-photo img{display:block;width:100%;height:100%;}
-.fb-photo img{object-fit:cover;pointer-events:none;}
-.fb-empty{display:grid;place-items:center;width:100%;height:100%;}
-.fb-empty svg{width:42%;height:auto;}
-.fb-card-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
-.fb-me{position:absolute;left:18px;top:84px;z-index:6;}
-.fb-me .sn-tool{width:60px;height:60px;}
+/* Une ferme par fille (11/10) : les cartes et « Changer » sont ceux de `core/mine.ts` ; la poubelle (27/10) sous « Changer » */
+.fb-wrap{--mine-bg:linear-gradient(180deg,#BFE6F7 0%,#E4F4D6 100%);--mine-card:#EEF7E6;}
+.fb-wrap[data-who=""] .fb-tray,.fb-wrap[data-who=""] .fb-dn,.fb-wrap[data-who=""] .fb-me,.fb-wrap[data-who=""] .fb-penitem,.fb-wrap[data-who=""] .fb-reset{display:none;}
+.fb-me{left:18px;top:84px;}
+.fb-reset{left:18px;top:176px;}
 /* Annuler, refaire : pâles quand il n'y a rien à défaire ou à refaire */
 .fb-undo{width:clamp(46px,4.4vw,56px);height:clamp(46px,4.4vw,56px);transition:opacity .2s;}
 .fb-undo.off{opacity:.35;}
@@ -2006,7 +2016,7 @@ body.playing .po-card{max-width:880px;}
   background:linear-gradient(135deg,#FFF4D6,#FFD3E6);box-shadow:0 0 0 4px #fff,0 8px 20px rgba(69,54,42,.22);}
 .fb-pen svg{width:78%;height:78%;}
 .fb-pen.nope{animation:fbNope .4s;}
-.fb-draw{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+.fb-draw{position:absolute;inset:0;z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   background:rgba(255,249,240,.66);backdrop-filter:blur(2px);transition:opacity .35s,transform .38s var(--spring);}
 .fb-draw[hidden]{display:none;}
 .fb-draw.out{opacity:0;transform:scale(.6) translateY(18%);pointer-events:none;}
@@ -2079,24 +2089,11 @@ body.playing .po-card{max-width:880px;}
 .ct-pal[data-step="deco"] .ct-opt.big{width:clamp(50px,5vw,62px);height:clamp(50px,5vw,62px);}
 .ct-sep{width:2px;align-self:stretch;background:rgba(69,54,42,.12);border-radius:2px;flex:none;}
 .ct-dot{display:block;width:58%;height:58%;border-radius:50%;margin:auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 0 0 2px rgba(69,54,42,.12);}
-.ct-me{position:absolute;right:18px;top:84px;z-index:6;}
-.ct-me .sn-tool{width:60px;height:60px;}
-/* La poubelle (27/10), sous la carte de la fille : deux touchers, comme dans l'Atelier */
-.ct-reset{position:absolute;right:18px;top:176px;z-index:6;transition:opacity .4s;}
-.ct-reset .sn-tool{width:60px;height:60px;}
-.ct-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
-  padding:80px 24px 24px;background:linear-gradient(180deg,#F8EEDD 0%,#FBD9B4 100%);}
-.ct-wrap[data-who=""] .ct-who{display:flex;}
+/* Un cartable par fille : les cartes, « Changer » et la poubelle (27/10, deux touchers) sont ceux de `core/mine.ts` */
+.ct-wrap{--mine-bg:linear-gradient(180deg,#F8EEDD 0%,#FBD9B4 100%);}
+.ct-me{right:18px;top:84px;}
+.ct-reset{right:18px;top:176px;}
 .ct-wrap[data-who=""] .ct-steps,.ct-wrap[data-who=""] .ct-pal,.ct-wrap[data-who=""] .ct-me,.ct-wrap[data-who=""] .ct-reset{display:none;}
-.ct-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
-  background:#FFF8F0;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
-.ct-card:active{transform:scale(.95);}
-.ct-card.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--mango),var(--e2);}
-.ct-photo,.ct-photo img{display:block;width:100%;height:100%;}
-.ct-photo img{object-fit:cover;pointer-events:none;}
-.ct-empty{display:grid;place-items:center;width:100%;height:100%;}
-.ct-empty svg{width:42%;height:auto;}
-.ct-card-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
 /* Fini : la petite fille part à l'école, plus rien d'autre à l'écran */
 .ct-wrap[data-phase="outro"] .ct-steps,.ct-wrap[data-phase="outro"] .ct-pal,.ct-wrap[data-phase="outro"] .ct-me,.ct-wrap[data-phase="outro"] .ct-reset{opacity:0;pointer-events:none;}
 /* Les Monuments (19/10) : les cartes des filles, la grille des huit monuments, puis
@@ -2130,22 +2127,15 @@ body.playing .po-card{max-width:880px;}
 .mn-guide path{fill:none;stroke:#fff;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 18;
   filter:drop-shadow(0 2px 3px rgba(69,54,42,.35));animation:mn-march 1s linear infinite;}
 @keyframes mn-march{to{stroke-dashoffset:-20;}}
-/* Les cartes des filles */
-.mn-who{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
-  padding:80px 24px 24px;background:linear-gradient(180deg,#BFE4F6 0%,#FBD9B4 100%);}
-.mn-wrap[data-who=""] .mn-who{display:flex;}
-.mn-card{width:clamp(180px,24vw,300px);aspect-ratio:1;border-radius:32px;border:6px solid var(--c);padding:0;display:grid;place-items:center;
-  background:#FFF8F0;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
-.mn-card svg{width:62%;height:auto;}
-.mn-card:active{transform:scale(.95);}
-.mn-card.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--lagoon),var(--e2);}
-.mn-card-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
+/* Les cartes des filles (la petite fille, sans photo), « Changer » et la poubelle : ceux de `core/mine.ts` */
+.mn-wrap{--mine-bg:linear-gradient(180deg,#BFE4F6 0%,#FBD9B4 100%);--mine-last:var(--lagoon);}
+.mn-reset{right:18px;top:176px;}
 /* La grille des monuments, en photos (le sien s'il est commencé) */
 .mn-grid{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;
   padding:84px 96px 24px;background:linear-gradient(180deg,#BFE4F6 0%,#F8EEDD 100%);}
 .mn-wrap:not([data-who=""])[data-mon=""] .mn-grid{display:flex;}
-.mn-wrap[data-mon=""] .mn-steps,.mn-wrap[data-mon=""] .mn-pal,.mn-wrap[data-mon=""] .mn-back,.mn-wrap[data-mon=""] .mn-guide,
-.mn-wrap[data-who=""] .mn-steps,.mn-wrap[data-who=""] .mn-pal,.mn-wrap[data-who=""] .mn-back{display:none;}
+.mn-wrap[data-mon=""] .mn-steps,.mn-wrap[data-mon=""] .mn-pal,.mn-wrap[data-mon=""] .mn-back,.mn-wrap[data-mon=""] .mn-guide,.mn-wrap[data-mon=""] .mn-reset,
+.mn-wrap[data-who=""] .mn-steps,.mn-wrap[data-who=""] .mn-pal,.mn-wrap[data-who=""] .mn-back,.mn-wrap[data-who=""] .mn-reset{display:none;}
 .mn-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,2vw,26px) clamp(14px,2.2vw,30px);width:min(100%,1180px);}
 .mn-cards .tool-item{min-width:0;}
 .mn-mcard{width:100%;aspect-ratio:4/3;border-radius:22px;border:5px solid #fff;padding:0;overflow:hidden;background:#FFF8F0;
@@ -2154,10 +2144,9 @@ body.playing .po-card{max-width:880px;}
 .mn-mcard img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;}
 .mn-empty{display:grid;place-items:center;width:100%;height:100%;}
 .mn-empty svg{width:46%;height:auto;}
-.mn-me{position:absolute;right:18px;top:84px;}
-.mn-me .sn-tool{width:60px;height:60px;}
+.mn-me{right:18px;top:84px;}
 /* Fini : la nuit tombe sur le monument, plus rien d'autre à l'écran */
-.mn-wrap[data-phase="outro"] .mn-steps,.mn-wrap[data-phase="outro"] .mn-pal,.mn-wrap[data-phase="outro"] .mn-back{opacity:0;pointer-events:none;}
+.mn-wrap[data-phase="outro"] .mn-steps,.mn-wrap[data-phase="outro"] .mn-pal,.mn-wrap[data-phase="outro"] .mn-back,.mn-wrap[data-phase="outro"] .mn-reset{opacity:0;pointer-events:none;}
 
 /* ============================================================
    DEVINE MON DESSIN (8/10) — la feuille de l'Atelier à gauche, le chat de

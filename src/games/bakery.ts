@@ -6,6 +6,7 @@ import { withRenderer } from '../core/portraits'
 import { sfx, preloadSfx } from '../core/sfx'
 import { sCrunch, tone } from '../core/audio'
 import { visible, handNow } from '../core/hand'
+import { Fingers, Spinner, perWidth, coast } from '../core/touchcam'
 
 /* 🎂 LE GÂTEAU de la Cuisine (c'était la Pâtisserie, du 5/10 au 27/10) —
    un gâteau sur son présentoir, dans une
@@ -889,7 +890,7 @@ function frame(s: State, dt: number) {
   s.t += dt
   s.phaseT += dt
   // Le plateau tourne au doigt (avec son élan) ; « Manger », il se remet de face (et rien d'autre ne le tourne)
-  if (s.phase === 'make') { s.rot += s.vRot * dt; s.vRot *= Math.pow(0.01, dt) }
+  if (s.phase === 'make') coast(s, dt, 0.01)
   else if (s.phase === 'prep') {
     s.rot += (s.prepWant - s.rot) * Math.min(1, dt * 4)
     if (Math.abs(s.prepWant - s.rot) < 0.004) s.rot = s.prepWant
@@ -1192,43 +1193,36 @@ export const cakeDish: Pick<GameDef, 'hand' | 'mount'> = {
     c.root.addEventListener('click', onClick)
 
     // Le doigt sur la scène : poser, tracer ; ailleurs, faire tourner le plateau
-    const pts = new Map<number, { x: number; y: number; moved: number; placing: boolean }>()
-    let lastT = 0
+    // Chaque doigt par son `pointerId` (`core/touchcam.ts`) ; celui qui reste après deux doigts ne tourne rien
+    const pts = new Fingers<{ placing: boolean }>()
+    const spin = new Spinner({ max: 3, perPx: () => me ? perWidth(me.stage.renderer.domElement, 120, 0.4)() : 0 })
     const onDown = (e: PointerEvent) => {
       const s = me
       if (!s || e.target !== s.stage.renderer.domElement) return
       // Pendant qu'on mange : un toucher prend une part
-      if (s.phase === 'eat') { pts.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: 0, placing: true }); return }
+      if (s.phase === 'eat') { pts.down(e, { placing: true }); return }
       if (s.phase !== 'make') return
       const onCake = s.step !== 'base' && !!pick(s, e.clientX, e.clientY, true)
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: 0, placing: onCake })
-      lastT = performance.now()
-      s.vRot = 0
+      pts.down(e, { placing: onCake })
+      spin.start(s)
       if (onCake && (s.step === 'creme' || (s.step === 'decor' && s.deco === 'vermicelles'))) onPlace(s, e.clientX, e.clientY, true)
     }
     const onMove = (e: PointerEvent) => {
       const s = me
-      const p = pts.get(e.pointerId)
-      if (!s || !p) return
-      const dx = e.clientX - p.x
-      p.moved += Math.abs(dx) + Math.abs(e.clientY - p.y)
-      p.x = e.clientX; p.y = e.clientY
+      const m = s ? pts.move(e) : null
+      if (!s || !m) return
+      const { f: p, dx } = m
       if (p.placing && (s.step === 'creme' || (s.step === 'decor' && s.deco === 'vermicelles'))) { onPlace(s, e.clientX, e.clientY, true); return }
       if (p.placing) return
-      if (pts.size > 1) return
-      const now = performance.now(), dts = Math.max(8, now - lastT) / 1000
-      lastT = now
-      const k = 1 / Math.max(120, s.stage.renderer.domElement.clientWidth * 0.4)
-      s.rot += dx * k
-      s.vRot = Math.max(-3, Math.min(3, s.vRot * 0.5 + dx * k / dts * 0.5))
+      if (p.multi) { spin.hold(s); return }
+      spin.turn(s, dx)
     }
     const onUp = (e: PointerEvent) => {
       const s = me
-      const p = pts.get(e.pointerId)
-      pts.delete(e.pointerId)
+      const p = pts.up(e)
       if (!s || !p) return
       if (s.phase === 'eat') { if (e.type !== 'pointercancel' && p.moved < 14) eatTap(s, e.clientX, e.clientY); return }
-      if (performance.now() - lastT > 90) s.vRot = 0
+      spin.release(s)
       if (e.type !== 'pointercancel' && p.moved < 12 && s.step !== 'creme') onPlace(s, e.clientX, e.clientY, false)
     }
     c.root.addEventListener('pointerdown', onDown)
