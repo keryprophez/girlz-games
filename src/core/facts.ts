@@ -23,10 +23,35 @@
    - les révisions se comptent en PARTIES, jamais en jours (aucun « reviens
      demain », règle 1) : un calcul su revient après 1, 2, 4 puis 8 parties ;
    - rien ne redescend tout seul avec le temps : seule une erreur fait
-     redescendre un calcul (« rien ne fane jamais »). */
+     redescendre un calcul (« rien ne fane jamais »).
+
+   Le même moteur pour les autres jeux d'Apprendre (27/10, « levier 4 ») :
+   il ne connaît que des CLÉS (`Keyed`), un calcul n'en est qu'un cas. Une
+   heure de l'Horloge, un pays du Tour du Monde, un mot de la Chasse aux
+   lettres, un montant du Marché sont des éléments comme les autres. Pour
+   eux (`recall`, tout en bas) :
+   - une série se tire SANS REMISE (`planSeries`) : jamais deux fois la même
+     question, sauf un raté qui revient trois questions plus loin
+     (`comeBack`) quand la série est assez longue — sinon à la série
+     suivante, en tête ;
+   - ce qui a été raté passe d'abord, puis quelques révisions de ce qui est
+     su, puis le jamais vu, puis ce qu'on n'a pas vu depuis le plus
+     longtemps ;
+   - « juste du premier coup » suffit pour monter : le temps n'y est pas
+     compté (les niveaux ne disent pas d'aide, seulement ce qui est su) ;
+   - une mémoire par jeu, commune à la famille, dans le localStorage
+     (`ferme:memoire:<jeu>`, compacte, bornée à `MEM_MAX` éléments), relue
+     prudemment (une entrée abîmée est oubliée, pas toute la mémoire) ;
+   - silencieuse : rien ne s'affiche, rien ne fane, rien ne se débloque. */
 
 export type Level = 0 | 1 | 2 | 3 | 4
 export const LV = { discover: 0, plants: 1, outline: 2, numbers: 3, heart: 4 } as const
+
+/** N'importe quel élément à retenir : un calcul, une heure, un pays, un
+    mot, un montant. La mémoire ne connaît que sa clé. */
+export interface Keyed {
+  key: string
+}
 
 /** Les quatre opérations. − et ÷ se lisent dans le tableau de + et de × :
     ce sont les mêmes tableaux, lus à l'envers. */
@@ -37,8 +62,7 @@ export type Op = 'add' | 'sub' | 'mul' | 'div'
     deux calculs (on lit la table à l'envers : dans la rangée du 7, où est
     56 ?) ; de même (a + b) − a = b : 11 − 7, c'est chercher 11 dans la
     rangée du 7. */
-export interface Fact {
-  key: string
+export interface Fact extends Keyed {
   a: number
   b: number
   op: Op
@@ -63,9 +87,10 @@ export interface Memory {
 
 export type Kind = 'learn' | 'review' | 'probe' | 'extra' | 'again'
 
-/** Une question de la récolte. `again` = un calcul raté qui revient. */
-export interface Item {
-  fact: Fact
+/** Une question de la récolte (ou d'une série). `again` = un calcul raté
+    qui revient. Le champ garde son nom de `fact`, quel que soit l'élément. */
+export interface Item<F extends Keyed = Fact> {
+  fact: F
   kind: Kind
 }
 
@@ -214,6 +239,20 @@ export function beginGame(mem: Memory) {
   mem.games++
 }
 
+export interface PlanOpts<F extends Keyed> {
+  /** Nombre de questions (douze pour une récolte). */
+  n?: number
+  /** Facilité d'un élément jamais vu (0 = le plus facile, sondé d'abord). */
+  ease?: (f: F) => number
+  rng?: Rng
+  /** Révisions réservées, au plus (trois par défaut). */
+  reviews?: number
+  /** Six éléments en cours et rien d'autre : les reposer une seconde fois
+      (le Potager, par défaut) ; sinon, en ouvrir de nouveaux (une série
+      sans remise). */
+  repeat?: boolean
+}
+
 /** Les douze questions d'une récolte, dans l'ordre où on les pose :
     - les calculs en cours d'apprentissage (niveaux 0 à 2) ;
     - jusqu'à trois révisions de calculs sus dont c'est le tour ;
@@ -222,24 +261,31 @@ export function beginGame(mem: Memory) {
     - de quoi compléter : les calculs sus les plus anciens.
     On commence par une question facile (un calcul su, ou le plus facile des
     jamais vus) : la première caisse se remplit toujours. */
-export function planHarvest(mem: Memory, pool: Fact[], opts: { n?: number; ease?: (f: Fact) => number; rng?: Rng } = {}): Item[] {
-  const n = Math.min(opts.n ?? HARVEST, Math.max(1, pool.length))
+export function planHarvest<F extends Keyed = Fact>(mem: Memory, pool: F[], opts: PlanOpts<F> = {}): Item<F>[] {
   const rng = opts.rng ?? Math.random
   const ease = opts.ease ?? (() => 0)
-  const rec = (f: Fact) => recOf(mem, f.key)
+  return arrange(mem, choose(mem, pool, opts, ease, rng), ease, rng)
+}
+
+/** Les éléments d'une récolte ou d'une série, pas encore dans l'ordre. */
+function choose<F extends Keyed>(mem: Memory, pool: F[], opts: PlanOpts<F>, ease: (f: F) => number, rng: Rng): Item<F>[] {
+  const n = Math.min(opts.n ?? HARVEST, Math.max(1, pool.length))
+  const revMax = opts.reviews ?? REVIEW_MAX
+  const repeat = opts.repeat ?? true
+  const rec = (f: F) => recOf(mem, f.key)
 
   const learning = pool.filter(f => rec(f).seen > 0 && rec(f).lv <= 2)
     .sort((x, y) => rec(x).lv - rec(y).lv || rec(x).last - rec(y).last)
   const known = pool.filter(f => rec(f).seen > 0 && rec(f).lv >= 3)
-  const overdue = (f: Fact) => mem.games - rec(f).last - rec(f).gap
+  const overdue = (f: F) => mem.games - rec(f).last - rec(f).gap
   const due = known.filter(f => isDue(mem, rec(f))).sort((x, y) => overdue(y) - overdue(x))
   const unseen = pool.filter(f => rec(f).seen === 0)
     .map(f => ({ f, k: ease(f) + rng() * 1.5 }))
     .sort((x, y) => x.k - y.k)
     .map(x => x.f)
 
-  const out: Item[] = []
-  const take = (fs: Fact[], kind: Kind, max: number) => {
+  const out: Item<F>[] = []
+  const take = (fs: F[], kind: Kind, max: number) => {
     for (const f of fs) {
       if (out.length >= n || max <= 0) break
       if (out.some(it => it.fact.key === f.key)) continue
@@ -249,22 +295,31 @@ export function planHarvest(mem: Memory, pool: Fact[], opts: { n?: number; ease?
   }
   // Les révisions d'abord réservées (au plus trois), pour qu'une grosse
   // pile de calculs en cours ne les chasse jamais complètement
-  const reviews = due.slice(0, Math.min(REVIEW_MAX, due.length))
+  const reviews = due.slice(0, Math.min(revMax, due.length))
   take(learning, 'learn', n - reviews.length)
-  take(reviews, 'review', REVIEW_MAX)
+  take(reviews, 'review', revMax)
   if (learning.length < WORK_MAX) take(unseen, 'probe', n)
   take(due, 'review', n)
   // Encore de la place : les calculs sus les plus anciens, puis (tout est
   // su et rien n'est dû) n'importe lesquels
   take([...known].sort((x, y) => rec(x).last - rec(y).last), 'extra', n)
-  // Six calculs en cours et rien d'autre : on les repose une seconde fois
-  // (entraînement, sans changer de niveau) plutôt que d'en ouvrir d'autres
-  for (let k = 0; out.length < n && learning.length && k < n; k++) {
-    out.push({ fact: learning[k % learning.length], kind: 'again' })
+  if (repeat) {
+    // Six calculs en cours et rien d'autre : on les repose une seconde fois
+    // (entraînement, sans changer de niveau) plutôt que d'en ouvrir d'autres
+    for (let k = 0; out.length < n && learning.length && k < n; k++) {
+      out.push({ fact: learning[k % learning.length], kind: 'again' })
+    }
+  } else {
+    // Une série sans remise : plutôt du neuf que deux fois la même question
+    take(unseen, 'probe', n)
   }
+  return out
+}
 
-  // Mélangées (entrelacement), sauf la première : la plus sûre
-  const confidence = (it: Item) => it.kind === 'probe' ? 2 - ease(it.fact) : rec(it.fact).lv
+/** L'ordre des questions : mélangées (entrelacement), sauf la première, la
+    plus sûre — la première caisse se remplit toujours. */
+function arrange<F extends Keyed>(mem: Memory, out: Item<F>[], ease: (f: F) => number, rng: Rng): Item<F>[] {
+  const confidence = (it: Item<F>) => it.kind === 'probe' ? 2 - ease(it.fact) : recOf(mem, it.fact.key).lv
   let first = 0
   out.forEach((it, i) => { if (confidence(it) > confidence(out[first])) first = i })
   const head = out.splice(first, 1)
@@ -272,7 +327,7 @@ export function planHarvest(mem: Memory, pool: Fact[], opts: { n?: number; ease?
 }
 
 /** Jamais deux fois le même calcul à la suite. */
-function spread(q: Item[]): Item[] {
+function spread<F extends Keyed>(q: Item<F>[]): Item<F>[] {
   for (let i = 1; i < q.length; i++) {
     if (q[i].fact.key !== q[i - 1].fact.key) continue
     const j = q.findIndex((it, k) => k > i && it.fact.key !== q[i].fact.key && (k + 1 >= q.length || q[k + 1].fact.key !== q[i].fact.key))
@@ -281,13 +336,17 @@ function spread(q: Item[]): Item[] {
   return q
 }
 
+/** L'importance d'une question, quand il faut en sacrifier une : un élément
+    qui revient (0) passe avant tout, un « de quoi compléter » (4) cède le
+    premier. */
+const PRIO: Record<Kind, number> = { again: 0, learn: 1, review: 2, probe: 3, extra: 4 }
+
 /** Un calcul raté revient `gapQ` questions plus loin, à la place d'une
     question de moindre importance : la récolte garde ses douze caisses.
     Renvoie false s'il n'y a plus la place de le reposer. */
-export function requeue(queue: Item[], at: number, fact: Fact, gapQ = 3): boolean {
+export function requeue<F extends Keyed>(queue: Item<F>[], at: number, fact: F, gapQ = 3): boolean {
   if (at >= queue.length - 1) return false
   const target = Math.min(queue.length - 1, at + gapQ)
-  const PRIO: Record<Kind, number> = { again: 0, learn: 1, review: 2, probe: 3, extra: 4 }
   // La question sacrifiée : la moins importante après la courante (la plus
   // loin à importance égale), jamais le même calcul
   let drop = -1
@@ -306,7 +365,7 @@ export function requeue(queue: Item[], at: number, fact: Fact, gapQ = 3): boolea
 
 /** Le niveau d'aide d'une question : un calcul jamais vu est sondé en
     « Nombres seuls », un calcul raté qui revient a ses légumes. */
-export function viewLevel(mem: Memory, it: Item): Level {
+export function viewLevel(mem: Memory, it: Item<Keyed>): Level {
   if (it.kind === 'again') return LV.plants
   const r = recOf(mem, it.fact.key)
   if (r.seen === 0) return LV.numbers
@@ -329,7 +388,7 @@ export interface Outcome {
 
 /** Enregistre la réponse à une question. Un calcul qui revient (`again`)
     ne change pas de niveau : on a déjà noté son erreur. */
-export function record(mem: Memory, it: Item, o: Outcome) {
+export function record(mem: Memory, it: Item<Keyed>, o: Outcome) {
   const key = it.fact.key
   const r = { ...recOf(mem, key) }
   const first = r.seen === 0
@@ -465,5 +524,175 @@ export function saveMemory(game: string, mem: Memory) {
   } catch (e) {
     // Quota plein ou stockage bloqué : la partie continue, sans mémoire
     console.warn('Mémoire des calculs non enregistrée', e)
+  }
+}
+
+/* ---------- Les séries des autres jeux d'Apprendre (27/10) ----------
+   L'Horloge, le Tour du Monde, la Chasse aux lettres, le Marché : le même
+   moteur, sans remise. Voir l'en-tête du fichier. */
+
+export interface SeriesOpts<F extends Keyed> {
+  rng?: Rng
+  /** Facilité d'un élément jamais vu (par défaut : tous égaux, au hasard). */
+  ease?: (f: F) => number
+  /** Révisions réservées, au plus. Par défaut une question sur quatre (aucune
+      dans une série de trois, deux sur huit, trois sur douze) : une série
+      courte garde sa place à ce qui a été raté. 0 : pas de révision de ce
+      qui est su (un montant du Marché n'est pas une leçon à revoir). */
+  reviews?: number
+}
+
+/** Une série de `n` questions SANS REMISE : jamais deux fois le même
+    élément (moins si le tas est plus petit). D'abord ce qui a été raté,
+    quelques révisions, le jamais vu, puis le moins récent ; la plus sûre en
+    tête, le reste mélangé. */
+export function planSeries<F extends Keyed>(mem: Memory, pool: F[], n: number, opts: SeriesOpts<F> = {}): Item<F>[] {
+  return planMix(mem, [{ pool, n }], opts)
+}
+
+/** Une série tirée de plusieurs tas, `n` de chacun, mêlés (le Tour du Monde
+    à la fleur : autant d'animaux que de pays). Sans remise, d'un tas à
+    l'autre aussi. */
+export function planMix<F extends Keyed>(mem: Memory, parts: { pool: F[]; n: number }[], opts: SeriesOpts<F> = {}): Item<F>[] {
+  const rng = opts.rng ?? Math.random
+  const ease = opts.ease ?? (() => 0)
+  const out: Item<F>[] = []
+  for (const { pool, n } of parts) {
+    if (n <= 0 || !pool.length) continue
+    const reviews = opts.reviews ?? Math.min(REVIEW_MAX, Math.floor(n / 4))
+    for (const it of choose(mem, pool, { n, reviews, repeat: false }, ease, rng)) {
+      if (!out.some(o => o.fact.key === it.fact.key)) out.push(it)
+    }
+  }
+  return arrange(mem, out, ease, rng)
+}
+
+/** Combien de questions plus loin revient un raté : trois (deux questions
+    entre les deux). */
+export const COME_BACK = 3
+
+/** Un raté revient trois questions plus loin, à la place de la question la
+    moins importante (la série garde sa longueur) — si la série est assez
+    longue ; sinon il attend la série suivante, où il passe en tête. Un
+    élément qui revient déjà ne revient pas une troisième fois.
+
+    Plus strict que le `requeue` du Potager : la question sacrifiée est prise
+    à partir de là où il revient, jamais entre les deux — rien n'avance, et
+    un autre raté déjà en route garde ses trois questions d'écart. */
+export function comeBack<F extends Keyed>(queue: Item<F>[], at: number): boolean {
+  const it = queue[at]
+  if (!it || it.kind === 'again') return false
+  const target = at + COME_BACK
+  if (target > queue.length - 1) return false
+  let drop = -1
+  for (let i = queue.length - 1; i >= target; i--) {
+    const q = queue[i]
+    if (q.kind === 'again' || q.fact.key === it.fact.key) continue
+    if (drop < 0 || PRIO[q.kind] > PRIO[queue[drop].kind]) drop = i
+  }
+  if (drop < 0) return false
+  queue.splice(drop, 1)
+  queue.splice(target, 0, { fact: it.fact, kind: 'again' })
+  return true
+}
+
+/** Au plus tant d'éléments retenus par jeu : l'Horloge en a 360 en tout,
+    le Tour du Monde 70, les Lettres 22 ; seul le Marché, aux montants sans
+    fin, peut dépasser. */
+export const MEM_MAX = 400
+
+/** Garde la mémoire sous `max` éléments : on oublie d'abord les éléments
+    SUS les plus anciens (un montant payé il y a longtemps), jamais un raté
+    avant eux. Un élément oublié redevient « jamais vu » : rien ne descend. */
+export function prune(mem: Memory, max = MEM_MAX) {
+  const keys = Object.keys(mem.facts)
+  if (keys.length <= max) return
+  const rec = (k: string) => mem.facts[k]
+  const learning = (k: string) => Number(rec(k).lv < LV.numbers)
+  keys.sort((x, y) => learning(x) - learning(y) || rec(x).last - rec(y).last)
+  for (const k of keys.slice(0, keys.length - max)) delete mem.facts[k]
+}
+
+/** La mémoire en JSON compact : `[niveau, partie, écart, vu]` par élément. */
+export function packMemory(mem: Memory, max = MEM_MAX): string {
+  prune(mem, max)
+  const facts: Record<string, number[]> = {}
+  for (const [k, r] of Object.entries(mem.facts)) facts[k] = [r.lv, r.last, r.gap, r.seen]
+  return JSON.stringify({ v: 1, games: mem.games, facts })
+}
+
+/** Relue prudemment : illisible → une mémoire neuve (le jeu reste jouable) ;
+    une entrée abîmée est oubliée, les autres sont gardées. */
+export function unpackMemory(raw: string | null | undefined, max = MEM_MAX): Memory {
+  const mem = emptyMemory()
+  if (!raw) return mem
+  let m: unknown
+  try { m = JSON.parse(raw) } catch { return mem }
+  if (!m || typeof m !== 'object') return mem
+  const { v, games, facts } = m as { v?: unknown; games?: unknown; facts?: unknown }
+  if (v !== 1 || !Number.isSafeInteger(games) || (games as number) < 0) return mem
+  if (!facts || typeof facts !== 'object' || Array.isArray(facts)) return mem
+  mem.games = games as number
+  for (const [k, e] of Object.entries(facts as Record<string, unknown>)) {
+    if (!k || k.length > 64 || !Array.isArray(e) || e.length !== 4 || !e.every(x => Number.isSafeInteger(x))) continue
+    const [lv, last, gap, seen] = e as number[]
+    if (lv < 0 || lv > LV.heart || last < -1 || gap < 0 || gap > GAP_MAX || seen < 1) continue
+    mem.facts[k] = { lv: lv as Level, last: Math.min(last, mem.games), gap, seen }
+  }
+  prune(mem, max)
+  return mem
+}
+
+/** Où se range la mémoire : le localStorage de la tablette (ou, pour les
+    tests, n'importe quelle étagère). */
+export interface Shelf {
+  get(key: string): string | null
+  set(key: string, value: string): void
+}
+
+const tablet: Shelf = {
+  get: k => { try { return localStorage.getItem(k) } catch { return null } },
+  set: (k, v) => {
+    try { localStorage.setItem(k, v) } catch (e) {
+      // Quota plein ou stockage bloqué : la partie continue, sans mémoire
+      console.warn('Mémoire du jeu non enregistrée', e)
+    }
+  }
+}
+
+export const memoryKey = (game: string) => `ferme:memoire:${game}`
+
+/** La mémoire d'un jeu d'Apprendre, prête à l'emploi. */
+export interface Recall {
+  readonly mem: Memory
+  /** Une nouvelle série de `n` questions : l'horloge des révisions avance
+      d'une partie, puis le tirage sans remise. */
+  series<F extends Keyed>(pool: F[], n: number, opts?: SeriesOpts<F>): Item<F>[]
+  /** Pareil, tirée de plusieurs tas (`planMix`). */
+  mix<F extends Keyed>(parts: { pool: F[]; n: number }[], opts?: SeriesOpts<F>): Item<F>[]
+  /** La réponse à une question : juste du premier coup, ou ratée. Gardée
+      tout de suite (une partie quittée en route compte). */
+  note(it: Item<Keyed>, ok: boolean): void
+}
+
+/** Ouvre la mémoire d'un jeu (`ferme:memoire:<jeu>`, commune à la famille). */
+export function recall(game: string, shelf: Shelf = tablet): Recall {
+  const key = memoryKey(game)
+  const mem = unpackMemory(shelf.get(key))
+  const save = () => shelf.set(key, packMemory(mem))
+  return {
+    mem,
+    series(pool, n, opts) {
+      beginGame(mem); save()
+      return planSeries(mem, pool, n, opts)
+    },
+    mix(parts, opts) {
+      beginGame(mem); save()
+      return planMix(mem, parts, opts)
+    },
+    note(it, ok) {
+      record(mem, it, { ok, fast: ok })
+      save()
+    }
   }
 }
