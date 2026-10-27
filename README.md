@@ -29,7 +29,14 @@ animaux chantent avec leurs vraies voix, à toi de rejouer la chanson) et
 Puissance 4, avec les personnages 3D de la ferme (vache, poule, cochon,
 canard, mouton…) en pions ; les Perles Miroir (une plaque à picots en 3D :
 on pose les perles qui complètent le reflet d'un papillon, d'une fraise ou
-d'une tête de cochon, puis le fer les fait fondre et l'objet s'envole).
+d'une tête de cochon, puis le fer les fait fondre et l'objet s'envole) ;
+1, 2, 3… Soleil ! (le doigt posé, le chat avance sur le chemin de la ferme ;
+l'épouvantail bat trois coups de tambour et se retourne : qui bouge recule,
+et le cochon et le mouton courent aussi) ; le Jeu des différences (deux
+petites fermes en 3D qu'on fait tourner ensemble, des différences tirées au
+hasard, et à la flamme, cachées derrière la grange) ; le Labyrinthe à bille
+(un jouet en bois, des trous, une bille d'acier : on penche la tablette, ou
+le plateau suit le doigt).
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
 le Potager (LE jeu des calculs : on choisit ses opérations, + − × ÷, puis la
@@ -44,7 +51,11 @@ la Terre et ses villes la nuit, les anneaux de Saturne, les lunes de Jupiter ;
 une fusée qu'on suit en vol, le temps qui file, un mode « Trouve »),
 Suites logiques, Chasse
 aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
-phrase avec le bon signe, et le point s'imprime tout seul).
+phrase avec le bon signe, et le point s'imprime tout seul), le Tracteur à
+programmer (une file de flèches pour aller chercher l'animal sur le pré
+quadrillé, comme le Bee-Bot de l'école ; à la flamme, la boucle « ×2 ») et
+le Géoplan (des élastiques tendus d'un picot à l'autre pour reproduire une
+figure ; à la flamme, agrandie, tournée ou en miroir).
 
 **Créer** — sans score : Habille-toi (la petite fille à couettes en 3D,
 qu'on habille — robe ou tee-shirt, couleurs, coiffure, chapeau, lunettes —
@@ -91,7 +102,12 @@ on les construit pièce par pièce sur leur forme en transparent, on trace au
 doigt le grand câble du pont, puis on les peint, on les couvre de
 guirlandes, de drapeaux et de cœurs, les animaux de la ferme viennent les
 voir, et la nuit tombe sur un feu d'artifice ; un livre de monuments par
-fille).
+fille), la Poterie (le tour qui tourne, la terre qu'on étire, évase et
+creuse au doigt, la peinture en bandes, le four qui la ressort émaillée,
+l'étagère), le Château de sable (la pelle, les moules, les douves que le
+seau d'eau remplit, puis la marée qui monte au coucher du soleil) et
+l'Aquarium (son poisson dessiné devient une peluche qui nage, vient quand
+on tapote la vitre — sans Claude : rien ne quitte la tablette).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se
@@ -103,7 +119,8 @@ enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
 quand le combo monte, vrais bruitages foley sur les chocs, mise à jour
 automatique de la PWA. Une seule sauvegarde pour la famille, sans prénom ni
 photo ; les jeux où chacune a SA création (la Ferme, le Cartable, les
-Monuments) ouvrent sur deux cartes, Jade et Joyce.
+Monuments, la Poterie, le Château de sable, l'Aquarium) ouvrent sur deux
+cartes, Jade et Joyce.
 
 **Ce qu'il n'y aura jamais** : monnaie, boutique, paliers de déblocage ni
 collection à compléter (l'album d'autocollants est sorti le 22/09), séries

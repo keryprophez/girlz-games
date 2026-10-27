@@ -89,7 +89,13 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `badges.ts` · `icons.ts` · `posters.ts` | vignettes dessinées, icônes SVG, liste des affiches (écrite par `posters.mjs`) |
 | `sprites.ts` · `portraits.ts` · `pictures.ts` · `lineart.ts` · `diskcache.ts` | photos des imagiers ; personnages 3D rendus en images ; images du Puzzle ; pages à colorier ; cache sur le disque |
 | `critters.ts` · `doll3d.ts` + `character.ts` | les animaux de la ferme en formes rondes (`FARM`, `FARM_MORE`) ; la petite fille d'Habille-toi et son look |
-| `farm3d.ts` | la ferme en diorama (Cache-Cache, la Ferme à construire) : cachettes, places, pièces, carte ×4 |
+| `farm3d.ts` | la ferme en diorama (Cache-Cache, la Ferme à construire, les Différences, le Tracteur, Soleil) : cachettes, places, pièces, carte ×4, l'épouvantail |
+| `mine.ts` | **une création par fille** (Ferme à construire, Mon cartable, Monuments, Poterie, Château de sable, Aquarium) : les cartes Jade / Joyce, la photo, le coffre `ferme:<jeu>:<qui>`, « Changer », la poubelle à deux touchers (`twoTaps`), `calm` contre le double toucher — testé |
+| `touchcam.ts` | les doigts sur une scène 3D : `Fingers` (chaque doigt par son `pointerId`, le doigt qui reste après deux ne fait rien), `Spinner` (tourner avec élan) — testé |
+| `labyrinth.ts` | le générateur de labyrinthes, leur chemin et leurs distances (Labyrinthe, Labyrinthe à bille) |
+| `soleil.ts` · `differences.ts` · `bille.ts` | la course de 1, 2, 3… Soleil ! ; le tirage d'une manche des Différences ; le plateau et la physique de la bille (pas fixe) — testés |
+| `tracteur.ts` · `geoplan.ts` | le pré quadrillé et le programme du Tracteur ; les figures du Géoplan — testés |
+| `pottery.ts` + `pottery3d.ts` · `sand.ts` + `beach3d.ts` · `fishtank.ts` + `aquarium3d.ts` | la Poterie, le Château de sable, l'Aquarium : la logique (testée) et la scène |
 | `facts.ts` | la mémoire d'Apprendre : celle des calculs du Potager (aides, révisions espacées, « presque ») et, depuis le 27/10, les séries sans remise de l'Horloge, du Tour du Monde, des Lettres et du Marché (`recall(jeu)`, `ferme:memoire:<jeu>` ; un raté revient trois questions plus loin) — testé |
 | `plants.ts` | les dix plantes illustrées du Potager |
 | `cosmos.ts` · `rocket3d.ts` | le système solaire de l'Espace (rendu HDR à part) et sa fusée |
@@ -205,7 +211,8 @@ formes pleines : carton titre, chargement), **son affiche**
 (`hand`) : une fonction qui rend le geste à montrer selon la phase, ou `null`
 quand le jeu n'attend rien. Ses cibles : un élément (`visible(root, sel)`), un
 point d'écran (`toScreen` en 3D) ou une fraction de l'arène ; gestes `tap`,
-`drag`, `slice`, `trace`, `taps`, et `choose` (« l'un de ceux-là », sans
+`drag`, `slice`, `trace`, `taps`, `hold` (garder le doigt posé), `tilt`
+(pencher la tablette) et `choose` (« l'un de ceux-là », sans
 appuyer : **jamais la réponse dans Apprendre**). Elle vient à la première
 partie, puis après 7 s sans toucher (15 s dans Créer) ; un toucher la chasse ;
 `handNow()` la fait venir tout de suite quand le jeu attend un geste NOUVEAU.
@@ -214,10 +221,12 @@ partie, puis après 7 s sans toucher (15 s dans Créer) ; un toucher la chasse ;
 choix de joueuse et la princesse sont sortis) : meilleure note par jeu, look
 de la petite fille, collier et pendentif des Bijoux, vitrine des créations,
 voix enregistrées, minuteur. Les créations « par fille » (la Ferme à
-construire, Mon cartable, les Monuments : deux cartes Jade / Joyce à
-l'ouverture, avec la photo de leur création) sont rangées par chaque jeu sous
-ses propres clés `ferme:<jeu>:<qui>` — **ne jamais changer ces clés**, ni
-`owner` (la clé de l'Atelier).
+construire, Mon cartable, les Monuments, la Poterie, le Château de sable,
+l'Aquarium : deux cartes Jade / Joyce à l'ouverture, avec la photo de leur
+création) passent par `core/mine.ts`, sous les clés `ferme:<jeu>:<qui>` —
+**ne jamais changer ces clés**, ni `owner` (la clé de l'Atelier). Les
+images coûteuses à rendre (le pré de l'accueil, les portraits, les pièces,
+les pages à colorier) sont gardées sur le disque (`diskcache.ts`).
 
 ---
 

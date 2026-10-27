@@ -13,22 +13,23 @@ jeu par itération, livré, joué, capturé.
 
 ---
 
-## Le catalogue (27/10) — 30 jeux
+## Le catalogue (27/10) — 38 jeux
 
 | Univers | Jeux |
 |---|---|
-| **Jouer** (11) — on s'amuse, on peut perdre | La Tour de Glace · Ninja Verger · Le Flipper · Cache-Cache · Devine mon dessin · Labyrinthe · Puzzle (et son mode Taquin) · Memory · Le Chœur · Puissance 4 · Perles Miroir |
-| **Apprendre** (9) — on travaille, jamais de sanction | Quelle heure ? · Le Potager (+ − × ÷) · Le Marché · L'Intrus · Le Tour du Monde · Voyage dans l'Espace · Suites Logiques · Chasse aux lettres · La Poste aux Phrases |
-| **Créer** (10) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments |
+| **Jouer** (14) — on s'amuse, on peut perdre | La Tour de Glace · Ninja Verger · Le Flipper · Cache-Cache · Devine mon dessin · Labyrinthe · Puzzle (et son mode Taquin) · Memory · Le Chœur · Puissance 4 · Perles Miroir · 1, 2, 3… Soleil ! · Le Jeu des différences · Le Labyrinthe à bille |
+| **Apprendre** (11) — on travaille, jamais de sanction | Quelle heure ? · Le Potager (+ − × ÷) · Le Marché · L'Intrus · Le Tour du Monde · Voyage dans l'Espace · Suites Logiques · Chasse aux lettres · La Poste aux Phrases · Le Tracteur · Le Géoplan |
+| **Créer** (13) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments · La Poterie · Le Château de sable · L'Aquarium |
 
 Jeux en vraie 3D : la Tour, le Flipper, Cache-Cache, Labyrinthe, Puzzle,
-Memory, le Chœur, Perles Miroir, l'Espace, Suites Logiques, Tour du Monde,
-Habille-toi, les Bijoux, la Cuisine, l'Animal qui répète, la Ferme à
-construire, Mon cartable, les Monuments.
+Memory, le Chœur, Perles Miroir, Soleil, les Différences, la Bille, l'Espace,
+Suites Logiques, Tour du Monde, le Tracteur, le Géoplan, Habille-toi, les
+Bijoux, la Cuisine, l'Animal qui répète, la Ferme à construire, Mon cartable,
+les Monuments, la Poterie, le Château de sable, l'Aquarium.
 
 ---
 
-## En cours — le lot du 27/10 (plan validé : « GO », « pousse tout sur main »)
+## Le lot du 27/10 — fait (plan validé : « GO », « pousse tout sur main »)
 
 1. ✅ **Couper** : le choix de joueuse (masqué depuis le 10/09) et la
    princesse (partie le 6/10) sortent du code — une seule sauvegarde « famille »
@@ -40,33 +41,37 @@ construire, Mon cartable, les Monuments.
    minuteurs qui survivent à un changement de mode, Devine mon dessin, écran
    de fin relancé par une tape de trop, chargement infini si la 3D échoue,
    Lettres, graines de la glace, Intrus, Espace, micro qui reste ouvert,
-   portraits rendus en pleine partie, fuites de la Cuisine et des paillettes…
-3. **Leviers 2 et 3** : `core/mine.ts` (une création par fille : cartes
-   Jade / Joyce, photo, sauvegarde aux mêmes clés, « Changer », la poubelle
-   pour la Ferme, le Cartable ET les Monuments, « Fini » protégé du double
-   toucher) ; `core/touchcam.ts` (les doigts lus une fois pour toutes : objets
-   qu'on tourne, plateau de la ferme ; le globe et l'Espace seulement si rien
-   ne change à l'usage).
+   portraits rendus en pleine partie, fuites de la Cuisine et des paillettes ;
+   le pré de l'accueil et les portraits gardés sur le disque (ils se
+   rendaient à chaque ouverture : 17 s de fil bloqué en 3D logicielle).
+3. ✅ **Leviers 2 et 3** : `core/mine.ts` (une création par fille : cartes
+   Jade / Joyce, photo, sauvegarde aux mêmes clés, « Changer », la poubelle à
+   deux touchers pour la Ferme, le Cartable ET les Monuments, « Fini » protégé
+   du double toucher) ; `core/touchcam.ts` (les doigts suivis un par un, le
+   tour avec élan, pour les objets qu'on tourne et le plateau de la ferme ;
+   le globe et l'Espace gardent leurs caméras).
 4. ✅ **Levier 4** : la mémoire du Potager (`facts.ts`) rendue générique, pour
    l'Horloge, le Tour du Monde, les Lettres et le Marché (tirage sans remise,
-   un raté revient trois questions plus loin, rien ne fane). À la fleur du
-   Tour du Monde, une manche est maintenant moitié animaux, moitié pays (au
-   lieu d'un pile ou face à chaque question) — à confirmer par le père.
+   un raté revient trois questions plus loin, rien ne fane).
+5. ✅ **Huit nouveaux jeux** (choisis le 27/10), faits en parallèle par trois
+   sessions, chacun avec sa vignette, son affiche, sa main et son bot :
+   - **Jouer** : 1, 2, 3… Soleil ! (l'épouvantail de la ferme se retourne ;
+     le cochon et le mouton courent aussi) · le Jeu des différences (deux
+     fermes de Cache-Cache qu'on tourne ensemble ; des différences cachées à
+     la flamme) · le Labyrinthe à bille (sa propre tuile : la tablette
+     inclinée, ou le doigt).
+   - **Apprendre** : le Tracteur à programmer (des flèches sur un pré
+     quadrillé) · le Géoplan (élastiques sur la plaque à picots).
+   - **Créer** : la Poterie (le tour, la peinture, le four) · le Château de
+     sable (moules, douves, la marée) · l'Aquarium (son poisson dessiné qui
+     nage, sans Claude). Les trois rangent une création par fille
+     (`core/mine.ts`).
 
-## Ensuite — huit nouveaux jeux (choisis le 27/10, plan présenté)
-
-- **Apprendre** : le Tracteur à programmer (codage de déplacements sur un pré
-  quadrillé de la ferme) · le Géoplan (élastiques sur la plaque à picots des
-  Perles ; le Tangram avait été refusé le 29/09).
-- **Créer** : la Poterie (le tour, la peinture, le four) · l'Aquarium des
-  dessins (son poisson dessiné devient une peluche qui nage, sans Claude) ·
-  le Château de sable (moules, douves, la marée qui monte).
-- **Jouer** : 1, 2, 3… Soleil ! · le Jeu des différences (deux fermes en
-  diorama) · le Labyrinthe à bille (incliner la tablette).
-- Méthode : par lots de deux ou trois, le décor 3D en maquette d'abord (« oui »
-  du père), puis un jeu à la fois avec vignette, affiche, main et bot.
-- **Questions ouvertes** : le Labyrinthe à bille, nouvelle tuile ou 4ᵉ mode du
-  Labyrinthe ? L'épouvantail qui se retourne dans Soleil ?
+**À confirmer par le père** : la pizza n'a pas de niveau (cuisson de 7 s) ;
+le gâteau a la musique de la cuisine ; à la fleur du Tour du Monde, une
+manche est moitié animaux, moitié pays (au lieu d'un pile ou face à chaque
+question) ; le Labyrinthe à bille a sa propre tuile (pas un 4ᵉ mode du
+Labyrinthe) ; l'épouvantail de Soleil.
 
 ## À mesurer sur la tablette (`?fps`)
 
@@ -76,8 +81,12 @@ pièces, le Feu d'artifice pendant le bouquet, le Flipper, Cache-Cache la nuit
 et sur la carte ×4, la Ferme à construire pleine (36 pièces, 20 animaux), la
 Cuisine (gâteau plein, la pizza), Mon cartable à paillettes, la Tour Eiffel
 des Monuments, les Bijoux (plaque pleine, douze pots), Perles Miroir (144
-perles). Le seuil de la qualité automatique (30 ms) est à confirmer. Les jeux
-qui rament sont à nommer par le père, un par un.
+perles), et les huit du 27/10 — surtout le Jeu des différences (deux fermes,
+environ 450 appels de dessin pendant une rotation, une ombre en 2048 : sinon
+la ramener à 1024) et le Labyrinthe à bille (le sens du gyroscope en
+paysage, jamais essayé sur une vraie tablette ; 16° d'inclinaison donnent
+la pleine pente). Le seuil de la qualité automatique (30 ms) est à
+confirmer. Les jeux qui rament sont à nommer par le père, un par un.
 
 À essayer pour de vrai : le micro de l'Animal qui répète (volume, écho), la
 voix sur la tablette, le premier vrai dessin de Devine mon dessin et de Mon
@@ -113,7 +122,9 @@ dessin prend vie (puis régler les consignes sur de vrais dessins).
   Claude est un secret du Worker.
 - **11/10** : Apprendre, c'est pour travailler (les Perles Miroir passent dans
   Jouer).
-- **27/10** : une seule sauvegarde pour la famille ; la Cuisine.
+- **27/10** : une seule sauvegarde pour la famille ; la Cuisine ; huit
+  nouveaux jeux (Soleil, Différences, Bille, Tracteur, Géoplan, Poterie,
+  Château de sable, Aquarium).
 
 ## Sortis — ne pas les refaire sans demande
 
