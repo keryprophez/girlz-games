@@ -4,6 +4,7 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
 import { visible } from '../core/hand'
+import { comeBack, recall, type Item, type Keyed, type Recall } from '../core/facts'
 
 /* Quelle heure ? — apprendre à LIRE l'heure pas à pas, en cinq modes :
    Découvre (manipule l'horloge, elle dit l'heure), Les heures (la petite
@@ -32,11 +33,22 @@ import { visible } from '../core/hand'
    - les réglages sont deux grosses rangées −/+ avec le dessin de l'aiguille
      qu'elles bougent (la courte, la longue), à droite de l'horloge, et un
      gros bouton vert « Valide » ; les modes sont de grosses icônes dessinées
-     (une horloge qui montre la courte, la longue…) avec leur mot en grand. */
+     (une horloge qui montre la courte, la longue…) avec leur mot en grand.
+
+   La mémoire (27/10, `core/facts.ts`) : chaque heure est un élément — 7 h
+   dans Heures, 25 dans Minutes, 3:45 dans Trouve, et 3:45 à régler dans
+   Règle (lire et régler s'apprennent à part). Une série se tire SANS REMISE
+   (avant, au hasard avec remise : 95 % des séries de huit Heures posaient
+   deux fois la même, près d'une sur deux deux fois de suite) : d'abord les
+   heures ratées, puis ce qui n'a pas été vu depuis longtemps. Une heure ratée revient trois questions plus
+   loin ; dans Règle, « ratée » = une première validation fausse. La mémoire
+   est muette : rien ne s'affiche. */
 
 type Mode = 'discover' | 'hours' | 'minutes' | 'quiz' | 'set'
 type Hand = 'hour' | 'minute'
 interface FaceOpts { minuteRing?: boolean; hideMinute?: boolean; fadeHour?: boolean; grab?: Hand | null }
+/** Une question de la série : l'heure à lire ou à régler. */
+interface Tick extends Keyed { h: number; m: number }
 
 interface State {
   mode: Mode
@@ -58,6 +70,11 @@ interface State {
   /** Numéro de la série : changer de mode fait taire la question suivante
       de l'ancien mode. */
   gen: number
+  /** Les questions de la série, tirées sans remise ; la question en cours
+      est `queue[round]`. */
+  queue: Item<Tick>[]
+  /** Règle : une validation fausse a déjà été notée pour cette heure. */
+  missed: boolean
 }
 
 const RING_KEY = 'ferme:horloge:minutes'
@@ -78,6 +95,8 @@ const RING_ICON = `<svg class="ck-mini" viewBox="0 0 100 100" aria-hidden="true"
 
 let ck: State | null = null
 let ctx: GameContext
+/** La mémoire de l'horloge (`ferme:memoire:clock`), ouverte au montage. */
+let memo: Recall
 
 /** Une petite horloge dessinée pour les boutons : on y voit QUELLE aiguille
     compte (la courte, la longue, les deux), plus un badge pour le geste. */
@@ -192,6 +211,10 @@ function setMode(me: State, mode: Mode) {
   $('ckDone').parentElement!.style.display = mode === 'discover' ? '' : 'none'
   $('ckCtrl').innerHTML = ''
   $('ckOpts').innerHTML = ''
+  if (mode !== 'discover') {
+    me.queue = memo.series(seriesPool(mode), mode === 'set' ? 6 : 8)
+    me.total = me.queue.length
+  }
   if (mode === 'discover') loadDiscover(me)
   if (mode === 'hours') nextHours(me)
   if (mode === 'minutes') nextMinutes(me)
@@ -257,8 +280,36 @@ function loadDiscover(me: State) {
   refreshDiscover(me)
 }
 
+/* ---- La série : tirée sans remise dans la mémoire ---- */
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1)
+/** Les minutes du mode Minutes, selon le niveau. */
+const minuteSteps = () => ctx.byTier([0, 5, 10, 15, 20, 30, 40, 45, 50], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], Array.from({ length: 59 }, (_, k) => k + 1).filter(m => m % 5 !== 0))
+/** Les minutes d'une heure complète (Trouve, Règle), selon le niveau. */
+const timeSteps = () => ctx.byTier([0, 30], [0, 15, 30, 45], [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
+
+/** Tout ce qu'un mode peut demander à ce niveau : une clé par heure. Lire
+    (`q:`) et régler (`r:`) 3:45 sont deux éléments. */
+function seriesPool(mode: Mode): Tick[] {
+  if (mode === 'hours') return HOURS.map(h => ({ key: `h:${h}`, h, m: 0 }))
+  if (mode === 'minutes') return minuteSteps().map(m => ({ key: `m:${m}`, h: 0, m }))
+  const tag = mode === 'set' ? 'r' : 'q'
+  return HOURS.flatMap(h => timeSteps().map(m => ({ key: `${tag}:${digital(h, m)}`, h, m })))
+}
+
+/** L'heure de la question en cours. */
+const current = (me: State): Tick => me.queue[me.round].fact
+
+/** La réponse, gardée en silence ; une heure ratée revient trois questions
+    plus loin (ou en tête de la prochaine série). */
+function noteAnswer(me: State, ok: boolean) {
+  const it = me.queue[me.round]
+  if (!it) return
+  memo.note(it, ok)
+  if (!ok) comeBack(me.queue, me.round)
+}
+
 /* ---- Quiz (heures / minutes / complet) ---- */
-function askOptions(me: State, opts: string[], good: string, onDone: () => void) {
+function askOptions(me: State, opts: string[], good: string, onDone: (ok: boolean) => void) {
   const box = $('ckOpts')
   box.innerHTML = ''
   shuffle([...opts]).forEach(t => {
@@ -274,7 +325,7 @@ function askOptions(me: State, opts: string[], good: string, onDone: () => void)
         document.querySelectorAll<HTMLButtonElement>('.qopt').forEach(x => { if (x.textContent === good) x.classList.add('good') })
       }
       paintSide(me)
-      onDone()
+      onDone(t === good)
     }
     box.appendChild(b)
   })
@@ -292,25 +343,24 @@ function advance(me: State, next: (me: State) => void) {
 }
 
 function nextHours(me: State) {
-  me.total = 8
-  me.h = rnd(1, 12); me.m = 0
+  me.h = current(me).h; me.m = 0
   $('ckDigital').style.display = 'none'
   renderFace(me)
   const opts = new Set([String(me.h)])
   while (opts.size < 3) opts.add(String(rnd(1, 12)))
-  askOptions(me, [...opts].map(x => x + ' h'), me.h + ' h', () => { ctx.say(timeSpoken(me.h, 0)); advance(me, nextHours) })
+  askOptions(me, [...opts].map(x => x + ' h'), me.h + ' h', ok => { noteAnswer(me, ok); ctx.say(timeSpoken(me.h, 0)); advance(me, nextHours) })
   me.lock = false
 }
 
 function nextMinutes(me: State) {
-  me.total = 8
-  const mins = ctx.byTier([0, 5, 10, 15, 20, 30, 40, 45, 50], [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], Array.from({ length: 59 }, (_, k) => k + 1).filter(m => m % 5 !== 0))
-  me.h = rnd(1, 12); me.m = mins[rnd(0, mins.length - 1)]
+  const mins = minuteSteps()
+  me.h = rnd(1, 12); me.m = current(me).m
   $('ckDigital').style.display = 'none'
   renderFace(me)
   const opts = new Set([String(me.m)])
   while (opts.size < 4) opts.add(String(mins[rnd(0, mins.length - 1)]))
-  askOptions(me, [...opts].map(x => x + ' min'), me.m + ' min', () => {
+  askOptions(me, [...opts].map(x => x + ' min'), me.m + ' min', ok => {
+    noteAnswer(me, ok)
     ctx.say(me.m === 0 ? 'zéro minute' : `${me.m} minutes`)
     advance(me, nextMinutes)
   })
@@ -318,23 +368,23 @@ function nextMinutes(me: State) {
 }
 
 function nextQuiz(me: State) {
-  me.total = 8
-  const mins = ctx.byTier([0, 30], [0, 15, 30, 45], [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
-  me.h = rnd(1, 12); me.m = mins[rnd(0, mins.length - 1)]
+  const mins = timeSteps()
+  const t = current(me)
+  me.h = t.h; me.m = t.m
   $('ckDigital').style.display = 'none'
   renderFace(me)
   const opts = new Set([digital(me.h, me.m)])
   let guard = 0
   while (opts.size < 4 && guard++ < 60) opts.add(digital(rnd(1, 12), mins[rnd(0, mins.length - 1)]))
-  askOptions(me, [...opts], digital(me.h, me.m), () => { ctx.say(timeSpoken(me.h, me.m)); advance(me, nextQuiz) })
+  askOptions(me, [...opts], digital(me.h, me.m), ok => { noteAnswer(me, ok); ctx.say(timeSpoken(me.h, me.m)); advance(me, nextQuiz) })
   me.lock = false
 }
 
 /* ---- Règle l'horloge : elle déplace les aiguilles ---- */
 function nextSet(me: State) {
-  me.total = 6
-  const mins = ctx.byTier([0, 30], [0, 15, 30, 45], [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
-  me.th = rnd(1, 12); me.tm = mins[rnd(0, mins.length - 1)]
+  const t = current(me)
+  me.th = t.h; me.tm = t.m
+  me.missed = false
   // Pas 12:00 au départ : les deux aiguilles l'une sur l'autre, on ne sait
   // pas laquelle on attrape. Une heure au hasard, jamais la réponse.
   do { me.h = rnd(1, 11); me.m = 0 } while (me.h === me.th && me.m === me.tm)
@@ -351,11 +401,14 @@ function checkSet(me: State) {
   if (me.h === me.th && me.m === me.tm) {
     me.lock = true
     me.score++
+    if (!me.missed) noteAnswer(me, true)
     sfx('confirm', { vol: 0.8 })
     fxAt($('ckFace'), JUICE.green, 16)
     ctx.say(timeSpoken(me.th, me.tm))
     advance(me, nextSet)
   } else {
+    // Une première validation fausse : l'heure est ratée (une seule fois)
+    if (!me.missed) { me.missed = true; noteAnswer(me, false) }
     sfx('drop', { vol: 0.4, rate: 0.8 })
     const f = $('ckFace')
     f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake')
@@ -470,8 +523,9 @@ export const clock: GameDef = {
         </div>
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
-    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null, showMin: loadShowMin(), gen: 0 }
+    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null, showMin: loadShowMin(), gen: 0, queue: [], missed: false }
     ck = me
+    memo = recall('clock')
     const paintRing = () => {
       $('ckRing').classList.toggle('sel', me.showMin)
       $('ckRingItem').classList.toggle('sel', me.showMin)
@@ -522,7 +576,9 @@ export const clock: GameDef = {
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __ck: unknown }).__ck = {
-        get h() { return me.h }, get m() { return me.m }, get th() { return me.th }, get tm() { return me.tm }, get grab() { return me.grab }, get mode() { return me.mode }, get round() { return me.round }, get score() { return me.score }, get lock() { return me.lock }
+        get h() { return me.h }, get m() { return me.m }, get th() { return me.th }, get tm() { return me.tm }, get grab() { return me.grab }, get mode() { return me.mode }, get round() { return me.round }, get score() { return me.score }, get lock() { return me.lock },
+        /** Les clés de la série en cours, dans l'ordre (sans remise). */
+        get plan() { return me.queue.map(it => it.fact.key) }
       }
     }
     setMode(me, 'discover')
