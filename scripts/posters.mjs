@@ -198,6 +198,32 @@ const STAGE = {
   space: { wait: 15000 },
   // Le petit train à quai, l'anneau doré sur le wagon vide
   patterns: { tier: 'easy', ready: () => window.__pt && !window.__pt.lock, wait: 1500, zoom: 1.12, cy: 0.5 },
+  // Le Tracteur : en route, la flèche en cours allumée, l'animal qui attend
+  tracteur: {
+    tier: 'med', ready: () => window.__tr && window.__tr.phase === 'edit', wait: 800,
+    act: async p => {
+      const sol = await p.evaluate(() => window.__tr.solution)
+      for (const t of sol) await p.locator(`.tr-cmd[data-cmd="${t.cmd}"]`).click({ force: true })
+      await p.locator('.tr-go').click({ force: true })
+    },
+    after: 2600
+  },
+  // Le Géoplan : un bateau, une étoile ou un hexagone presque tendus, le modèle à côté
+  geoplan: {
+    tier: 'med', ready: () => window.__gp && window.__gp.phase === 'play', wait: 800,
+    accept: () => ['bateau', 'etoile', 'hexagone'].includes(window.__gp?.shape),
+    act: async p => {
+      const want = await p.evaluate(() => window.__gp.want)
+      for (const [a, b] of want.slice(0, want.length - 1)) {
+        const A = await p.evaluate(([c, r]) => window.__gp.at(c, r), a)
+        const B = await p.evaluate(([c, r]) => window.__gp.at(c, r), b)
+        await p.mouse.move(A.x, A.y); await p.mouse.down()
+        for (let i = 1; i <= 5; i++) await p.mouse.move(A.x + (B.x - A.x) * i / 5, A.y + (B.y - A.y) * i / 5)
+        await p.mouse.up()
+      }
+    },
+    after: 1500, cx: 0.5
+  },
   // Les Perles Miroir : un papillon ou une tête de cochon à moitié reflété,
   // les rangées du haut déjà posées, celles du bas encore à faire
   mirror: {

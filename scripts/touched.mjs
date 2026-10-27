@@ -58,6 +58,8 @@ const OWN = {
   'poterie': ['src/games/poterie.ts', 'src/core/pottery.ts', 'src/core/pottery3d.ts'],
   'chateau': ['src/games/chateau.ts', 'src/core/sand.ts', 'src/core/beach3d.ts'],
   'aquarium': ['src/games/aquarium.ts', 'src/core/fishtank.ts', 'src/core/aquarium3d.ts'],
+  'tracteur': ['src/games/tracteur.ts', 'src/core/tracteur.ts'],
+  'geoplan': ['src/games/geoplan.ts', 'src/core/geoplan.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux
 const NO_BOT = new Set(['src/games/sentences.ts', 'src/games/index.ts'])

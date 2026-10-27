@@ -301,6 +301,29 @@ export const BADGE: Record<string, string> = {
     <rect x="21" y="28" width="12" height="12" rx="3" fill="${C.cream}"/>
     <path d="M39 30v3M39 36v.1" stroke="${C.mango}" stroke-width="4" stroke-linecap="round"/>`),
 
+  /* Le Tracteur : le tracteur rouge sur le damier du pré, une flèche devant
+     lui, la vache qui attend au bout. */
+  tracteur: svg(`
+    <rect x="3" y="5" width="42" height="38" rx="6" fill="${C.meadow}"/>
+    <path d="M3 18h42M3 31h42M17 5v38M31 5v38" stroke="${C.meadowDark}" stroke-width="1.6"/>
+    <rect x="31" y="5" width="14" height="13" fill="${C.leaf}" opacity=".7"/>
+    <circle cx="38" cy="11.5" r="4.6" fill="${C.white}"/><circle cx="36.4" cy="10.4" r="1.6" fill="${C.ink}"/><ellipse cx="38.6" cy="13.6" rx="2.6" ry="1.6" fill="${C.pink}"/>
+    <path d="M24 23l5-5 5 5h-3v5h-4v-5z" fill="${C.white}"/>
+    <rect x="8" y="29" width="13" height="8" rx="2" fill="${C.coral}"/>
+    <rect x="15" y="24" width="7" height="7" rx="1.5" fill="${C.coralDark}"/><rect x="16.4" y="25.4" width="4.2" height="3.4" rx="1" fill="${C.ice}"/>
+    <circle cx="11" cy="38" r="4.2" fill="${C.ink}"/><circle cx="11" cy="38" r="1.7" fill="${C.sun}"/>
+    <circle cx="21.5" cy="39" r="3" fill="${C.ink}"/><circle cx="21.5" cy="39" r="1.2" fill="${C.sun}"/>`),
+
+  /* Le Géoplan : la plaque à picots, une maison tendue en élastiques de couleur. */
+  geoplan: svg(`
+    <rect x="4" y="6" width="40" height="38" rx="6" fill="${C.iceDark}"/>
+    <rect x="4" y="5" width="40" height="37" rx="6" fill="${C.ice}"/>
+    ${[11, 19, 27, 35].map(y => [11, 19, 27, 37].map(x => `<circle cx="${x}" cy="${y}" r="1.6" fill="${C.skyDark}"/>`).join('')).join('')}
+    <path d="M11 35V19h26v16z" fill="none" stroke="${C.coral}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M11 19l13-10 13 10" fill="none" stroke="${C.mango}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M19 35v-8h8v8" fill="none" stroke="${C.meadowDark}" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="24" cy="9" r="2" fill="${C.skyDark}"/>`),
+
   /* Une plaque à picots vue de dessus : un cœur en perles à repasser, la
      moitié gauche posée, la droite en cours, l'axe lumineux entre les deux. */
   mirror: svg(`

@@ -996,6 +996,110 @@ await scenario('perles-miroir-flamme-au-fer', async () => {
   await finDe('Quel joli reflet', 240000)
 })
 
+/* 🚜 Le Tracteur à programmer (27/10) : huit manches. À la première, une
+   flèche posée puis retirée d'un toucher, puis une file trop courte : le
+   tracteur s'arrête sans l'animal et revient à sa place (aucune sanction,
+   un départ de plus) ; on complète la file, il ramène l'animal. Ensuite, le
+   plus court programme de chaque manche. À la flamme : une file qui fonce
+   tout droit cogne, sa flèche fautive clignote ; puis les boucles ×2. */
+const tracteur = async (tier, titre) => {
+  await openGame('Le Tracteur', '__tr', tier)
+  const etat = () => page.evaluate(() => JSON.stringify({ manche: window.__tr.round, phase: window.__tr.phase, file: window.__tr.file.length, departs: window.__tr.retries, case: window.__tr.at }))
+  const pose = async toks => {
+    for (const t of toks) {
+      if (t.x2) await page.locator('.tr-x2').click({ force: true })
+      await page.locator(`.tr-cmd[data-cmd="${t.cmd}"]`).click({ force: true })
+    }
+  }
+  const edit = k => page.waitForFunction(k => window.__tr.round === k && window.__tr.phase === 'edit', k, { timeout: 120000, polling: 250 })
+  for (let r = 0; r < 8; r++) {
+    await edit(r).catch(async () => { throw new Error(`manche ${r + 1} jamais prête (${await etat()})`) })
+    const sol = await page.evaluate(() => window.__tr.solution)
+    if (r === 0) {
+      // Une flèche posée, retirée d'un toucher
+      await page.locator('.tr-pal .tr-cmd').first().click({ force: true })
+      if (await page.locator('.tr-tok').count() !== 1) throw new Error(`la flèche ne se pose pas (${await etat()})`)
+      await page.locator('.tr-tok').first().click({ force: true })
+      if (await page.locator('.tr-tok').count() !== 0) throw new Error(`la flèche ne se retire pas (${await etat()})`)
+      if (tier === 'exp') {
+        // Tout droit, jusqu'à cogner (ou, par chance, tout ramasser)
+        for (let i = 0; i < 9; i++) await page.locator('.tr-cmd[data-cmd="F"]').click({ force: true })
+        await page.locator('.tr-go').click({ force: true })
+        await page.waitForFunction(() => ['stuck', 'win'].includes(window.__tr.phase), null, { timeout: 120000, polling: 200 })
+        if (await page.evaluate(() => window.__tr.phase) === 'win') continue
+        if (await page.evaluate(() => window.__tr.fault) < 0) throw new Error(`la flèche fautive ne clignote pas (${await etat()})`)
+        await edit(0)
+        while (await page.locator('.tr-tok').count()) await page.locator('.tr-tok').first().click({ force: true })
+      } else {
+        // Une file trop courte : il revient sans l'animal
+        await pose(sol.slice(0, -1))
+        await page.locator('.tr-go').click({ force: true })
+        await page.waitForFunction(() => window.__tr.retries === 1, null, { timeout: 120000, polling: 200 })
+          .catch(async () => { throw new Error(`la file trop courte ne compte pas un départ (${await etat()})`) })
+        await edit(0)
+        // Revenu à sa place : la file gardée, il ne manque que la dernière flèche
+        if ((await page.evaluate(() => window.__tr.file.length)) !== sol.length - 1) throw new Error(`la file a changé au retour (${await etat()})`)
+        await pose(sol.slice(-1))
+        await page.locator('.tr-go').click({ force: true })
+        await page.waitForFunction(() => window.__tr.round === 1, null, { timeout: 120000, polling: 250 })
+          .catch(async () => { throw new Error(`la file complétée ne ramène pas l'animal (${await etat()})`) })
+        continue
+      }
+    }
+    await pose(sol)
+    await page.locator('.tr-go').click({ force: true })
+    await page.waitForFunction(k => window.__tr.round > k, r, { timeout: 120000, polling: 250 })
+      .catch(async () => { throw new Error(`manche ${r + 1} : le tracteur ne ramène pas tout le monde (${await etat()})`) })
+  }
+  await finDe(titre, 60000)
+}
+await scenario('tracteur-fleur', () => tracteur('easy', 'Tout le monde est monté'))
+await scenario('tracteur-flamme', () => tracteur('exp', 'Tout le monde est monté'))
+
+/* 📐 Le Géoplan (27/10) : à la fleur, un élastique lâché dans le vide ne
+   s'accroche pas, un élastique de trop se retire d'un toucher ; puis chaque
+   figure est tendue côté par côté, au doigt (appuyer sur un picot, glisser,
+   lâcher sur l'autre). À la flamme, les figures transformées, n'importe où. */
+const geoplan = async (tier, manches) => {
+  await openGame('Le Géoplan', '__gp', tier)
+  const etat = () => page.evaluate(() => JSON.stringify({ manche: window.__gp.round, phase: window.__gp.phase, figure: window.__gp.shape, elastiques: window.__gp.bands.length, retires: window.__gp.undone }))
+  const at = p => page.evaluate(([c, r]) => window.__gp.at(c, r), p)
+  const tire = async (a, b, lache = true) => {
+    const A = await at(a), B = b.x === undefined ? await at(b) : b
+    await page.mouse.move(A.x, A.y); await page.mouse.down()
+    for (let i = 1; i <= 6; i++) await page.mouse.move(A.x + (B.x - A.x) * i / 6, A.y + (B.y - A.y) * i / 6)
+    if (lache) await page.mouse.up()
+  }
+  for (let r = 0; r < manches; r++) {
+    await page.waitForFunction(k => window.__gp.round === k && window.__gp.phase === 'play', r, { timeout: 120000, polling: 250 })
+      .catch(async () => { throw new Error(`manche ${r + 1} jamais prête (${await etat()})`) })
+    const want = await page.evaluate(() => window.__gp.want)
+    if (r === 0) {
+      const n = await page.evaluate(() => window.__gp.n)
+      // Lâché dans le vide (entre deux picots) : rien ne s'accroche
+      const A = await at([0, 0]), B = await at([1, 1])
+      await tire([0, 0], { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 + 3 })
+      await page.waitForTimeout(300)
+      if ((await page.evaluate(() => window.__gp.bands.length)) !== 0) throw new Error(`un élastique lâché dans le vide s'accroche (${await etat()})`)
+      // Un élastique de trop, au bord de la plaque, puis retiré d'un toucher
+      await tire([n - 1, n - 2], [n - 1, n - 1])
+      await page.waitForFunction(() => window.__gp.bands.length === 1, null, { timeout: 20000, polling: 200 })
+        .catch(async () => { throw new Error(`l'élastique ne s'accroche pas (${await etat()})`) })
+      const m = await page.evaluate(() => window.__gp.mid(0))
+      await page.mouse.click(m.x, m.y)
+      await page.waitForFunction(() => window.__gp.bands.length === 0 && window.__gp.undone === 1, null, { timeout: 20000, polling: 200 })
+        .catch(async () => { throw new Error(`l'élastique ne se retire pas (${await etat()})`) })
+    }
+    if (tier === 'exp' && !(await page.evaluate(() => window.__gp.xf))) throw new Error(`la flamme sans transformation (${await etat()})`)
+    for (const [a, b] of want) await tire(a, b)
+    await page.waitForFunction(k => window.__gp.round > k, r, { timeout: 30000, polling: 250 })
+      .catch(async () => { throw new Error(`manche ${r + 1} : la figure tendue n'est pas reconnue (${await etat()})`) })
+  }
+  await finDe('Quelles belles figures', 60000)
+}
+await scenario('geoplan-fleur', () => geoplan('easy', 5))
+await scenario('geoplan-flamme', () => geoplan('exp', 6))
+
 /* 💶 Le Marché : quatre paiements exacts, pièces choisies de la plus grosse
    à la plus petite (le bot rend la monnaie comme un marchand), quatre prix
    différents (27/10 : sans remise). */
