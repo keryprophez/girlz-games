@@ -327,9 +327,10 @@ function newRound(me: State) {
       }
     }
     // Son centre et son rayon, mesurés sur ce qui la porte (repère du plateau)
-    const box = new T.Box3().setFromObject(main!)
-    const root = (main as Obj).parent && isIn(main!, me.B) ? me.B : me.A
+    // (les matrices d'abord : la copie vient de naître, un parent périmé décalait le centre)
+    const root = isIn(main!, me.B) ? me.B : me.A
     root.updateMatrixWorld(true)
+    const box = new T.Box3().setFromObject(main!)
     const c = root.worldToLocal(box.getCenter(new T.Vector3()))
     const size = box.getSize(new T.Vector3())
     const r = Math.max(0.6, Math.min(1.5, Math.max(size.x, size.z) * 0.62))
@@ -670,6 +671,9 @@ export const differences: GameDef = {
             }
             return null
           },
+          /** Pour comprendre un échec : ce que donne un toucher au centre de chaque différence restante. */
+          why: () => me.lives.filter(l => !l.found).map(l => ({ kind: l.d.kind, at: [l.at.x, l.at.y, l.at.z].map(v => +v.toFixed(2)), r: +l.r.toFixed(2), a: l.a.length, b: l.b.length,
+            hits: [me.B, me.A].map(root => { const p = toScreen(stage, root.localToWorld(l.at.clone())); const r = probe(me, p.x, p.y); return r.kind + ('l' in r ? ':' + r.l.d.kind : '') }) })),
           /** Un point d'écran sur une ferme, loin de toute différence (un toucher « dans le vide »). */
           blank: () => {
             for (let i = 0; i < 60; i++) {
