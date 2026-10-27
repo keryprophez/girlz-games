@@ -190,13 +190,13 @@ const STAGE = {
     },
     after: 2600
   },
-  // Le Géoplan : un bateau ou une étoile à moitié tendus, le modèle à côté
+  // Le Géoplan : un bateau, une étoile ou un hexagone presque tendus, le modèle à côté
   geoplan: {
     tier: 'med', ready: () => window.__gp && window.__gp.phase === 'play', wait: 800,
     accept: () => ['bateau', 'etoile', 'hexagone'].includes(window.__gp?.shape),
     act: async p => {
       const want = await p.evaluate(() => window.__gp.want)
-      for (const [a, b] of want.slice(0, Math.max(2, want.length - 2))) {
+      for (const [a, b] of want.slice(0, want.length - 1)) {
         const A = await p.evaluate(([c, r]) => window.__gp.at(c, r), a)
         const B = await p.evaluate(([c, r]) => window.__gp.at(c, r), b)
         await p.mouse.move(A.x, A.y); await p.mouse.down()

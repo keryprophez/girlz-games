@@ -171,6 +171,8 @@ const PLAN: Record<Tier, (string | [string, Xf])[]> = {
 export function makeRounds(tier: Tier, rand: () => number = Math.random): Round[] {
   const n = BOARD[tier]
   let plan = PLAN[tier]
+  // L'éclair : les six figures dans un ordre tiré au sort (rejouer change tout)
+  if (tier === 'med') plan = plan.slice().sort(() => rand() - 0.5)
   if (tier === 'exp') {
     // Six manches : deux de chaque transformation, dans un ordre tiré au sort
     const by: Record<Xf, [string, Xf][]> = { x2: [], rot: [], mir: [] }
