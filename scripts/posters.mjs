@@ -84,6 +84,24 @@ const STAGE = {
     },
     after: 3000, zoom: 1.2, cy: 0.5
   },
+  // La Poterie : un vase bleu et blanc, émaillé, sur le tour qui tourne
+  poterie: {
+    ready: () => window.__pt && window.__pt.ready, wait: 1500,
+    act: async p => { await p.evaluate(() => { localStorage.removeItem('ferme:poterie'); window.__pt.demo(); document.querySelectorAll('.pt-steps,.pt-pal').forEach(e => { e.style.display = 'none' }) }) },
+    after: 3500, zoom: 1.15, cx: 0.52, cy: 0.45
+  },
+  // Le Château de sable : quatre tours, le donjon crénelé, les douves pleines, les drapeaux, le crabe
+  chateau: {
+    ready: () => window.__ch && window.__ch.ready, wait: 1500,
+    act: async p => { await p.evaluate(() => { localStorage.removeItem('ferme:chateau'); window.__ch.demo(); document.querySelectorAll('.ch-tools,.ch-pal,.ch-reset').forEach(e => { e.style.display = 'none' }) }) },
+    after: 3000, zoom: 1.2, cx: 0.52, cy: 0.5
+  },
+  // L'Aquarium : deux poissons dessinés qui nagent, le château englouti, le coffre, les algues
+  aquarium: {
+    ready: () => window.__aq && window.__aq.ready, wait: 1500,
+    act: async p => { await p.evaluate(() => { localStorage.removeItem('ferme:aquarium'); window.__aq.demo(); document.querySelectorAll('.aq-tools,.aq-pal').forEach(e => { e.style.display = 'none' }) }) },
+    after: 3500, zoom: 1.1, cx: 0.55, cy: 0.5
+  },
   // La Ferme à construire : une ferme toute faite (celle de la maquette)
   farmbuild: {
     // Les cartes d'abord (11/10) : la ferme de Jade, vidée, puis la ferme de la maquette

@@ -2280,3 +2280,28 @@ body.playing .po-card{max-width:880px;}
 .ch-opt img{width:84%;height:84%;object-fit:contain;pointer-events:none;}
 .ch-opt.sel{box-shadow:0 0 0 4px #FFC94D;}
 .ch-wrap[data-phase="outro"] .ch-tools,.ch-wrap[data-phase="outro"] .ch-pal,.ch-wrap[data-phase="outro"] .ch-reset{opacity:0;pointer-events:none;}
+
+/* ============================================================
+   L'AQUARIUM (27/10) — à gauche Dessiner, Nourrir, Fini ; le tiroir du
+   décor en bas ; le rond qui s'élargit quand on tapote la vitre ; la
+   feuille de dessin est celle de la Ferme (`.fb-draw`)
+   ============================================================ */
+.aq-wrap{background:#DCE6EE;touch-action:none;overflow:hidden;}
+.aq-wrap > canvas{display:block;width:100%;height:100%;}
+.aq-tools{position:absolute;left:16px;top:84px;z-index:6;display:flex;flex-direction:column;gap:10px;
+  background:rgba(255,250,244,.88);border-radius:26px;padding:12px 10px;box-shadow:0 6px 20px rgba(40,60,90,.18);transition:opacity .4s;}
+.aq-tools .sn-tool{width:clamp(48px,4.8vw,60px);height:clamp(48px,4.8vw,60px);}
+.aq-tools .aq-draw{width:clamp(58px,6vw,74px);height:clamp(58px,6vw,74px);background:linear-gradient(135deg,#FFE98A,#FFB3CF);}
+.aq-fini{margin-top:6px;background:#FFF4E0;}
+.aq-pal{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:10px;align-items:flex-end;
+  background:rgba(255,250,244,.92);border-radius:26px;padding:10px 16px 8px;box-shadow:0 6px 20px rgba(40,60,90,.2);
+  max-width:calc(100% - 200px);overflow-x:auto;scrollbar-width:none;transition:opacity .4s;}
+.aq-pal::-webkit-scrollbar{display:none;}
+.aq-pal .tool-item{flex:none;}
+.aq-opt{width:clamp(54px,5.6vw,70px);height:clamp(54px,5.6vw,70px);border-radius:20px;background:#F0F8FF;}
+.aq-opt.sel{box-shadow:0 0 0 4px #FFC94D;}
+.aq-ripples{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;}
+.aq-ripple{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:4px solid rgba(255,255,255,.85);
+  animation:aqRipple .85s ease-out forwards;}
+@keyframes aqRipple{to{transform:scale(5);opacity:0;border-width:1px}}
+.aq-wrap[data-phase="outro"] .aq-tools,.aq-wrap[data-phase="outro"] .aq-pal{opacity:0;pointer-events:none;}

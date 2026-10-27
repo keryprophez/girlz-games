@@ -2069,6 +2069,80 @@ await scenario('chateau', async () => {
   if (revu.h < 0.2 || revu.w < 20 || revu.d !== 1) throw new Error(`la plage n'est pas gardée (${JSON.stringify(revu)})`)
 })
 
+/* 🐠 L'Aquarium (27/10) : un poisson dessiné sur la feuille (un ovale, sa
+   queue, son œil à droite), « Fini » : il naît, se gonfle et nage ; envoyé
+   à gauche il se retourne (son dos), à droite il montre son dessin ; la
+   vitre tapotée, il vient ; les flocons, il les mange ; un château posé
+   puis repris, une algue posée ; « Fini » : le soir tombe ; rouvert, le
+   poisson et l'algue sont toujours là. */
+await scenario('aquarium', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.evaluate(() => localStorage.removeItem('ferme:aquarium'))
+  await openGame('L’Aquarium', '__aq')
+  const pret = () => page.waitForFunction(() => window.__aq.ready, null, { timeout: 120000, polling: 300 })
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__aq.phase, f: window.__aq.fish, s: window.__aq.saved, sw: window.__aq.swim, sh: window.__aq.sheet }))
+  await pret()
+  // La feuille : un poisson, la tête à droite (l'œil)
+  await page.locator('#aqDraw').click({ force: true })
+  await page.waitForFunction(() => window.__aq.sheet, null, { timeout: 20000, polling: 200 })
+  const cv = await page.locator('.fb-dpaper canvas').boundingBox()
+  const P = (x, y) => [cv.x + cv.width * x, cv.y + cv.height * y]
+  const trace = async pts => { await page.mouse.move(...P(...pts[0])); await page.mouse.down(); for (const p of pts.slice(1)) await page.mouse.move(...P(...p), { steps: 3 }); await page.mouse.up() }
+  const ovale = Array.from({ length: 33 }, (_, i) => { const a = i / 32 * Math.PI * 2; return [0.5 + Math.cos(a) * 0.2, 0.5 + Math.sin(a) * 0.14] })
+  await trace(ovale)
+  await trace([[0.3, 0.5], [0.16, 0.36], [0.16, 0.64], [0.3, 0.5]])
+  await page.locator('.at-color').last().click()
+  await trace([[0.62, 0.45], [0.625, 0.455], [0.62, 0.46]])
+  await page.locator('.fb-ddone button').click({ force: true })
+  await page.waitForFunction(() => window.__aq.fish === 1 && !window.__aq.sheet, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`le dessin ne devient pas poisson (${await etat()})`) })
+  let f = (await page.evaluate(() => window.__aq.swim))[0]
+  if (f.d !== 1) throw new Error(`la tête n'est pas du côté de l'œil (${await etat()})`)
+  // Il nage : à gauche, il se retourne (on voit son dos) ; à droite, son dessin
+  await page.waitForTimeout(1500)
+  await page.evaluate(() => window.__aq.go(0, -1))
+  await page.waitForFunction(() => window.__aq.swim[0].x3 < -0.8 && window.__aq.swim[0].face === -1, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`il ne file pas à gauche en se retournant (${await etat()})`) })
+  await page.evaluate(() => window.__aq.go(0, 1))
+  await page.waitForFunction(() => window.__aq.swim[0].x3 > 0.4 && window.__aq.swim[0].face === 1, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`il ne revient pas à droite en montrant son dessin (${await etat()})`) })
+  // On tapote la vitre à gauche : il vient
+  const vitre = await page.evaluate(() => window.__aq.glass(-0.8, 1.0))
+  await page.mouse.click(vitre.x, vitre.y)
+  await page.waitForFunction(() => window.__aq.swim[0].x3 < -0.4 && window.__aq.swim[0].z3 > 0.15, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`il ne vient pas à la vitre (${await etat()})`) })
+  // Les flocons : il en mange
+  await page.locator('#aqFeed').click({ force: true })
+  await page.waitForFunction(() => window.__aq.flakes > 0, null, { timeout: 10000, polling: 100 })
+  const avant = await page.evaluate(() => window.__aq.flakes)
+  await page.waitForFunction(n => window.__aq.flakes < n - 1, avant, { timeout: 90000, polling: 300 })
+    .catch(async () => { throw new Error(`il ne mange pas les flocons (${await etat()})`) })
+  // Le décor : un château posé sur le sable, repris d'un toucher ; une algue
+  await page.locator('.aq-opt[data-deco="chateau"]').click({ force: true })
+  // Touché en pleine eau : il coule jusqu'au sable
+  let q = await page.evaluate(() => window.__aq.sand(0.3, -0.1))
+  await page.mouse.click(q.x, q.y - 160)
+  await page.waitForFunction(() => window.__aq.saved.deco === 1, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le château ne se pose pas (${await etat()})`) })
+  await page.waitForTimeout(2500)
+  q = await page.evaluate(() => window.__aq.deco(0))
+  await page.mouse.click(q.x, q.y)
+  await page.waitForFunction(() => window.__aq.saved.deco === 0, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le château ne se reprend pas (${await etat()})`) })
+  await page.locator('.aq-opt[data-deco="algue"]').click({ force: true })
+  q = await page.evaluate(() => window.__aq.sand(-0.9, -0.2))
+  await page.mouse.click(q.x, q.y - 120)
+  await page.waitForFunction(() => window.__aq.saved.deco === 1, null, { timeout: 20000, polling: 200 })
+  // Fini : le soir tombe, l'aquarium reste allumé
+  await page.locator('#aqFini').click({ force: true })
+  await finDe('Quel bel aquarium', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
+  // Rouvert : le poisson et l'algue sont là
+  await openGame('L’Aquarium', '__aq')
+  await pret()
+  const revu = await page.evaluate(() => ({ f: window.__aq.fish, d: window.__aq.saved.deco, d0: window.__aq.swim[0]?.d }))
+  if (revu.f !== 1 || revu.d !== 1 || revu.d0 !== 1) throw new Error(`l'aquarium n'est pas gardé (${JSON.stringify(revu)})`)
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 // L'éclair (6/10) : la grande ferme de jour, des animaux cachés en entier à fouiller
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))

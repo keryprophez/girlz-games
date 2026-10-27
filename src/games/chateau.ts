@@ -5,11 +5,12 @@ import { buildProps, buildSeaside, decoObject, DECOS, makeCrab, makeGull, makeSh
 import { clearSand, dig, heightAt, makeSand, MOLDS, MOLD_R, N, packSand, pat, pour, SIZE, smoothAt, stamp, surfaceAt, unpackSand, type Mold, type Sand } from '../core/sand'
 import { sfx, preloadSfx } from '../core/sfx'
 import { getCtx, isSoundOn, tone } from '../core/audio'
+import { onPause } from '../core/session'
 import { visible, handNow, type HandMove } from '../core/hand'
 
 /* 🏰 LE CHÂTEAU DE SABLE (27/10, choisi par le père avec la Poterie et
    l'Aquarium) — une plage : la mer qui roule et son écume, le ciel, la
-   parasol, la serviette, le seau, la pelle. Le sable est une grille de
+   serviette, le seau, la pelle. Le sable est une grille de
    hauteurs (`core/sand.ts`, 128 × 128) dont on ne renvoie que la zone
    touchée ; sec il est clair, mouillé il est plus sombre. Les outils, à
    gauche, chacun son icône et son nom :
@@ -502,6 +503,7 @@ export const chateau: GameDef = {
       handNow()
     }
 
+    let unPause = () => { /* posé au chargement */ }
     const hideLoader = loader(arena, 'chateau')
     build(c, arena).then(s => {
       hideLoader()
@@ -509,6 +511,8 @@ export const chateau: GameDef = {
       me = s
       const ac = getCtx()
       if (ac) try { s.surf = surf(ac) } catch { /* sans la mer qui chante */ }
+      // En pause, la boucle s'arrête : la vague se tait avec elle
+      unPause = onPause(p => { if (p) me?.surf?.set(0, 0) })
       setTool('moule')
       s.stage.start(dt => { if (me === s) frame(s, dt) })
     }).catch(e => { hideLoader(); console.error(e); if (!dead) c.toast('La 3D n\'est pas disponible ici') })
@@ -643,7 +647,6 @@ export const chateau: GameDef = {
         /** Un point du sable (x, z en mètres) à l'écran. */
         pt(x: number, z: number) { return me ? sandScreen(me, x, z) : null },
         speed(k: number) { if (me) me.stage.timeScale = k },
-        get dbg() { return me },
         /** L'affiche : un château à quatre tours, ses douves pleines, ses drapeaux et ses coquillages. */
         demo() {
           const s = me
@@ -681,6 +684,7 @@ export const chateau: GameDef = {
       window.removeEventListener('pointercancel', onUp)
       window.removeEventListener('pointermove', follow)
       window.removeEventListener('pointerdown', follow)
+      unPause()
       const s = me
       me = null
       if (s) {
