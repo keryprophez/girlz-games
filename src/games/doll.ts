@@ -11,6 +11,7 @@ import { useFerme } from '../core/store'
 import { createStage, loader, type Stage } from '../core/three3d'
 import { ground, particles, type Particles } from '../core/scene3d'
 import { makeDoll, poseDoll, type Doll } from '../core/doll3d'
+import { Fingers, Spinner, coast } from '../core/touchcam'
 
 /* Habille-toi — la petite fille des filles, telle qu'elle était du 23 au
    27/09 ; revenue le 28/09 derrière un petit bouton de la Princesse, elle
@@ -38,9 +39,9 @@ interface State {
   stage: Stage | null
   doll: Doll | null
   fx: Particles | null
-  /** Rotation du personnage (au doigt) et son élan. */
-  yaw: number
-  spin: number
+  /** Rotation du personnage (au doigt) et son élan (radians par seconde). */
+  rot: number
+  vRot: number
   /** Saut de joie en cours (secondes restantes). */
   hop: number
   t: number
@@ -64,7 +65,7 @@ function rebuild(me: State, joy = true) {
   if (me.doll) { st.scene.remove(me.doll.obj); me.doll.dispose() }
   me.doll = makeDoll(st.T, me.look, 1.25)
   me.doll.obj.position.y = 0.16
-  me.doll.obj.rotation.y = me.yaw
+  me.doll.obj.rotation.y = me.rot
   st.scene.add(me.doll.obj)
   if (joy) {
     me.hop = 0.9
@@ -111,7 +112,7 @@ export function mountDoll(c: GameContext): () => void {
     const st0 = useFerme.getState()
     const me: State = {
       look: normalizeLook(st0.look),
-      running: true, stage: null, doll: null, fx: null, yaw: -0.35, spin: 0, hop: 0, t: 0
+      running: true, stage: null, doll: null, fx: null, rot: -0.35, vRot: 0, hop: 0, t: 0
     }
     du = me
 
@@ -168,7 +169,7 @@ export function mountDoll(c: GameContext): () => void {
         hat: pick(HATS), glasses: pick(GLASSES), held: pick(HELD)
       }
       setScene(me, Math.floor(Math.random() * SCENES.length))
-      me.spin = 9 // un tour sur elle-même pour la surprise
+      me.vRot = 9 // un tour sur elle-même pour la surprise
       sfx('confirm', { vol: 0.6 }); rebuild(me); save(me)
     }
     c.root.querySelector<HTMLElement>('#duReset')!.onclick = () => {
@@ -181,22 +182,32 @@ export function mountDoll(c: GameContext): () => void {
 
     const holder = c.root.querySelector<HTMLElement>('#duScene')!
     const hideLoader = loader(holder, 'dressup')
-    let drag: { x: number; moved: boolean } | null = null
-    const onMove = (e: PointerEvent) => {
-      if (!drag) return
-      const dx = e.clientX - drag.x
-      drag.x = e.clientX
-      if (Math.abs(dx) > 1) drag.moved = true
-      me.yaw += dx * 0.012
-      me.spin = dx * 0.6
+    /* Le doigt la fait tourner, chaque doigt suivi par son `pointerId` (deux
+       doigts ne la font plus tourner comme une toupie) ; l'élan se mesure en
+       vrai, borné (la surprise : 9), et s'éteint */
+    const pts = new Fingers<{ turned: boolean }>()
+    const spin = new Spinner({ max: 9, perPx: () => 0.012 })
+    const onDown = (e: PointerEvent) => {
+      pts.down(e, { turned: false })
+      spin.start(me)
     }
-    const onUp = () => {
+    const onMove = (e: PointerEvent) => {
+      const m = pts.move(e)
+      if (!m) return
+      if (Math.abs(m.dx) > 1) m.f.turned = true
+      if (m.f.multi) spin.hold(me)
+      else spin.turn(me, m.dx)
+    }
+    const onUp = (e: PointerEvent) => {
+      const f = pts.up(e)
+      if (!f) return
+      spin.release(me)
       // Un tap sur elle (sans glisser) : un saut de joie
-      if (drag && !drag.moved && me.running) { me.hop = 0.9; sfx('pluck', { vol: 0.5, rate: 1.3 }) }
-      drag = null
+      if (e.type !== 'pointercancel' && !f.turned && !f.multi && me.running) { me.hop = 0.9; sfx('pluck', { vol: 0.5, rate: 1.3 }) }
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
 
     ;(async () => {
       const stage = await createStage(holder, {
@@ -216,13 +227,13 @@ export function mountDoll(c: GameContext): () => void {
       stage.scene.add(pod, rim)
       me.fx = particles(stage, 240)
       rebuild(me, false)
-      stage.renderer.domElement.addEventListener('pointerdown', e => { drag = { x: e.clientX, moved: false } })
+      stage.renderer.domElement.addEventListener('pointerdown', onDown)
       stage.start(dt => {
         if (!me.doll) return
         me.t += dt
         // Elle tourne au doigt, avec un peu d'élan qui s'éteint
-        if (!drag) { me.yaw += me.spin * dt; me.spin *= Math.pow(0.04, dt) }
-        me.doll.obj.rotation.y = me.yaw
+        if (!pts.size) coast(me, dt, 0.04)
+        me.doll.obj.rotation.y = me.rot
         if (me.hop > 0) {
           me.hop = Math.max(0, me.hop - dt)
           poseDoll(me.doll, 'cheer', (0.9 - me.hop) * 1.2, dt)
@@ -240,6 +251,7 @@ export function mountDoll(c: GameContext): () => void {
       me.running = false
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       me.fx?.dispose()
       me.doll?.dispose()
       me.stage?.dispose()

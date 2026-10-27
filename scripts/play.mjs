@@ -1505,6 +1505,22 @@ await scenario('ferme-a-construire', async () => {
   await page.locator('#fbRedo').click()
   await page.waitForFunction(() => window.__fb.paths === 0 && window.__fb.fences === 1, null, { timeout: 10000 })
     .catch(async () => { throw new Error(`« Refaire » ne regomme pas (${await etat()})`) })
+  // La poubelle (27/10) : le premier toucher l'arme (rien ne change), le second vide la ferme
+  // — UNE étape : « Annuler » fait tout revenir (les deux d'un coup : la 3D logicielle passe les 2,6 s armées)
+  const avant = await page.evaluate(() => ({ n: window.__fb.pieces.length + window.__fb.animals.length, f: window.__fb.fences, u: window.__fb.undo }))
+  const vide = await page.evaluate(() => {
+    const b = document.querySelector('#fbReset')
+    b.click()
+    const r = { arm: b.classList.contains('arm'), n: window.__fb.pieces.length + window.__fb.animals.length }
+    b.click()
+    return r
+  })
+  if (!vide.arm || vide.n !== avant.n) throw new Error(`le premier toucher n'arme pas la poubelle, ou vide déjà (${JSON.stringify(vide)})`)
+  await page.waitForFunction(u => !window.__fb.pieces.length && !window.__fb.animals.length && !window.__fb.fences && !window.__fb.paths && window.__fb.undo === u + 1, avant.u, { timeout: 10000, polling: 200 })
+    .catch(async () => { throw new Error(`la poubelle ne vide pas la ferme en une étape (${await etat()})`) })
+  await page.locator('#fbUndo').click()
+  await page.waitForFunction(a => window.__fb.pieces.length + window.__fb.animals.length === a.n && window.__fb.fences === a.f, avant, { timeout: 20000, polling: 250 })
+    .catch(async () => { throw new Error(`« Annuler » ne rend pas la ferme vidée (${await etat()})`) })
   // On sort, on revient : la ferme de Jade est gardée, et sa carte a la photo de sa ferme
   await page.locator('.pbtn[aria-label="Menu"]').click()
   await openGame('La Ferme à construire', '__fb')
@@ -1876,6 +1892,25 @@ await scenario('monuments', async () => {
     await glisse(p.from, p.to)
     await page.waitForFunction(n => window.__mn.built >= n, n, { timeout: 20000, polling: 150 })
       .catch(async () => { throw new Error(`la pièce n° ${n} ne se pose pas (${await etat()})`) })
+    if (n > 1) continue
+    // La poubelle (27/10) : deux touchers, le pont redevient tel qu'au premier jour, sa photo oubliée
+    await page.evaluate(() => localStorage.setItem('ferme:monuments:photo:jade:goldengate', 'data:image/webp;base64,'))
+    const arme = await page.evaluate(() => {
+      const b = document.querySelector('#mnReset')
+      b.click()
+      const a = b.classList.contains('arm') && window.__mn.built === 1
+      b.click()
+      return a
+    })
+    if (!arme) throw new Error(`le premier toucher n'arme pas la poubelle, ou efface déjà (${await etat()})`)
+    await page.waitForFunction(() => window.__mn.ready && window.__mn.built === 0, null, { timeout: 120000, polling: 300 })
+      .catch(async () => { throw new Error(`la poubelle ne remet pas le pont à zéro (${await etat()})`) })
+    if (await page.evaluate(() => localStorage.getItem('ferme:monuments:photo:jade:goldengate') || JSON.parse(localStorage.getItem('ferme:monuments:jade')).goldengate.built))
+      throw new Error('après la poubelle, le pont garde sa photo ou ses pièces')
+    p = await piece()
+    await glisse(p.from, p.to)
+    await page.waitForFunction(() => window.__mn.built >= 1, null, { timeout: 20000, polling: 150 })
+      .catch(async () => { throw new Error(`après la poubelle, la première pièce ne se pose pas (${await etat()})`) })
   }
   p = await piece()
   if (!p.trace) throw new Error(`pas de câble à tracer (${await etat()})`)

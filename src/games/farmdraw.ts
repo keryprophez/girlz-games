@@ -72,14 +72,10 @@ export const DRAW_ICONS = {
 
 export interface Sheet {
   readonly open: boolean
-  readonly empty: boolean
   show(): void
   hide(): void
   /** Le geste de la main : tracer sur la feuille vide, puis toucher « Fini ». */
   hand(): { trace: { x: number; y: number }[] } | { tap: Element } | null
-  /** Ce qui a été tracé (le bot), le canvas. */
-  readonly strokes: DrawStroke[]
-  readonly canvas: HTMLCanvasElement
   /** « Fini » refusé (rien de dessiné, ou rien qui fasse une peluche) : il tremble. */
   shake(): void
   dispose(): void
@@ -143,10 +139,12 @@ export function createSheet(host: HTMLElement, o: { done: (strokes: DrawStroke[]
   cv.addEventListener('pointercancel', up)
 
   const clear = () => { strokes = []; points = 0; live.clear(); g.clearRect(0, 0, CW, CH); sync() }
+  // La feuille s'envole, puis se cache ; rouverte avant (380 ms), ce minuteur ne doit pas la vider ni la cacher
+  let gone = 0
   const hide = () => {
-    if (el.hidden) return
+    if (el.hidden || el.classList.contains('out')) return
     el.classList.add('out')
-    window.setTimeout(() => { el.hidden = true; el.classList.remove('out'); clear() }, 380)
+    gone = window.setTimeout(() => { gone = 0; el.hidden = true; el.classList.remove('out'); clear() }, 380)
   }
   const shake = () => { doneBtn.classList.remove('shake'); void doneBtn.offsetWidth; doneBtn.classList.add('shake'); sfx('tick', { vol: 0.3 }) }
   el.addEventListener('click', e => {
@@ -178,10 +176,7 @@ export function createSheet(host: HTMLElement, o: { done: (strokes: DrawStroke[]
 
   return {
     get open() { return !el.hidden },
-    get empty() { return !strokes.some(st => !st.e) },
-    get strokes() { return strokes },
-    canvas: cv,
-    show() { clear(); el.hidden = false; el.classList.remove('out'); o.opened(); sfx('open', { vol: 0.4 }) },
+    show() { clearTimeout(gone); gone = 0; clear(); el.hidden = false; el.classList.remove('out'); o.opened(); sfx('open', { vol: 0.4 }) },
     hide,
     shake,
     hand() {
@@ -196,6 +191,6 @@ export function createSheet(host: HTMLElement, o: { done: (strokes: DrawStroke[]
       }
       return { trace: pts }
     },
-    dispose() { el.remove() }
+    dispose() { clearTimeout(gone); el.remove() }
   }
 }

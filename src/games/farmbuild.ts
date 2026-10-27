@@ -9,6 +9,8 @@ import { visible } from '../core/hand'
 import { BADGE } from '../core/badges'
 import { buildPlush, plushParts, type Plush, type PlushParts } from '../core/plush3d'
 import { askVivant, DEFAULT, type Allure, type Taille, type Vivant } from '../core/vivant'
+import { mine, snapScene, whoCards, paintCards, meButton, paintMe, trashButton, twoTaps, calm, type Who } from '../core/mine'
+import { Fingers, Spinner, perWidth, coast } from '../core/touchcam'
 import { createSheet, DRAW_ICONS, exportPng, plushStrokes, renderStrokes, type Drawn, type DrawStroke, type Sheet } from './farmdraw'
 
 /* 🏡 LA FERME À CONSTRUIRE (5/10, Créer) — le plateau de Cache-Cache, vide :
@@ -22,7 +24,9 @@ import { createSheet, DRAW_ICONS, exportPng, plushStrokes, renderStrokes, type D
    Chaque fille a SA ferme (11/10 : une carte « Jade », une carte « Joyce »
    à l'ouverture, avec la photo de sa ferme telle qu'elle l'a laissée) ;
    elle se garde (`ferme:construire:<qui>`) et se continue. Annuler et
-   refaire, geste par geste. Pas de score, pas de fin, pas de niveau. */
+   refaire, geste par geste. La poubelle (27/10, le père), sous la carte de
+   la fille : deux touchers, la ferme se vide — une seule étape, qu'Annuler
+   défait. Pas de score, pas de fin, pas de niveau. */
 
 type Tab = 'batiments' | 'nature' | 'objets' | 'animaux'
 type Tool = 'none' | 'path' | 'fence' | 'erase'
@@ -56,15 +60,12 @@ const DRAWN_SPEED: Record<Allure, number> = { marche: 0.55, saute: 0.75, vole: 0
 const DRAWN_GAIT: Record<Allure, number> = { marche: 10, saute: 6.5, vole: 4, rampe: 6, nage: 7 }
 const R = PLATEAU_R, EDGE = R - 0.9
 
-/** Une ferme par fille (11/10) ; sa couleur borde sa carte. */
-type Who = 'jade' | 'joyce'
-const WHO: { id: Who; name: string; color: string }[] = [
-  { id: 'jade', name: 'Jade', color: '#5EC97B' },
-  { id: 'joyce', name: 'Joyce', color: '#B197FC' }
-]
-const KEY = (w: Who) => `ferme:construire:${w}`
-const PHOTO = (w: Who) => `ferme:construire:photo:${w}`
-const WHO_KEY = 'ferme:construire:qui'
+/** Une ferme par fille (11/10) : `ferme:construire:<qui>`, sa photo, la dernière choisie. */
+const box = mine('construire', { delay: 400 })
+/** Les lanternes des granges la nuit : un petit nombre FIXE de lumières, préparées éteintes
+    (une lumière de plus ou de moins dans la scène recompile toutes les matières : l'à-coup
+    au moment où la grange glisse sous le doigt). Au-delà, une grange garde sa lanterne peinte. */
+const LANTERNS = 3
 /** L'ancienne ferme de la famille (5/10) : on repart de zéro (11/10, le père). */
 const OLD_KEY = 'ferme:construire'
 const PIECES = new Set(TABS.batiments.items.concat(TABS.nature.items, TABS.objets.items).map(i => i[0]))
@@ -85,8 +86,9 @@ interface Thing {
   goal?: { x: number; z: number } | null
   wait?: number
   hop?: number
-  /** Une pièce : sa lanterne allumée la nuit. */
+  /** Une pièce : sa lanterne allumée la nuit (une de `State.lanterns`), et où elle pend sur la pièce. */
   lamp?: import('three').PointLight
+  lampAt?: [number, number, number]
   /** Un animal dessiné (18/10) : sa peluche, son dessin, son sens (1 : vers la
       droite de l'écran), sa taille du moment, sa naissance (1 → 0 : il se
       gonfle), son tempo à lui, et s'il attend la réponse de Claude. */
@@ -124,8 +126,8 @@ interface State {
   fx: Particles
   ray: import('three').Raycaster
   t: number
-  idle: number
-  placed: number
+  /** La nuit : les lanternes, toujours dans la scène, éteintes tant qu'aucune grange ne les tient. */
+  lanterns: import('three').PointLight[]
 }
 
 let me: State | null = null
@@ -143,24 +145,16 @@ let nextU = 1
 /* ---------- La sauvegarde (une ferme par fille) ---------- */
 
 function load(w: Who): Saved {
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY(w)) || 'null') as Saved | null
-    if (s && s.v === 1 && Array.isArray(s.items)) return { v: 1, night: !!s.night, items: s.items, paths: s.paths || [], fences: s.fences || [] }
-  } catch { /* une ferme neuve */ }
+  const s = box.read(w) as Saved | null
+  if (s && s.v === 1 && Array.isArray(s.items)) return { v: 1, night: !!s.night, items: s.items, paths: s.paths || [], fences: s.fences || [] }
   return { v: 1, night: false, items: [], paths: [], fences: [] }
 }
-let saveTimer = 0
 function save(s: State) {
   saved = { v: 1, night: s.night, items: s.things.map(t => itemOf(t)), paths: s.paths.map(p => p.pts), fences: s.fences.map(f => f.pts) }
-  clearTimeout(saveTimer)
-  const w = who
-  saveTimer = window.setTimeout(() => { try { localStorage.setItem(KEY(w), JSON.stringify(saved)) } catch { /* plein : tant pis */ } }, 400)
+  box.save(who, saved)
 }
 /** Tout de suite (on quitte cette ferme). */
-function flush() {
-  clearTimeout(saveTimer)
-  try { localStorage.setItem(KEY(who), JSON.stringify(saved)) } catch { /* plein */ }
-}
+function flush() { box.write(who, saved) }
 const r2 = (x: number) => Math.round(x * 100) / 100
 /** Une chose telle qu'on la garde (à sa place, ou à une autre : là d'où on l'a prise). */
 const itemOf = (t: Thing, x = t.g.position.x, z = t.g.position.z): Kept =>
@@ -170,15 +164,8 @@ const itemOf = (t: Thing, x = t.g.position.x, z = t.g.position.z): Kept =>
     réduite (400 px de large, en WebP : une vingtaine de Ko). Lue dans la
     foulée du rendu : après, le tampon d'un canvas WebGL est vidé. */
 function snap(s: State) {
-  try {
-    const cv = s.stage.renderer.domElement
-    s.stage.renderer.render(s.stage.scene, s.stage.camera)
-    const w = 400, h = Math.max(1, Math.round(w * cv.height / Math.max(1, cv.width)))
-    const c2 = document.createElement('canvas')
-    c2.width = w; c2.height = h
-    c2.getContext('2d')!.drawImage(cv, 0, 0, w, h)
-    localStorage.setItem(PHOTO(who), c2.toDataURL('image/webp', 0.8))
-  } catch { /* pas de photo neuve : la carte garde l'ancienne */ }
+  const url = snapScene(s.stage, 400)
+  if (url) box.setPhoto(who, url)
 }
 
 /* ---------- Annuler, refaire (11/10) ----------
@@ -267,12 +254,9 @@ function addPiece(s: State, id: PieceId, x: number, z: number, ry: number, drop 
   p.g.rotation.y = ry
   s.farm.root.add(p.g)
   const t: Thing = { kind: 'piece', u: uid(u), id, g: p.g, foot: p.foot, ry, drop: drop ? 1 : 0, jump: 0 }
-  if (s.night && p.lamp) {
-    const L = new s.T.PointLight(0xFFB45A, 3.2, 5.5, 1.4)
-    L.position.set(p.lamp[0], p.lamp[1], p.lamp[2])
-    p.g.add(L)
-    t.lamp = L
-  }
+  // La nuit, sa lanterne : une des lumières préparées, libre (elle suit la pièce, `frame`)
+  const free = p.lamp && s.lanterns.find(L => !s.things.some(o => o.lamp === L))
+  if (free) { t.lamp = free; t.lampAt = p.lamp }
   p.g.traverse(o => { o.userData.thing = t })
   s.things.push(t)
   return t
@@ -342,8 +326,11 @@ function awaken(s: State, w: Drawn, v: Vivant) {
   save(s)
 }
 
-function removeThing(s: State, t: Thing) {
+/** `hush` : sans son (la ferme vidée d'un coup n'en fait qu'un). */
+function removeThing(s: State, t: Thing, hush = false) {
   s.things = s.things.filter(x => x !== t)
+  // Sa lanterne s'éteint et reste dans la scène, pour la grange suivante
+  if (t.lamp) t.lamp.intensity = 0
   s.farm.root.remove(t.g)
   t.plush?.dispose()
   t.g.traverse(o => {
@@ -353,7 +340,7 @@ function removeThing(s: State, t: Thing) {
     if (m.isMesh && t.kind === 'piece' && !(m as unknown as import('three').InstancedMesh).isInstancedMesh) m.geometry.dispose()
   })
   s.fx.burst(s.farm.root.localToWorld(t.g.position.clone()), { count: 14, color: ['#C9A57A', '#FFFFFF'], speed: 1.4, spread: 1, life: 0.6, size: 0.12 })
-  sfx('whoosh', { vol: 0.5 })
+  if (!hush) sfx('whoosh', { vol: 0.5 })
   save(s)
 }
 
@@ -545,7 +532,6 @@ function dropHeld(s: State, cx: number, cy: number) {
 
 /** Posé : un bruit, un nuage de poussière ; un animal dit bonjour. */
 function landed(s: State, t: Thing) {
-  s.idle = 0
   const w = s.farm.root.localToWorld(t.g.position.clone())
   if (t.kind === 'piece') {
     sfx(t.id === 'pond' || t.id === 'mud' ? 'pluck' : 'drop', { vol: 0.7 })
@@ -554,7 +540,6 @@ function landed(s: State, t: Thing) {
     hello(t, 1, 0.6)
     t.jump = 0.5
   }
-  s.placed++
   save(s)
 }
 
@@ -705,12 +690,7 @@ function showDrawn(s: State, t: Thing, v: Vivant, dt: number, mx: number, mz: nu
 
 function frame(s: State, dt: number) {
   s.t += dt
-  s.idle += dt
-  if (!s.held && !s.stroke) {
-    s.rot += s.vRot * dt
-    s.vRot *= Math.pow(0.004, dt)
-    if (Math.abs(s.vRot) < 0.01) s.vRot = 0
-  }
+  if (!s.held && !s.stroke) coast(s, dt, 0.004, 0.01)
   s.farm.root.rotation.y = s.rot
   s.zoom += (s.tgtZoom - s.zoom) * Math.min(1, dt * 8)
   const cam = s.stage.camera
@@ -729,6 +709,12 @@ function frame(s: State, dt: number) {
     if (t.kind === 'piece') t.g.rotation.y += (t.ry - t.g.rotation.y) * Math.min(1, dt * 14)
     if (t.c) s.kit.blink(t.c, dt)
     if (t.kind === 'animal') stepAnimal(s, t, dt)
+    // Sa lanterne la suit (dans le repère de la ferme) ; allumée tant que la pièce se voit
+    if (t.lamp && t.lampAt) {
+      t.g.updateMatrix()
+      t.lamp.position.set(...t.lampAt).applyMatrix4(t.g.matrix)
+      t.lamp.intensity = t.g.visible ? 3.2 : 0
+    }
   }
   s.farm.step(dt, s.t)
   s.fx.update(dt)
@@ -753,8 +739,10 @@ async function build(c: GameContext, arena: HTMLElement, night: boolean): Promis
     dirt: stage.keep(new T.MeshStandardMaterial({ color: night ? 0x4A3C30 : 0xA8865E, roughness: 1 })),
     wood: stage.keep(new T.MeshStandardMaterial({ color: night ? 0x3E2A1A : 0x6E4A2C, roughness: 0.8 })),
     rot: -0.15, vRot: 0, zoom: 1, tgtZoom: 1, tool: 'none', tab: 'batiments', held: null, stroke: null,
-    fx: particles(stage, 300), ray: new T.Raycaster(), t: 0, idle: 0, placed: 0
+    fx: particles(stage, 300), ray: new T.Raycaster(), t: 0,
+    lanterns: night ? Array.from({ length: LANTERNS }, () => new T.PointLight(0xFFB45A, 0, 5.5, 1.4)) : []
   }
+  for (const L of s.lanterns) farm.root.add(L)
   // La ferme gardée revient telle quelle (chaque chose avec son numéro)
   for (const it of saved.items) revive(s, it, false)
   for (const pts of saved.paths) if (pts.length >= 4) { const m = pathMesh(s, pts); farm.root.add(m); s.paths.push({ pts, mesh: m }) }
@@ -789,8 +777,6 @@ const TOOL_ICONS = {
   undo: svg('<path d="M19 11 8 21l11 10" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 21h17a9.5 9.5 0 0 1 0 19h-8" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round"/>'),
   redo: svg('<g transform="matrix(-1 0 0 1 48 0)"><path d="M19 11 8 21l11 10" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 21h17a9.5 9.5 0 0 1 0 19h-8" fill="none" stroke="#3E8ED0" stroke-width="5" stroke-linecap="round"/></g>')
 }
-/** Une petite fille (sa couleur : son haut), pour sa carte et le bouton « changer de ferme ». */
-const girl = (color: string, sz = 40) => svg(`<path d="M11 45c1-8 6-11 13-11s12 3 13 11z" fill="${color}"/><circle cx="24" cy="22" r="11" fill="#FFD9B8"/><path d="M12.5 22c0-9 5-14 11.5-14S35.5 13 35.5 22c-3-5-6.5-7-11.5-7s-8.5 2-11.5 7z" fill="#6B3E26"/><circle cx="10" cy="21" r="4.5" fill="#6B3E26"/><circle cx="38" cy="21" r="4.5" fill="#6B3E26"/><circle cx="20" cy="23.5" r="1.5" fill="#45362A"/><circle cx="28" cy="23.5" r="1.5" fill="#45362A"/><path d="M21 28c2 1.5 4 1.5 6 0" fill="none" stroke="#C0605A" stroke-width="1.5" stroke-linecap="round"/>`, sz)
 
 export const farmbuild: GameDef = {
   id: 'farmbuild', name: 'La Ferme à construire', icon: '🏡', sq: 'sq-mint', cat: 'creatif', noTier: true,
@@ -816,10 +802,9 @@ export const farmbuild: GameDef = {
     forget()
     c.root.innerHTML = `
       <div class="arena g3-arena fb-wrap" id="fbWrap" data-who="">
-        <div class="fb-who" id="fbWho">${WHO.map(w => `
-          <span class="tool-item fb-card-item"><button class="fb-card" data-who="${w.id}" aria-label="${w.name}" style="--c:${w.color}"><span class="fb-photo"></span></button><b class="fb-card-name">${girl(w.color, 44)}${w.name}</b></span>`).join('')}
-        </div>
-        <span class="tool-item fb-me"><button class="sn-tool" id="fbMe" aria-label="Changer de ferme"></button><i class="tool-cap" id="fbMeCap"></i></span>
+        ${whoCards('fb')}
+        ${meButton('fbMe', 'fb-me', 'Changer de ferme')}
+        ${trashButton('fbReset', 'fb-reset', 'Vider la ferme')}
         <span class="tool-item fb-dn"><button class="sn-tool" id="fbNight" aria-label="Jour ou nuit"></button><i class="tool-cap" id="fbNightCap"></i></span>
         <span class="tool-item fb-penitem"><button class="sn-tool fb-pen" id="fbPen" aria-label="Dessiner">${DRAW_ICONS.pen}</button><i class="tool-cap">Dessiner</i></span>
         <div class="fb-tray" id="fbTray">
@@ -875,7 +860,6 @@ export const farmbuild: GameDef = {
       s.stage.settle()
       // On s'approche un peu pour le voir se gonfler
       s.tgtZoom = Math.max(s.tgtZoom, 1.3)
-      s.idle = 0
       sfx('cloth', { vol: 0.7 })
       c.after(320, () => {
         if (me !== s) return
@@ -891,7 +875,9 @@ export const farmbuild: GameDef = {
     // La feuille ouverte, la ferme ne se redessine plus : sa dernière image
     // reste derrière le voile (le GPU de la tablette est tout à la feuille)
     const still = (on: boolean) => { if (me) me.stage.render = on ? () => { /* image figée */ } : undefined }
-    sheet = createSheet(arena, { done: born, closed: () => still(false), opened: () => still(true) })
+    // La feuille fermée (son X est pile sur Jour / Nuit) : le second toucher d'un double toucher ne refait pas la ferme
+    const quiet = calm()
+    sheet = createSheet(arena, { done: (st, cv) => { quiet.mark(); return born(st, cv) }, closed: () => { quiet.mark(); still(false) }, opened: () => still(true) })
     preloadCries(ANIMALS.map(k => CRY[k]).filter((v): v is AnimalVoice => !!v))
     const pics: Record<string, string> = {}
     const showTab = (tab: Tab) => {
@@ -908,18 +894,7 @@ export const farmbuild: GameDef = {
     }
     showTab('batiments')
     /** Les deux cartes : la photo de chaque ferme (ou la grange dessinée, si elle est neuve), la dernière bordée. */
-    const showCards = () => {
-      let last: string | null = null
-      try { last = localStorage.getItem(WHO_KEY) } catch { /* rien */ }
-      for (const w of WHO) {
-        const b = c.root.querySelector<HTMLElement>(`.fb-card[data-who="${w.id}"]`)
-        if (!b) continue
-        b.classList.toggle('last', w.id === last)
-        let src: string | null = null
-        try { src = localStorage.getItem(PHOTO(w.id)) } catch { /* rien */ }
-        b.querySelector('.fb-photo')!.innerHTML = src ? `<img src="${src}" alt="" draggable="false">` : `<span class="fb-empty">${BADGE.farmbuild}</span>`
-      }
-    }
+    const showCards = () => paintCards(arena, box, BADGE.farmbuild)
     showCards()
     // Les vignettes (rendues une fois, gardées)
     const ids = (Object.values(TABS).flatMap(t => t.items.map(i => i[0])))
@@ -952,13 +927,11 @@ export const farmbuild: GameDef = {
     const choose = (w: Who) => {
       if (me || building) return
       who = w
-      try { localStorage.setItem(WHO_KEY, w) } catch { /* rien */ }
+      box.setLast(w)
       saved = load(w)
       forget()
       arena.setAttribute('data-who', w)
-      const me0 = WHO.find(x => x.id === w)!
-      c.root.querySelector('#fbMe')!.innerHTML = girl(me0.color)
-      c.root.querySelector('#fbMeCap')!.textContent = me0.name
+      paintMe(c.root, 'fbMe', w)
       setNightBtn(saved.night)
       sfx('confirm', { vol: 0.5 })
       hideLoader = loader(arena, 'farmbuild')
@@ -970,14 +943,18 @@ export const farmbuild: GameDef = {
       save(s)
       flush()
       forget()
+      pts.clear(); drawerDown = null
       me = null
       disposeState(s)
     }
 
-    /* Le doigt : par pointerId (deux doigts = pincer) ; le glissé s'écoute sur window */
-    const pts = new Map<number, { x: number; y: number }>()
-    let tap: { x: number; y: number; t: number; moved: number; thing: Thing | null } | null = null
-    let pinch0 = 0, zoom0 = 1, lastT = 0
+    /* Le doigt : par pointerId (deux doigts = pincer ; celui qui reste après ne
+       fait rien) ; le glissé s'écoute sur window. Le tiroir ne suit qu'un doigt
+       à la fois : un second toucher dessus, pendant qu'on glisse une pièce, est ignoré. */
+    const pts = new Fingers()
+    const spin = new Spinner({ max: 3.2, perPx: () => me ? perWidth(me.stage.renderer.domElement, 120, 0.36)() : 0 })
+    let tap: { t: number; thing: Thing | null } | null = null
+    let pinch0 = 0, zoom0 = 1
     let drawerDown: { id: string; pid: number; x: number; y: number; started: boolean } | null = null
 
     const onDown = (e: PointerEvent) => {
@@ -986,16 +963,13 @@ export const farmbuild: GameDef = {
       const t = e.target as HTMLElement
       // Une pièce du tiroir : on la prendra si le doigt monte vers la ferme
       const item = t.closest<HTMLElement>('.fb-item')
-      if (item?.dataset.id) { drawerDown = { id: item.dataset.id, pid: e.pointerId, x: e.clientX, y: e.clientY, started: false }; return }
+      if (item?.dataset.id) { if (!drawerDown) drawerDown = { id: item.dataset.id, pid: e.pointerId, x: e.clientX, y: e.clientY, started: false }; return }
       if (t !== s.stage.renderer.domElement) return
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      s.vRot = 0
-      lastT = performance.now()
-      s.idle = 0
+      pts.down(e)
+      spin.start(s)
       if (pts.size === 2) {
         // Un second doigt : on pince — le trait ou la chose tenue s'arrêtent
-        const [a, b] = [...pts.values()]
-        pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = s.tgtZoom
+        pinch0 = pts.pair()!.d; zoom0 = s.tgtZoom
         if (s.stroke) { if (s.stroke.mesh) { s.farm.root.remove(s.stroke.mesh); s.stroke.mesh.geometry.dispose() } s.stroke = null }
         if (s.held && !s.held.fresh) dropHeld(s, e.clientX, e.clientY)
         tap = null
@@ -1005,8 +979,10 @@ export const farmbuild: GameDef = {
         const g = ground(s, e.clientX, e.clientY)
         if (g && Math.hypot(g.x, g.z) < EDGE) { s.stroke = { pid: e.pointerId, pts: [g.x, g.z], mesh: null, kind: s.tool }; return }
       }
-      if (s.tool === 'erase') { const g = ground(s, e.clientX, e.clientY); if (g) eraseAt(s, g.x, g.z); tap = { x: e.clientX, y: e.clientY, t: lastT, moved: 0, thing: null }; return }
-      tap = { x: e.clientX, y: e.clientY, t: lastT, moved: 0, thing: thingAt(s, e.clientX, e.clientY) }
+      if (pts.size > 2) return
+      // L'heure de l'événement : une image lente entre l'appui et le lever ne change pas un toucher en appui long
+      if (s.tool === 'erase') { const g = ground(s, e.clientX, e.clientY); if (g) eraseAt(s, g.x, g.z); tap = { t: e.timeStamp, thing: null }; return }
+      tap = { t: e.timeStamp, thing: thingAt(s, e.clientX, e.clientY) }
     }
 
     const onMove = (e: PointerEvent) => {
@@ -1022,16 +998,15 @@ export const farmbuild: GameDef = {
         if (drawerDown.started) moveHeld(s, e.clientX, e.clientY)
         return
       }
-      const p = pts.get(e.pointerId)
-      if (!p) return
-      const dx = e.clientX - p.x, dy = e.clientY - p.y
-      p.x = e.clientX; p.y = e.clientY
-      if (tap) tap.moved += Math.abs(dx) + Math.abs(dy)
+      const m = pts.move(e)
+      if (!m) return
+      const { f: p, dx } = m
       if (pts.size === 2 && pinch0 > 0) {
-        const [a, b] = [...pts.values()]
-        s.tgtZoom = Math.max(0.8, Math.min(1.6, zoom0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch0))
+        s.tgtZoom = Math.max(0.8, Math.min(1.6, zoom0 * pts.pair()!.d / pinch0))
         return
       }
+      // Le doigt qui reste après deux doigts ne fait rien (ni tour, ni gomme, ni chose emmenée)
+      if (p.multi) { spin.hold(s); return }
       if (s.stroke && s.stroke.pid === e.pointerId) {
         const g = ground(s, e.clientX, e.clientY)
         if (!g || Math.hypot(g.x, g.z) > EDGE) return
@@ -1051,22 +1026,17 @@ export const farmbuild: GameDef = {
       if (s.tool === 'erase') { const g = ground(s, e.clientX, e.clientY); if (g) eraseAt(s, g.x, g.z); return }
       // Une chose de la ferme qu'on emmène
       if (s.held && s.held.pid === e.pointerId) { moveHeld(s, e.clientX, e.clientY); return }
-      if (tap?.thing && tap.moved > 10 && !s.held) { grab(s, tap.thing, e.pointerId, false, e.clientX, e.clientY); moveHeld(s, e.clientX, e.clientY); return }
+      if (tap?.thing && p.moved > 10 && !s.held) { grab(s, tap.thing, e.pointerId, false, e.clientX, e.clientY); moveHeld(s, e.clientX, e.clientY); return }
       if (tap?.thing) return
       // Sinon, la ferme tourne (avec son élan)
-      const now = performance.now()
-      const dts = Math.max(8, now - lastT) / 1000
-      lastT = now
-      const k = 1 / Math.max(120, s.stage.renderer.domElement.clientWidth * 0.36)
-      s.rot += dx * k
-      s.vRot = Math.max(-3.2, Math.min(3.2, s.vRot * 0.5 + dx * k / dts * 0.5))
+      spin.turn(s, dx)
     }
 
     // Un doigt levé : ce que son geste a changé devient UNE étape (annuler)
     const onUp = (e: PointerEvent) => { up(e); commit() }
     const up = (e: PointerEvent) => {
       const s = me
-      if (!s) { pts.delete(e.pointerId); drawerDown = null; return }
+      if (!s) { pts.up(e); drawerDown = null; return }
       if (drawerDown && e.pointerId === drawerDown.pid) {
         const d = drawerDown
         drawerDown = null
@@ -1085,8 +1055,10 @@ export const farmbuild: GameDef = {
         }
         return
       }
-      if (!pts.has(e.pointerId)) return
-      pts.delete(e.pointerId)
+      // Une chose tenue par ce doigt est toujours lâchée (jamais restée en l'air)
+      if (s.held?.pid === e.pointerId && !pts.has(e.pointerId)) { dropHeld(s, e.clientX, e.clientY); return }
+      const f = pts.up(e)
+      if (!f) return
       if (pts.size < 2) pinch0 = 0
       if (s.stroke && s.stroke.pid === e.pointerId) {
         const st = s.stroke
@@ -1096,10 +1068,10 @@ export const farmbuild: GameDef = {
         return
       }
       if (s.held && s.held.pid === e.pointerId) { dropHeld(s, e.clientX, e.clientY); tap = null; return }
-      if (performance.now() - lastT > 90) s.vRot = 0
+      spin.release(s)
       const t = tap
       tap = null
-      if (e.type === 'pointercancel' || !t || t.moved > 12 || performance.now() - t.t > 600 || !t.thing) return
+      if (e.type === 'pointercancel' || f.multi || !t || f.moved > 12 || e.timeStamp - t.t > 600 || !t.thing) return
       // Un toucher : la pièce pivote d'un quart de tour, l'animal répond
       const th = t.thing
       s.vRot = 0
@@ -1154,6 +1126,26 @@ export const farmbuild: GameDef = {
       showUndo()
     }
 
+    /* La poubelle (27/10) : deux touchers, et la ferme se vide — UNE étape :
+       « Annuler » fait tout revenir, chaque chose à sa place */
+    const trash = twoTaps(c.root.querySelector<HTMLElement>('#fbReset')!, c, () => {
+      const s = me
+      if (!s || building || undoing || s.held || s.stroke) return
+      for (const t of [...s.things]) { rec({ k: 'del', it: itemOf(t) }); removeThing(s, t, true) }
+      for (const [kind, list] of [['path', s.paths], ['fence', s.fences]] as const) {
+        // Du dernier au premier : annulés à l'envers, chacun reprend sa place dans la liste
+        for (let i = list.length - 1; i >= 0; i--) {
+          rec({ k: 'erase', kind, pts: list[i].pts, i })
+          s.farm.root.remove(list[i].mesh)
+          list[i].mesh.geometry.dispose()
+        }
+        list.length = 0
+      }
+      commit()
+      save(s)
+      sfx('whoosh', { vol: 0.6, rate: 0.8 })
+    })
+
     const onWheel = (e: WheelEvent) => {
       if (!me || e.target !== me.stage.renderer.domElement) return
       e.preventDefault()
@@ -1166,6 +1158,8 @@ export const farmbuild: GameDef = {
       const t = e.target as HTMLElement
       const card = t.closest<HTMLElement>('.fb-card')
       if (card?.dataset.who) { choose(card.dataset.who as Who); return }
+      if (!t.closest('#fbReset')) trash.disarm()
+      if (t.closest('#fbReset')) { if (s) trash.tap(); return }
       if (t.closest('#fbUndo')) { undo(true); return }
       if (t.closest('#fbPen') && s && !building) {
         if (s.things.filter(x => x.drawn).length >= MAX_DRAWN) {
@@ -1178,7 +1172,7 @@ export const farmbuild: GameDef = {
         return
       }
       if (t.closest('#fbRedo')) { undo(false); return }
-      if (t.closest('#fbMe') && s && !building && !undoing) {
+      if (t.closest('#fbMe') && s && !building && !undoing && !quiet.quiet()) {
         sheet?.hide()
         leave(s)
         arena.setAttribute('data-who', '')
@@ -1197,7 +1191,7 @@ export const farmbuild: GameDef = {
         sfx('switch', { vol: 0.5 })
         return
       }
-      if (t.closest('#fbNight') && s && !building && !undoing) {
+      if (t.closest('#fbNight') && s && !building && !undoing && !quiet.quiet()) {
         const night = !s.night
         save(s)
         saved.night = night

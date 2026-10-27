@@ -9,6 +9,8 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { tone } from '../core/audio'
 import { visible, handNow, type HandMove } from '../core/hand'
 import { BADGE } from '../core/badges'
+import { mine, snapScene, whoCards, paintCards, meButton, paintMe, trashButton, twoTaps, type Who } from '../core/mine'
+import { Fingers, Spinner, perWidth, coast } from '../core/touchcam'
 
 /* 🎒 MON CARTABLE (19/10, demandé par Joyce : « le tuning de cartable ») —
    sur le modèle de la Pâtisserie : le cartable en grand dans un coin de
@@ -36,14 +38,8 @@ import { BADGE } from '../core/badges'
    Créer : aucune note. */
 
 type Step = 'modele' | 'matiere' | 'couleurs' | 'motifs' | 'deco' | 'remplir'
-type Who = 'jade' | 'joyce'
-const WHO: { id: Who; name: string; color: string }[] = [
-  { id: 'jade', name: 'Jade', color: '#5EC97B' },
-  { id: 'joyce', name: 'Joyce', color: '#B197FC' }
-]
-const KEY = (w: Who) => `ferme:cartable:${w}`
-const PHOTO = (w: Who) => `ferme:cartable:photo:${w}`
-const WHO_KEY = 'ferme:cartable:qui'
+/** Un cartable par fille : `ferme:cartable:<qui>`, sa photo, la dernière choisie. */
+const box = mine('cartable', { delay: 300 })
 
 const STEPS: Step[] = ['modele', 'matiere', 'couleurs', 'motifs', 'deco', 'remplir']
 const STEP_NAME: Record<Step, string> = { modele: 'Modèle', matiere: 'Matière', couleurs: 'Couleurs', motifs: 'Motifs', deco: 'Déco', remplir: 'Remplir' }
@@ -105,7 +101,6 @@ interface State {
   fx: Particles
   ray: import('three').Raycaster
   cam: { p: import('three').Vector3; t: import('three').Vector3 }
-  t: number
 }
 
 let me: State | null = null
@@ -116,32 +111,19 @@ const thumbs: Record<string, string> = {}
 /* ---------- La sauvegarde (un cartable par fille) ---------- */
 
 function load(w: Who): Saved {
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY(w)) || 'null') as Saved | null
-    if (s && s.v === 1 && s.look && typeof s.look.model === 'string') return { v: 1, look: { ...defaultLook(w), ...s.look }, seq: s.seq }
-  } catch { /* un cartable neuf */ }
+  const s = box.read(w) as Saved | null
+  if (s && s.v === 1 && s.look && typeof s.look.model === 'string') return { v: 1, look: { ...defaultLook(w), ...s.look }, seq: s.seq }
   return { v: 1, look: defaultLook(w) }
 }
-let saveTimer = 0
 function save(s: State) {
   const seq = s.bag.sequins ? s.bag.sequins.bits() : s.seq
   s.seq = seq ?? null
-  const data: Saved = { v: 1, look: s.look, ...(seq ? { seq } : {}) }
-  clearTimeout(saveTimer)
-  const w = who
-  saveTimer = window.setTimeout(() => { try { localStorage.setItem(KEY(w), JSON.stringify(data)) } catch { /* plein : tant pis */ } }, 300)
+  box.save(who, { v: 1, look: s.look, ...(seq ? { seq } : {}) } satisfies Saved)
 }
 /** La photo du cartable pour sa carte : l'image telle qu'on la quitte, réduite. */
 function snap(s: State) {
-  try {
-    const cv = s.stage.renderer.domElement
-    s.stage.renderer.render(s.stage.scene, s.stage.camera)
-    const w = 400, h = Math.max(1, Math.round(w * cv.height / Math.max(1, cv.width)))
-    const c2 = document.createElement('canvas')
-    c2.width = w; c2.height = h
-    c2.getContext('2d')!.drawImage(cv, 0, 0, w, h)
-    localStorage.setItem(PHOTO(who), c2.toDataURL('image/webp', 0.8))
-  } catch { /* la carte garde l'ancienne photo */ }
+  const url = snapScene(s.stage, 400)
+  if (url) box.setPhoto(who, url)
 }
 
 /* ---------- Le coin de classe ---------- */
@@ -390,7 +372,6 @@ const CAMS: Record<'make' | 'fill' | 'outro', { p: [number, number, number]; t: 
 }
 
 function frame(s: State, dt: number) {
-  s.t += dt
   const T = s.T
   // La caméra glisse vers son cadre (Remplir : plus haut, pour voir dedans)
   const want = s.phase === 'outro' || s.phase === 'done' ? CAMS.outro : s.step === 'remplir' ? CAMS.fill : CAMS.make
@@ -399,7 +380,7 @@ function frame(s: State, dt: number) {
   s.stage.camera.position.copy(s.cam.p); s.stage.camera.lookAt(s.cam.t)
   // Le cartable tourne au doigt (avec son élan) ; pour Remplir, il se met de face
   if (s.step === 'remplir' && s.phase === 'make') s.rot += (0 - s.rot) * Math.min(1, dt * 4)
-  else { s.rot += s.vRot * dt; s.vRot *= Math.pow(0.02, dt) }
+  else coast(s, dt, 0.02)
   // Ouvrir, fermer
   if (s.openK !== s.openWant) {
     const was = s.openK
@@ -568,7 +549,7 @@ async function build(c: GameContext, arena: HTMLElement, saved: Saved): Promise<
     stage, T, kit, bag, look, seq: saved.seq ?? null, step: 'modele', color: COLORS[0][0], pick: null,
     rot: REST, vRot: 0, building: false, again: false, openK: 0, openWant: 0, items, squash: 0, poof: null,
     phase: 'make', outro: null, fx: particles(stage, 300), ray: new T.Raycaster(),
-    cam: { p: new T.Vector3(...CAMS.make.p), t: new T.Vector3(...CAMS.make.t) }, t: 0
+    cam: { p: new T.Vector3(...CAMS.make.p), t: new T.Vector3(...CAMS.make.t) }
   }
   placeBag(s, bag)
   return s
@@ -621,9 +602,7 @@ const STEP_ICON: Record<Step, string> = {
   deco: svg('<path d="M24 41C10 31 7 24 9 18c2-6 10-8 15-2 5-6 13-4 15 2 2 6-1 13-15 23z" fill="#FF6B81" stroke="#C93F5A" stroke-width="2.4" stroke-dasharray="3 2"/><circle cx="36" cy="12" r="7" fill="#FFC94D" stroke="#C9CED6" stroke-width="2"/>'),
   remplir: svg('<rect x="8" y="14" width="20" height="26" rx="2.5" fill="#4FB8E7"/><rect x="11" y="18" width="14" height="3" rx="1.5" fill="#fff" opacity=".8"/><path d="M33 8l6 6-14 22-7 2 1-7z" fill="#FFC94D"/><path d="M18 31l7 5-7 2z" fill="#F4D6B0"/><path d="M33 8l6 6 2-3-6-6z" fill="#FF8FAB"/>')
 }
-const TRASH_ICON = svg('<path d="M12 15h24l-2 25a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3z" fill="#E8574C"/><rect x="8" y="9" width="32" height="6" rx="2.5" fill="#C8453B"/><rect x="19" y="5" width="10" height="6" rx="2.5" fill="#C8453B"/><path d="M19 21v16M24 21v16M29 21v16" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>', 32)
 const FINI_ICON = svg('<circle cx="24" cy="24" r="18" fill="#5EC97B"/><path d="m15 24.5 6 6L33.5 18" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>')
-const girl = (color: string, sz = 40) => svg(`<path d="M11 45c1-8 6-11 13-11s12 3 13 11z" fill="${color}"/><circle cx="24" cy="22" r="11" fill="#FFD9B8"/><path d="M12.5 22c0-9 5-14 11.5-14S35.5 13 35.5 22c-3-5-6.5-7-11.5-7s-8.5 2-11.5 7z" fill="#6B3E26"/><circle cx="10" cy="21" r="4.5" fill="#6B3E26"/><circle cx="38" cy="21" r="4.5" fill="#6B3E26"/><circle cx="20" cy="23.5" r="1.5" fill="#45362A"/><circle cx="28" cy="23.5" r="1.5" fill="#45362A"/><path d="M21 28c2 1.5 4 1.5 6 0" fill="none" stroke="#C0605A" stroke-width="1.5" stroke-linecap="round"/>`, sz)
 
 /* ---------- Le jeu ---------- */
 
@@ -654,18 +633,15 @@ export const cartable: GameDef = {
     let dead = false
     c.root.innerHTML = `
       <div class="arena g3-arena ct-wrap" id="ctWrap" data-who="" data-step="modele">
-        <div class="ct-who">${WHO.map(w => `
-          <span class="tool-item"><button class="ct-card" data-who="${w.id}" aria-label="${w.name}" style="--c:${w.color}"><span class="ct-photo"></span></button><b class="ct-card-name">${girl(w.color, 44)}${w.name}</b></span>`).join('')}
-        </div>
+        ${whoCards('ct')}
         <div class="ct-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool ct-step${st === 'modele' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}<span class="tool-item"><button class="sn-tool ct-fini" id="ctFini" aria-label="Fini">${FINI_ICON}</button><i class="tool-cap">Fini</i></span></div>
-        <span class="tool-item ct-me"><button class="sn-tool" id="ctMe" aria-label="Changer de cartable"></button><i class="tool-cap" id="ctMeCap"></i></span>
-        <span class="tool-item ct-reset"><button class="sn-tool at-trash" id="ctReset" aria-label="Effacer le cartable">${TRASH_ICON}</button><i class="tool-cap">Effacer</i></span>
+        ${meButton('ctMe', 'ct-me', 'Changer de cartable')}
+        ${trashButton('ctReset', 'ct-reset', 'Effacer le cartable')}
         <div class="ct-pal" id="ctPal"></div>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#ctWrap')!
-    const resetB = c.root.querySelector<HTMLElement>('#ctReset')!
-    let armed = false, armId = 0
-    const disarm = () => { armed = false; resetB.classList.remove('arm'); ctx.cancel(armId) }
+    // La poubelle : deux touchers, pouf, le cartable de départ
+    const trash = twoTaps(c.root.querySelector<HTMLElement>('#ctReset')!, c, () => { if (me) { reset(me); setStep('modele') } })
     preloadSfx(['pluck', 'cloth', 'select', 'confirm', 'drop', 'whoosh', 'metal', 'open', 'switch'])
 
     const opt = (attrs: string, icon: string, cap: string, sel: boolean, big = false) =>
@@ -714,18 +690,7 @@ export const cartable: GameDef = {
     }
 
     /* Les deux cartes : la photo de chaque cartable, la dernière bordée */
-    const showCards = () => {
-      let last: string | null = null
-      try { last = localStorage.getItem(WHO_KEY) } catch { /* rien */ }
-      for (const w of WHO) {
-        const b = c.root.querySelector<HTMLElement>(`.ct-card[data-who="${w.id}"]`)
-        if (!b) continue
-        b.classList.toggle('last', w.id === last)
-        let src: string | null = null
-        try { src = localStorage.getItem(PHOTO(w.id)) } catch { /* rien */ }
-        b.querySelector('.ct-photo')!.innerHTML = src ? `<img src="${src}" alt="" draggable="false">` : `<span class="ct-empty">${BADGE.cartable || ''}</span>`
-      }
-    }
+    const showCards = () => paintCards(arena, box, BADGE.cartable || '')
     showCards()
     let hideLoader = () => { /* les cartes d'abord */ }
     let starting = false
@@ -733,11 +698,9 @@ export const cartable: GameDef = {
       if (me || starting) return
       starting = true
       who = w
-      try { localStorage.setItem(WHO_KEY, w) } catch { /* rien */ }
+      box.setLast(w)
       arena.setAttribute('data-who', w)
-      const me0 = WHO.find(x => x.id === w)!
-      c.root.querySelector('#ctMe')!.innerHTML = girl(me0.color)
-      c.root.querySelector('#ctMeCap')!.textContent = me0.name
+      paintMe(c.root, 'ctMe', w)
       sfx('confirm', { vol: 0.5 })
       hideLoader = loader(arena, 'cartable')
       const s = await build(c, arena, load(w)).catch(() => null)
@@ -756,8 +719,8 @@ export const cartable: GameDef = {
       if (s.poof) { s.poof = null; s.bag.obj.scale.setScalar(1); s.bag.obj.position.y = bagY(s, s.bag) }
       if (s.phase === 'make') { s.bag.open(0); snap(s) }
       save(s)
-      clearTimeout(saveTimer)
-      try { localStorage.setItem(KEY(who), JSON.stringify({ v: 1, look: s.look, ...(s.seq ? { seq: s.seq } : {}) })) } catch { /* plein */ }
+      box.flush()
+      pts.clear()
       me = null
       s.outro?.doll.dispose()
       s.bag.dispose(); s.kit.dispose()
@@ -771,7 +734,7 @@ export const cartable: GameDef = {
       if (card?.dataset.who) { choose(card.dataset.who as Who); return }
       const s = me
       if (!s) return
-      if (armed && !t.closest('#ctReset')) disarm()
+      if (!t.closest('#ctReset')) trash.disarm()
       if (t.closest('#ctMe')) {
         if (s.phase !== 'make') return
         leave(s)
@@ -781,22 +744,7 @@ export const cartable: GameDef = {
         return
       }
       if (t.closest('#ctFini')) { if (!s.poof) startOutro(s); return }
-      if (t.closest('#ctReset')) {
-        if (s.phase !== 'make') return
-        // Deux touchers : le premier arme la poubelle
-        if (!armed) {
-          armed = true
-          resetB.classList.add('arm')
-          sfx('switch', { vol: 0.5 })
-          ctx.cancel(armId)
-          armId = ctx.after(2600, disarm)
-          return
-        }
-        disarm()
-        reset(s)
-        setStep('modele')
-        return
-      }
+      if (t.closest('#ctReset')) { if (s.phase === 'make') trash.tap(); return }
       const stepB = t.closest<HTMLElement>('.ct-step')
       if (stepB?.dataset.step) { setStep(stepB.dataset.step as Step); sfx('select', { vol: 0.5 }); return }
       const o = t.closest<HTMLElement>('.ct-opt')
@@ -824,30 +772,31 @@ export const cartable: GameDef = {
     c.root.addEventListener('click', onClick)
 
     // Le doigt sur la scène : caresser les paillettes, toucher, ou faire tourner le cartable
-    const pts = new Map<number, { x: number; y: number; moved: number; stroke: boolean; flips: number }>()
-    let lastT = 0, lastFlipSound = 0
+    const pts = new Fingers<{ stroke: boolean; flips: number; sx: number; sy: number }>()
+    const spin = new Spinner({ max: 4, perPx: () => me ? perWidth(me.stage.renderer.domElement, 120, 0.35)() : 0 })
+    let lastFlipSound = 0
     const canStroke = (s: State) => s.look.fabric === 'paillettes' && !!s.bag.sequins && s.step !== 'remplir' && s.openK < 0.05
     const onDown = (e: PointerEvent) => {
       const s = me
       if (!s || e.target !== s.stage.renderer.domElement || s.phase !== 'make') {
-        if (s && s.phase === 'outro' && e.target === s.stage.renderer.domElement) endGame(s)
+        // Un toucher passe la fin — pas le second d'un double toucher sur « Fini » (la première seconde)
+        if (s && s.phase === 'outro' && e.target === s.stage.renderer.domElement && (s.outro?.t ?? 0) >= 1) endGame(s)
         return
       }
       const h = canStroke(s) ? hitBag(s, e.clientX, e.clientY) : null
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: 0, stroke: !!h && (h.part === 'paillettes' || h.part === 'rabat'), flips: 0 })
-      lastT = performance.now()
-      s.vRot = 0
+      pts.down(e, { stroke: !!h && (h.part === 'paillettes' || h.part === 'rabat'), flips: 0, sx: e.clientX, sy: e.clientY })
+      spin.start(s)
     }
     const onMove = (e: PointerEvent) => {
       const s = me
-      const p = pts.get(e.pointerId)
-      if (!s || !p) return
-      const dx = e.clientX - p.x, dy = e.clientY - p.y
-      p.moved += Math.abs(dx) + Math.abs(dy)
+      const m = s ? pts.move(e) : null
+      if (!s || !m) return
+      const { f: p, dx } = m
       if (p.stroke) {
-        // Caresser : vers le haut, elles se retournent ; vers le bas, elles reviennent
-        if (Math.abs(dy) < 2 && Math.abs(dx) < 2) return
-        p.x = e.clientX; p.y = e.clientY
+        // Caresser : vers le haut, elles se retournent ; vers le bas, elles reviennent (le geste compte depuis le dernier point pris)
+        const dy = e.clientY - p.sy
+        if (Math.abs(dy) < 2 && Math.abs(e.clientX - p.sx) < 2) return
+        p.sx = e.clientX; p.sy = e.clientY
         const h = hitBag(s, e.clientX, e.clientY)
         if (!h || !s.bag.sequins) return
         const w: 0 | 1 = dy < 0 ? 1 : dy > 0 ? 0 : (s.bag.sequins.faceAt(h.local) ? 1 : 0)
@@ -860,22 +809,17 @@ export const cartable: GameDef = {
         }
         return
       }
-      p.x = e.clientX; p.y = e.clientY
-      if (pts.size > 1) return
-      const now = performance.now(), dts = Math.max(8, now - lastT) / 1000
-      lastT = now
-      const k = 1 / Math.max(120, s.stage.renderer.domElement.clientWidth * 0.35)
-      s.rot += dx * k
-      s.vRot = Math.max(-4, Math.min(4, s.vRot * 0.5 + dx * k / dts * 0.5))
+      // Le doigt qui reste après deux doigts ne fait rien
+      if (p.multi) { spin.hold(s); return }
+      spin.turn(s, dx)
     }
     const onUp = (e: PointerEvent) => {
       const s = me
-      const p = pts.get(e.pointerId)
-      pts.delete(e.pointerId)
+      const p = pts.up(e)
       if (!s || !p || s.phase !== 'make') return
       if (p.stroke && p.flips) { save(s); return }
-      if (performance.now() - lastT > 90) s.vRot = 0
-      if (e.type === 'pointercancel' || p.moved >= 12) return
+      spin.release(s)
+      if (e.type === 'pointercancel' || p.moved >= 12 || p.multi) return
       // Un toucher
       if (s.step === 'remplir') {
         const el = s.stage.renderer.domElement, r = el.getBoundingClientRect()

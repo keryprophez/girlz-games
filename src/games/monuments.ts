@@ -9,6 +9,8 @@ import { tone, sWin } from '../core/audio'
 import { visible, handNow, type HandMove } from '../core/hand'
 import { BADGE } from '../core/badges'
 import { ICON } from '../core/icons'
+import { mine, snapScene, whoCards, paintCards, meButton, trashButton, twoTaps, calm, type Who } from '../core/mine'
+import { Fingers, Spinner, perWidth, coast } from '../core/touchcam'
 
 /* 🗼 LES MONUMENTS (19/10, demandé par Jade : « construire les pyramides, la
    tour Eiffel, le pont de Californie… et les pimper ») — d'après les
@@ -27,20 +29,15 @@ import { ICON } from '../core/icons'
    (un toucher sur une déco ou un visiteur le reprend)
    « Fini » : la nuit tombe, le monument s'illumine, un bouquet au-dessus,
    la caméra en fait le tour (un toucher passe). Chaque monument est gardé
-   tel qu'on l'a laissé, par fille, avec sa photo. Créer : aucune note. */
+   tel qu'on l'a laissé, par fille, avec sa photo ; la poubelle (27/10, deux
+   touchers) le remet tel qu'au premier jour. Créer : aucune note. */
 
-type Who = 'jade' | 'joyce'
 type Step = 'construire' | 'peindre' | 'lumieres' | 'deco' | 'visiteurs'
 type DecoKind = 'drapeau' | 'noeud' | 'ballon' | 'etoile' | 'coeur'
 type Lights = 'off' | 'or' | 'blanc' | 'rose' | 'bleu' | 'arc'
 
-const WHO: { id: Who; name: string; color: string }[] = [
-  { id: 'jade', name: 'Jade', color: '#5EC97B' },
-  { id: 'joyce', name: 'Joyce', color: '#B197FC' }
-]
-const KEY = (w: Who) => `ferme:monuments:${w}`
-const PHOTO = (w: Who, id: MonumentId) => `ferme:monuments:photo:${w}:${id}`
-const WHO_KEY = 'ferme:monuments:qui'
+/** Un livre de monuments par fille : `ferme:monuments:<qui>`, la photo de chacun (`…:photo:<qui>:<monument>`), la dernière choisie. */
+const box = mine('monuments', { delay: 300 })
 
 const STEPS: Step[] = ['construire', 'peindre', 'lumieres', 'deco', 'visiteurs']
 const STEP_NAME: Record<Step, string> = { construire: 'Construire', peindre: 'Peindre', lumieres: 'Lumières', deco: 'Déco', visiteurs: 'Visiteurs' }
@@ -137,34 +134,22 @@ const thumbs: Record<string, string> = {}
 /* ---------- La sauvegarde : un livre de monuments par fille ---------- */
 
 function loadBook(w: Who): Book {
-  try { const b = JSON.parse(localStorage.getItem(KEY(w)) || 'null') as Book | null; if (b && typeof b === 'object') return b } catch { /* un livre neuf */ }
-  return {}
+  const b = box.read(w) as Book | null
+  return b && typeof b === 'object' ? b : {}
 }
 function loadSaved(w: Who, id: MonumentId): Saved {
   const s = loadBook(w)[id]
   return s && typeof s.built === 'number' ? { ...fresh(), ...s } : fresh()
 }
-let saveTimer = 0
+/** Le livre, avec ce monument tel qu'il est (relu au moment d'écrire : les autres monuments n'y perdent rien). */
+const bookWith = (w: Who, id: MonumentId, data: Saved) => () => { const b = loadBook(w); b[id] = data; return b }
 function save(s: State) {
-  clearTimeout(saveTimer)
-  const w = who, id = s.id, data = JSON.parse(JSON.stringify(s.saved)) as Saved
-  saveTimer = window.setTimeout(() => writeSaved(w, id, data), 300)
+  box.save(who, bookWith(who, s.id, JSON.parse(JSON.stringify(s.saved)) as Saved))
 }
-function writeSaved(w: Who, id: MonumentId, data: Saved) {
-  try { const b = loadBook(w); b[id] = data; localStorage.setItem(KEY(w), JSON.stringify(b)) } catch { /* plein : tant pis */ }
-}
-/** La photo du monument pour sa carte. */
+/** La photo du monument pour sa carte : le milieu de l'image, en 4:3. */
 function snap(s: State) {
-  try {
-    s.stage.renderer.render(s.stage.scene, s.stage.camera)
-    const cv = s.stage.renderer.domElement
-    const w = 360, h = Math.round(w * 3 / 4)
-    const c2 = document.createElement('canvas'); c2.width = w; c2.height = h
-    // Le milieu de l'image, en 4:3
-    const sw = Math.min(cv.width, cv.height * 4 / 3), sh = sw * 3 / 4
-    c2.getContext('2d')!.drawImage(cv, (cv.width - sw) / 2, (cv.height - sh) / 2, sw, sh, 0, 0, w, h)
-    localStorage.setItem(PHOTO(who, s.id), c2.toDataURL('image/webp', 0.8))
-  } catch { /* la carte garde l'ancienne photo */ }
+  const url = snapScene(s.stage, 360, true)
+  if (url) box.setPhoto(who, url, s.id)
 }
 
 /* ---------- Le décor ---------- */
@@ -467,7 +452,7 @@ function frame(s: State, dt: number) {
     if (s.m.w > s.m.h * 1.4) s.rot += (s.rot0 + Math.sin(s.outroT * 0.9) * 0.5 - s.rot) * (1 - Math.pow(0.05, dt))
     else s.rot += dt * 0.9
   }
-  else { s.rot += s.vRot * dt; s.vRot *= Math.pow(0.03, dt) }
+  else coast(s, dt, 0.03)
   cam.position.set(Math.sin(s.rot) * s.dist, s.camY, Math.cos(s.rot) * s.dist)
   cam.lookAt(0, s.tgtY, 0)
   s.shake.apply(dt)
@@ -752,7 +737,6 @@ const STEP_ICON: Record<Step, string> = {
 const FINI_ICON = svg('<circle cx="24" cy="24" r="18" fill="#5EC97B"/><path d="m15 24.5 6 6L33.5 18" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>')
 const SUN_ICON = svg('<circle cx="24" cy="24" r="9" fill="#FFC94D"/>' + Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<path d="M${24 + Math.cos(a) * 13} ${24 + Math.sin(a) * 13}L${24 + Math.cos(a) * 19} ${24 + Math.sin(a) * 19}" stroke="#FFC94D" stroke-width="3.4" stroke-linecap="round"/>` }).join(''))
 const MOON_ICON = svg('<path d="M30 8a17 17 0 1 0 10 28A14 14 0 0 1 30 8z" fill="#5B6FA8"/><circle cx="36" cy="12" r="2" fill="#FFD34D"/><circle cx="41" cy="22" r="1.4" fill="#FFD34D"/>')
-const girl = (color: string, sz = 40) => svg(`<path d="M11 45c1-8 6-11 13-11s12 3 13 11z" fill="${color}"/><circle cx="24" cy="22" r="11" fill="#FFD9B8"/><path d="M12.5 22c0-9 5-14 11.5-14S35.5 13 35.5 22c-3-5-6.5-7-11.5-7s-8.5 2-11.5 7z" fill="#6B3E26"/><circle cx="10" cy="21" r="4.5" fill="#6B3E26"/><circle cx="38" cy="21" r="4.5" fill="#6B3E26"/><circle cx="20" cy="23.5" r="1.5" fill="#45362A"/><circle cx="28" cy="23.5" r="1.5" fill="#45362A"/><path d="M21 28c2 1.5 4 1.5 6 0" fill="none" stroke="#C0605A" stroke-width="1.5" stroke-linecap="round"/>`, sz)
 
 /* ---------- Le jeu ---------- */
 
@@ -795,12 +779,11 @@ export const monuments: GameDef = {
     let dead = false
     c.root.innerHTML = `
       <div class="arena g3-arena mn-wrap" id="mnWrap" data-who="" data-mon="" data-step="construire" data-built="0">
-        <div class="mn-who">${WHO.map(w => `
-          <span class="tool-item"><button class="mn-card" data-who="${w.id}" aria-label="${w.name}" style="--c:${w.color}">${girl(w.color, 120)}</button><b class="mn-card-name">${w.name}</b></span>`).join('')}
-        </div>
+        ${whoCards('mn', true)}
         <div class="mn-grid" id="mnGrid"></div>
         <div class="mn-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool mn-step${st === 'construire' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}<span class="tool-item"><button class="sn-tool mn-fini" id="mnFini" aria-label="Fini">${FINI_ICON}</button><i class="tool-cap">Fini</i></span></div>
         <span class="tool-item mn-back"><button class="sn-tool" id="mnBack" aria-label="Les monuments">${ICON.choices}</button><i class="tool-cap">Monuments</i></span>
+        ${trashButton('mnReset', 'mn-reset', 'Effacer le monument')}
         <div class="mn-pal" id="mnPal"></div>
         <svg class="mn-guide" id="mnGuide" aria-hidden="true"><path id="mnGuidePath" d=""/></svg>
       </div>`
@@ -835,31 +818,27 @@ export const monuments: GameDef = {
     setStepRef = setStep
 
     /* Les cartes des filles, puis les monuments */
-    const showWho = () => {
-      let last: string | null = null
-      try { last = localStorage.getItem(WHO_KEY) } catch { /* rien */ }
-      c.root.querySelectorAll<HTMLElement>('.mn-card').forEach(b => b.classList.toggle('last', b.dataset.who === last))
-    }
+    const showWho = () => paintCards(arena, box)
     showWho()
     const showGrid = () => {
       const grid = c.root.querySelector<HTMLElement>('#mnGrid')!
-      const me0 = WHO.find(x => x.id === who)!
-      grid.innerHTML = `<span class="tool-item mn-me"><button class="sn-tool" id="mnMe" aria-label="Changer">${girl(me0.color)}</button><i class="tool-cap">${me0.name}</i></span>
+      grid.innerHTML = `${meButton('mnMe', 'mn-me', 'Changer', who)}
         <div class="mn-cards">${MONUMENTS.map(id => {
-          let src: string | null = null
-          try { src = localStorage.getItem(PHOTO(who, id)) } catch { /* rien */ }
-          src ??= thumbs['m-' + id] ?? null
+          const src = box.photo(who, id) ?? thumbs['m-' + id] ?? null
           return `<span class="tool-item"><button class="mn-mcard" data-mon="${id}" aria-label="${MONUMENT_NAME[id]}">${src ? `<img src="${src}" alt="" draggable="false">` : `<span class="mn-empty">${BADGE.monuments || ''}</span>`}</button><i class="tool-cap">${MONUMENT_NAME[id]}</i></span>`
         }).join('')}</div>`
     }
+    // « Changer » de la grille est à la place du retour « Monuments » : le second toucher d'un double toucher n'y appuie pas
+    const quiet = calm()
     const toGrid = () => {
+      quiet.mark()
       arena.setAttribute('data-mon', '')
       showGrid()
       if (!(window as unknown as { __BOT?: boolean }).__BOT) monumentThumbs(320).then(() => { if (!dead && arena.getAttribute('data-mon') === '') showGrid() })
     }
     const chooseWho = (w: Who) => {
       who = w
-      try { localStorage.setItem(WHO_KEY, w) } catch { /* rien */ }
+      box.setLast(w)
       arena.setAttribute('data-who', w)
       sfx('confirm', { vol: 0.5 })
       toGrid()
@@ -890,8 +869,8 @@ export const monuments: GameDef = {
     /** On quitte le monument : gardé, photographié, libéré. */
     const leave = (s: State, photo = true) => {
       if (photo && s.phase === 'make') snap(s)
-      clearTimeout(saveTimer)
-      writeSaved(who, s.id, JSON.parse(JSON.stringify(s.saved)))
+      box.write(who, bookWith(who, s.id, JSON.parse(JSON.stringify(s.saved)) as Saved))
+      pts.clear()
       if (me === s) me = null
       for (const d of s.decos) disposeTree(d.g)
       for (const c of s.cars) disposeTree(c.g)
@@ -916,11 +895,13 @@ export const monuments: GameDef = {
       const t = e.target as HTMLElement
       const card = t.closest<HTMLElement>('.mn-card')
       if (card?.dataset.who) { chooseWho(card.dataset.who as Who); return }
-      if (t.closest('#mnMe')) { arena.setAttribute('data-who', ''); showWho(); sfx('select', { vol: 0.4 }); return }
+      if (t.closest('#mnMe')) { if (quiet.quiet()) return; arena.setAttribute('data-who', ''); showWho(); sfx('select', { vol: 0.4 }); return }
       const mc = t.closest<HTMLElement>('.mn-mcard')
       if (mc?.dataset.mon) { open(mc.dataset.mon as MonumentId); return }
       const s = me
       if (!s) return
+      if (!t.closest('#mnReset')) trash.disarm()
+      if (t.closest('#mnReset')) { if (s.phase === 'make') trash.tap(); return }
       if (t.closest('#mnBack')) { if (s.phase === 'make') { leave(s); toGrid(); sfx('select', { vol: 0.4 }) } return }
       if (t.closest('#mnFini')) { startOutro(s); return }
       const stepB = t.closest<HTMLElement>('.mn-step')
@@ -940,14 +921,27 @@ export const monuments: GameDef = {
       showPal()
     }
     c.root.addEventListener('click', onClick)
+    /* La poubelle (27/10) : deux touchers, et le monument ouvert redevient tel
+       qu'au premier jour — rien de posé, sa photo oubliée ; on le rouvre neuf */
+    const trash = twoTaps(c.root.querySelector<HTMLElement>('#mnReset')!, c, () => {
+      const s = me
+      if (!s || s.phase !== 'make') return
+      const id = s.id
+      sfx('whoosh', { vol: 0.6, rate: 0.8 })
+      s.saved = fresh()
+      leave(s, false)
+      box.dropPhoto(who, id)
+      open(id)
+    })
 
     // Le doigt : glisser la pièce, tracer le câble, toucher le monument, ou tourner autour
-    const pts = new Map<number, { x: number; y: number; moved: number; kind: 'piece' | 'trace' | 'turn' }>()
-    let lastT = 0
+    const pts = new Fingers<{ kind: 'piece' | 'trace' | 'turn' }>()
+    const spin = new Spinner({ max: 3, sign: -1, perPx: () => me ? perWidth(me.stage.renderer.domElement, 160, 0.5)() : 0 })
     const onDown = (e: PointerEvent) => {
       const s = me
       if (!s || e.target !== s.stage.renderer.domElement) return
-      if (s.phase === 'outro') { endGame(s); return }
+      // Un toucher passe la fin — pas le second d'un double toucher sur « Fini » (la première seconde)
+      if (s.phase === 'outro') { if (s.outroT >= 1) endGame(s); return }
       if (s.phase !== 'make') return
       let kind: 'piece' | 'trace' | 'turn' = 'turn'
       const cur = s.cur
@@ -973,16 +967,13 @@ export const monuments: GameDef = {
           kind = 'trace'
         }
       }
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: 0, kind })
-      lastT = performance.now()
-      if (kind === 'turn') s.vRot = 0
+      pts.down(e, { kind })
+      if (kind === 'turn') spin.start(s)
     }
     const onMove = (e: PointerEvent) => {
-      const s = me, p = pts.get(e.pointerId)
-      if (!s || !p) return
-      const dx = e.clientX - p.x
-      p.moved += Math.abs(dx) + Math.abs(e.clientY - p.y)
-      p.x = e.clientX; p.y = e.clientY
+      const s = me, m = s ? pts.move(e) : null
+      if (!s || !m) return
+      const { f: p, dx } = m
       if (p.kind === 'piece' && s.cur?.drag?.id === e.pointerId) {
         const cur = s.cur, tgt = worldOf(s, cur.i)
         const w = rayAt(s, e.clientX, e.clientY).ray.intersectPlane(dragPlane(s, tgt), new s.T.Vector3())
@@ -1019,17 +1010,14 @@ export const monuments: GameDef = {
         }
         return
       }
-      if (p.kind === 'turn' && pts.size === 1) {
-        const now = performance.now(), dts = Math.max(8, now - lastT) / 1000
-        lastT = now
-        const k = 1 / Math.max(160, s.stage.renderer.domElement.clientWidth * 0.5)
-        s.rot -= dx * k
-        s.vRot = Math.max(-3, Math.min(3, s.vRot * 0.5 - dx * k / dts * 0.5))
+      if (p.kind === 'turn') {
+        // Le doigt qui reste après deux doigts ne fait rien
+        if (p.multi) spin.hold(s)
+        else spin.turn(s, dx)
       }
     }
     const onUp = (e: PointerEvent) => {
-      const s = me, p = pts.get(e.pointerId)
-      pts.delete(e.pointerId)
+      const s = me, p = pts.up(e)
       if (!s || !p || s.phase !== 'make') return
       if (p.kind === 'piece' && s.cur?.drag?.id === e.pointerId) {
         const cur = s.cur, tgt = worldOf(s, cur.i)
@@ -1042,8 +1030,8 @@ export const monuments: GameDef = {
         return
       }
       if (p.kind === 'trace') { if (s.trace) s.trace.id = null; return }
-      if (performance.now() - lastT > 90) s.vRot = 0
-      if (e.type === 'pointercancel' || p.moved >= 12 || s.saved.built < s.m.pieces.length) return
+      spin.release(s)
+      if (e.type === 'pointercancel' || p.moved >= 12 || p.multi || s.saved.built < s.m.pieces.length) return
       // Un toucher : peindre, poser une déco ou un visiteur, ou les reprendre
       const h = hitScene(s, e.clientX, e.clientY)
       if (!h) return
