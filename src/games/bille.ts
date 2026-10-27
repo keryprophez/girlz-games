@@ -532,6 +532,8 @@ export const bille: GameDef = {
           get tilt() { return me.tilt.slice() }, get size() { return [me.board.w, me.board.h] }, get holes() { return me.board.holes.length - 1 },
           get flag() { return me.ball.flag }, get falls() { return me.falls }, get rim() { return me.ball.rim },
           ball: () => toScreen(stage, me.tray.localToWorld(me.ballMesh.position.clone())),
+          /** Le premier pas du chemin depuis le départ (la case voisine ouverte) : [dx, dy]. */
+          get firstStep() { const [a, b] = me.board.path; return [b[0] - a[0], b[1] - a[1]] },
           /** Le pilote (le même que celui des tests) incline à la place du doigt. */
           set auto(v: boolean) { me.auto = v; me.ball.pilot = v ? autoPilot() : null },
           get auto() { return me.auto }
