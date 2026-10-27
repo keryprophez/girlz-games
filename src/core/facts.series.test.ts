@@ -215,6 +215,20 @@ describe('la mémoire d\'un jeu', () => {
     expect(recOf(rec.mem, 'h:3').lv).toBe(LV.numbers)
   })
 
+  it('changer de mode sans répondre ne fait pas passer les parties', () => {
+    const sh = shelf()
+    const rec = recall('clock', sh)
+    for (let k = 0; k < 4; k++) rec.series(HOURS, 8)
+    expect(rec.mem.games).toBe(1)
+    expect(sh.data.size).toBe(0) // rien n'est gardé tant qu'elle n'a pas répondu
+    const q = rec.series(HOURS, 8)
+    rec.note(q[0], true)
+    expect(rec.mem.games).toBe(1)
+    expect(recall('clock', sh).mem.games).toBe(1)
+    rec.series(HOURS, 8)
+    expect(rec.mem.games).toBe(2)
+  })
+
   it('gardée sous `ferme:memoire:<jeu>`, relue à la réouverture', () => {
     const sh = shelf()
     const a = recall('geo', sh)

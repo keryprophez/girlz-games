@@ -366,7 +366,7 @@ await scenario('memory-toutes-les-paires', async () => {
   // Et la meilleure note du jeu est enregistrée (sous sa tuile à l'accueil) —
   // vérifiée ici depuis que le Bonhomme de neige est sorti (28/09)
   const best = await page.evaluate(() => {
-    const d = JSON.parse(localStorage.getItem('ferme:v2') || '{}')
+    const d = JSON.parse(localStorage.getItem('ferme:v3') || '{}')
     return d.state?.best?.memory
   })
   if (typeof best !== 'number') throw new Error('meilleure note non enregistrée après la partie')
@@ -1238,7 +1238,7 @@ await scenario('bijoux-collier-de-perles', async () => {
   await bjWait(() => window.__bj.count === 10 && window.__bj.moving === 0, null, 'annuler', 180000)
   await page.locator('#bjClose').click({ force: true })
   await bjWait(() => window.__bj.phase === 'vitrine', null, 'vitrine', 180000)
-  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.necklace)
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v3') || '{}').state?.necklace)
   if (kept?.length !== 10) throw new Error(`le collier n'est pas gardé : ${JSON.stringify(kept)}`)
   await page.locator('#bjFini').click({ force: true, timeout: 120000 })
   await finDe('Quel joli collier', 60000)
@@ -1289,7 +1289,7 @@ await scenario('bijoux-perles-a-repasser-pendentif', async () => {
   await bjWait(() => window.__bj.phase === 'fly' && window.__bj.choose, null, 'la création en l\'air', 300000)
   await page.locator('#bjCollar').click({ force: true })
   await bjWait(() => window.__bj.phase === 'vitrine', null, 'la vitrine du collier', 180000)
-  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state)
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v3') || '{}').state)
   const pend = kept?.pendant
   const beads = (pend?.rows || []).join('').replace(/\./g, '').length
   if (beads !== 10) throw new Error(`le pendentif n'est pas gardé : ${JSON.stringify(pend)}`)
@@ -1306,7 +1306,7 @@ await scenario('habille-toi', async () => {
   await page.waitForFunction(() => window.__du && window.__du.ready, null, { timeout: 120000, polling: 500 })
   await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__du.look.hat === 'crown', null, { timeout: 20000, polling: 250 })
-  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.look)
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v3') || '{}').state?.look)
   if (!kept || kept.hat !== 'crown') throw new Error('le look de la petite fille n\'est pas gardé')
   await page.locator('#duDone').click({ force: true, timeout: 120000 })
   await finDe('Superbe look', 60000)

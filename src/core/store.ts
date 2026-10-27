@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { loudStorage, STORE_KEY } from './backup'
+import { loudStorage, OLD_STORE_KEY, STORE_KEY } from './backup'
 import { normalizeBeads, type Bead } from './bijoux3d'
 import type { Look } from './character'
 import { normalizePiece, type Piece } from './perles'
@@ -67,8 +67,9 @@ export const useFerme = create<FermeState>()(
     {
       name: STORE_KEY,
       version: SAVE_VERSION,
-      // Sans ça, un dépassement de quota fait échouer l'enregistrement en silence
-      storage: createJSONStorage(() => loudStorage),
+      // Sans ça, un dépassement de quota fait échouer l'enregistrement en silence ;
+      // la toute première fois, la sauvegarde d'avant est lue sous son ancienne clé
+      storage: createJSONStorage(() => ({ ...loudStorage, getItem: (name: string) => loudStorage.getItem(name) ?? loudStorage.getItem(OLD_STORE_KEY) })),
       // Une sauvegarde d'avant le 27/10 (des profils, une princesse) est convertie…
       migrate: (old, version) => migrateSave(old, version),
       // … et toute sauvegarde est relue prudemment

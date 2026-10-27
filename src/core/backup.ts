@@ -5,7 +5,12 @@
 
 import { toast } from './utils'
 
-export const STORE_KEY = 'ferme:v2'
+/** La sauvegarde de la famille (depuis le 27/10). L'ancienne, `ferme:v2`,
+    n'est plus que LUE, une fois, pour la convertir : elle reste intacte, et
+    une version d'avant de l'app la retrouverait telle quelle (écrire la
+    sauvegarde convertie par-dessus la lui faisait perdre). */
+export const STORE_KEY = 'ferme:v3'
+export const OLD_STORE_KEY = 'ferme:v2'
 
 /* ---- Stockage qui ne se tait pas ----
    zustand/persist avale les exceptions de setItem : au dépassement de quota,

@@ -17,14 +17,6 @@ export function uniqueNumbers(answer: number, min: number, max: number, count: n
   return shuffle([...s])
 }
 
-/** Sprite joueur : photo ronde si dispo, sinon emoji. */
-export function faceSprite(avatar: string | null, emoji: string, px = 44): string {
-  if (avatar) {
-    return `<span class="face-sprite" style="width:${px}px;height:${px}px;background-image:url('${avatar}')"></span>`
-  }
-  return emoji
-}
-
 export const $ = (id: string) => document.getElementById(id) as HTMLElement
 
 /** Taille d'un plateau carré : s'étend en mode grand écran (body.bigplay). */

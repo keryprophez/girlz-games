@@ -228,9 +228,9 @@ const STAGE = {
       // Son pendentif de perles à repasser (un cœur) attend au milieu du U :
       // gardé dans la sauvegarde, la page rechargée pour qu'il y soit
       await p.evaluate(rows => {
-        const s = JSON.parse(localStorage.getItem('ferme:v2') || '{"state":{},"version":1}')
+        const s = JSON.parse(localStorage.getItem('ferme:v3') || '{"state":{},"version":1}')
         s.state.pendant = { rows }
-        localStorage.setItem('ferme:v2', JSON.stringify(s))
+        localStorage.setItem('ferme:v3', JSON.stringify(s))
       }, ['..RRR.....RRR..', '.RWWRR...RRRRR.', '.RWPPPR.RPPPRR.', 'RRPPPPPRPPPPPRR', '.RPPPPPPPPPPPR.', '.RRPPPPPPPPPRR.', '..RRPPPPPPPRR..', '...RRPPPPPRR...', '....RRPPPRR....', '.....RRPRR.....', '......RRR......', '.......R.......'])
       await p.goto(p.url())
       await p.locator('.hm-tab[data-w="creer"]').click()

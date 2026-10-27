@@ -666,7 +666,10 @@ export const memoryKey = (game: string) => `ferme:memoire:${game}`
 export interface Recall {
   readonly mem: Memory
   /** Une nouvelle série de `n` questions : l'horloge des révisions avance
-      d'une partie, puis le tirage sans remise. */
+      d'une partie, puis le tirage sans remise. Une série tirée puis quittée
+      sans une réponse (un bouton de mode touché, une autre carte) ne compte
+      pas : l'horloge n'avance qu'une fois, et n'est gardée qu'à la première
+      réponse. */
   series<F extends Keyed>(pool: F[], n: number, opts?: SeriesOpts<F>): Item<F>[]
   /** Pareil, tirée de plusieurs tas (`planMix`). */
   mix<F extends Keyed>(parts: { pool: F[]; n: number }[], opts?: SeriesOpts<F>): Item<F>[]
@@ -680,18 +683,22 @@ export function recall(game: string, shelf: Shelf = tablet): Recall {
   const key = memoryKey(game)
   const mem = unpackMemory(shelf.get(key))
   const save = () => shelf.set(key, packMemory(mem))
+  // Une partie commencée (l'horloge avancée), pas encore jouée
+  let open = false
+  const begin = () => { if (!open) { beginGame(mem); open = true } }
   return {
     mem,
     series(pool, n, opts) {
-      beginGame(mem); save()
+      begin()
       return planSeries(mem, pool, n, opts)
     },
     mix(parts, opts) {
-      beginGame(mem); save()
+      begin()
       return planMix(mem, parts, opts)
     },
     note(it, ok) {
       record(mem, it, { ok, fast: ok })
+      open = false
       save()
     }
   }

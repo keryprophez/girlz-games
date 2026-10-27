@@ -278,7 +278,9 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
         try {
           const off = game.mount(ctx)
           // La main qui montre : Créer laisse le temps de contempler
-          const hand = game.hand ? coachHand(ctx, game.id, game.hand, creative ? 15000 : 7000) : null
+          // Une main par variante (la pizza et le gâteau n'ont pas les mêmes gestes)
+          const handId = game.variants ? game.id + ':' + ctx.variant : game.id
+          const hand = game.hand ? coachHand(ctx, handId, game.hand, creative ? 15000 : 7000) : null
           cleanupRef.current = () => { hand?.(); off() }
         } catch (err) {
           console.error(err)

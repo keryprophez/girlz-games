@@ -90,8 +90,9 @@ export async function devine(request: Request, env: DevineEnv, ask: Ask = askCla
 /** Montre le dessin à Claude (Opus 5.5, effort bas, une fiche imposée) et
     rend la fiche lue (du JSON, à revérifier) ; ses erreurs en mots du jeu. */
 export async function askModel(key: string, o: { system: string; schema: object; png: string; text: string; maxTokens: number }, fetchImpl?: typeof fetch): Promise<unknown> {
-  // 15 s par essai, un réessai : la tablette, elle, abandonne à 35 s (ASK_MS)
-  const client = new Anthropic({ apiKey: key, maxRetries: 1, timeout: 15_000, ...(fetchImpl ? { fetch: fetchImpl } : {}) })
+  // Un seul essai de 30 s au plus : la tablette abandonne à 35 s (ASK_MS) ; deux
+  // essais courts coupaient les réponses lentes mais justes (et se payaient deux fois)
+  const client = new Anthropic({ apiKey: key, maxRetries: 0, timeout: 30_000, ...(fetchImpl ? { fetch: fetchImpl } : {}) })
   const body = {
     model: MODEL,
     max_tokens: o.maxTokens,

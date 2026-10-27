@@ -302,20 +302,22 @@ function advance(me: State, dt: number) {
   const dist = Math.hypot(dx, dy)
   const step = speed * dt
   if (dist > 0.01) me.heading = Math.atan2(dx, dy)
-  // Une glissade : chaque case traversée donne sa graine quand on y passe
+  const there = dist <= step
+  me.vis = there ? { x: w.x, y: w.y } : { x: me.vis.x + dx / dist * step, y: me.vis.y + dy / dist * step }
+  // Une glissade : chaque case dépassée (ou à moins d'une demi-case) donne sa
+  // graine — par l'avancement le long du trajet, pas par la distance au poussin
+  // (une image lente lui fait sauter plus d'une case d'un coup)
   if (w.through) {
+    const left = Math.hypot(w.x - me.vis.x, w.y - me.vis.y)
     w.through = w.through.filter(c => {
-      if (Math.hypot(c.x - me.vis.x, c.y - me.vis.y) > 0.5) return true
+      if (Math.hypot(w.x - c.x, w.y - c.y) < left - 0.5) return true
       arrived(me, c.x, c.y)
       return false
     })
   }
-  if (dist <= step) {
-    me.vis = { x: w.x, y: w.y }
+  if (there) {
     me.path.shift()
     arrived(me, w.x, w.y)
-  } else {
-    me.vis = { x: me.vis.x + dx / dist * step, y: me.vis.y + dy / dist * step }
   }
 }
 

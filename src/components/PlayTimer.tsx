@@ -166,7 +166,8 @@ export function PlayGuard() {
       ;[392, 330, 262].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'sine', 0.1), i * 260))
       say('C\'est l\'heure de la pause ! Tu as très bien joué.')
     }
-    if (!expired && wasExpired.current) setPaused(pausedBefore.current)
+    // (un minuteur qui expire pendant un outro : l'écran de fin est arrivé depuis)
+    if (!expired && wasExpired.current) setPaused(pausedBefore.current || !!document.querySelector('#result.show'))
     wasExpired.current = expired
   }, [expired])
 

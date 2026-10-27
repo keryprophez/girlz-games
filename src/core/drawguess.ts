@@ -146,19 +146,28 @@ export const MODEL = 'claude-opus-5-5'
 
 export type Tier = 'easy' | 'med' | 'exp'
 
-/** Montre le dessin (une image PNG en base64, sans l'en-tête `data:`) et rend ses trois propositions.
- *  `tier` : le défi de ce niveau (parmi quels sujets il devine) ; null : Libre, parmi tout. */
-/** L'attente au plus (le Worker abandonne avant, réessai compris) : au-delà,
-    le chat dit « pas de réseau » au lieu de réfléchir une minute et demie. */
+/** L'attente au plus (le Worker abandonne avant) : au-delà, le chat dit
+    « pas de réseau » au lieu de réfléchir une minute et demie. */
 export const ASK_MS = 35_000
 
 /** Le signal de l'appelant, plus le délai : `TimeoutError` (pas `AbortError`)
-    quand c'est le délai qui coupe. */
+    quand c'est le délai qui coupe. `AbortSignal.any` et `.timeout` manquent
+    aux navigateurs d'avant Chromium 116 : sans eux, la même chose à la main
+    (sinon chaque appel finissait en « pas de réseau »). */
 export function withDeadline(signal?: AbortSignal, ms = ASK_MS): AbortSignal {
-  const t = AbortSignal.timeout(ms)
-  return signal ? AbortSignal.any([signal, t]) : t
+  const A = AbortSignal as typeof AbortSignal & { any?: (s: AbortSignal[]) => AbortSignal }
+  if (typeof A.any === 'function' && typeof A.timeout === 'function') {
+    const t = A.timeout(ms)
+    return signal ? A.any([signal, t]) : t
+  }
+  const c = new AbortController()
+  const timer = setTimeout(() => c.abort(new DOMException('délai dépassé', 'TimeoutError')), ms)
+  signal?.addEventListener('abort', () => { clearTimeout(timer); c.abort(signal.reason) }, { once: true })
+  return c.signal
 }
 
+/** Montre le dessin (une image PNG en base64, sans l'en-tête `data:`) et rend ses trois propositions.
+ *  `tier` : le défi de ce niveau (parmi quels sujets il devine) ; null : Libre, parmi tout. */
 export async function guessDrawing(png: string, tier: Tier | null, signal?: AbortSignal): Promise<Guess> {
   let res: Response
   try {
