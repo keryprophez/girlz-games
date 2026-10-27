@@ -391,6 +391,32 @@ function outside(slot: FarmSlot, q: V3): boolean {
   return (q.x - slot.at[0]) * ox + (q.z - slot.at[2]) * oz > (slot.plane ?? 0) + 0.015
 }
 
+/** D'où l'on regarde une cachette, de huit côtés : la petite ferme, de 26° à
+    46° (la caméra est à 42°, mais une cachette du bord d'en face se voit plus à
+    plat — l'animal pendu sous le pommier) ; la carte ×4, du ras du sol à la verticale. */
+const LOOK_EL = { small: [0.45, 0.8], big: [0.3, 0.65, Math.PI / 2] }
+const looks: Partial<Record<'small' | 'big', V3[]>> = {}
+/** Ce point qui dépasse de sa place se voit-il d'au moins un côté ? Une boîte ne
+    dit pas tout : des oreilles au-dessus du bord d'un buisson peuvent être
+    enfouies dans son feuillage, et deux points ainsi faisaient un animal
+    introuvable de partout (vu par le bot de l'éclair, le 27/10 : un chien dans
+    un buisson, 120 visites). Le rayon part du dehors vers le point (de
+    l'intérieur, il ne verrait pas les faces qui l'entourent). */
+function seeable(me: State, spot: FarmSpot, w: V3): boolean {
+  const T = me.T, map = me.big ? 'big' : 'small'
+  const dirs = looks[map] ??= LOOK_EL[map].flatMap(el => Array.from({ length: el === Math.PI / 2 ? 1 : 8 }, (_, k) =>
+    new T.Vector3(Math.cos(el) * Math.sin(k * Math.PI / 4), Math.sin(el), Math.cos(el) * Math.cos(k * Math.PI / 4))))
+  const from = new T.Vector3(), back = new T.Vector3()
+  let ok = false
+  for (const d of dirs) {
+    me.ray.set(from.copy(w).addScaledVector(d, 6), back.copy(d).negate())
+    me.ray.near = 0; me.ray.far = 6 - 0.02
+    if (!me.ray.intersectObjects(spot.occ, false).length) { ok = true; break }
+  }
+  me.ray.far = Infinity
+  return ok
+}
+
 /** Range l'animal dans sa cachette ; faux si rien ne dépasserait. */
 function hideIn(me: State, h: Hider, spot: FarmSpot, slot: FarmSlot, peek: Peek): boolean {
   const { T } = me
@@ -405,19 +431,24 @@ function hideIn(me: State, h: Hider, spot: FarmSpot, slot: FarmSlot, peek: Peek)
   if (h.raised && h.hang) { h.raised.visible = slot.type !== 'tree' && peek !== 'cache'; h.hang.visible = slot.type === 'tree' }
   spot.g.updateWorldMatrix(true, true)
   // Les points qui dépassent de la cachette
-  const pts: V3[] = []
+  const out: { p: V3; w: V3 }[] = []
   const q = new T.Vector3()
   for (const sm of h.samples) {
     if (sm.tag === 'raised' && !h.raised?.visible) continue
     if (sm.tag === 'hang' && !h.hang?.visible) continue
-    q.copy(sm.p); o.localToWorld(q); spot.g.worldToLocal(q)
-    if (outside(slot, q)) pts.push(sm.p)
+    q.copy(sm.p); o.localToWorld(q)
+    const w = q.clone()
+    spot.g.worldToLocal(q)
+    if (outside(slot, q)) out.push({ p: sm.p, w })
   }
+  // Deux au moins doivent se voir d'un côté : on en essaie six, pris au hasard (chaque rayon
+  // parcourt le feuillage entier : on n'en lance pas plus qu'il ne faut)
+  let vus = 0
+  if (peek !== 'cache') for (const c of shuffle(out.slice()).slice(0, 6)) if (seeable(me, spot, c.w) && ++vus === 2) break
   // Caché en entier : rien ne dépasse, il faudra fouiller la cachette
-  if (peek !== 'cache' && pts.length < 2) { me.farm.root.attach(o); return false }
+  if (peek !== 'cache' && vus < 2) { me.farm.root.attach(o); return false }
   // Au plus 16 points, bien répartis
-  const keep = peek === 'cache' ? [] : pts.length > 16 ? shuffle(pts).slice(0, 16) : pts
-  h.pts = keep
+  h.pts = peek === 'cache' ? [] : shuffle(out).slice(0, 16).map(c => c.p)
   h.spot = spot; h.slot = slot; h.peek = peek
   h.base.set(ps.x, ps.y, ps.z); h.ry = ps.ry; h.k = k
   h.state = 'hidden'
