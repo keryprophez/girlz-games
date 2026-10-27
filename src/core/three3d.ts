@@ -373,44 +373,6 @@ export function fixedStep(step = 1 / 60, max = 5) {
   }
 }
 
-/* ---------- Caméra orbitale « boutons » — pensée pour des petites mains ----------
-   Pas de drag : les jeux utilisent le doigt pour JOUER. On tourne autour de la
-   scène avec deux gros boutons, et la caméra glisse en douceur (ressort). */
-export interface Orbit {
-  /** Angle visé, en radians. Le mouvement est amorti. */
-  target: number
-  /** Distance et hauteur visées. */
-  dist: number
-  height: number
-  /** Point regardé. */
-  look: [number, number, number]
-  /** Rotation automatique lente (rad/s), 0 = arrêt. */
-  auto: number
-  update(dt: number): void
-  turn(delta: number): void
-}
-
-export function orbitCam(stage: Stage, dist: number, height: number, look: [number, number, number]): Orbit {
-  let a = 0
-  let d = dist, h = height
-  const cur: [number, number, number] = [...look]
-  const o: Orbit = {
-    target: a, dist, height, look, auto: 0,
-    turn(delta) { o.target += delta },
-    update(dt) {
-      o.target += o.auto * dt
-      const k = 1 - Math.pow(0.001, dt) // amortissement indépendant du framerate
-      a += (o.target - a) * k
-      d += (o.dist - d) * k
-      h += (o.height - h) * k
-      for (let i = 0; i < 3; i++) cur[i] += (o.look[i] - cur[i]) * k
-      stage.camera.position.set(cur[0] + Math.sin(a) * d, cur[1] + h, cur[2] + Math.cos(a) * d)
-      stage.camera.lookAt(cur[0], cur[1], cur[2])
-    }
-  }
-  return o
-}
-
 /* ---------- Textures procédurales partagées ---------- */
 function canvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas')
@@ -516,20 +478,6 @@ export function dotTex(T: T3, color = '#FFFFFF') {
   return t
 }
 
-/** Glace translucide : matériau récupéré de l'ancien igloo 3D, le seul acquis
-    visuel qui méritait de lui survivre. La réfraction coûte une passe de rendu —
-    penser à `renderer.transmissionResolutionScale = 0.5` sur la scène. */
-export function iceMaterial(T: T3, stage?: Stage) {
-  const nrm = bumpyNormal(T, 6, 2)
-  stage?.keep(nrm)
-  return new T.MeshPhysicalMaterial({
-    color: 0xD9F1FF, roughness: 0.14, metalness: 0,
-    transmission: 0.72, thickness: 0.4, ior: 1.31, side: T.DoubleSide,
-    clearcoat: 0.6, clearcoatRoughness: 0.25,
-    normalMap: nrm, normalScale: new T.Vector2(0.35, 0.35)
-  })
-}
-
 /* ---------- Modèles glTF ----------
    De vrais objets modélisés, pas des primitives. Un cube arrondi reste un cube :
    c'est ici que se joue le saut visuel. Chaque modèle n'est chargé qu'une fois
@@ -573,32 +521,6 @@ export function fitModel(T: T3, g: import('three').Object3D, targetSize: number)
   const k = targetSize / Math.max(size.x, size.y, size.z)
   g.scale.setScalar(k)
   return g
-}
-
-/** Médaillon rond avec la photo de la joueuse (ctx.avatar), toujours face
-    caméra — pour incarner « c'est MOI qui joue » dans les jeux 3D.
-    Renvoie null sans photo ; le nettoyage passe par disposeTree comme le
-    reste de la scène. */
-export async function avatarMedallion(T: T3, dataUrl: string | null, size: number) {
-  if (!dataUrl) return null
-  const img = new Image()
-  try {
-    await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = dataUrl })
-  } catch { return null }
-  const c = document.createElement('canvas')
-  c.width = c.height = 128
-  const g = c.getContext('2d')!
-  g.save()
-  g.beginPath(); g.arc(64, 64, 57, 0, Math.PI * 2); g.clip()
-  g.drawImage(img, 0, 0, 128, 128)
-  g.restore()
-  g.beginPath(); g.arc(64, 64, 57, 0, Math.PI * 2)
-  g.lineWidth = 9; g.strokeStyle = '#FFFDF6'; g.stroke()
-  const tex = new T.CanvasTexture(c)
-  tex.colorSpace = T.SRGBColorSpace
-  const sp = new T.Sprite(new T.SpriteMaterial({ map: tex, depthWrite: false }))
-  sp.scale.set(size, size, 1)
-  return sp
 }
 
 /* ---------- Interaction : quel objet est sous le doigt ? ---------- */

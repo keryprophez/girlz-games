@@ -68,20 +68,8 @@ export async function drawings(profile: string): Promise<Drawing[]> {
   } catch { return [] }
 }
 
-/* ---- Les coloriages des princesses (photos de la Princesse) ---- */
-export const PRINCESS_PAGES_MAX = 12
+/* ---- Les coloriages des princesses (photos de la Princesse, partie le
+   6/10) : plus rien ne s'y ajoute, ceux qui restent se colorient encore ---- */
 export async function princessPages(): Promise<string[]> {
   return (await idbGet<string[]>('pages', 'princesse:liste')) || []
-}
-/** Range un coloriage (trait noir sur fond transparent, 1500 × 1000). */
-export async function addPrincessPage(lines: Blob): Promise<string | null> {
-  const id = 'princesse:' + Date.now()
-  if (!(await idbPut('pages', lines, id + ':trait'))) return null
-  const list = [id, ...(await princessPages())]
-  // Les plus anciennes s'en vont (et leur feuille coloriée avec elles)
-  for (const old of list.slice(PRINCESS_PAGES_MAX)) {
-    await idbDel('pages', old + ':trait')
-  }
-  await idbPut('pages', list.slice(0, PRINCESS_PAGES_MAX), 'princesse:liste')
-  return id
 }

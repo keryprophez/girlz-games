@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { SHOW_PROFILES, useFerme } from '../core/store'
+import { useRef, useState } from 'react'
+import { useFerme } from '../core/store'
 import { WORLDS } from '../games'
 import { sFlip } from '../core/audio'
 import { VoiceStudio } from './VoiceStudio'
 import { TimerButton } from './PlayTimer'
-import type { Tier } from '../core/types'
 import { ICON, starsHTML } from '../core/icons'
 import { BADGE, WORLD_BADGE } from '../core/badges'
 import { POSTERS } from '../core/posters'
@@ -16,24 +15,10 @@ const Svg = ({ html, className }: { html: string; className?: string }) =>
   <span className={className} dangerouslySetInnerHTML={{ __html: html }} />
 
 const WORLD_KEY = 'ferme:univers'
-const TIER_LABEL: Record<Tier, string> = { easy: '🌱 Douce', med: '🌿 Normale', exp: '🔥 Expert' }
-const NEXT_TIER: Record<Tier, Tier> = { easy: 'med', med: 'exp', exp: 'easy' }
 
 export function Home({ onPlay }: { onPlay: (id: string) => void }) {
   const store = useFerme()
   const [voicesOpen, setVoicesOpen] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const photoTarget = useRef<string>('')
-
-  const current = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
-  const prog = store.progress[current.id] || { bestStars: {} }
-
-  const askPhoto = (profileId: string) => {
-    photoTarget.current = profileId
-    fileRef.current?.click()
-  }
-
-  const [adjust, setAdjust] = useState<{ img: HTMLImageElement; pid: string } | null>(null)
 
   /* L'univers ouvert est retenu : on revient là où on jouait */
   const [world, setWorld] = useState(() => {
@@ -69,17 +54,6 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
     window.setTimeout(() => z.remove(), 1000)
   }
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    const img = new Image()
-    // On ouvre le réglage zoom/cadrage plutôt que de recadrer aveuglément :
-    // il faut pouvoir zoomer sur la tête !
-    img.onload = () => setAdjust({ img, pid: photoTarget.current })
-    img.src = URL.createObjectURL(file)
-  }
-
   return (
     <section className="screen active home">
       <div className="hm-top">
@@ -94,35 +68,6 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
         </div>
       </div>
 
-      {SHOW_PROFILES && (<>
-      <div className="seg-label">Qui joue ?</div>
-      <div className="profiles">
-        {store.profiles.map(p => {
-          const sel = p.id === store.currentId
-          return (
-            <div key={p.id} className={'pcard' + (sel ? ' sel' : '')}
-              onClick={() => { store.selectProfile(p.id); sFlip() }}>
-              <button className="pavatar" onClick={e => { e.stopPropagation(); askPhoto(p.id) }}
-                style={p.avatar ? { backgroundImage: `url(${p.avatar})` } : undefined}>
-                <span className="pcam"><Svg html={ICON.camera} /></span>
-              </button>
-              {p.avatar && (
-                <button className="pdel" title="Enlever la photo"
-                  onClick={e => { e.stopPropagation(); store.setAvatar(p.id, null) }}>✖</button>
-              )}
-              <div className="pname">{p.name}</div>
-              {sel && (
-                <button className="ptier" onClick={e => { e.stopPropagation(); store.setTier(p.id, NEXT_TIER[p.tier]); sFlip() }}>
-                  {TIER_LABEL[p.tier]}
-                </button>
-              )}
-            </div>
-          )
-        })}
-      </div>
-      </>)}
-      {SHOW_PROFILES && <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />}
-
       {/* Trois univers en gros onglets dessinés ; un univers = un écran, sans défilement */}
       <nav className="hm-tabs">
         {WORLDS.map(w => (
@@ -135,7 +80,7 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
       </nav>
       <div className={'hm-grid w-' + world + ' n' + shown.games.length} key={world}>
         {shown.games.map(g => {
-          const best = prog.bestStars[g.id] || 0
+          const best = store.best[g.id] || 0
           return (
             <button className={'gc' + (POSTERS.has(g.id) ? ' gc-poster' : '')} key={g.id} data-id={g.id}
               onClick={e => launch(e.currentTarget, g.id, g.sq, BADGE[g.id] || g.icon)}>
@@ -149,90 +94,6 @@ export function Home({ onPlay }: { onPlay: (id: string) => void }) {
         })}
       </div>
       {voicesOpen && <VoiceStudio onClose={() => setVoicesOpen(false)} />}
-      {adjust && (
-        <PhotoAdjust img={adjust.img}
-          onCancel={() => { URL.revokeObjectURL(adjust.img.src); setAdjust(null) }}
-          onDone={dataUrl => {
-            store.setAvatar(adjust.pid, dataUrl)
-            URL.revokeObjectURL(adjust.img.src)
-            setAdjust(null)
-          }} />
-      )}
     </section>
-  )
-}
-
-/* Réglage de la photo : zoom + glisser pour cadrer pile sur la tête. */
-function PhotoAdjust({ img, onDone, onCancel }: {
-  img: HTMLImageElement
-  onDone: (dataUrl: string) => void
-  onCancel: () => void
-}) {
-  const cvRef = useRef<HTMLCanvasElement>(null)
-  const view = useRef({ zoom: 1.6, panX: 0, panY: 0 })
-
-  const draw = (cv: HTMLCanvasElement, out: number) => {
-    const { zoom, panX, panY } = view.current
-    const side = Math.min(img.width, img.height)
-    const sw = side / zoom
-    const sx = Math.max(0, Math.min(img.width - sw, (img.width - sw) / 2 + panX))
-    const sy = Math.max(0, Math.min(img.height - sw, (img.height - sw) / 2 + panY))
-    const c = cv.getContext('2d')!
-    c.clearRect(0, 0, out, out)
-    c.drawImage(img, sx, sy, sw, sw, 0, 0, out, out)
-  }
-
-  useEffect(() => {
-    const cv = cvRef.current!
-    draw(cv, 220)
-    let last: { x: number; y: number } | null = null
-    const down = (e: PointerEvent) => { e.preventDefault(); last = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId) }
-    const move = (e: PointerEvent) => {
-      if (!last) return
-      const side = Math.min(img.width, img.height)
-      const k = side / view.current.zoom / 220
-      view.current.panX -= (e.clientX - last.x) * k
-      view.current.panY -= (e.clientY - last.y) * k
-      last = { x: e.clientX, y: e.clientY }
-      draw(cv, 220)
-    }
-    const up = () => { last = null }
-    cv.addEventListener('pointerdown', down)
-    cv.addEventListener('pointermove', move)
-    cv.addEventListener('pointerup', up)
-    return () => {
-      cv.removeEventListener('pointerdown', down)
-      cv.removeEventListener('pointermove', move)
-      cv.removeEventListener('pointerup', up)
-    }
-  }, [img])
-
-  const validate = () => {
-    const out = document.createElement('canvas')
-    out.width = out.height = 256
-    draw(out, 256)
-    onDone(out.toDataURL('image/jpeg', 0.85))
-  }
-
-  return (
-    <div id="sheet" className="show">
-      <div className="modal">
-        <h2>📷 Cadre la tête !</h2>
-        <p>Zoome et déplace la photo pour que le visage remplisse le rond</p>
-        <div className="adj-frame">
-          <canvas ref={cvRef} width={220} height={220} className="adj-canvas" />
-        </div>
-        <div className="adj-zoomrow">
-          <span>🔍−</span>
-          <input type="range" min={1} max={4} step={0.05} defaultValue={1.6} className="adj-slider"
-            onInput={e => { view.current.zoom = parseFloat((e.target as HTMLInputElement).value); draw(cvRef.current!, 220) }} />
-          <span>🔍+</span>
-        </div>
-        <div className="rbtns">
-          <button className="bigbtn primary" onClick={validate}>✔ C'est parfait !</button>
-          <button className="bigbtn ghost" onClick={onCancel}>Annuler</button>
-        </div>
-      </div>
-    </div>
   )
 }

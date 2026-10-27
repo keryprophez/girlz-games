@@ -7,7 +7,8 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { sCrunch, tone } from '../core/audio'
 import { visible, handNow } from '../core/hand'
 
-/* 🎂 LA PÂTISSERIE (5/10, Créer) — un gâteau sur son présentoir, dans une
+/* 🎂 LE GÂTEAU de la Cuisine (c'était la Pâtisserie, du 5/10 au 27/10) —
+   un gâteau sur son présentoir, dans une
    petite pâtisserie (mur à rayures, fanions, bocaux, comptoir en marbre).
    Cinq étapes à gauche, chacune son icône et son nom :
    - Gâteau  : un, deux ou trois étages ; rond, en cœur ou carré
@@ -1093,9 +1094,9 @@ const sideOf = (s: State, i: number) => {
   return screenOf(s, Math.cos(a) * t.r * 0.98, s.tierY[i] + t.h * 0.5, Math.sin(a) * t.r * 0.98)
 }
 
-export const bakery: GameDef = {
-  id: 'bakery', name: 'La Pâtisserie', icon: '🎂', sq: 'sq-pink', cat: 'creatif', noTier: true,
-  subtitle: 'Fais un gâteau, décore-le, plante les bougies… et mange-le !',
+/** Le gâteau de la Cuisine (`games/cuisine.ts`) : fais-le, décore-le,
+    plante les bougies… et mange-le ! */
+export const cakeDish: Pick<GameDef, 'hand' | 'mount'> = {
   // La main : selon l'étape, choisir dans la palette, toucher le gâteau, tracer la crème, planter une bougie
   hand: root => {
     const s = me

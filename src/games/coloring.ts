@@ -1188,7 +1188,7 @@ export const coloring: GameDef = {
     const linesCv = document.getElementById('atLines') as HTMLCanvasElement
     const me: State = {
       running: true,
-      profileId: useFerme.getState().currentId,
+      profileId: useFerme.getState().owner,
       tool: 'brush', brush: 'feutre', sym: 1, color: PALETTE[7], paper: PAPERS[0], size: 1, stamp: FARM[0],
       page: PAGES[0], galleryId: null,
       paint: paintCv.getContext('2d', { willReadFrequently: true })!,

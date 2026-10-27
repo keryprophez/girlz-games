@@ -121,11 +121,11 @@ const SOFT: Record<Matter, () => void> = {
   terre: () => sfx('cloth', { vol: 0.2, rate: 0.7 })
 }
 const PAW = `<svg class="ico" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><ellipse cx="12" cy="16" rx="5.4" ry="4.6" fill="currentColor"/><ellipse cx="5.6" cy="10.4" rx="2.3" ry="2.9" fill="currentColor"/><ellipse cx="9.4" cy="6.4" rx="2.3" ry="3" fill="currentColor"/><ellipse cx="14.6" cy="6.4" rx="2.3" ry="3" fill="currentColor"/><ellipse cx="18.4" cy="10.4" rx="2.3" ry="2.9" fill="currentColor"/></svg>`
-/** Deux mains qui cachent les yeux (le compte du cache-cache). */
-/** « Toute la ferme » : une mire (la vue revient au milieu). */
 /** L'aide : des étoiles qui scintillent. */
 const SPARK = `<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><path d="M21 5c1.3 9.2 4.8 12.7 14 14-9.2 1.3-12.7 4.8-14 14-1.3-9.2-4.8-12.7-14-14 9.2-1.3 12.7-4.8 14-14z" fill="#FFC94D" stroke="#E0A230" stroke-width="1.6" stroke-linejoin="round"/><path d="M36 27c.7 4.6 2.4 6.3 7 7-4.6.7-6.3 2.4-7 7-.7-4.6-2.4-6.3-7-7 4.6-.7 6.3-2.4 7-7z" fill="#FF8FB8"/><circle cx="11" cy="38" r="3.2" fill="#8FD8FF"/></svg>`
+/** « Toute la ferme » : une mire (la vue revient au milieu). */
 const CENTRE = `<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><circle cx="24" cy="24" r="15" fill="none" stroke="#4FB8E7" stroke-width="4"/><circle cx="24" cy="24" r="5" fill="#4FB8E7"/><path d="M24 3v8M24 37v8M3 24h8M37 24h8" stroke="#4FB8E7" stroke-width="4" stroke-linecap="round"/></svg>`
+/** Deux mains qui cachent les yeux (le compte du cache-cache). */
 const HAND = `<svg viewBox="0 0 100 150" aria-hidden="true"><path d="M24 150V86c-6-6-14-14-15-22-1-6 5-9 10-5l9 9V30c0-5 3-8 7-8s7 3 7 8v34-46c0-5 3-8 7-8s7 3 7 8v46-40c0-5 3-8 7-8s7 3 7 8v42-30c0-5 3-7 6-7s6 2 6 7v56c0 20-10 32-18 38v22z" fill="#FFDCC0" stroke="#B9785A" stroke-width="3.5" stroke-linejoin="round"/><path d="M42 64v14M56 62v16M70 64v14" stroke="#D9A486" stroke-width="3" stroke-linecap="round"/></svg>`
 
 interface Tween {

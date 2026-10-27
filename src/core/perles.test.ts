@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALL_MOTIFS, COLOR_LETTER, LARGE, LETTER, MEDIUM, PALETTE, PLATE_MARGIN, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, QUAD, SMALL,
-  edgeDistance, insidePoly, isComplete, isGiven, makeRounds, missing, pegXY, pieceBeads, pieceHook, pieceOf, placeOnBoard,
-  plateMask, plateOutline, sourceOf, transpose,
-  type ColorId, type Round
+  PIECE_MAX, edgeDistance, insidePoly, isComplete, isGiven, makeRounds, missing, normalizePiece, pegXY, pieceBeads, pieceHook,
+  pieceOf, pieceSize, placeOnBoard, plateMask, plateOutline, sourceOf, transpose,
+  type ColorId, type Piece, type Round
 } from './perles'
 
 const rev = (s: string) => [...s].reverse().join('')
@@ -214,5 +214,17 @@ describe('une création de perles à repasser', () => {
     expect(u.y).toBe(1.5)
     expect(u.above).toBe(0)
     expect(Math.abs(u.x)).toBe(2)
+  })
+
+  it('se relit du stockage recadrée, et les abîmées sont jetées', () => {
+    const coeur: Piece = { rows: ['.RR.RR.', 'RRPRPRR', '.RRRRR.', '..RRR..', '...R...'] }
+    expect(normalizePiece(coeur)).toEqual(coeur)
+    expect(normalizePiece({ rows: ['.....', '..R..', '.PP..', '.....'] })).toEqual({ rows: ['.R', 'PP'] })
+    expect(normalizePiece({ rows: ['RR', 'R'] })).toBe(null) // lignes de longueurs différentes
+    expect(normalizePiece({ rows: ['RX'] })).toBe(null) // une couleur inconnue
+    expect(normalizePiece({ rows: ['...', '...'] })).toBe(null) // pas une perle
+    expect(normalizePiece({ rows: Array.from({ length: PIECE_MAX + 1 }, () => 'R') })).toBe(null)
+    expect(normalizePiece(null)).toBe(null)
+    expect(pieceSize(coeur)).toBe(20)
   })
 })

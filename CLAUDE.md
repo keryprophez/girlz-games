@@ -9,8 +9,9 @@ pas un catalogue de mini-jeux. **Il valide le plan avant tout chantier lourd.**
 **Répartition des documents — ne rien dupliquer d'un fichier à l'autre :**
 `CLAUDE.md` = les règles et conventions (ce fichier) · `PIEGES.md` = les
 bugs déjà payés et leur parade (à lire par domaine, pas en entier) ·
-`ROADMAP.md` = où on en est et ce qui reste à faire · `AUDIT.md` = l'état
-des lieux du 2/09 (verdict par jeu) · `README.md` = présentation de l'app.
+`ROADMAP.md` = où on en est, ce qui reste, ce qui a été refusé ou sorti ·
+`AUDIT.md` = l'état des lieux du 2/09 · `README.md` = présentation de l'app.
+L'histoire de chaque jeu est dans l'en-tête de son fichier et dans `git log`.
 
 ---
 
@@ -21,314 +22,128 @@ des lieux du 2/09 (verdict par jeu) · `README.md` = présentation de l'app.
    qui se rechargent · paliers de déblocage, arbre de progression, saisons,
    événements limités · séries quotidiennes, notifications de rappel, « reviens
    demain » · classements ou comparaison entre les deux sœurs · publicité,
-   achats intégrés, analytique tiers, compte en ligne pour les enfants. Les étoiles sont un simple retour de fin de partie :
-   rien ne s'accumule (l'album de 24 autocollants à débloquer et le total
-   d'étoiles de l'accueil sont sortis le 22/09 ; seule la meilleure note par
-   jeu reste, sous sa tuile).
+   achats intégrés, analytique tiers, compte en ligne pour les enfants. Les
+   étoiles sont un simple retour de fin de partie : rien ne s'accumule (seule
+   la meilleure note par jeu reste, sous sa tuile).
 2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, sons
    distincts, démonstration visuelle. `core/voice.ts` ne lit que le **contenu
    pédagogique** (multiplications, heures, noms de lieux), **jamais les
-   consignes** (réaffirmé le 2/09 ; le moteur de voix est gardé pour la suite).
-   Corollaire : dans Apprendre, **aucune sanction** (ni vies, ni chrono, ni
-   bonus de vitesse) ; dans Créer, **aucune note** sur une création.
+   consignes**. Corollaire : dans Apprendre, **aucune sanction** (ni vies, ni
+   chrono, ni bonus de vitesse) ; dans Créer, **aucune note** sur une création.
 3. **Pas de collecte de données enfants.** Photos et voix restent locales.
-   Aucun analytique tiers. **Deux exceptions, choisies par le père :
-   Devine mon dessin (8/10) et Mon dessin prend vie (18/10, la Ferme à
-   construire)** envoient le DESSIN (réduit, sans prénom, sans
-   voix ni photo) à Claude, l'IA d'Anthropic, qui l'efface sous 30 jours
-   et ne s'en sert pas pour s'entraîner — par NOTRE Worker
-   (`worker/devine.ts`, `worker/vivant.ts`), avec la clé API du père, un secret du Worker
-   Cloudflare (`ANTHROPIC_API_KEY`, posé dans le tableau de bord) : jamais
-   dans l'app, ni sur la tablette, ni dans le dépôt (9/10, « je veux pas
-   ajouter la clef sur la tablette »). Rien d'autre ne part, nulle part.
+   Aucun analytique tiers. **Deux exceptions, choisies par le père : Devine
+   mon dessin (8/10) et Mon dessin prend vie (18/10, la Ferme à construire)**
+   envoient le DESSIN (réduit, sans prénom, sans voix ni photo) à Claude,
+   l'IA d'Anthropic, qui l'efface sous 30 jours et ne s'en sert pas pour
+   s'entraîner — par NOTRE Worker (`worker/devine.ts`, `worker/vivant.ts`),
+   avec la clé API du père, un secret du Worker Cloudflare
+   (`ANTHROPIC_API_KEY`) : jamais dans l'app, ni sur la tablette, ni dans le
+   dépôt. Rien d'autre ne part, nulle part.
 4. **Français uniquement** : textes, commentaires de code, messages de commit.
    Et on se tutoie.
 
-**Le hors-ligne n'est PAS une contrainte** (décision du 25/07/2026). La PWA reste
-— elle sert à installer l'app sur l'écran d'accueil — mais le poids du précache
-n'est plus un critère de conception : les assets peuvent être chargés à la
-demande. Le temps de démarrage n'est pas non plus un critère (dit explicitement
-le 28/07) : ce qui compte, c'est la **qualité une fois en jeu** — design,
-physique, jouabilité.
+**Le hors-ligne n'est PAS une contrainte** (25/07) : la PWA sert à installer
+l'app sur l'écran d'accueil, le poids du précache n'est pas un critère, ni le
+temps de démarrage (28/07). Ce qui compte, c'est la **qualité une fois en
+jeu** — design, physique, jouabilité.
 
 **Règle d'arbitrage** : entre « ajouter un jeu » et « amener un jeu existant au
-niveau des jeux 3D », **toujours la seconde option**. Depuis le 2/09 : **un jeu
-par itération**, plein écran, avec enjeu, rampe liée à la performance,
-near-miss et outro (voir `AUDIT.md` §4 pour les huit manques communs).
+niveau des jeux 3D », **toujours la seconde option** — sauf quand le père
+demande un jeu. **Un jeu par itération**, plein écran, avec enjeu, rampe liée
+à la performance, near-miss et outro (les huit manques communs : `AUDIT.md` §4).
 
 ---
 
 ## Architecture
 
 ```
-src/core/    types.ts (contrat GameDef) · store.ts (zustand+persist) · audio.ts
-             music.ts (générative ; `playNote` pour une partition écrite,
-                       le bouquet du Feu d'artifice) · voice.ts · juice.ts · fx.ts
-             three3d.ts  ← SOCLE 3D PARTAGÉ, à lire avant tout jeu 3D
-             sprites.ts  ← photos des imagiers (`photoImg`) et icônes du Food Kit
-             portraits.ts ← personnages 3D rendus en IMAGES pour les jeux en DOM
-                           (+ `meadowBanner` : le pré de l'accueil)
-             plants.ts   ← les 10 plantes illustrées du potager (une par rangée)
-             facts.ts    ← LA MÉMOIRE DES CALCULS (phase 4) : niveaux d'aide,
-                           récolte composée, révisions espacées, pièges voisins,
-                           « presque », + − × ÷ — logique pure, testée
-             fps.ts      ← sonde `?fps` (images/s, coût 3D, GPU) pour la tablette
-             impact.ts   ← LE feel des chocs : force 0..1 → son + secousse + particules
-             backup.ts   ← export/import JSON + alerte quota localStorage
-             badges.ts   ← une vignette SVG dessinée par jeu (accueil, carton titre)
-             arcade.ts   ← session d'un jeu d'adresse : score, vies, combo, rampe, HUD
-             critters.ts ← personnages 3D en formes rondes : taupe, poussin, cochon,
-                           lapin, cactus, vache, poule, chien, canard, mouton
-                           (`FARM`, les pions des jeux en DOM) et, depuis le
-                           28/09, coq, chèvre, cheval, chat (`FARM_MORE`)
-             royal.ts    ← l'ancienne princesse en données (27/09) ; sert encore
-                           aux Bijoux : le collier (`beads`) et le pendentif
-                           (`pendant`, `Piece`) gardés dans le store — testé
-             atelierdb.ts ← l'IndexedDB de l'Atelier
-             cosmos.ts   ← LE SYSTÈME SOLAIRE de l'Espace (27/09, d'après la
-                           maquette du père) : ciel et Voie lactée procéduraux,
-                           Soleil qui bout, Terre jour/nuit/villes, atmosphères,
-                           ombres des anneaux, lunes, vraies positions (JPL),
-                           rendu HDR + halo + ACES branché sur `stage.render` ;
-                           depuis le 30/09 (sa maquette suivante), le flou de
-                           rotation et les traînées quand le temps file
-                           (`frame(dt, dJ, suivi)`) — le jeu, lui, reprend sa
-                           disposition : nom et fiche, date et vitesse, barre
-                           de tous les astres, noms des petits astres
-             rocket3d.ts ← LA FUSÉE de l'Espace (28/09) : la fusée « A » choisie
-                           dans Canva, reconstruite en vraie 3D (l'image sert de
-                           modèle) — profil lissé, peinture vernie, joints et
-                           rivets, reflets tournés vers le vrai Soleil, flamme
-             winter.ts   ← le paysage d'hiver de la Tour de Glace (né avec le
-                           Bonhomme, sorti le 28/09) : montagnes, chalet Kenney
-                           assemblé pièce par pièce, lanternes, et l'HEURE qui
-                           suit la hauteur (`setDusk` : jour → doré → crépuscule
-                           → nuit, étoiles, lune, aurore)
-             doll3d.ts   ← la petite fille d'Habille-toi en formes rondes (+
-                           `character.ts`, son look, gardé dans le profil) :
-                           le jeu Habille-toi (`games/doll.ts`, monté par
-                           `dressup.ts`) ; en images (`dollPortraits` de
-                           `portraits.ts`) sur l'accueil, l'écran de fin et en
-                           tampon dans l'Atelier
-             money3d.ts  ← L'ARGENT du Marché en 3D (28/09) : pièces en métal
-                           (relief, patine, tranche, vraies tailles) et billets
-                           courbés, rendus en IMAGES (`moneyImages`), gardés
-             posters.ts  ← les jeux qui ont leur AFFICHE sur l'accueil
-                           (écrit par `scripts/posters.mjs`)
-             hand.ts     ← LA MAIN QUI MONTRE (30/09) : le geste de chaque jeu
-                           mimé par un gant blanc (`GameDef.hand`, lancé par
-                           GameHost) — taper, glisser, trancher, tracer une
-                           forme (`trace`, le cœur du Feu d'artifice), taper
-                           l'un après l'autre (`taps` : les deux pouces du
-                           Flipper, le pot puis le picot des Bijoux), ou
-                           `choose` (« l'un de ceux-là », sans appuyer :
-                           jamais la réponse dans Apprendre) ; `handNow()`
-                           la fait venir tout de suite (11/10)
-             pinball.ts  ← LA PHYSIQUE DU FLIPPER (1/10) : la bille dans le
-                           plan de la table, pas fixe de 1/480 s (un batteur ne
-                           se traverse jamais), batteurs en capsules qui
-                           tournent (ω × r donné à la bille), bumpers, foins,
-                           œufs, rampe en une dimension, chien gardien, et
-                           `autoPilot` (le pilote des tests et du bot) — pure,
-                           testée ; les grandes séries : `npm run sim:flipper`
-             barn3d.ts   ← la scène de la grange et sa chorale (le Chœur, le
-                           coloriage) : `barnChoir`,
-                           `singOn`, `stepChoir`
-             train3d.ts  ← le petit train (Suites logiques, coloriage)
-             lineart.ts  ← le LIVRE DE COLORIAGES de l'Atelier (30/09) : les
-                           personnages 3D rendus en dessins au trait (une
-                           couleur par pièce, on garde les bords), gardés
-             jigsaw.ts   ← LES DÉCOUPES DU PUZZLE (30/09) : tenons et
-                           mortaises en courbes de Bézier, bords droits —
-                           logique pure, testée (`games/jigsaw.ts` en fait
-                           des pièces 3D)
-             pictures.ts ← LES IMAGES DU PUZZLE (30/09), en 4:3 : la ferme
-                           en 3D,
-                           l'Espace avec leur fusée — rendues une fois,
-                           gardées sur le disque (+ `drawingPicture` de
-                           `games/coloring.ts` pour un dessin du dossier)
-             hama3d.ts   ← LES PERLES À REPASSER en 3D (30/09) : la plaque à
-                           picots (`pegboard`, en pas de plaque, perles et
-                           picots en `InstancedMesh`), la perle-tube et sa
-                           version FONDUE en morph par perle (`fuse`), les
-                           pots de perles, l'axe lumineux, le fer et le
-                           papier sulfurisé (`ironing`) — pour les Perles
-                           Miroir et les Bijoux ; depuis le 1/10, les plaques
-                           à FORME (`outline` + `mask` : cœur, étoile, rond),
-                           et la création fondue en UNE géométrie aux
-                           couleurs dans ses sommets (`fusedPieceGeo`,
-                           `pendantGeos` : le pendentif et son anneau)
-             perles.ts   ← leurs dessins en petites grilles (papillon, fraise,
-                           cochon…), la palette des pots et les manches du
-                           Miroir (modèle, axe, reflet) ; les plaques à forme
-                           des Bijoux (`plateMask`, `plateOutline`) et une
-                           création en lignes de lettres (`pieceOf`,
-                           `pieceHook` : où passe l'anneau) — logique pure, testée
-             bijoux3d.ts ← LES PERLES des Bijoux (30/09) en vraie 3D, à leur
-                           taille réelle : nacrée irisée, verre, cristal
-                           taillé, cœur, étoile, fleur, intercalaire, cube ;
-                           un « kit » par scène (`beadKit` : `refract` pour
-                           la vitrine, `cheap` pour une scène légère), `orientQ`
-                           (le trou sur Y, le long du fil), `instancedRun`
-             voicefx.ts  ← LA VOIX RIGOLOTE de l'Animal qui répète (5/10) :
-                           plus aiguë sans aller plus vite (des grains),
-                           accélérée, chevrotante, à l'envers, et le
-                           détecteur de phrase (`Phrase` : le bruit de la
-                           pièce appris, une demi-seconde gardée avant, un
-                           claquement ignoré) — logique pure, testée
-             mic.ts      ← LE MICRO (5/10) : ouvert à la demande, coupé pour
-                           de bon (`stop` arrête la piste), il ne garde rien
-                           (un morceau de son passé au jeu puis oublié)
-             cake3d.ts   ← LE GÂTEAU de la Pâtisserie (5/10), modelé ici : étages
-                           ronds, en cœur ou carrés (`outlineOf`, extrudés,
-                           sommets soudés), nappage qui coule (`pour` : les
-                           gouttes descendent), couleur qui s'étale depuis le
-                           doigt (`paintable`, un cercle dans le shader),
-                           rosaces et gouttes de crème, fraise, framboise,
-                           myrtille, cerise, vermicelles, perles, bougies et
-                           flamme, présentoir ; les faces de coupe (`cutFaces` :
-                           génoise, crème, confiture), le couteau (`knife`) ;
-                           depuis le 19/10, la BOUCHÉE vue de profil (`biteOf` :
-                           la bouche et ses dents, `inBite`, `biteRim` — testé)
-                           et la paroi en arc qu'elle laisse (`biteWall`)
-             satchel3d.ts ← LE CARTABLE de Mon cartable (19/10), modelé ici : le
-                           cartable à rabat (le rabat épouse le corps arrondi —
-                           une distance signée —, sur sa charnière : `open`),
-                           le sac à dos (sa fermeture éclair qui s'ouvre), le
-                           cartable à roulettes ; six matières dont les
-                           PAILLETTES RÉVERSIBLES (`Sequins` : `stroke`, `faceAt`,
-                           gardées en bits, `packBits`) ; motifs, écussons
-                           brodés, badges, porte-clés ; chaque pièce dit ce
-                           qu'elle est (`userData.part`, `userData.deco`) ;
-                           tout ce qu'un cartable crée part avec lui (`dispose`)
-             monuments3d.ts ← LES MONUMENTS (19/10, le jeu de Jade) : huit
-                           monuments en PIÈCES à poser (`Piece`), leur forme
-                           en transparent (`ghost`), un câble à tracer
-                           (`Piece.trace`, le Golden Gate), la route du pont
-                           (`road`, ses voitures) ; la Tour Eiffel en vrai
-                           treillis de poutres (instances)
-             plush.ts    ← LA PELUCHE de Mon dessin prend vie (18/10) : son
-                           dessin gonflé — la silhouette (ses VRAIS trous de
-                           contour bouchés grâce à ses traits, `bridges` :
-                           le début et la fin d'un même trait, ou d'un trait
-                           et du suivant ; jamais l'écart entre deux pattes),
-                           le tissu de chaque zone (`fabric`), l'épaisseur
-                           (racine de la distance au bord, jamais plus que
-                           rond) et le maillage cousu, devant et dos
-                           (`inflate`) — logique pure, testée ; `plush3d.ts`
-                           l'habille (couleurs, broderie en relief, points de
-                           couture, duvet teinté) : `plushParts` (calculé une
-                           fois) puis `buildPlush` (par scène)
-             vivant.ts   ← CE QUE CLAUDE DIT D'UN ANIMAL DESSINÉ (18/10) : la
-                           fiche imposée (`SCHEMA` : allure, regard, cri parmi
-                           les dix vrais cris, taille), `parseVivant`, et
-                           `askVivant` (`POST /api/vivant`) — lu aussi par le
-                           Worker ; sans réponse, `DEFAULT` (il sautille)
-             drawguess.ts ← LE DEVINEUR de Devine mon dessin (8/10) : la
-                           FICHE imposée (`SCHEMA` : trois propositions avec
-                           la photo de l'imagier qui leur correspond), les
-                           consignes (`systemPrompt`, `userPrompt`),
-                           `parseGuess` qui revérifie tout, `matches` (le défi
-                           trouvé ?), les sujets par niveau (`POOLS`,
-                           `candidates`) — lu aussi par le Worker ; et
-                           `guessDrawing` (le dessin → `POST /api/devine`)
-                           — testé, sauf l'appel
-             farm3d.ts   ← LA FERME EN DIORAMA (1/10, Cache-Cache) : un plateau
-                           rond qu'on fait tourner, ses cachettes construites
-                           (grange, meule, puits, charrette, tracteur, niche,
-                           poulailler, mare, boue, potager…) et leurs PLACES
-                           (`FarmSlot` : 'top', 'face', 'rear', 'tree'), la
-                           nuit (lune, lucioles, lanternes) ; `bake()` fond ce
-                           qui ne bouge pas en un mesh par matériau ;
-                           `bale()` : une botte de foin de plus ; depuis le
-                           5/10, `{ empty: true }` (le plateau seul) et
-                           `make(id)` : une pièce qu'on pose où l'on veut
-                           (`PieceId`, la Ferme à construire ; ses vignettes :
-                           `piecePortraits` de `core/portraits.ts`) ; depuis
-                           le 6/10, `{ huge: true }` : la CARTE ×4 de
-                           Cache-Cache (rayon 26 : `BIG_LAYOUT`, maïs,
-                           silo, moulin, ruisseau, verger, citrouilles, puis
-                           `HUGE_LAYOUT`, trois bois, grand maïs, lac,
-                           hameau, tournesols, blé, bosquets, haies ; une
-                           construction posée deux fois suffixe ses places,
-                           `#2`) et `detail(on)` (fleurs, cailloux, fougères
-                           éteints vus de loin)
-src/components/  Home · GameHost · PlayTimer · Album · VoiceStudio · …
-src/games/       1 fichier par jeu + index.ts (le catalogue)
-public/assets/     planches Kenney (PNG packé + JSON d'atlas) + CREDITS.md
-worker/          LE WORKER CLOUDFLARE (9/10, il sert l'app : wrangler.jsonc)
-                 index.ts (les routes) · access.ts + access-page.ts (le CODE
-                 D'ACCÈS de toute l'app, repris de food-coach : cookie signé,
-                 fermé tant que les secrets manquent) · devine.ts (l'appel
-                 à Claude : Opus 5.5, effort bas, la fiche imposée, le repli
-                 serveur, la clé en secret ; `readDrawing` et `askModel`,
-                 partagés) · vivant.ts (Mon dessin prend vie, 18/10) ·
-                 headers.ts · worker.test.ts
-scripts/smoke.mjs        ouvre tous les jeux dans Chromium, vérifie 0 erreur JS
-scripts/import-assets.mjs  (re)télécharge et trie les packs Kenney
-scripts/posters.mjs      les affiches de l'accueil : chaque jeu ouvert, mis en
-                         scène (`STAGE`), photographié sans la coquille
+src/core/       le socle partagé (un module = une responsabilité) ↓
+src/components/ Home (accueil) · GameHost (coquille d'un jeu) · PlayTimer
+                (minuteur parental) · VoiceStudio · Ambient (le pré de l'accueil)
+src/games/      un fichier par jeu + index.ts (le catalogue et les trois univers)
+worker/         le Worker Cloudflare qui sert l'app (wrangler.jsonc) : index.ts
+                (routes) · access.ts + access-page.ts (le code d'accès, cookie
+                signé) · devine.ts (l'appel à Claude, partagé) · vivant.ts ·
+                headers.ts · worker.test.ts
+public/assets/  modèles Kenney, photos des imagiers, sons, affiches, CREDITS.md
+scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
+                · touched.mjs (quels bots lancer) · posters.mjs (les affiches)
+                · import-assets.mjs (Kenney) · import-photos.mjs (imagiers)
 ```
 
-**Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : l'Intrus,
-Memory, la Chasse aux lettres, le Marché — et depuis le 22/09 les animaux
-des continents du Tour du Monde. 76 sujets dans
-`public/assets/photos/*.jpg`, réunis par `scripts/import-photos.mjs` —
-**animaux : iNaturalist** (recherche par taxon latin), **le reste : catégories
-de Wikimedia Commons** — tous ramenés au même moule (carré, 512 px) à l'import.
-`photoImg(nom, px)` et `hasPhoto(nom)` sont dans `core/sprites.ts`, les crédits
-dans `photos/CREDITS.json` et `public/assets/CREDITS.md`. L'app est privée et
-sans usage commercial : les licences CC BY-NC sont acceptées, et créditées.
-**Règle du père : jamais deux styles.** Ce qui est PION ou DÉCOR (Simon,
-Puissance 4, les images du Puzzle) est fait des personnages
-3D de la ferme (`core/critters.ts`), rendus en images par `core/portraits.ts` :
-`critterPortraits(['cow','hen'], px)` renvoie des dataURL (cache, un contexte
-WebGL jetable), `portraitImg(url, px)` les insère ; `farmPicture()` de
-`core/pictures.ts` rend un pré 3D entier (4:3, gardé sur le disque). **La petite fille d'Habille-toi** suit la même règle : construite dans
-`core/doll3d.ts` à partir de son `Look` (`core/character.ts`, gardé dans le
-profil, `familyDoll()` du store), en vraie 3D dans Habille-toi, en images
-(`dollPortraits(looks, poses, px)`) sur l'écran de fin, en promenade sur
-l'accueil et en tampon dans l'Atelier. **La princesse VRM est partie le
-6/10** (le père : « la princesse ça rame trop, ramène la moche tête ronde,
-tant pis pour moi ») avec son modèle de 6 Mo, `princess3d.ts`, son compagnon
-(`pet3d.ts`), ses décors (`castle3d.ts`), sa photo du Puzzle et sa scène des
-Bijoux ; le collier et le pendentif des Bijoux restent gardés dans
-`royals.solo` (`Royal.beads`, `Royal.pendant`, `wearNecklace`,
-`wearPendant`), sans personne pour les porter. La vitrine des créations est
-dans le store (`creations`, 24 au plus). Pour ajouter un mot : une ligne dans
-`TERMS` (+ `VIVANT` ou `CATEG`), `node scripts/import-photos.mjs candidats <id>`,
-**regarder** la planche-contact, écrire `photos.picks.json`, puis `… garder`.
+**Le socle (`src/core/`)** — lire le module avant d'y toucher :
 
-**Plus aucune planche 2D** (22/09) : les planches Kenney `animals`, `nature`,
-`items` et `fish` ne servaient plus à aucun jeu, elles sont sorties avec leur
-code (`loadAtlas`, `frameStyle`, `spriteFromAtlas`…). Kenney reste la source
-des modèles 3D (kits food, holiday, space, nature) et des bruitages : pour en
-ajouter, éditer `scripts/import-assets.mjs` et le relancer — les fichiers
-triés sont commités, les zips ne le sont pas. Pas d'emoji dans les jeux.
+| Module | Ce qu'il fait |
+|---|---|
+| `types.ts` | le contrat `GameDef` / `GameContext` |
+| `store.ts` + `save.ts` | la sauvegarde de la famille (zustand + persist) ; sa forme, sa relecture et la conversion des anciennes, testées |
+| `backup.ts` | la clé de sauvegarde et le stockage qui prévient quand c'est plein |
+| `session.ts` | la pause globale et les timers de partie |
+| `three3d.ts` | **le socle 3D**, à lire avant tout jeu 3D (stage, chargement, qualité adaptative) |
+| `scene3d.ts` | sol, décor glTF, particules GPU, secousse, projection monde → écran |
+| `arcade.ts` | session d'un jeu d'adresse : score, vies, combo, rampe, HUD, outro |
+| `impact.ts` · `juice.ts` · `fx.ts` | le feel des chocs, l'iris, les confettis |
+| `audio.ts` · `sfx.ts` · `music.ts` | sons synthétiques, échantillons Kenney + vraies voix des animaux (`cry`), musique générative (`playNote` pour une partition écrite) |
+| `voice.ts` · `voicefx.ts` · `mic.ts` | la voix (contenu seulement), la voix rigolote, le micro ouvert à la demande et coupé pour de bon |
+| `hand.ts` | la main qui montre le geste de chaque jeu |
+| `badges.ts` · `icons.ts` · `posters.ts` | vignettes dessinées, icônes SVG, liste des affiches (écrite par `posters.mjs`) |
+| `sprites.ts` · `portraits.ts` · `pictures.ts` · `lineart.ts` · `diskcache.ts` | photos des imagiers ; personnages 3D rendus en images ; images du Puzzle ; pages à colorier ; cache sur le disque |
+| `critters.ts` · `doll3d.ts` + `character.ts` | les animaux de la ferme en formes rondes (`FARM`, `FARM_MORE`) ; la petite fille d'Habille-toi et son look |
+| `farm3d.ts` | la ferme en diorama (Cache-Cache, la Ferme à construire) : cachettes, places, pièces, carte ×4 |
+| `facts.ts` | la mémoire des calculs du Potager (aides, révisions espacées, « presque ») — testé |
+| `plants.ts` | les dix plantes illustrées du Potager |
+| `cosmos.ts` · `rocket3d.ts` | le système solaire de l'Espace (rendu HDR à part) et sa fusée |
+| `winter.ts` | le paysage d'hiver de la Tour de Glace, l'heure qui suit la hauteur |
+| `pinball.ts` | la physique du Flipper (pas fixe 1/480 s, pilote automatique) — testé |
+| `barn3d.ts` · `train3d.ts` | la grange et sa chorale (le Chœur) ; le petit train (Suites logiques) |
+| `jigsaw.ts` | les découpes du Puzzle — testé |
+| `hama3d.ts` · `perles.ts` · `bijoux3d.ts` | perles à repasser (plaque, fusion, fer) ; leurs dessins, manches et créations — testé ; les perles des Bijoux |
+| `money3d.ts` | les pièces et billets du Marché |
+| `cake3d.ts` | le gâteau de la Cuisine (étages, nappage, bouchée — testé) |
+| `satchel3d.ts` | le cartable de Mon cartable (paillettes réversibles) |
+| `monuments3d.ts` | les huit monuments en pièces à poser |
+| `plush.ts` + `plush3d.ts` · `vivant.ts` | un dessin gonflé en peluche — testé ; ce que Claude dit de l'animal dessiné |
+| `drawguess.ts` | le devineur de Devine mon dessin (fiche imposée, revérifiée) — testé |
+| `atelierdb.ts` | l'IndexedDB de l'Atelier (dessins, coloriages) |
+| `fps.ts` | la sonde `?fps` pour la tablette |
 
-**Une illustration se commande, elle ne se dessine pas** (23/09). Deux
-refus nets du père le même jour : les modèles Kenney vus de près (« cette 3D
-immonde avec 5 triangles par objet ») et des plantes dessinées à la main en
-SVG (« hideux »). Ce qui a été validé : une **planche générée d'un coup avec
-Canva** (les dix plantes dans UN style, fond retiré dans Canva), découpée en
-carrés WebP — voir `core/plants.ts` et la section des plantes de
-`public/assets/CREDITS.md` (texte de commande à réutiliser). Canva refuse le
-téléchargement depuis la session : le père dépose le PNG dans son Google Drive
-et on le récupère par le connecteur Drive (un sous-agent, le fichier arrive en
-base64). Une nouvelle planche se commande **avec la planche des plantes en
-image de référence** (`generate-image` de Canva l'accepte) : c'est ainsi que
-les fruits du Ninja (24/09, `public/assets/fruits/`) sont du même style.
-**Un personnage humain en formes rondes** : refusé le 27/09 (« sa tête
-ronde, on dirait un pantin de bois de 1950 »), remplacé par le modèle VRM de
-pixiv… qui ramait trop sur la tablette : le 6/10, le père a choisi la
-petite fille ronde d'Habille-toi (« tant pis pour moi »). **La fluidité sur
-la tablette passe avant le réalisme** : un personnage lourd (6 Mo, ressorts,
-matériaux à compiler) se mesure avec `?fps` AVANT d'être adopté.
-Et avant toute nouvelle direction visuelle : **des maquettes au
-format de la tablette, montrées AVANT de coder** (c'est ainsi que le rendu du
-Potager et le ciel du Ninja ont été choisis).
+**Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : 76 sujets dans
+`public/assets/photos/*.jpg` (animaux : iNaturalist ; le reste : Wikimedia
+Commons), carrés de 512 px, crédités dans `photos/CREDITS.json` et
+`public/assets/CREDITS.md` (licences CC BY-NC acceptées : app privée, sans
+usage commercial). `photoImg(nom, px)` et `hasPhoto(nom)` dans `sprites.ts`.
+Ajouter un mot : une ligne dans `TERMS` (+ `VIVANT` ou `CATEG`),
+`node scripts/import-photos.mjs candidats <id>`, **regarder** la
+planche-contact, écrire `photos.picks.json`, puis `… garder`.
 
-**Contrat d'un jeu** — volontairement minimal, c'est la force du projet :
+**Règle du père : jamais deux styles.** Ce qui est PION ou DÉCOR est fait des
+personnages 3D de la ferme (`critters.ts`), rendus en images par
+`portraits.ts` pour les jeux en DOM (`critterPortraits`, `portraitImg`). La
+petite fille d'Habille-toi suit la même règle (`dollPortraits` sur l'accueil,
+l'écran de fin, les tampons de l'Atelier). Plus aucune planche 2D : Kenney
+reste la source des modèles 3D (kits food, holiday, space, nature) et des
+bruitages (`import-assets.mjs`, fichiers triés commités). Pas d'emoji dans
+les jeux.
+
+**Une illustration se commande, elle ne se dessine pas** (23/09) : refus nets
+des modèles Kenney vus de près et des dessins SVG faits main. Ce qui marche :
+une **planche générée d'un coup avec Canva** dans UN style (les plantes, puis
+les fruits du Ninja avec la planche des plantes en image de référence),
+découpée en WebP (texte de commande dans `CREDITS.md`). Canva ne télécharge
+pas depuis la session : le père dépose le PNG dans son Google Drive, un
+sous-agent le récupère par le connecteur Drive.
+
+**La fluidité sur la tablette passe avant le réalisme** : un personnage lourd
+(la princesse VRM, partie le 6/10) se mesure avec `?fps` AVANT d'être adopté.
+Avant toute nouvelle direction visuelle : **des maquettes au format de la
+tablette, montrées AVANT de coder**. Un jeu en vraie 3D ne redescend pas en
+2D, sauf quand le père le demande.
+
+---
+
+## Le contrat d'un jeu
+
+Volontairement minimal, c'est la force du projet :
 
 ```ts
 export const monJeu: GameDef = {
@@ -336,246 +151,114 @@ export const monJeu: GameDef = {
   cat: 'action',   // reflexion | memoire | action | creatif
   music: 'fair',   // optionnel : thème de core/music.ts
   subtitle: '…',
+  hand: root => …, // le geste à montrer maintenant, ou null
   mount(ctx) { /* … */ return () => { /* cleanup IDEMPOTENT */ } }
 }
 ```
-Puis **une ligne dans `src/games/index.ts`**. `GameHost` fournit `ctx` :
-`root`, `tier`, `playerName` (**vide** tant que le choix de joueuse est
-masqué : les messages de fin tutoient et ne nomment personne), `avatar`,
-`look`, `byTier(e,m,x)`, `finish()`,
-`toast()`, `say()`, et depuis le 2/09 les **timers de partie** `after(ms,fn)` /
-`every(ms,fn)` / `cancel(id)` / `alive()` (annulés au démontage, suspendus en
-pause — ne plus utiliser `setTimeout` pour piloter un jeu). `finish()` accepte
-`outroMs` : le jeu reste monté ce temps-là (ralenti, chute, caméra) avant le
-score. La **pause** est globale (`core/session.ts` : `setPaused`, `onPause`) :
-onglet caché, minuteur parental, bouton pause ; `createStage` fige sa boucle
-dessus tout seul. **La difficulté se choisit DANS le jeu** (10/09) : à l'ouverture, `GameHost`
-affiche trois boutons sans un mot — fleur, éclair, flamme — et ne monte le
-jeu qu'après le choix, qui alimente `ctx.tier` et `ctx.byTier(e, m, x)`.
-**Depuis le 30/09, tout est décalé d'un cran** (« le niveau le plus facile
-dégage ») : la fleur (`easy`) joue l'ancien normal, l'éclair (`med`)
-l'ancien expert, la flamme (`exp`) est un niveau NEUF, plus dur que tout ce
-qui existait. Un nouveau réglage part de là : jamais de retour aux valeurs
-de l'ancienne fleur. Le dernier niveau joué est retenu par jeu (`ferme:niveau:<id>`)
-et signalé d'un liseré ; un bouton de la barre en jeu rouvre le choix et
-relance la partie. Un jeu qui déclare `ops: true` (le Potager, 27/09) ouvre
-d'abord sur une étape « opérations » : quatre étiquettes + − × ÷ sans un mot,
-plusieurs à la fois, le + par défaut, la dernière allumée ne s'éteint pas, le
-choix retenu (`ferme:ops:<id>`) ; une flèche mène à la difficulté, dont le
-rappel des opérations ramène à l'étape 1 ; `ctx.ops` suit. Un jeu qui déclare `duo: true` (Ninja) ajoute
-au-dessus un choix « seule / à deux » (deux silhouettes) : `ctx.duo` = deux
-sœurs sur la même tablette, EN ÉQUIPE — plusieurs doigts à la fois, un seul
-score, les messages de fin disent « vous », jamais qui a fait quoi.
-L'accueil est une **grille de jeux en trois onglets** (Jouer / Apprendre /
-Créer, `.hm-tab[data-w]`, dernier onglet retenu dans `ferme:univers`) : le choix
-de joueuse (Jade / Joyce) est masqué derrière `SHOW_PROFILES` dans
-`core/store.ts` — prêt à revenir ; tant qu'il l'est, les encouragements
-enregistrés sont communs à la famille — le Défi à deux et la fenêtre de
-sauvegarde sont supprimés
-(`core/backup.ts` reste pour `loudStorage` et l'alerte de quota).
-En jeu, `body.playing` met la coquille en **plein écran** :
-l'arène (`.arena`, `#catchArea`, `#runArea`) prend toute la place restante, la
-barre maison/pause/rejouer flotte par-dessus (`.playbar`), le titre est un
-carton de 1,5 s. Les icônes de la coquille viennent de `core/icons.ts` (SVG),
-jamais d'emoji. **Chaque bouton de mode ou d'outil porte son petit nom
-dessous** (30/09 : « un label en plus du symbole, dans toute l'app ») :
+Puis **une ligne dans `src/games/index.ts`** (GAMES et un univers de WORLDS).
+
+**`ctx`** (fourni par `GameHost`) : `root`, `tier`, `byTier(e,m,x)`, `duo`,
+`ops`, `variant`, `finish()`, `toast()`, `say()`, et les **timers de partie**
+`after(ms,fn)` / `every(ms,fn)` / `cancel(id)` / `alive()` (annulés au
+démontage, suspendus en pause — jamais `setTimeout` pour piloter un jeu).
+Personne n'est nommé : les messages de fin tutoient (« vous » à deux) et ne
+citent jamais de prénom. `finish({ outroMs })` : le jeu reste monté ce
+temps-là (ralenti, chute, caméra) avant le score. La **pause** est globale
+(`session.ts` : onglet caché, minuteur parental, bouton pause) ; `createStage`
+fige sa boucle dessus tout seul.
+
+**L'ouverture d'un jeu** (`GameHost`, sans un mot à lire) :
+- **la difficulté** : fleur (`easy`), éclair (`med`), flamme (`exp`), petit nom
+  dessous (Facile · Moyen · Difficile), le dernier retenu (`ferme:niveau:<id>`)
+  et bordé. Depuis le 30/09, tout est décalé d'un cran : la fleur joue l'ancien
+  normal, la flamme est plus dure que tout ce qui existait — jamais de retour
+  aux valeurs de l'ancienne fleur ;
+- `noTier` : pas de niveau, le jeu démarre (ou une flèche après « seule / à
+  deux ») ;
+- `ops: true` (le Potager) : d'abord les étiquettes + − × ÷, plusieurs à la
+  fois, le + par défaut, retenues (`ferme:ops:<id>`), `ctx.ops` ;
+- `duo: true` (Ninja, Flipper) : « seule / à deux », `ctx.duo` = deux sœurs EN
+  ÉQUIPE sur la même tablette, un seul score, jamais qui a fait quoi ;
+- `variants` (la Cuisine : pizza ou gâteau) : de grandes images à la place
+  de la flèche, `ctx.variant`, la dernière retenue (`ferme:variante:<id>`) ;
+  le bouton de la barre et « Changer » à la fin rouvrent le choix.
+
+**La coquille en jeu** : `body.playing` met tout en **plein écran**, la barre
+ronde (maison, niveau, son, pause, rejouer) flotte par-dessus sans texte, le
+titre est un carton de 1,5 s. Un voile d'arène reste à `z-index` 7 au plus
+(la barre est à 8). L'écran de fin : Rejouer, **Niveau** et Menu ; une
+cérémonie par note (3 étoiles = fête, 1 = « Encore ! » sans confetti, Créer
+sans étoiles) ; la petite fille d'Habille-toi saute de joie ou fait coucou.
+
+**Chaque bouton de mode ou d'outil porte son petit nom dessous** (30/09) :
 `<span class="tool-item">bouton<i class="tool-cap">Nom</i></span>` — la
-pastille s'allume seule quand le bouton a `.sel` ou `.on` (`:has`), le jeu
-n'a rien à suivre ; le choix de niveau dit Facile · Moyen · Difficile, et
-Seule / À deux. Le symbole reste le repère (une enfant de 6 ans ne lit pas) ;
-la barre ronde en jeu (maison, pause, son, rejouer) reste sans texte, pour ne
-pas couvrir le jeu. L'écran de fin a trois boutons : Rejouer, **Niveau** (le
-choix fleur / éclair / flamme revient, puis la partie) et Menu. **Les tuiles de l'accueil sont des AFFICHES** (28/09) : une
-image du jeu en train de se jouer (`public/assets/affiches/<id>.webp`, 4:3),
-prise dans le vrai jeu par `scripts/posters.mjs` — mise en scène par jeu
-(`STAGE` : attente, gestes, cadrage), barre, score et main cachés. La
-**vignette dessinée** de `core/badges.ts` (`BADGE[id]`, `viewBox 0 0 48 48`,
-formes pleines, palette de `global.css`) reste pour le carton titre, le
-chargement et un jeu sans affiche (sans vignette : son emoji). Un nouveau
-jeu arrive avec les trois : sa vignette, son affiche
-(`ONLY=<id> node scripts/posters.mjs`, puis REGARDER l'image), et **sa
-main** (`hand`, `core/hand.ts`) : une fonction qui rend le geste à montrer
-selon la phase du jeu, ou `null` quand il n'attend rien (chargement, écoute,
-animation). Ses cibles : un élément (`visible(root, sel)` ne garde que ceux
-qu'un doigt toucherait vraiment), un point d'écran (`toScreen` en 3D) ou une
-fraction de l'arène. Dans Apprendre, `choose` sur plusieurs cibles, jamais
-la bonne seule. Elle vient à la première partie, puis après 7 s sans toucher
-(15 s dans Créer) ; un toucher la chasse. Quand le jeu attend un geste
-NOUVEAU en cours de route (la première part servie de la Pâtisserie),
-`handNow()` la fait venir tout de suite — sinon l'enfant cale 30 s.
+pastille s'allume seule quand le bouton a `.sel` ou `.on`. Le symbole reste
+le repère (une enfant de 6 ans ne lit pas).
 
-**Un jeu d'adresse part de `core/arcade.ts`** (session : score, vies, combo,
-rampe par performance, timers simulés `game.after`, HUD en icônes dans
-l'arène, `game.flash()` pour un mot-image, `game.end()` avec `outroMs` ; le
-combo pilote `setMusicIntensity()` de `core/music.ts` : à 3, 6 et 10
-d'affilée la musique gagne un shaker, un arpège, une contre-voix) et de
-`core/sfx.ts` pour les sons de gestes (`sfx('slice')`, `preloadSfx([...])`)
-— et, depuis le 25/09, pour les **vraies voix des animaux** (`cry('vache', {max,
-solo})`, `CRY[critter]`, `preloadCries`) : dix cris enregistrés de Wikimedia
-Commons choisis à l'oreille par le père, dans `public/assets/sounds/animals/`
-(crédits dans CREDITS.md). Un animal de la ferme qui « parle » prend sa voix
-là, jamais un `tone()` — depuis le 28/09, les dix ont leur personnage 3D
-(le coq, la chèvre, le cheval et le chat sont arrivés avec le Chœur sur scène).
-Modèles : `icetower.ts` et, en 2D, `ninja.ts` (un canvas, les fruits Canva,
-ombres et lueurs précalculées une fois par image, vagues puis pluie finale).
-Poussin Volant et Tape-Trous sont sortis le 27/09 (« vire-les »), avec
-`core/runner.ts` (le socle des jeux qui défilent) ; la Boîte à rythme le
-30/09 (« un peu nulle » pour les filles : des cris d'animaux coupés au temps
-sonnent mal, et le Piano tient déjà la musique dans Créer). Pour un jeu Apprendre
-en 3D sans arcade, `geo.ts` (globe NASA, données Natural Earth/IGN dans
-`public/assets/geo/`, voix = noms de lieux uniquement ; depuis le 30/09, on
-pince pour zoomer sur le globe et sur la France, que le doigt fait glisser).
+**L'accueil** : trois onglets (Jouer / Apprendre / Créer, le dernier retenu
+dans `ferme:univers`), une grille de tuiles qui sont des **AFFICHES** — le jeu
+en train de se jouer (`public/assets/affiches/<id>.webp`, 4:3, prises par
+`scripts/posters.mjs` avec une mise en scène par jeu, `STAGE`). Un nouveau jeu
+arrive avec **sa vignette** (`BADGE[id]` de `badges.ts`, `viewBox 0 0 48 48`,
+formes pleines : carton titre, chargement), **son affiche**
+(`ONLY=<id> node scripts/posters.mjs`, puis REGARDER l'image) et **sa main**
+(`hand`) : une fonction qui rend le geste à montrer selon la phase, ou `null`
+quand le jeu n'attend rien. Ses cibles : un élément (`visible(root, sel)`), un
+point d'écran (`toScreen` en 3D) ou une fraction de l'arène ; gestes `tap`,
+`drag`, `slice`, `trace`, `taps`, et `choose` (« l'un de ceux-là », sans
+appuyer : **jamais la réponse dans Apprendre**). Elle vient à la première
+partie, puis après 7 s sans toucher (15 s dans Créer) ; un toucher la chasse ;
+`handNow()` la fait venir tout de suite quand le jeu attend un geste NOUVEAU.
 
-**Un nouveau jeu 3D part de `core/three3d.ts`** : `createStage()` applique déjà
-antialias, pixelRatio plafonné à 2, ACES, PCFSoftShadowMap, `shadow.bias`,
-lumières et brouillard. Puis `fixedStep()` pour la physique, `orbitCam()` pour la
-caméra, `loadThree()`/`loadPhysics()` + `loader(arena, gameId)` (la vignette
-`BADGE` du jeu qui respire) pour le chargement à la
-demande, `stage.dispose()` pour le nettoyage GPU (et `stage.keep(tex)` pour les
-textures non attachées à la scène). Puis **`core/scene3d.ts`** : `ground()`,
-`decor()` (modèles du kit `nature` ou `holiday`, avec `shade` pour assombrir
-les kits clairs), `particles()` (GPU, dans la scène — plus de divs au-dessus du
-canvas), `camShake()` (à `apply()` après avoir placé la caméra), `toScreen()`.
-`stage.timeScale` fait les ralentis d'outro. **La qualité s'adapte seule**
-(28/09, reprise le 30/09 : « la Princesse est hyper saccadée ») dans la boucle
-de `createStage` : plus de 30 ms par image en moyenne → un cran toutes les
-1,5 s, du moins visible au plus visible : densité ramenée à 1, matériaux « de
-luxe » simplifiés (vernis, satin, irisé, transmission : les plus chers par
-pixel), ombres coupées, densité 0,85 puis 0,75 ; moins de 17 ms → la densité
-remonte, mais jamais jusqu'à un niveau qui était trop lent (sinon elle fait
-le va-et-vient, et chaque changement de taille est un à-coup) ; remonter
-attend 4 s de fluidité. Les 2 premières secondes ne sont même pas MESURÉES
-(shaders, modèles : elles faisaient baisser la qualité à chaque ouverture),
-ni rien avec `?hq` (captures, mesures), ni pour les bots
-(`__BOT`), ni pour un jeu à rendu propre ; `?fps` affiche l'état. Un jeu
-n'a donc plus à faire sa propre baisse de qualité ; un travail PRÉVU qui
-ralentit quelques images (des shaders préparés exprès) se signale par
-`stage.settle()` : la qualité ne compte pas ces images-là. Un jeu qui a son propre rendu
-(l'Espace : ciel à part, cible HDR, halo en sept étages, ACES écrit à la main)
-le branche sur `stage.render` et réalloue ses cibles dans `stage.onResize` :
-la pause, le redimensionnement, `?fps` et le nettoyage restent ceux du socle.
+**La sauvegarde** est celle de la famille (`save.ts`, depuis le 27/10 : le
+choix de joueuse et la princesse sont sortis) : meilleure note par jeu, look
+de la petite fille, collier et pendentif des Bijoux, vitrine des créations,
+voix enregistrées, minuteur. Les créations « par fille » (la Ferme à
+construire, Mon cartable, les Monuments : deux cartes Jade / Joyce à
+l'ouverture, avec la photo de leur création) sont rangées par chaque jeu sous
+ses propres clés `ferme:<jeu>:<qui>` — **ne jamais changer ces clés**, ni
+`owner` (la clé de l'Atelier).
 
-Jeux déjà en vraie 3D : `pizza` · `space` · `icetower` · `patterns` (le petit train, 28/09) ·
-`simon` (le Chœur sur scène, 28/09) · `pinball` (le Flipper de la grange, 1/10 :
-physique à nous dans `core/pinball.ts`, pas cannon-es) · `mirror` (les Perles Miroir, 30/09) · `dressup` (Habille-toi, la petite fille ronde) · `bijoux` (30/09) ·
-`memory` · `maze` (logique de grille inchangée, rendu en haies 3D) ·
-`taquin2` (le Puzzle, 30/09 : son mode Puzzle est en 3D, `games/jigsaw.ts` ;
-son second mode, le Taquin, reste en DOM) ·
-`hideseek` (Cache-Cache, 1/10 : la ferme en diorama qu'on fait tourner au
-doigt, `core/farm3d.ts` ; la nuit, à la lampe torche ; depuis le 6/10,
-l'éclair et la flamme sur la CARTE ×4 — `{ huge: true }`, 14 et 18
-animaux, caméra de carte : un doigt promène (avec élan), pincer zoome
-jusqu'au ras du sol, tourner deux doigts fait pivoter, les glisser
-ensemble incline ; la ferme tourne autour du point regardé (`pan`, la
-racine du plateau décalée) ; de loin ni ombre ni détails, de près une
-ombre serrée (`closeUp`) ; le toucher à la mesure de ce qu'on voit ; des
-animaux cachés en entier qu'on fouille, `peek: 'cache'` — dans un grand
-coin, là où l'on touche ; depuis le 27/10, le bouton « Aide » sur le côté,
-toujours là : la vue recule sur toute la ferme et ceux qui restent brillent
-5 s, un halo vu à travers leur cachette, sans coûter d'étoile) · `parrot` (l'Animal
-qui répète, 5/10 : un animal sur sa botte de foin dans l'enclos de cette
-ferme, `critterKit(T, { fine: true })` pour les gros plans ; le micro ne
-s'ouvre que là, se coupe en pause et en sortant, et n'écoute pas pendant
-qu'il parle ; son bot parle par un faux micro, un WAV que `play.mjs`
-génère et que Chromium lit en boucle) · `farmbuild` (la Ferme à
-construire, 5/10 : le plateau de Cache-Cache vide, les pièces glissées du
-tiroir — par `pointerId`, écouté sur `window` —, chemins et clôtures au
-doigt, les animaux qui vont à leur place ; jour / nuit = la scène
-reconstruite ; depuis le 11/10, UNE FERME PAR FILLE — deux cartes « Jade »
-et « Joyce » à l'ouverture, avec la photo de sa ferme (`snap`, prise en la
-quittant), gardée dans `ferme:construire:<qui>` ; « Annuler » et
-« Refaire » à côté de la gomme, une étape par geste (chaque chose a son
-numéro `u`, gardé avec elle), quarante au plus ; depuis le 18/10, MON
-DESSIN PREND VIE : « Dessiner » en tête des Animaux ouvre une feuille
-(`games/farmdraw.ts` : ses traits gardés tels quels, rejoués au pixel
-près), « Fini » et son animal devient une peluche à lui (`core/plush.ts`)
-qui se gonfle devant nous puis vit sur la ferme — toujours face à nous,
-retourné quand il change de sens (son dos : son dessin en miroir) ; Claude
-dit son allure, son sens, son cri, sa taille (`core/vivant.ts`) ; six par
-ferme ; la feuille ouverte, la ferme ne se redessine plus
-(`stage.render` vide) ; son bot répond à la place de Claude,
-`__fb.fakeVivant` ; depuis le 19/10, un gros bouton « Dessiner » sous
-Jour / Nuit, toujours là, que la main montre une fois par ouverture tant
-que sa ferme n'a pas de dessin — la tuile du tiroir des Animaux ne se
-trouvait pas) · `cartable` (Mon cartable, 19/10, Créer, demandé par Joyce :
-`core/satchel3d.ts` dans un coin de classe ; Modèle, Matière, Couleurs (une
-couleur, puis la pièce qu'on touche), Motifs, Déco (posée où l'on touche,
-reprise d'un toucher), Remplir (le rabat s'ouvre, les affaires filent
-dedans ; une affaire manquée de peu est prise quand même : la règle est
-fine) ; les paillettes se CARESSENT (vers le haut elles se retournent, vers
-le bas elles reviennent) ; « Fini » : la petite fille d'Habille-toi le met
-sur son dos et part à l'école ; un cartable par fille, comme la Ferme à
-construire, avec sa photo ; depuis le 27/10, la poubelle sous sa carte (deux
-touchers, comme dans l'Atelier) le rend tel qu'au premier jour ; son bot :
-`cartable`) · `monuments` (Les
-Monuments, 19/10, Créer, demandé par Jade : `core/monuments3d.ts`, huit
-monuments dans leur décor — parc, désert, baie, île ; on le CONSTRUIT pièce
-par pièce : la pièce attend à côté, on la glisse sur sa forme en
-transparent, elle s'emboîte près de sa place (poussière, secousse), revient
-attendre si on la lâche loin ; le câble du Golden Gate se TRACE au doigt
-sur un pointillé, puis les suspentes tombent ; puis on le « pimpe » :
-Peindre (la pièce touchée), Lumières (guirlandes, jour / nuit), Déco,
-Visiteurs (les animaux de la ferme ; sur l'eau, seul le canard) ; un
-toucher reprend ; « Fini » : la nuit, le bouquet, la caméra en fait le
-tour (devant un pont, elle se balance) ; rien de haut en deçà du tour de
-la caméra ; un livre de monuments par fille, chacun sa photo sur sa carte ;
-son bot : `monuments`) · `drawguess` (Devine mon dessin, 8/10, Jouer : la feuille de l'Atelier et
-le chat de la ferme sur sa botte, qui devine — Claude par l'API ; Défi
-(la photo du sujet épinglée) ou Libre (elle répond du pouce) ; sans clé
-au Worker, un cadenas à « Fini », rien à régler sur la tablette ; le bot
-répond à la place de Claude, `__dg.fake` : jamais de vrai appel en
-intégration) · `bakery` (la Pâtisserie, 5/10 : `core/cake3d.ts` ; depuis le
-19/10 (« vire toute l'animation des bougies »), plus de souffle, de micro,
-de chanson ni de fête : les bougies sont une décoration, et « Manger » (la
-fourchette, sous les étapes) les fait sortir une à une, le gâteau se remet
-de face (rien d'autre ne le tourne : sinon il n'y arrive jamais) ; le même
-jour, on le MANGE COMME LA PIZZA (« l'animation pour manger est vraiment
-éclatée ») : six coups de couteau, les six parts s'écartent ; un toucher
-sur l'une, dans l'ordre qu'on veut : elle monte, des fils de glaçage et de
-crème la retiennent à ses voisines puis cassent (accrochés au coin et au
-dessus : les côtés d'une part qu'on tire vers nous ne se voient pas), elle
-vient devant nous de profil, croc, croc — l'encoche festonnée des dents —
-puis elle disparaît dans les miettes. Chaque part est une COPIE des étages
-gardée entre ses deux bords (`localClippingEnabled`, son ombre coupée
-aussi : `clipShadows`) et trouée par ses bouchées (un bout de shader, les
-ronds de la bouche et des dents dans le plan de la part) ; ce qui est posé
-dessus part avec elle. Pendant que les bougies sortent, la RÉPÉTITION du
-repas — chaque matière posée sous le comptoir telle qu'elle sera, ses rendus
-préparés en arrière-plan (`renderer.compileAsync`) : aucun shader à
-préparer pendant qu'on mange (compté : 0) ; son bot accélère le temps,
-`__bk.speed`, sauf `patisserie-sans-bougie`, à vitesse normale). La Course,
-le Stand 3D et Attrape sont sortis le 24/09 (« éclatée », « on enlève »), le
-Chien de berger le 19/10 (« les filles trouvent ça nul », avec son troupeau
-`core/herd.ts`) ; le Ninja est repassé en 2D le même jour
-(« les fruits trop grossiers, c'est confus »). La Chenille et Poussin Volant
-ont fait l'aller-retour le 25/09 : leurs versions 2D illustrées ont été
-retirées le soir même — « mille fois moins bien que la version isométrique
-hyper mignonne », « de la 2D saccadée et pixelisée sur une surface
-minuscule » ; les 3D du 23/09 sont revenues telles quelles. La Chenille est
-sortie le 30/09 (« elles aiment pas »). **Un jeu en vraie
-3D ne redescend pas en 2D** — sauf quand le père le demande : le 6/10, les
-Cubes de l'alphabet 3D (30/09) sont redevenus la Chasse aux lettres en 2D
-(« je préférais la version 2D sans tes cubes moches »), avec ses photos. Pour
-un jeu de physique rigide (cannon-es) sur le socle, `icetower.ts` est le
-modèle : `loadPhysics()`, `fixedStep` autour de `world.step`, corps figé avec
-`mass = 0`.
+---
+
+## Faire un jeu
+
+**Un jeu d'adresse part de `core/arcade.ts`** (score, vies, combo, rampe par
+performance, timers simulés `game.after`, HUD en icônes, `game.flash()`,
+`game.end()` avec `outroMs` ; le combo pilote `setMusicIntensity()` : à 3, 6
+et 10 d'affilée la musique gagne une couche) et de `core/sfx.ts` pour les
+gestes (`sfx('slice')`, `preloadSfx`). **Un animal qui « parle » prend sa vraie
+voix** (`cry('vache')`, dix cris enregistrés choisis par le père), jamais un
+`tone()`. Modèles : `icetower.ts` (3D, physique cannon-es) et `ninja.ts` (2D,
+un canvas).
+
+**Un jeu 3D part de `core/three3d.ts`** : `createStage()` (antialias,
+`pixelRatio` plafonné, ACES, ombres douces, lumières, brouillard), `fixedStep()`
+pour la physique, `loadThree()` / `loadPhysics()` + `loader(arena, gameId)`
+pour le chargement à la demande, `stage.dispose()` pour le nettoyage GPU
+(`stage.keep(tex)` pour les textures hors scène), `stage.timeScale` pour les
+ralentis. Puis `core/scene3d.ts`. **La qualité s'adapte seule** dans la boucle
+de `createStage` (plus de 30 ms par image → un cran toutes les 1,5 s : densité,
+matériaux de luxe, ombres ; moins de 17 ms → elle remonte, jamais jusqu'à un
+niveau trop lent) ; ni les 2 premières secondes, ni `?hq`, ni les bots ne sont
+mesurés. Un travail PRÉVU qui ralentit se signale par `stage.settle()`. Un jeu
+à rendu propre (l'Espace) se branche sur `stage.render` et `stage.onResize`.
+Physique rigide : `loadPhysics()`, `fixedStep` autour de `world.step`, corps
+figé avec `mass = 0` ; physique sur mesure et testée quand c'est plus sûr (le
+Flipper).
+
+**Un jeu Apprendre en 3D sans arcade** : `geo.ts` (globe NASA, données Natural
+Earth/IGN dans `public/assets/geo/`, voix = noms de lieux uniquement).
 
 ---
 
 ## Pièges déjà payés 🪤 → `PIEGES.md`
 
-Une soixantaine de bugs vécus, leur cause et leur parade, rangés dans
-`PIEGES.md` (sorti d'ici le 2/10 pour alléger ce fichier, relu à chaque
-étape). **Avant de toucher à un domaine, lire sa ligne** — 3D et GPU
-(nettoyage, couleurs + ACES, canvas redimensionné, textures de shader,
-effets proportionnels au temps d'une image), physique (cannon-es, pas
-fixes, horloge simulée), toucher (deux doigts, glissé sur `window`, plein
-écran, tiroir qui avale le doigt), VRM (parti le 6/10 : cheveux, yeux,
-habits liés, creux du cou), voix et sons (`setTimeout`, premier son, noms des lettres), bots
-(accroche, 4 fps, valeur périmée, gagner par chance, copie de la main),
-scripts (`pkill -f`, ports, serveurs des autres), PWA (la maj qui
-recharge), imagiers (banques d'images, planche-contact). Et en ajouter une
-ligne quand on en paie un nouveau.
+Une soixantaine de bugs vécus, leur cause et leur parade. **Avant de toucher à
+un domaine, lire sa ligne** — 3D et GPU, physique, toucher (deux doigts, glissé
+sur `window`, plein écran, tiroir qui avale le doigt, voile au-dessus de la
+barre), voix et sons, bots, scripts, PWA, imagiers. Et en ajouter une ligne
+quand on en paie un nouveau.
 
 ---
 
@@ -588,52 +271,39 @@ ligne quand on en paie un nouveau.
    Pour la 3D : `args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader']`.
 3. **Regarder les captures d'écran.** Ne jamais conclure « ça marche » sur des
    logs : les trois pires bugs de la 3D étaient invisibles dans la console.
-4. **Avant chaque envoi sur `main`, dans la session** (9/10 : la CI est
-   devenue légère, le dépôt privé — voir « Git & déploiement ») : le smoke
-   ouvre TOUS les jeux (`npm run test:smoke`), puis **seuls les bots des
-   jeux touchés** jouent (2/10, le père : « on ne valide via bot que les
-   jeux que l'on touche spécifiquement ») ; l'un ou l'autre en échec = pas
-   d'envoi. `node scripts/touched.mjs origin/main` dit lesquels : un fichier
-   d'un jeu, un module qui ne sert qu'à lui (sa table `OWN`) ou un scénario
-   modifié de `play.mjs` → ses bots ; un module commun → aucun bot.
-   `npm run test:play` a **un bot par jeu** (19/10 : 44 scénarios, le Potager en a quatre, Cache-Cache trois, le Feu d'artifice, le Puzzle, les Bijoux, les Perles Miroir, la Pâtisserie et la Ferme à construire deux ; `BOTS=poste,potager` pour n'en lancer que quelques-uns ; `PORT=…` pour les faire tourner à côté d'un autre serveur) jusqu'à
-   son écran de fin ; un nouveau jeu arrive avec son bot, son accroche
-   `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
-   `OWN` (sinon `touched.mjs` le signale d'un ⚠ et aucun bot ne le joue). Plusieurs sessions en
-   parallèle : `PORT=4186 npm run test:smoke` (ou `test:play`) prend un autre
-   port, et les deux scripts refusent de démarrer sur un port déjà servi.
+4. **Avant chaque envoi sur `main`, dans la session** : le smoke ouvre TOUS les
+   jeux (`npm run test:smoke`, chaque variante comprise), puis **seuls les
+   bots des jeux touchés** jouent (`node scripts/touched.mjs origin/main` dit
+   lesquels : un fichier d'un jeu, un module qui ne sert qu'à lui — sa table
+   `OWN` — ou un scénario modifié de `play.mjs` ; un module commun → aucun
+   bot). L'un ou l'autre en échec = pas d'envoi. `npm run test:play` : un bot
+   par jeu jusqu'à son écran de fin (`BOTS=poste,potager` pour quelques-uns,
+   `PORT=…` à côté d'un autre serveur). Un nouveau jeu arrive avec son bot, son
+   accroche `window.__xx` (posée seulement si `window.__BOT`) et sa ligne dans
+   `OWN`.
 5. Supprimer les scripts `.verify-*.mjs` avant de committer (ils sont dans
    `.gitignore` et ignorés par ESLint, par sécurité).
-6. Sur la vraie tablette, `?fps` dans l'adresse allume la sonde d'images par
-   seconde (reste allumée, `?fps=0` l'éteint) : mesurer AVANT de toucher aux
-   ombres, au `pixelRatio` ou aux particules.
-7. **L'économie** (2/10, « pourquoi tu consommes autant de tokens ? ») :
-   - **un seul agent à la fois** — à cinq sur 4 cœurs, la 3D logicielle
-     sature, les tests expirent avant d'ouvrir un jeu et tout est refait ;
-   - en local, **3 ou 4 captures** bien choisies (celles qui jugent le
-     rendu), **un seul passage du bot du jeu touché** pendant le travail ;
-     le smoke complet et les bots des jeux touchés UNE fois, juste avant
-     l'envoi du lot sur `main` ;
-   - **une mise en ligne par lot**, pas une par jeu ;
-   - lire `PIEGES.md` par domaine, et les gros fichiers par morceaux.
+6. Sur la vraie tablette, `?fps` dans l'adresse allume la sonde (reste
+   allumée, `?fps=0` l'éteint) : mesurer AVANT de toucher aux ombres, au
+   `pixelRatio` ou aux particules.
+7. **L'économie** (2/10) : un seul agent à la fois quand il ouvre un
+   navigateur (la 3D logicielle sature 4 cœurs) ; 3 ou 4 captures bien
+   choisies ; un seul passage du bot du jeu touché pendant le travail ; le
+   smoke complet et les bots des jeux touchés UNE fois, avant l'envoi ; une
+   mise en ligne par lot ; lire `PIEGES.md` par domaine et les gros fichiers
+   par morceaux.
 
 ## Git & déploiement
 
-- **Hébergé sur Cloudflare** depuis le 9/10 (le père : « une vraie web app
-  cloudflare, et plus une page github ») : le Worker `girlz-games` du compte
+- **Hébergé sur Cloudflare** depuis le 9/10 : le Worker `girlz-games` du compte
   `tld83`, https://girlz-games.tld83.workers.dev — **toute l'app derrière un
-  code d'accès** (comme food-coach). Procédures de son compte (token,
-  secrets, erreurs connues) : skill `.claude/skills/cloudflare-deploy`
-  (reprise du gabarit `keryprophez/tld-docs`). L'ancienne adresse GitHub
-  Pages s'éteint ; les créations restées sur la tablette à l'ancienne
-  adresse ne suivent pas (choix du père : on repart de zéro).
-- Repo `keryprophez/girlz-games`, **privé** : ses minutes de CI comptent
-  dans le quota commun du compte GitHub (2 000 par mois en Free, partagées
-  avec tous ses sites) — d'où la CI légère.
-- **`main` est la branche par défaut ET la seule qui publie** :
-  `deploy.yml` se déclenche sur un push de `main` (sauf docs seules).
-- Développer sur une branche de travail, ne jamais pousser ailleurs sans
-  demander. Livraison :
+  code d'accès**. Procédures du compte (token, secrets, erreurs connues) :
+  skill `.claude/skills/cloudflare-deploy`.
+- Repo `keryprophez/girlz-games`, **privé** : ses minutes de CI comptent dans
+  le quota commun du compte (2 000 par mois) — d'où la CI légère.
+- **`main` est la branche par défaut ET la seule qui publie** (`deploy.yml`
+  sur un push de `main`, sauf docs seules). Développer sur une branche de
+  travail. Livraison :
   ```bash
   git fetch origin && git merge origin/main
   npm run build && npm run test:smoke   # tous les jeux s'ouvrent
@@ -643,21 +313,15 @@ ligne quand on en paie un nouveau.
   git checkout main && git merge --ff-only <branche> && git push origin main
   git checkout <branche>
   ```
-- CI (`deploy.yml`, quelques minutes) : `npm ci` → `npm run lint` →
-  `npm test` → `npm run build` (tsc de l'app ET du Worker) →
-  `cloudflare/wrangler-action@v4` (`wrangler deploy`). Un seul secret
-  GitHub : `CLOUDFLARE_API_TOKEN`. Si un run est annulé ou échoue sur le
-  réseau : `workflow_dispatch` sur `main`.
+- CI : `npm ci` → `npm run lint` → `npm test` → `npm run build` (tsc de l'app
+  ET du Worker) → `wrangler deploy`. Un seul secret GitHub :
+  `CLOUDFLARE_API_TOKEN`. Run annulé ou échec réseau : `workflow_dispatch`.
 - **Les secrets du Worker** se posent dans le tableau de bord Cloudflare
   (Workers & Pages → `girlz-games` → Settings → Variables and secrets, type
-  Secret) et survivent aux déploiements ; jamais dans le dépôt :
-  `ACCESS_CODE` (le code de la famille ; le changer déconnecte les
-  appareils), `ACCESS_SIGNING_SECRET` (32 caractères aléatoires au moins ;
-  absent ou trop court = app fermée), `ANTHROPIC_API_KEY` (la clé du père,
-  dans un workspace Anthropic à plafond de dépense ; absente = le cadenas de
-  Devine mon dessin). Variable facultative : `ACCESS_MAX_AGE_DAYS` (400 par
-  défaut, gardée par `keep_vars`).
-- En local : `npm run build && npm run worker:dev` sert le vrai Worker
-  (`wrangler dev`, port 8787) avec les secrets de `.dev.vars` (ignoré par
-  git, `CLE=valeur` par ligne). Le smoke et les bots, eux, tournent sous
-  `vite preview` : sans portail ni en-têtes du Worker.
+  Secret), jamais dans le dépôt : `ACCESS_CODE` (le code de la famille),
+  `ACCESS_SIGNING_SECRET` (32 caractères aléatoires au moins ; absent = app
+  fermée), `ANTHROPIC_API_KEY` (absente = le cadenas de Devine mon dessin).
+  Variable facultative : `ACCESS_MAX_AGE_DAYS` (400 par défaut).
+- En local : `npm run build && npm run worker:dev` sert le vrai Worker (port
+  8787, secrets dans `.dev.vars`, ignoré par git). Le smoke et les bots
+  tournent sous `vite preview`, sans portail.

@@ -40,12 +40,7 @@ export const sGood = () => { buzz(12); tone(660, 0.12); tone(880, 0.14, 'sine', 
 export const sWin = () => { buzz([25, 50, 25]); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'sine', 0.15, i * 0.11)) }
 export const sNope = () => { buzz(45); tone(170, 0.18, 'square', 0.12) }
 export const sFlip = () => tone(440, 0.07, 'triangle', 0.1)
-export const sCatch = () => tone(760, 0.08, 'triangle')
-export const sPower = () => { [700, 900, 1200].forEach((f, i) => tone(f, 0.1, 'square', 0.12, i * 0.06)) }
-export const sBonk = () => { tone(300, 0.06, 'square', 0.16); tone(520, 0.08, 'triangle', 0.12, 0.05) }
-export const sJump = () => tone(500, 0.1, 'triangle', 0.12)
 export const sPop = () => { tone(880, 0.05, 'triangle', 0.14); tone(1240, 0.07, 'sine', 0.1, 0.035) }
-export const sSlice = () => { tone(900, 0.05, 'sawtooth', 0.06); tone(420, 0.08, 'sawtooth', 0.05, 0.025) }
 
 /* ---- Bruitages v2 : souffle blanc filtré + enveloppes = sons « réels » ---- */
 let noiseBuf: AudioBuffer | null = null
@@ -112,12 +107,6 @@ function noiseBurst(dur: number, freq: number, opts: {
   src.connect(f); f.connect(g); g.connect(ac.destination)
   src.start(t0); src.stop(t0 + dur + 0.05)
 }
-/** Plouf dans l'eau : gros souffle grave + goutte qui remonte. */
-export const sSplash = () => {
-  noiseBurst(0.4, 900, { vol: 0.3, sweepTo: 250 })
-  tone(300, 0.12, 'sine', 0.12, 0.06)
-  tone(520, 0.1, 'sine', 0.09, 0.16)
-}
 /** Explosion charnue (ballon, boum). `v` règle la force (le bouquet du Feu
     d'artifice en tire trente sous sa mélodie : on les veut sous la musique). */
 export const sBoomReal = (d = 0, v = 1) => {
@@ -130,11 +119,6 @@ export const sPopReal = (d = 0) => {
   noiseBurst(0.07, 1800, { vol: 0.22, type: 'highpass', delay: d })
   tone(620, 0.05, 'sine', 0.16, d)
 }
-/** Impact touché (bataille navale). */
-export const sHit = () => {
-  noiseBurst(0.22, 1400, { vol: 0.3, sweepTo: 300 })
-  tone(180, 0.15, 'square', 0.14)
-}
 /** Crounch (neige, bouchée croustillante). */
 export const sCrunch = () => {
   noiseBurst(0.09, 950, { vol: 0.26, type: 'bandpass', q: 1.4, sweepTo: 480 })
@@ -145,5 +129,3 @@ export const sSteam = (d = 0) => {
   noiseBurst(0.42, 5200, { vol: 0.06, type: 'highpass', q: 0.5, sweepTo: 2400, delay: d })
   noiseBurst(0.3, 900, { vol: 0.035, type: 'bandpass', q: 0.8, delay: d + 0.04 })
 }
-/** Woosh d'objet lancé. */
-export const sWoosh = () => noiseBurst(0.26, 320, { vol: 0.16, type: 'bandpass', q: 0.8, sweepTo: 1700 })

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SHOW_PROFILES, familyDoll, soloRoyal, useFerme } from '../core/store'
+import { familyDoll, useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Op, Tier } from '../core/types'
 import { toast } from '../core/utils'
@@ -41,6 +41,11 @@ const duoKey = (gameId: string) => `ferme:duo:${gameId}`
 function lastDuo(gameId: string): boolean {
   try { return localStorage.getItem(duoKey(gameId)) === '1' } catch { return false }
 }
+/* La variante (jeux `variants`, la Cuisine) : retenue par jeu, comme le niveau */
+const variantKey = (gameId: string) => `ferme:variante:${gameId}`
+function lastVariant(gameId: string): string {
+  try { return localStorage.getItem(variantKey(gameId)) || '' } catch { return '' }
+}
 
 /* Les opérations (jeux `ops`, le Potager, 27/09) : une première étape avant
    la difficulté — quatre étiquettes + − × ÷, plusieurs à la fois, le + par
@@ -65,7 +70,7 @@ const Svg = ({ html, className }: { html: string; className?: string }) =>
 /** Leur petite fille d'Habille-toi sur l'écran de fin : elle saute de joie
     pour une belle partie, elle fait coucou « encore ! » pour une partie
     ratée. Les images sont préparées sur l'accueil (cache) : elles sont prêtes. */
-function EndPrincesses({ looks, mood }: { looks: Look[]; mood: 'joy' | 'soft' | 'again' }) {
+function EndDoll({ looks, mood }: { looks: Look[]; mood: 'joy' | 'soft' | 'again' }) {
   const [img, setImg] = useState<Record<string, string>>({})
   useEffect(() => {
     let on = true
@@ -113,7 +118,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const [crashed, setCrashed] = useState(false)
   // Tant que la difficulté n'est pas choisie, le jeu n'est pas monté ; un
   // jeu sans niveau (et sans « à deux ») démarre aussitôt
-  const [tier, setTier] = useState<Tier | null>(game.noTier && !game.duo ? 'easy' : null)
+  const [tier, setTier] = useState<Tier | null>(game.noTier && !game.duo && !game.variants ? 'easy' : null)
   const [duo, setDuo] = useState(() => lastDuo(gameId))
   // Lu au montage du jeu (l'effet ne dépend pas de `duo` : changer se fait
   // dans le choix du niveau, qui relance de toute façon la partie)
@@ -121,6 +126,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   // Les opérations (jeux `ops`) : l'étape 1 de l'ouverture, avant la difficulté
   const [ops, setOps] = useState<Op[]>(() => lastOps(gameId))
   const opsRef = useRef(ops)
+  // La variante (jeux `variants`) : choisie à l'ouverture, gardée au rejouer
+  const variantRef = useRef(lastVariant(gameId))
   const [step, setStep] = useState<1 | 2>(1)
   const [card, setCard] = useState(true)
   const [paused, setPausedState] = useState(isPaused())
@@ -173,7 +180,6 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     return () => { off(); document.removeEventListener('visibilitychange', onVis) }
   }, [game.music, result])
 
-  const profile = store.profiles.find(p => p.id === store.currentId) || store.profiles[0]
   // Un objet stable : de nouvelles tenues à chaque rendu relanceraient le rendu 3D
   const looksKey = JSON.stringify(familyDoll(store))
   const looks = useMemo(() => [familyDoll(useFerme.getState())], [looksKey])
@@ -201,7 +207,6 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     const cardT = window.setTimeout(() => setCard(false), TITLE_CARD_MS)
     iris() // entrée de scène : le cercle s'ouvre sur le jeu
     if (game.music) playMusic(game.music)
-    const p = profile
     const session = new Session()
     sessionRef.current = session
     let finished = false
@@ -219,12 +224,10 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     const ctx: GameContext = {
       root: rootRef.current,
       tier,
-      playerName: SHOW_PROFILES ? p.name : '',
-      avatar: p.avatar,
-      look: soloRoyal(useFerme.getState()),
       byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
       duo: !!game.duo && duoRef.current,
       ops: game.ops ? opsRef.current : [],
+      variant: game.variants ? (game.variants.find(v => v.id === variantRef.current) ?? game.variants[0]).id : '',
       toast,
       say,
       after: (ms, fn) => session.after(ms, fn),
@@ -234,7 +237,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       finish(payload) {
         if (finished) return
         finished = true
-        useFerme.getState().recordBest(gameId, payload.stars, p.id)
+        useFerme.getState().recordBest(gameId, payload.stars)
         // L'outro : le jeu reste monté pendant que la tour s'écroule, le
         // tracteur percute, la caméra recule — PUIS le score.
         const outroMs = payload.outroMs ?? 0
@@ -246,7 +249,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
           sessionRef.current = null
           setPaused(true)
           ceremony(payload)
-          hostTimers.push(window.setTimeout(() => playClip(p.id, payload.stars >= 2 ? 'bravo' : 'retry'), 800))
+          hostTimers.push(window.setTimeout(() => playClip(payload.stars >= 2 ? 'bravo' : 'retry'), 800))
           setResult(payload)
         }, outroMs))
       }
@@ -309,6 +312,11 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     setOps(next)
     tone(on ? 440 : 660, 0.1, 'sine', 0.09)
   }
+  const pickVariant = (v: string) => {
+    try { localStorage.setItem(variantKey(gameId), v) } catch { /* stockage refusé */ }
+    variantRef.current = v
+    pickTier('easy')
+  }
   const pickDuo = (v: boolean) => {
     try { localStorage.setItem(duoKey(gameId), v ? '1' : '0') } catch { /* stockage refusé */ }
     duoRef.current = v
@@ -324,6 +332,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
         <span className="playbar-right">
           {tier && !game.noTier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={askTier} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
           {tier && game.noTier && game.duo && <button className="pbtn" onClick={askTier} aria-label="Seule ou à deux"><Svg html={duo ? ICON.duo : ICON.solo} /></button>}
+          {tier && game.variants && <button className="pbtn" onClick={askTier} aria-label="Changer"><Svg html={ICON.choices} /></button>}
           <button className="pbtn" onClick={() => {
             store.toggleSound()
             // `store.sound` est encore l'état d'AVANT : s'il était allumé, on
@@ -367,8 +376,18 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
               <button className={'duobtn' + (duo ? ' sel' : '')} onClick={() => pickDuo(true)} aria-label="À deux"><Svg html={ICON.duo} /><i>À deux</i></button>
             </div>
           )}
+          {/* Plusieurs jeux sous la tuile : leurs grandes images, le dernier choix bordé */}
+          {game.variants && <div className="tierrow">
+            {game.variants.map(v => (
+              <span key={v.id} className="tier-item">
+                <button className={'varbtn' + (variantRef.current === v.id ? ' last' : '')} data-v={v.id}
+                  style={{ backgroundImage: `url("${v.img}")` }} onClick={() => pickVariant(v.id)} aria-label={v.name} />
+                <i className="tool-cap">{v.name}</i>
+              </span>
+            ))}
+          </div>}
           {/* Sans niveau : une seule flèche pour jouer (après « seule / à deux ») */}
-          {game.noTier && <div className="tierrow">
+          {game.noTier && !game.variants && <div className="tierrow">
             <span className="tier-item">
               <button className="tierbtn tier-easy tier-go" onClick={() => pickTier('easy')} aria-label="Jouer"><Svg html={ICON.play} /></button>
               <i className="tool-cap">Jouer</i>
@@ -424,7 +443,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             ? e => { if (e.target === e.currentTarget) replay() }
             : undefined}>
           <div className="modal">
-            <EndPrincesses looks={looks} mood={creative || result.stars === 3 ? 'joy' : result.stars === 2 ? 'soft' : 'again'} />
+            <EndDoll looks={looks} mood={creative || result.stars === 3 ? 'joy' : result.stars === 2 ? 'soft' : 'again'} />
             <h2>{result.title}</h2>
             {result.score !== undefined && <BigScore value={result.score} icon={result.scoreIcon ?? ICON.star} />}
             <p>{result.msg}</p>
@@ -433,6 +452,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
               <button className="bigbtn primary" onClick={replay}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
               {/* Rejouer à un autre niveau (30/09) : le choix fleur / éclair / flamme revient */}
               {tier && !game.noTier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={askTier}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
+              {tier && game.variants && <button className="bigbtn ghost" onClick={askTier}><Svg html={ICON.choices} /> Changer</button>}
               <button className="bigbtn ghost" onClick={goHome}><Svg html={ICON.home} /> Menu</button>
             </div>
             {game.cat === 'action' && <div className="retryhint">ou tape à côté pour rejouer</div>}

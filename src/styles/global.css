@@ -81,26 +81,6 @@ body.ingame .critter{display:none;}
   border-radius:999px;padding:7px 14px;font-weight:600;font-size:clamp(13px,2.7vmin,15px);box-shadow:var(--e1);}
 .stat button{border:none;background:none;cursor:pointer;font-weight:600;font-size:inherit;display:flex;align-items:center;gap:6px;}
 
-/* ---- Profils avec photos ---- */
-.seg-label{color:var(--ink-soft);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.12em;margin:16px 0 8px;}
-.profiles{display:flex;gap:14px;justify-content:center;}
-.pcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;
-  background:var(--card);border:2px solid var(--line);border-radius:var(--r-lg);padding:14px 22px 12px;
-  box-shadow:var(--e1);transition:transform .25s var(--spring),border-color .25s,box-shadow .25s;}
-.pcard:active{transform:scale(.96);}
-.pcard.sel{border-color:var(--mango);box-shadow:0 6px 22px rgba(255,184,77,.35);transform:scale(1.04);}
-.pavatar{position:relative;width:clamp(58px,12vmin,76px);height:clamp(58px,12vmin,76px);border-radius:50%;
-  border:3px solid #fff;cursor:pointer;background:#FFE8D6 center/cover no-repeat;
-  display:flex;align-items:center;justify-content:center;font-size:clamp(28px,6vmin,36px);
-  box-shadow:var(--e1);}
-.pcam{position:absolute;bottom:-4px;right:-6px;font-size:15px;background:#fff;border-radius:50%;
-  padding:2px;box-shadow:var(--e1);line-height:1;}
-.pname{font-family:'Baloo 2';font-weight:800;font-size:clamp(15px,3.4vmin,19px);}
-.ptier{border:1px solid var(--line);background:var(--paper);border-radius:99px;cursor:pointer;
-  font-weight:700;font-size:11.5px;padding:4px 10px;margin-top:3px;font-family:'Baloo 2';
-  transition:transform .2s var(--spring);}
-.ptier:active{transform:scale(.9);}
-
 /* ---- Accueil en trois univers (23/09) ----
    En haut le titre et les réglages, puis trois gros onglets dessinés, puis
    UN univers à la fois en grandes tuiles, sans défilement ; le pré 3D en
@@ -815,14 +795,6 @@ body.playing .g3-bar{max-width:820px;}
 /* Le « Fini » du Piano (né avec la Boîte à rythme, sortie le 30/09) */
 .pn-done{position:absolute;right:14px;bottom:14px;width:70px;height:70px;}
 
-/* ---- Réglage photo (zoom sur la tête) ---- */
-.adj-frame{display:flex;justify-content:center;margin:10px 0 4px;}
-.adj-canvas{width:220px;height:220px;border-radius:50%;border:4px solid var(--mango);
-  box-shadow:var(--e2);touch-action:none;cursor:grab;background:#F4ECDE;}
-.adj-canvas:active{cursor:grabbing;}
-.adj-zoomrow{display:flex;align-items:center;gap:10px;justify-content:center;margin:12px 0 16px;font-size:18px;}
-.adj-slider{width:200px;accent-color:var(--coral);height:26px;}
-
 /* ---- Le pavé du minuteur parental (PlayTimer) — hérité du Grand Tableau,
    sorti le 27/09 avec le Potager unique ---- */
 .tb-key{border:1px solid var(--line);border-radius:13px;background:var(--card);cursor:pointer;
@@ -1095,6 +1067,12 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .tierbtn.tier-med{background:linear-gradient(135deg,#FFC65C,#FF9E5C);}
 .tierbtn.tier-exp{background:linear-gradient(135deg,#FF8F6B,#E8574C);}
 .tierbtn.last{box-shadow:0 0 0 4px var(--mango),var(--e2);}
+/* Plusieurs jeux sous une tuile (la Cuisine, 27/10) : leurs grandes images */
+.varbtn{width:clamp(220px,30vw,380px);aspect-ratio:4/3;border-radius:28px;cursor:pointer;
+  border:4px solid #fff;background:var(--card) center/cover no-repeat;box-shadow:var(--e2);
+  transition:transform .2s var(--spring);}
+.varbtn:active{transform:scale(.95);}
+.varbtn.last{box-shadow:0 0 0 5px var(--mango),var(--e2);}
 .duorow{display:flex;gap:6px;padding:6px;border-radius:99px;background:rgba(255,255,255,.8);box-shadow:var(--e1);}
 .duobtn{width:64px;height:52px;border-radius:99px;border:none;background:transparent;cursor:pointer;color:var(--ink-soft);
   font-size:30px;display:grid;place-items:center;transition:transform .2s var(--spring),background .2s;}
@@ -1170,12 +1148,6 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 /* ---- Taquin : mode chiffres + chips ---- */
 .tb-key{aspect-ratio:1;padding:0;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;font-size:clamp(26px,5vmin,40px);border-radius:18px;}
 
-/* ---- Retour à la photo par défaut sur la carte profil ---- */
-.pdel{position:absolute;top:8px;left:10px;width:22px;height:22px;border-radius:50%;
-  border:none;background:#fff;color:var(--ink-soft);cursor:pointer;font-size:11px;
-  box-shadow:var(--e1);line-height:1;z-index:2;transition:transform .2s var(--spring);}
-.pdel:active{transform:scale(.85);}
-
 /* ============================================================
    PUISSANCE 4 DES SŒURS — plein écran, tour en portrait sur le côté
    ============================================================ */
@@ -1204,7 +1176,6 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 /* ---- Studio des voix de la famille ---- */
 .vs-block{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
   padding:10px 12px;margin-bottom:10px;text-align:left;}
-.vs-name{font-family:'Baloo 2';font-weight:800;font-size:17px;margin-bottom:6px;}
 .vs-row{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap;}
 .vs-label{flex:1;min-width:150px;font-size:13.5px;color:var(--ink-soft);font-weight:600;}
 .vs-rec.on{background:linear-gradient(135deg,#FF6B81,#E04E63);color:#fff;animation:lgpulse 1s ease-in-out infinite;}

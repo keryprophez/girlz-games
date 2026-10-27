@@ -82,12 +82,6 @@ export function ring(n: number, rMin: number, rMax: number, arc: [number, number
   return out
 }
 
-/** Oriente un panneau vers la caméra autour de Y seulement (il reste debout). */
-export function faceCamera(stage: Stage, mesh: import('three').Object3D) {
-  const c = stage.camera.position
-  mesh.rotation.y = Math.atan2(c.x - mesh.position.x, c.z - mesh.position.z)
-}
-
 /* ---------- Particules GPU ----------
    Un seul `Points` par scène, un tampon fixe, des particules recyclées.
    Chaque burst pose N particules avec une vitesse, une couleur, une durée de

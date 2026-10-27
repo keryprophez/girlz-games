@@ -15,7 +15,6 @@ import { market } from './market'
 import { maze } from './maze'
 import { taquin } from './taquin'
 import { connect4 } from './connect4'
-import { pizza } from './pizza'
 import { space } from './space'
 import { geoGame } from './geo'
 import { fireworks } from './fireworks'
@@ -26,17 +25,16 @@ import { hideseek } from './hideseek'
 import { pinball } from './pinball'
 import { parrot } from './parrot'
 import { farmbuild } from './farmbuild'
-import { bakery } from './bakery'
 import { drawguess } from './drawguess'
 import { cartable } from './cartable'
 import { monuments } from './monuments'
+import { cuisine } from './cuisine'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, pinball, hideseek, drawguess, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
-  dressup, bijoux, piano, fireworks, coloring, pizza, parrot, farmbuild, bakery, cartable,
-  monuments
+  dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -53,7 +51,8 @@ export const GAMES: GameDef[] = [
    pièces libres de puzzle → taquin. La Loupe Magique (geo) est sortie le
    2/09 : des pays inventés n'apprennent rien, on refera une géographie
    VRAIE ou rien. Le Chien de berger (11/10) est sorti le 19/10 (« les
-   filles trouvent ça nul »). */
+   filles trouvent ça nul »). La Pizzeria et la Pâtisserie ne font plus qu'une
+   tuile depuis le 27/10 : la Cuisine (la pizza ou le gâteau). */
 export const WORLDS: { id: string; label: string; icon: string; games: GameDef[] }[] = [
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
@@ -69,8 +68,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   {
     id: 'creer', label: 'Créer', icon: '🎨',
     games: [
-      dressup, bijoux, piano, fireworks, coloring, pizza, parrot, farmbuild, bakery, cartable,
-      monuments
+      dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments
     ]
   }
 ]

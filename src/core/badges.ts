@@ -155,6 +155,16 @@ export const BADGE: Record<string, string> = {
     <rect x="22.6" y="9" width="2.8" height="8" rx="1" fill="${C.sky}"/>
     <path d="M24 2.5c2.4 3 2.8 4.6 0 6.5-2.8-1.9-2.4-3.5 0-6.5z" fill="${C.mango}"/>
   `),
+  // La Cuisine (27/10) : la toque du chef, son bandeau, posée sur la planche
+  cuisine: svg(`
+    <ellipse cx="24" cy="42" rx="17" ry="3.4" fill="${C.wood}"/>
+    <circle cx="15" cy="17" r="8" fill="${C.white}"/>
+    <circle cx="24" cy="12" r="9.5" fill="${C.white}"/>
+    <circle cx="33" cy="17" r="8" fill="${C.white}"/>
+    <path d="M11.5 19h25l-2.5 14h-20z" fill="${C.white}"/>
+    <path d="M18 23.5v6M24 22.5v7M30 23.5v6" stroke="${C.cream}" stroke-width="1.8" stroke-linecap="round"/>
+    <rect x="13" y="31" width="22" height="8" rx="2.4" fill="${C.coral}"/>
+  `),
   // La Ferme à construire : la grange rouge sur son pré, une clôture, une étincelle
   farmbuild: svg(`
     <ellipse cx="24" cy="40" rx="20" ry="5" fill="${C.meadow}"/>

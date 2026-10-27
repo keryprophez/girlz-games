@@ -88,34 +88,11 @@ const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } cat
    Les images
    ===================================================================== */
 
-/** Une photo (sa tête, une photo chargée) recadrée au format du plateau. */
-function photoCanvas(url: string): Promise<HTMLCanvasElement | null> {
-  return new Promise(res => {
-    const im = new Image()
-    im.onload = () => {
-      const cv = document.createElement('canvas')
-      cv.width = PIC_W; cv.height = PIC_H
-      const k = Math.max(PIC_W / im.width, PIC_H / im.height)
-      cv.getContext('2d')!.drawImage(im, (PIC_W - im.width * k) / 2, (PIC_H - im.height * k) / 2, im.width * k, im.height * k)
-      res(cv)
-    }
-    im.onerror = () => res(null)
-    im.src = url
-  })
-}
-
-function basePics(c: GameContext): Pic[] {
-  const st = useFerme.getState()
+function basePics(): Pic[] {
   const pics: Pic[] = [
     { id: 'ferme', cap: 'Ferme', thumb: '', warm: true, load: farmPicture },
     { id: 'espace', cap: 'Espace', thumb: '', warm: true, load: spacePicture }
   ]
-  const custom = st.puzzleImgs[st.currentId]
-  if (custom) pics.push({ id: 'photo', cap: 'Ta photo', thumb: custom, load: () => canvasPicture('photo:' + custom.length, () => photoCanvas(custom)) })
-  if (c.avatar) {
-    const av = c.avatar
-    pics.push({ id: 'tete', cap: 'Ta tête', thumb: av, load: () => canvasPicture('tete:' + av.length, () => photoCanvas(av)) })
-  }
   pics.push({ id: 'nombres', cap: 'Nombres', thumb: '', cls: 'pz-num', load: () => Promise.resolve(null) })
   return pics
 }
@@ -421,14 +398,14 @@ export const taquin: GameDef = {
     const me: Shell = {
       mode: savedMode === 'taquin' ? 'taquin' : 'puzzle',
       pic: read(PIC_KEY) || 'ferme',
-      pics: basePics(c), jig: null, alive: true, gen: 0, urls: [], fingers: 0
+      pics: basePics(), jig: null, alive: true, gen: 0, urls: [], fingers: 0
     }
     sh = me
     document.querySelectorAll<HTMLElement>('.tq-mode').forEach(b => {
       b.onclick = () => setMode(me, b.dataset.m as Mode)
     })
     // Leurs dessins du dossier (les deux plus récents) : lus avant de choisir l'image
-    const listed = drawings(st.currentId).then(ds => {
+    const listed = drawings(st.owner).then(ds => {
       if (sh !== me) return
       const at = me.pics.findIndex(p => p.id === 'espace') + 1
       const mine = ds.slice(0, 2).map((d, k): Pic => {

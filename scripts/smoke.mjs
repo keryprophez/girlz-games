@@ -68,7 +68,14 @@ for (let i = 0; i < games.length; i++) {
   // Un jeu à calculs (le Potager) demande d'abord ses opérations : on garde
   // celles par défaut et on passe (27/09)
   // (un jeu sans niveau, 30/09, démarre directement : on attend le jeu lui-même)
-  await page.locator('.opsgo, .tierbtn.tier-easy, .gameroot > *').first().waitFor()
+  await page.locator('.opsgo, .tierbtn.tier-easy, .varbtn, .gameroot > *').first().waitFor()
+  // Plusieurs jeux sous une tuile (la Cuisine, 27/10) : chacun est vérifié
+  const vs = await page.$$eval('.varbtn', els => els.map(el => el.dataset.v))
+  if (vs.length && games[i].v === undefined) {
+    games.splice(i + 1, 0, ...vs.slice(1).map(v => ({ ...games[i], v })))
+    games[i].v = vs[0]
+  }
+  if (games[i].v) await page.locator(`.varbtn[data-v="${games[i].v}"]`).click()
   if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
   // La difficulté se choisit dans le jeu : on prend la douce (comme Jade)
   if (await page.locator('.tierbtn').count()) await page.locator('.tierbtn.tier-easy').click()
@@ -80,9 +87,9 @@ for (let i = 0; i < games.length; i++) {
     .then(() => true).catch(() => false)
   if (pageErrors.length || !mounted || !loaded) {
     failures.push({ game: games[i], errors: [...pageErrors], mounted, loaded })
-    console.error(`✗ ${games[i].name} — monté: ${mounted}, chargé: ${loaded}, erreurs: ${pageErrors.join(' | ') || 'aucune'}`)
+    console.error(`✗ ${games[i].name}${games[i].v ? ' (' + games[i].v + ')' : ''} — monté: ${mounted}, chargé: ${loaded}, erreurs: ${pageErrors.join(' | ') || 'aucune'}`)
   } else {
-    console.log(`✓ ${games[i].name}`)
+    console.log(`✓ ${games[i].name}${games[i].v ? ' (' + games[i].v + ')' : ''}`)
   }
 }
 

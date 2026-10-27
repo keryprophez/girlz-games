@@ -10,7 +10,7 @@
    Sous swiftshader la 3D rend 3 à 4 images/s : compter une quinzaine de
    minutes pour les 24 jeux. Regarder CHAQUE affiche avant de committer. */
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 
 // PORT / DIST : à côté du smoke (4188) et des bots (4189), qui servent dist/
@@ -24,6 +24,9 @@ const W = 600, H = 450
    l'arène), et `shots` : plusieurs photos à `every` ms d'écart, on garde la
    plus colorée (le Ninja : le moment où il y a le plus de fruits en l'air).
    `tier` : le niveau (le Ninja en expert, plus de fruits à la fois).
+   `variants` : un jeu à plusieurs variantes (la Cuisine) — chacune a son
+   entrée « id:variante » et sa photo (<id>-<variante>.webp, les grandes
+   images de l'ouverture), et l'affiche de la tuile les met côte à côte.
    Par défaut : 5 s, une photo, cadrage 4:3 au centre, niveau doux. */
 const STAGE = {
   // Jouer
@@ -50,8 +53,10 @@ const STAGE = {
     after: 1500, zoom: 1.12, cy: 0.46
   },
   maze: { wait: 5000 },
-  // La Pâtisserie : un gâteau tout fait, ses bougies allumées
-  bakery: {
+  // La Cuisine : la pizza et le gâteau, côte à côte sur la tuile
+  cuisine: { variants: ['pizza', 'gateau'] },
+  // Le gâteau : tout fait, ses bougies allumées
+  'cuisine:gateau': {
     ready: () => window.__bk && window.__bk.ready, wait: 1500,
     act: async p => { await p.evaluate(() => window.__bk.demo()) },
     after: 2500, zoom: 1.12, cy: 0.42
@@ -203,10 +208,10 @@ const STAGE = {
     ready: () => window.__bj && window.__bj.phase === 'work', wait: 2500,
     act: async p => {
       // Son pendentif de perles à repasser (un cœur) attend au milieu du U :
-      // gardé dans la princesse, la page rechargée pour qu'il y soit
+      // gardé dans la sauvegarde, la page rechargée pour qu'il y soit
       await p.evaluate(rows => {
-        const s = JSON.parse(localStorage.getItem('ferme:v2') || '{"state":{},"version":0}')
-        s.state.royals = { solo: { pendant: { rows } }, jade: null, joyce: null }
+        const s = JSON.parse(localStorage.getItem('ferme:v2') || '{"state":{},"version":1}')
+        s.state.pendant = { rows }
         localStorage.setItem('ferme:v2', JSON.stringify(s))
       }, ['..RRR.....RRR..', '.RWWRR...RRRRR.', '.RWPPPR.RPPPRR.', 'RRPPPPPRPPPPPRR', '.RPPPPPPPPPPPR.', '.RRPPPPPPPPPRR.', '..RRPPPPPPPRR..', '...RRPPPPPRR...', '....RRPPPRR....', '.....RRPRR.....', '......RRR......', '.......R.......'])
       await p.goto(p.url())
@@ -275,8 +280,8 @@ const STAGE = {
     },
     after: 1500
   },
-  // La sauce en spirale, puis trois garnitures semées du doigt
-  pizza: {
+  // La pizza : la sauce en spirale, puis trois garnitures semées du doigt
+  'cuisine:pizza': {
     wait: 6000,
     act: async p => {
       const cv = await p.locator('#pzArena canvas').first().boundingBox()
@@ -342,16 +347,21 @@ for (const w of await page.$$eval('.hm-tab', els => els.map(el => el.dataset.w))
 const only = process.env.ONLY ? process.env.ONLY.split(',') : null
 mkdirSync(OUT, { recursive: true })
 
-for (const g of games) {
+// Une photo par jeu, ou une par variante (la Cuisine : la pizza, le gâteau)
+const jobs = games.flatMap(g => (STAGE[g.id]?.variants || [null]).map(v =>
+  ({ ...g, v, key: v ? `${g.id}:${v}` : g.id, file: v ? `${g.id}-${v}` : g.id })))
+
+for (const g of jobs) {
   if (only && !only.includes(g.id)) continue
-  const st = STAGE[g.id] || { wait: 5000 }
+  const st = STAGE[g.key] || { wait: 5000 }
   // `accept` : une partie tirée au sort qui ne convient pas est relancée (6 fois au plus)
   for (let tries = 0; ; tries++) {
     errors.length = 0
     await page.goto(URL)
     await page.locator(`.hm-tab[data-w="${g.w}"]`).click()
     await page.locator(`.gc[data-id="${g.id}"]`).click({ force: true })
-    await page.locator('.opsgo, .tierbtn, .gameroot > *').first().waitFor()
+    await page.locator('.opsgo, .tierbtn, .varbtn, .gameroot > *').first().waitFor()
+    if (g.v) await page.locator(`.varbtn[data-v="${g.v}"]`).click({ force: true })
     if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
     if (await page.locator('.duobtn').count()) await page.locator('.duobtn').first().click({ force: true })
     if (await page.locator('.tierbtn').count()) await page.locator('.tierbtn.tier-' + (st.tier || 'easy')).click({ force: true })
@@ -401,12 +411,40 @@ for (const g of games) {
     g.drawImage(img, x, y, cw, ch, 0, 0, W, H)
     return c.toDataURL('image/webp', 0.82).split(',')[1]
   }, { b64: png.toString('base64'), zoom: st.zoom || 1, cx: st.cx ?? 0.5, cy: st.cy ?? 0.5, W, H })
+  writeFileSync(OUT + g.file + '.webp', Buffer.from(webp, 'base64'))
+  console.log(`${errors.length ? '⚠' : '✓'} ${g.file}${errors.length ? ' — ' + errors.join(' | ') : ''}`)
+}
+
+// L'affiche d'un jeu à variantes : la moitié du milieu de chacune, côte à
+// côte, un filet clair entre les deux
+for (const g of games) {
+  const vs = STAGE[g.id]?.variants
+  if (!vs || (only && !only.includes(g.id))) continue
+  const parts = vs.map(v => OUT + `${g.id}-${v}.webp`)
+  if (!parts.every(f => existsSync(f))) continue
+  const webp = await page.evaluate(async ({ srcs, W, H }) => {
+    const c = document.createElement('canvas')
+    c.width = W; c.height = H
+    const x = c.getContext('2d')
+    const w = W / srcs.length
+    for (let i = 0; i < srcs.length; i++) {
+      const img = new Image()
+      img.src = 'data:image/webp;base64,' + srcs[i]
+      await img.decode()
+      const sw = img.naturalWidth / srcs.length
+      x.drawImage(img, (img.naturalWidth - sw) / 2, 0, sw, img.naturalHeight, i * w, 0, w, H)
+    }
+    x.fillStyle = '#FFFDF6'
+    for (let i = 1; i < srcs.length; i++) x.fillRect(i * w - 3, 0, 5, H)
+    return c.toDataURL('image/webp', 0.82).split(',')[1]
+  }, { srcs: parts.map(f => readFileSync(f).toString('base64')), W, H })
   writeFileSync(OUT + g.id + '.webp', Buffer.from(webp, 'base64'))
-  console.log(`${errors.length ? '⚠' : '✓'} ${g.id}${errors.length ? ' — ' + errors.join(' | ') : ''}`)
+  console.log(`✓ ${g.id} (${vs.join(' + ')})`)
 }
 
 // La liste des affiches présentes : l'accueil ne demande que celles-là
-const ids = readdirSync(OUT).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort()
+// (les photos des variantes, « id-variante », ne sont pas des tuiles)
+const ids = readdirSync(OUT).filter(f => f.endsWith('.webp') && !f.includes('-')).map(f => f.slice(0, -5)).sort()
 writeFileSync('src/core/posters.ts', `/* Les jeux qui ont leur affiche sur l'accueil (public/assets/affiches/).
    Fichier ÉCRIT par scripts/posters.mjs : ne pas le modifier à la main. */
 export const POSTERS = new Set<string>(${JSON.stringify(ids)})

@@ -524,9 +524,41 @@ export function plateMask(shape: PlateShape, n = PLATE_SIZE[shape]): boolean[] {
 
 /* ---------- Une création (perles posées, puis fondues) ----------
    Elle se garde en lignes de lettres (celles de `LETTER`, `.` sans perle),
-   recadrée sur ses perles : c'est ce que la princesse porte en pendentif
-   (`Royal.pendant`) et ce que range la vitrine des créations (le store). */
+   recadrée sur ses perles : c'est le pendentif du collier des Bijoux et ce
+   que range la vitrine des créations (le store). */
 export const COLOR_LETTER = Object.fromEntries(Object.entries(LETTER).map(([l, c]) => [c, l])) as Record<ColorId, string>
+
+export interface Piece { rows: string[] }
+/** La plus grande plaque fait 17 picots ; de la marge pour une plaque à venir. */
+export const PIECE_MAX = 29
+
+/** Relit une création venue du stockage : des lignes de même longueur, des
+    lettres de pots connues, au moins une perle, recadrée sur ses perles.
+    Tout le reste (abîmé, vide, trop grand) : null. */
+export function normalizePiece(x: unknown): Piece | null {
+  if (!x || typeof x !== 'object') return null
+  const rows = (x as Record<string, unknown>).rows
+  if (!Array.isArray(rows) || !rows.length || rows.length > PIECE_MAX) return null
+  const w = typeof rows[0] === 'string' ? rows[0].length : 0
+  if (!w || w > PIECE_MAX) return null
+  for (const row of rows) {
+    if (typeof row !== 'string' || row.length !== w) return null
+    for (const ch of row) if (ch !== '.' && !(ch in LETTER)) return null
+  }
+  const lines = rows as string[]
+  const full = (s: string) => /[^.]/.test(s)
+  const col = (c: number) => lines.some(l => l[c] !== '.')
+  let r0 = 0, r1 = lines.length - 1, c0 = 0, c1 = w - 1
+  while (r0 <= r1 && !full(lines[r0])) r0++
+  if (r0 > r1) return null
+  while (!full(lines[r1])) r1--
+  while (!col(c0)) c0++
+  while (!col(c1)) c1--
+  return { rows: lines.slice(r0, r1 + 1).map(l => l.slice(c0, c1 + 1)) }
+}
+
+/** Le nombre de perles d'une création. */
+export const pieceSize = (p: Piece) => p.rows.reduce((n, l) => n + l.replace(/\./g, '').length, 0)
 
 /** La plaque (n × n, une couleur ou rien par picot) recadrée sur ses perles ;
     null si elle est vide. */

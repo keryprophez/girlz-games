@@ -10,7 +10,7 @@ import { particles, decor, type Particles, toScreen } from '../core/scene3d'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 
-/* 🍕 La Pizzeria — refaite le 23/09 (« le jeu de pizza est absolument
+/* 🍕 La pizza de la Cuisine (c'était la Pizzeria jusqu'au 27/10) — refaite le 23/09 (« le jeu de pizza est absolument
    éclaté », les filles). Ce qui n'allait pas : des ingrédients illisibles
    (un « fromage » en pommes de terre, un épi de maïs planté debout, un
    oignon pour une olive) qui tombaient en vrac ; une cuisson qui ne se
@@ -577,9 +577,9 @@ function finish(me: State) {
   })
 }
 
-export const pizza: GameDef = {
-  id: 'pizza', name: 'La Pizzeria', icon: '🍕', sq: 'sq-peach', cat: 'creatif', music: 'kitchen',
-  subtitle: 'Sauce, fromage, garniture… au four, puis on croque !',
+/** La pizza de la Cuisine (`games/cuisine.ts`) : sauce, fromage, garniture…
+    au four, puis on croque ! */
+export const pizzaDish: Pick<GameDef, 'hand' | 'mount'> = {
   // La main : la sauce s'étale d'un glissé, un ingrédient se pose d'un
   // toucher ; bien garnie, au four ; cuite, on prend une part
   hand: root => {

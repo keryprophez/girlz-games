@@ -192,10 +192,7 @@ export const letters: GameDef = {
     preloadSfx(['tick', 'confirm', 'drop'])
     const tierWords = c.byTier(WORDS.med, WORDS.exp, WORDS.ultra)
     const me: State = {
-      // Le prénom en premier mot, seulement si on sait qui joue
-      words: c.playerName
-        ? [c.playerName.toUpperCase(), ...shuffle([...tierWords]).slice(0, 2)]
-        : shuffle([...tierWords]).slice(0, 3),
+      words: shuffle([...tierWords]).slice(0, 3),
       word: '', round: 0, pos: 0, here: 0, mistakes: 0, running: true, peeking: false, root: c.root
     }
     lg = me

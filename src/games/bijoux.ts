@@ -5,14 +5,13 @@ import { sfx, preloadSfx } from '../core/sfx'
 import { tone, sSteam, sWin } from '../core/audio'
 import { ICON } from '../core/icons'
 import { visible } from '../core/hand'
-import { useFerme, soloRoyal } from '../core/store'
-import { beadKit, beadRun, instancedRun, orientQ, BEAD_GAP, BEAD_HALF, BEAD_LEN, type BeadKit } from '../core/bijoux3d'
-import { BEADS_MAX, type Bead, type BeadKind, type Piece } from '../core/royal'
+import { useFerme } from '../core/store'
+import { beadKit, beadRun, instancedRun, orientQ, BEADS_MAX, BEAD_GAP, BEAD_HALF, BEAD_LEN, type Bead, type BeadKind, type BeadKit } from '../core/bijoux3d'
 import {
   pegboard, beadPot, ironing, fusedPieceGeo, fusedMaterial, pendantGeos, pendantPitch, BEAD,
   type Pegboard, type BeadPot, type Ironing
 } from '../core/hama3d'
-import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateOutline, pieceOf, type ColorId, type PlateShape } from '../core/perles'
+import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateOutline, pieceOf, type ColorId, type Piece, type PlateShape } from '../core/perles'
 
 /* LES BIJOUX (30/09) — la demande de Jade : un collier de perles enfilé
    perle par perle (le père : « collier de perles » ; maquette validée).
@@ -28,7 +27,7 @@ import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateO
       sous une lumière de bijouterie.
    4. « Fini ». (La princesse VRM qui le portait dans la salle de bal est
       partie le 6/10 avec son modèle : « ça rame trop ». Le collier reste
-      gardé dans `royal.beads`, `wearNecklace`.)
+      gardé dans la sauvegarde, `setNecklace`.)
    Le second mode (1/10, « les perles à repasser dedans ») : une plaque à
    picots en création LIBRE — carré, cœur, étoile ou rond, comme les vraies
    plaques à formes —, douze pots de perles (leur nom dessous) ; on pose au
@@ -37,7 +36,7 @@ import { LETTER, PALETTE, PLATE_MAX, PLATE_SHAPES, PLATE_SIZE, plateMask, plateO
    perles fondent, l'objet se décolle et tourne dans les airs. Puis « Garder »
    (la vitrine des créations, gardée sur la tablette) ou « Au collier » : il
    devient le PENDENTIF du collier, pendu au milieu par un petit anneau doré
-   (`royal.pendant`, `wearPendant`), dans la vitrine.
+   (`setPendant`), dans la vitrine.
    Rien à lire, aucune note (Créer). */
 
 type V3 = import('three').Vector3
@@ -361,7 +360,7 @@ function buildWorkbench(me: State) {
   buildOrganizer(me)
   // Son pendentif (les perles à repasser), s'il en a un, attend au milieu
   // du U : le collier qu'on enfile le portera
-  const pend = soloRoyal(useFerme.getState()).pendant
+  const pend = useFerme.getState().pendant
   if (pend) {
     const pg = pendantGeos(T, pend.rows, pendantPitch(pend.rows), { seg: 10 })
     const grp = new T.Group()
@@ -731,8 +730,8 @@ function close(me: State) {
   for (const b of me.beads) { b.st = 'rest'; b.bump = 0; restPose(me, b); draw(me, b) }
   for (const b of me.leaving) unpool(me, b)
   me.leaving.length = 0
-  // Le collier est gardé (`royal.beads`)
-  useFerme.getState().wearNecklace(me.beads.map(b => ({ ...b.bead })))
+  // Le collier est gardé
+  useFerme.getState().setNecklace(me.beads.map(b => ({ ...b.bead })))
   sfx('cloth', { vol: 0.35, rate: 1.3 })
   me.morph = 0.0001
 }
@@ -1152,7 +1151,7 @@ function keepPiece(me: State) {
 function pieceToCollar(me: State, piece: Piece, fresh: boolean) {
   const st = useFerme.getState()
   if (fresh) st.keepCreation(piece)
-  st.wearPendant(piece)
+  st.setPendant(piece)
   me.choose = false
   document.getElementById('bjArena')?.classList.remove('choose', 'gsel')
   sfx('cloth', { vol: 0.4, rate: 1.2 })
@@ -1410,8 +1409,7 @@ function buildVitrine(me: State) {
   spin.add(btn)
   // Le collier posé en rond sur le bombé : le fil a la longueur de celui de
   // l'établi. Celui qu'elle porte : ses perles, et son pendentif (1/10)
-  const worn = soloRoyal(useFerme.getState())
-  const beads = worn.beads, pend = worn.pendant
+  const { necklace: beads, pendant: pend } = useFerme.getState()
   const pg = pend ? pendantGeos(T, pend.rows, pendantPitch(pend.rows), { seg: 12 }) : null
   const surf = (x: number, z: number) => 0.012 + 0.115 * 0.24 * Math.sqrt(Math.max(0, 1 - (x / 0.115) ** 2 - (z / (0.115 * 0.82)) ** 2))
   const L = me.L
@@ -1805,7 +1803,7 @@ export const bijoux: GameDef = {
             refreshHamaUi(st)
           },
           /** Le pendentif gardé (ses lignes), dans la vitrine du collier. */
-          get pendant() { return soloRoyal(useFerme.getState()).pendant?.rows || null },
+          get pendant() { return useFerme.getState().pendant?.rows || null },
           get vitrinePendant() { return !!st.vitrine?.getObjectByName('pendentif') },
           get creations() { return useFerme.getState().creations.length },
           get gallery() { return st.gallery ? { count: st.gallery.items.length, sel: st.gallery.sel } : null },

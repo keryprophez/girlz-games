@@ -1,5 +1,5 @@
-/* Le look de la petite fille d'Habille-toi (`core/doll3d.ts`, l'ancienne
-   version derrière le petit bouton de la Princesse) : le type, les palettes,
+/* Le look de la petite fille d'Habille-toi (`core/doll3d.ts`, gardé dans la
+   sauvegarde de la famille) : le type, les palettes,
    la relecture prudente du look gardé et les petites icônes des boutons. */
 
 export interface Look {
@@ -25,7 +25,7 @@ const CHOICES: { [K in keyof Look]?: readonly string[] } = {
   held: ['none', 'balloon', 'wand', 'flower', 'icecream']
 }
 
-/** Le look gardé (profil), relu prudemment : une valeur inconnue reprend celle de base. */
+/** Le look gardé, relu prudemment : une valeur inconnue reprend celle de base. */
 export function normalizeLook(x: unknown): Look {
   const out = defaultLook()
   if (!x || typeof x !== 'object') return out

@@ -192,9 +192,3 @@ export function buildPlush(T: T3, parts: PlushParts, height = 1): Plush {
     dispose() { geo.dispose(); mat.dispose(); map.dispose(); normalMap.dispose() }
   }
 }
-
-/** Les deux d'un coup (la maquette). */
-export function plushFromDrawing(T: T3, drawing: HTMLCanvasElement, o: { height?: number; strokes?: Stroke[] } = {}): Plush | null {
-  const parts = plushParts(drawing, o.strokes)
-  return parts && buildPlush(T, parts, o.height)
-}

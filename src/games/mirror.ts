@@ -39,7 +39,7 @@ import { PALETTE, makeRounds, isGiven, isComplete, missing, wantAt, sourceOf, ty
    retire), les perles du modèle qui n'ont pas encore leur reflet sautent,
    et le bouton tremble ; chaque perle fausse compte pour les étoiles. */
 
-type Phase = 'load' | 'intro' | 'play' | 'win' | 'iron' | 'fly' | 'over'
+type Phase = 'load' | 'intro' | 'play' | 'win' | 'iron' | 'fly'
 
 interface Pot { id: ColorId; pot: BeadPot; pos: import('three').Vector3; el: HTMLElement; btn: HTMLButtonElement }
 interface Stroke { erase: boolean; seen: Set<number> }
@@ -247,7 +247,7 @@ function startRound(me: State) {
     el.className = 'tool-item pl-pot'
     el.innerHTML = `<button class="pl-potbtn" data-c="${id}" aria-label="${PALETTE[id].name}"></button><i class="tool-cap">${PALETTE[id].name}</i>`
     const btn = el.querySelector('button')!
-    btn.addEventListener('pointerdown', e => { e.stopPropagation(); if (me.phase !== 'over') selectColor(me, id) })
+    btn.addEventListener('pointerdown', e => { e.stopPropagation(); selectColor(me, id) })
     holder.appendChild(el)
     me.pots.push({ id, pot, pos: new T.Vector3(x, POT_R * 0.35, z), el, btn })
   })

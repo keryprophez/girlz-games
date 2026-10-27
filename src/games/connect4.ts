@@ -6,7 +6,6 @@ import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
 import { critterPortraits, portraitImg } from '../core/portraits'
 import type { CritterKind } from '../core/critters'
-import { SHOW_PROFILES, useFerme } from '../core/store'
 import { visible } from '../core/hand'
 
 /* Puissance 4 des Sœurs — LE jeu à deux sur la même tablette, au tour par
@@ -26,7 +25,7 @@ const COLS = 7, ROWS = 6
 const RIMS = ['#FF6B81', '#4FB8E7']
 type Grid = number[][]
 
-interface Player { name: string; avatar: string | null; fallback: CritterKind }
+interface Player { name: string; fallback: CritterKind }
 interface State {
   players: Player[]
   grid: Grid
@@ -44,7 +43,6 @@ let c4: State | null = null
 let ctx: GameContext
 
 function tokenHTML(p: Player, rim: string, px: number): string {
-  if (p.avatar) return `<span class="c4-face" style="background-image:url('${p.avatar}');border-color:${rim}"></span>`
   return `<span class="c4-face c4-drawn" style="border-color:${rim}">${portraitImg(c4?.img[p.fallback], Math.round(px * 0.72))}</span>`
 }
 
@@ -246,13 +244,8 @@ export const connect4: GameDef = {
   },
   mount(c) {
     ctx = c
-    // Tant que le choix de joueuse est masqué, on ne sait pas qui tient la
-    // tablette : chacune est son pion (le poussin, la poule), pas un prénom
-    const profiles = useFerme.getState().profiles
-    const curP = profiles.find(p => p.id === useFerme.getState().currentId) || profiles[0]
-    const otherP = profiles.find(p => p.id !== curP.id) || curP
-    const cur = SHOW_PROFILES ? curP : { name: 'le poussin', avatar: null }
-    const other = SHOW_PROFILES ? otherP : { name: 'la poule', avatar: null }
+    // On ne sait pas qui tient la tablette : chacune est son pion (le
+    // poussin, la poule), jamais un prénom
     c.root.innerHTML = `
       <div class="arena c4-wrap" id="c4Wrap">
         <div id="c4Board"></div>
@@ -281,18 +274,16 @@ export const connect4: GameDef = {
         `<button class="c4-col" data-c="${col}" style="width:${cell}px;left:${pad + col * cell}px;height:${pad * 2 + cell * ROWS}px"></button>`).join('')}`
     const me: State = {
       players: [
-        { name: cur.name, avatar: cur.avatar, fallback: 'chick' },
-        { name: other.name, avatar: other.avatar, fallback: 'hen' }
+        { name: 'le poussin', fallback: 'chick' },
+        { name: 'la poule', fallback: 'hen' }
       ],
       grid: [], turn: 0, lock: false, over: false, solo: false, cell, pad, img: {}
     }
     c4 = me
-    const HEN: Player = { name: 'la poule', avatar: null, fallback: 'hen' }
     document.querySelectorAll<HTMLElement>('.c4-mode').forEach(b => {
       b.onclick = () => {
         me.solo = b.dataset.m === 'solo'
         document.querySelectorAll('.c4-mode').forEach(x => x.classList.toggle('sel', x === b))
-        me.players[1] = me.solo ? HEN : { name: other.name, avatar: other.avatar, fallback: 'hen' }
         sfx('click', { vol: 0.4 })
         newGame(me)
       }

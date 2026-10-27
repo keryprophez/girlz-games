@@ -107,10 +107,12 @@ const clickTile = async name => {
   throw new Error(`tuile introuvable : ${name}`)
 }
 
-const openGame = async (name, hook, tier = 'easy', ops = null) => {
+const openGame = async (name, hook, tier = 'easy', ops = null, variant = null) => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
   await clickTile(name)
+  // Plusieurs jeux sous une tuile (la Cuisine, 27/10) : la variante voulue
+  if (variant) await page.locator(`.varbtn[data-v="${variant}"]`).click()
   // Un jeu à calculs (le Potager, 27/09) demande d'abord ses opérations :
   // on allume exactement celles voulues (sinon celles par défaut), on passe
   // (un jeu sans niveau, 30/09, démarre directement : on attend le jeu lui-même)
@@ -151,7 +153,7 @@ const scenario = async (name, fn) => {
 
 /* 🍕 Pizzeria : la sauce doit apparaître SOUS le doigt (régression UV). */
 await scenario('pizza-sauce-sous-le-doigt', async () => {
-  await openGame('La Pizzeria')
+  await openGame('La Cuisine', null, 'easy', null, 'pizza')
   const cv = await page.locator('canvas').first().boundingBox()
   const tapX = cv.x + cv.width * 0.56, tapY = cv.y + cv.height * 0.52
   await page.mouse.move(tapX, tapY)
@@ -365,7 +367,7 @@ await scenario('memory-toutes-les-paires', async () => {
   // vérifiée ici depuis que le Bonhomme de neige est sorti (28/09)
   const best = await page.evaluate(() => {
     const d = JSON.parse(localStorage.getItem('ferme:v2') || '{}')
-    return d.state?.progress?.jade?.bestStars?.memory
+    return d.state?.best?.memory
   })
   if (typeof best !== 'number') throw new Error('meilleure note non enregistrée après la partie')
 })
@@ -835,14 +837,12 @@ const finDe = async (texte, ms = 9000) => {
   await page.waitForFunction(t => document.querySelector('#result.show') && document.body.innerText.includes(t), texte, { timeout: ms })
 }
 
-/* 🍕 La Pizzeria, refaite le 23/09 : la partie entière. Du fromage au doigt,
+/* 🍕 La pizza de la Cuisine (la Pizzeria, refaite le 23/09) : la partie entière. Du fromage au doigt,
    au four, sortie DANS la zone parfaite (une sortie trop tôt ne sort pas),
    la pizza se coupe, et on croque les six parts jusqu'à l'écran de fin. */
 await scenario('pizza-du-four-a-la-bouche', async () => {
-  // À l'éclair, la cuisson dure 5 s simulées (7 à la fleur, 4 à la flamme) :
-  // sous swiftshader en CI (2 à 3 images/s, dt borné à 100 ms), une cuisson
-  // longue dépasse la minute, une trop courte laisse une fenêtre de 3 images
-  await openGame('La Pizzeria', '__pz', 'med')
+  // La cuisson dure 7 s simulées (la Cuisine n'a pas de niveau, 27/10)
+  await openGame('La Cuisine', '__pz', 'easy', null, 'pizza')
   const cv = await page.locator('#pzArena canvas').first().boundingBox()
   const cx = cv.x + cv.width / 2, cy = cv.y + cv.height / 2
   await page.locator('.pz-bowl[data-t="cheese"]').click()
@@ -1225,8 +1225,8 @@ await scenario('bijoux-collier-de-perles', async () => {
   await bjWait(() => window.__bj.count === 10 && window.__bj.moving === 0, null, 'annuler', 180000)
   await page.locator('#bjClose').click({ force: true })
   await bjWait(() => window.__bj.phase === 'vitrine', null, 'vitrine', 180000)
-  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.royals?.solo)
-  if (!kept || kept.neck !== 'beads' || kept.beads?.length !== 10) throw new Error(`le collier n'est pas gardé : ${JSON.stringify(kept?.beads)}`)
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.necklace)
+  if (kept?.length !== 10) throw new Error(`le collier n'est pas gardé : ${JSON.stringify(kept)}`)
   await page.locator('#bjFini').click({ force: true, timeout: 120000 })
   await finDe('Quel joli collier', 60000)
 })
@@ -1277,9 +1277,9 @@ await scenario('bijoux-perles-a-repasser-pendentif', async () => {
   await page.locator('#bjCollar').click({ force: true })
   await bjWait(() => window.__bj.phase === 'vitrine', null, 'la vitrine du collier', 180000)
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state)
-  const pend = kept?.royals?.solo?.pendant
+  const pend = kept?.pendant
   const beads = (pend?.rows || []).join('').replace(/\./g, '').length
-  if (kept?.royals?.solo?.neck !== 'beads' || beads !== 10) throw new Error(`le pendentif n'est pas gardé : ${JSON.stringify(pend)}`)
+  if (beads !== 10) throw new Error(`le pendentif n'est pas gardé : ${JSON.stringify(pend)}`)
   if (!kept.creations?.length) throw new Error('la création n\'est pas dans la vitrine des créations')
   if (!(await page.evaluate(() => window.__bj.vitrinePendant))) throw new Error('pas de pendentif dans la vitrine du collier')
   await page.locator('#bjFini').click({ force: true, timeout: 120000 })
@@ -1287,13 +1287,13 @@ await scenario('bijoux-perles-a-repasser-pendentif', async () => {
 })
 
 /* 👗 Habille-toi (revenue le 6/10 à la place de la princesse VRM) : une
-   couronne sur sa tête, gardée dans le profil ; « Fini » mène à l'écran de fin. */
+   couronne sur sa tête, gardée dans la sauvegarde ; « Fini » mène à l'écran de fin. */
 await scenario('habille-toi', async () => {
   await openGame('Habille-toi', '__du')
   await page.waitForFunction(() => window.__du && window.__du.ready, null, { timeout: 120000, polling: 500 })
   await page.locator('.du-opt[data-k="hat"][data-v="crown"]').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__du.look.hat === 'crown', null, { timeout: 20000, polling: 250 })
-  const kept = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('ferme:v2') || '{}').state; return s?.profiles?.find(p => p.id === s.currentId)?.look })
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:v2') || '{}').state?.look)
   if (!kept || kept.hat !== 'crown') throw new Error('le look de la petite fille n\'est pas gardé')
   await page.locator('#duDone').click({ force: true, timeout: 120000 })
   await finDe('Superbe look', 60000)
@@ -1601,7 +1601,7 @@ await scenario('ferme-a-construire-dessin', async () => {
   await oublie()
 })
 
-/* 🎂 La Pâtisserie : deux étages en cœur, le glaçage au doigt (flanc et
+/* 🎂 Le gâteau de la Cuisine (la Pâtisserie) : deux étages en cœur, le glaçage au doigt (flanc et
    nappage), une ligne de crème, une fraise et des vermicelles, trois
    bougies ; « Manger » : les bougies sortent (19/10 : plus de souffle ni de
    chanson), les six parts, l'écran de fin. */
@@ -1656,7 +1656,7 @@ await scenario('devine-mon-dessin', async () => {
   await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Il a reconnu'), null, { timeout: 60000, polling: 500 })
 })
 await scenario('patisserie', async () => {
-  await openGame('La Pâtisserie', '__bk')
+  await openGame('La Cuisine', '__bk', 'easy', null, 'gateau')
   await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })
   const etat = () => page.evaluate(() => JSON.stringify({ st: window.__bk.step, ph: window.__bk.phase, t: window.__bk.tiers, b0: window.__bk.body(0), g1: window.__bk.glazed(window.__bk.tiers - 1), cr: window.__bk.count('rosace'), fr: window.__bk.count('fraise'), sp: window.__bk.sprinkles, bougies: window.__bk.candles }))
   const tap = async p => { await page.mouse.click(p.x, p.y) }
@@ -1720,7 +1720,7 @@ await scenario('patisserie', async () => {
 // Sans une bougie, et à VITESSE NORMALE (19/10) : le repas ne commençait jamais en temps réel
 // (le gâteau tournait en même temps qu'il se remettait de face) — en temps accéléré, on ne le voyait pas
 await scenario('patisserie-sans-bougie', async () => {
-  await openGame('La Pâtisserie', '__bk')
+  await openGame('La Cuisine', '__bk', 'easy', null, 'gateau')
   await page.waitForFunction(() => window.__bk.ready, null, { timeout: 120000, polling: 500 })
   await page.locator('#bkEat').click({ force: true, timeout: 120000 })
   await page.waitForFunction(() => window.__bk.phase === 'prep' || window.__bk.phase === 'eat', null, { timeout: 10000, polling: 250 })

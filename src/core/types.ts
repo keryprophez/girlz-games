@@ -17,19 +17,11 @@ export interface FinishPayload {
   outroMs?: number
 }
 
-import type { Royal } from './royal'
 import type { HandSpec } from './hand'
 
 export interface GameContext {
   root: HTMLElement
   tier: Tier
-  /** Prénom de la joueuse — CHAÎNE VIDE tant que le choix de joueuse est
-      masqué (SHOW_PROFILES) : sans lui, tout le monde s'appellerait Jade.
-      Les messages de fin tutoient et ne citent jamais de prénom. */
-  playerName: string
-  avatar: string | null
-  /** La princesse qu'on habille seule dans la Princesse. */
-  look: Royal
   byTier<T>(e: T, m: T, x: T): T
   /** À deux sur la même tablette, EN ÉQUIPE (23/09) : deux doigts à la
       fois, un seul score commun, aucune comparaison (règle 1). Toujours
@@ -38,6 +30,9 @@ export interface GameContext {
   /** Les opérations choisies à l'ouverture (étiquettes + − × ÷, au moins
       une). Vide pour un jeu qui ne déclare pas `ops`. */
   ops: Op[]
+  /** La variante choisie à l'ouverture (la Cuisine : 'pizza' ou 'gateau').
+      Vide pour un jeu qui ne déclare pas `variants`. */
+  variant: string
   finish(p: FinishPayload): void
   toast(msg: string): void
   /** Lit un texte à voix haute. UNIQUEMENT du contenu pédagogique (une
@@ -78,28 +73,15 @@ export interface GameDef {
       aussi à deux (`duo`), l'ouverture ne garde que « seule / à deux » et
       une flèche. `ctx.tier` vaut alors 'easy'. */
   noTier?: boolean
+  /** Plusieurs jeux sous une même tuile (la Cuisine, 27/10 : la pizza ou le
+      gâteau). L'ouverture les propose en grandes images à la place de la
+      flèche (avec `noTier`), `ctx.variant` suit, le bouton de la barre et
+      celui de l'écran de fin rouvrent le choix ; le dernier est retenu. */
+  variants?: { id: string; name: string; img: string }[]
   /** La main qui montre (30/09, core/hand.ts) : le geste à mimer MAINTENANT
       (taper, glisser, trancher, ou « l'un de ceux-là » sans appuyer — jamais
       la réponse dans Apprendre), ou null quand le jeu n'attend rien. */
   hand?: HandSpec
   /** Monte le jeu dans root et renvoie une fonction de nettoyage idempotente. */
   mount(ctx: GameContext): () => void
-}
-
-export interface Profile {
-  id: string
-  name: string
-  age: number
-  avatar: string | null // dataURL
-  tier: Tier
-  /** Le look d'Habille-toi, la petite fille (l'ancienne version derrière le
-      petit bouton de la Princesse) : relu par `normalizeLook`, et une fois
-      pour la toute première princesse. */
-  look?: unknown
-}
-
-/** Ce qu'on garde d'une partie à l'autre : la meilleure note par jeu,
-    affichée sous la tuile. Pas de total, pas de collection (règle 1). */
-export interface Progress {
-  bestStars: Record<string, number>
 }

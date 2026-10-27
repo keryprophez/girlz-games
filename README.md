@@ -23,8 +23,8 @@ Ninja Verger, en 2D, où l'on tranche des fruits illustrés
 d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe
 en vraies haies 3D (classique, brouillard à la lanterne, glace), où le poussin
 rejoint sa maman poule — c'est au doigt de prendre chaque virage — en
-ramassant les graines cachées au fond des impasses ; et des classiques : Taquin (une photo ou un pré en
-3D), Memory (de vraies cartes qui se retournent), le Chœur de la ferme (les
+ramassant les graines cachées au fond des impasses ; et des classiques : le Puzzle (de vraies pièces en
+3D sur la ferme, l'Espace ou un dessin de l'Atelier, et son mode Taquin), Memory (de vraies cartes qui se retournent), le Chœur de la ferme (les
 animaux chantent avec leurs vraies voix, à toi de rejouer la chanson) et
 Puissance 4, avec les personnages 3D de la ferme (vache, poule, cochon,
 canard, mouton…) en pions ; les Perles Miroir (une plaque à picots en 3D :
@@ -61,7 +61,13 @@ l'Atelier (dix pinceaux — néon, paillettes, aquarelle, craie, spray, cœurs,
 pot de peinture, les tampons de la ferme et de la petite fille, et un livre de coloriages : les animaux de
 la ferme de face et de profil, le petit train, la fusée, la grange ; un dossier où ranger ses dessins,
 les reprendre, revoir leur film ou les enregistrer dans la tablette), la
-Pizzeria (on garnit, on enfourne, le fromage fond… et file quand on croque),
+Cuisine (la pizza ou le gâteau, au choix en ouvrant : pour la pizza, on
+garnit, on enfourne, le fromage fond… et file quand on croque ; pour le
+gâteau, d'un à trois étages, rond, en cœur ou carré : le glaçage s'étale
+au doigt et le nappage coule, la poche à douille dépose des rosaces, des
+fraises, framboises, myrtilles, cerises et vermicelles, et des bougies ;
+« Manger » : les bougies sortent, six coups de couteau, et on le mange
+part par part — la crème file, croc, croc, la marque des dents),
 et l'Animal qui répète (un animal de la ferme sur sa botte de foin redit ce
 qu'on lui dit avec sa voix à lui — poussin accéléré, cochon qui finit en
 grognant, vache grave, mouton qui chevrote, canard, chat —, ou à l'envers ;
@@ -73,13 +79,7 @@ boue — ; de jour ou de nuit ; chacune a SA ferme, retrouvée à sa carte avec
 la photo de sa ferme, et chaque geste s'annule ou se refait ; et son
 animal à elle : elle le dessine, il devient une peluche qui vit sur sa
 ferme, et Claude dit s'il marche, saute, vole, rampe ou nage, et quel cri
-lui va), et la Pâtisserie (un
-gâteau d'un à trois étages, rond, en cœur ou carré : le glaçage s'étale
-au doigt et le nappage coule, la poche à douille dépose des rosaces, des
-fraises, framboises, myrtilles, cerises et vermicelles, et des bougies ;
-« Manger » : les bougies sortent, six coups de couteau, et on le mange
-part par part, comme la pizza — la crème file, croc, croc, la marque des
-dents), et Mon cartable (le cartable à rabat, le sac à dos ou le cartable
+lui va), et Mon cartable (le cartable à rabat, le sac à dos ou le cartable
 à roulettes, dans un coin de classe : six matières dont les paillettes
 réversibles qu'on caresse pour dessiner, les couleurs pièce par pièce,
 les motifs, des écussons brodés, des badges et des porte-clés ; on y range
@@ -101,8 +101,9 @@ jamais donner la réponse), le Ninja et le Flipper à deux en équipe sur la mê
 minuteur parental avec verrou « question de grand », voix de la famille
 enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
 quand le combo monte, vrais bruitages foley sur les chocs, mise à jour
-automatique de la PWA. Le choix de joueuse (profils avec photo) est masqué
-pour l'instant, prêt à revenir.
+automatique de la PWA. Une seule sauvegarde pour la famille, sans prénom ni
+photo ; les jeux où chacune a SA création (la Ferme, le Cartable, les
+Monuments) ouvrent sur deux cartes, Jade et Joyce.
 
 **Ce qu'il n'y aura jamais** : monnaie, boutique, paliers de déblocage ni
 collection à compléter (l'album d'autocollants est sorti le 22/09), séries

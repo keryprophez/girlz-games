@@ -22,7 +22,7 @@ import { appendFileSync, readFileSync } from 'node:fs'
    partagé par plusieurs jeux n'y figure pas, sauf s'il est le cœur de
    chacun (les perles à repasser : le Miroir et les Bijoux). */
 const OWN = {
-  'pizza': ['src/games/pizza.ts'],
+  'pizza': ['src/games/pizza.ts', 'src/games/cuisine.ts'],
   'tour-trois-blocs': ['src/games/icetower.ts', 'src/core/winter.ts'],
   'labyrinthe': ['src/games/maze.ts'],
   'taquin': ['src/games/taquin.ts'],
@@ -44,12 +44,12 @@ const OWN = {
   'piano': ['src/games/piano.ts'],
   'atelier': ['src/games/coloring.ts', 'src/core/lineart.ts'],
   'feu-': ['src/games/fireworks.ts'],
-  'bijoux': ['src/games/bijoux.ts', 'src/core/bijoux3d.ts', 'src/core/hama3d.ts', 'src/core/perles.ts', 'src/core/royal.ts'],
+  'bijoux': ['src/games/bijoux.ts', 'src/core/bijoux3d.ts', 'src/core/hama3d.ts', 'src/core/perles.ts'],
   'habille-toi': ['src/games/dressup.ts', 'src/games/doll.ts', 'src/core/doll3d.ts', 'src/core/character.ts'],
   'cache-cache': ['src/games/hideseek.ts', 'src/core/farm3d.ts'],
   'animal-qui-repete': ['src/games/parrot.ts', 'src/core/voicefx.ts', 'src/core/mic.ts'],
   'ferme-a-construire': ['src/games/farmbuild.ts', 'src/games/farmdraw.ts', 'src/core/farm3d.ts', 'src/core/plush.ts', 'src/core/plush3d.ts', 'src/core/vivant.ts'],
-  'patisserie': ['src/games/bakery.ts', 'src/core/cake3d.ts', 'src/core/souffle.ts'],
+  'patisserie': ['src/games/bakery.ts', 'src/games/cuisine.ts', 'src/core/cake3d.ts'],
   'cartable': ['src/games/cartable.ts', 'src/core/satchel3d.ts'],
   'monuments': ['src/games/monuments.ts', 'src/core/monuments3d.ts'],
   'devine-mon-dessin': ['src/games/drawguess.ts', 'src/core/drawguess.ts'],

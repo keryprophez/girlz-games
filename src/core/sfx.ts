@@ -87,13 +87,6 @@ export function sfx(name: SfxName, o: { vol?: number; rate?: number; spread?: nu
   src.start(ac.currentTime + (o.delay ?? 0))
 }
 
-/** Volume du bus effets (0..1). */
-export function setFxVolume(v: number) {
-  const ac = getCtx()
-  if (!ac) return
-  fxBus(ac).gain.setTargetAtTime(v, ac.currentTime, 0.05)
-}
-
 /* ---------- Les voix des animaux (25/09) ----------
    De vrais cris enregistrés (Wikimedia Commons, licences libres, crédités
    dans public/assets/CREDITS.md), choisis À L'OREILLE par le père sur une

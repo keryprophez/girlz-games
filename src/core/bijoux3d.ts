@@ -9,12 +9,29 @@
    Le verre et le cristal VRAIMENT réfractés (`refract`, la vitrine) coûtent
    cher : un seul matériau transmissif oblige three.js à rendre toute la
    scène une fois de plus. Sur l'établi (on y joue, il doit rester fluide),
-   ils sont « simulés » : transparents, vernis, un peu lumineux. `cheap` : la
-   version de la princesse — moins de facettes, opaque (la salle de bal
-   entière ne se rend pas deux fois pour un collier). Les perles d'une même
+   ils sont « simulés » : transparents, vernis, un peu lumineux. `cheap` : une
+   scène légère — moins de facettes, opaque. Les perles d'une même
    sorte se dessinent d'un coup (`instancedRun`), comme celles du boîtier. */
 import type { T3 } from './three3d'
-import type { Bead, BeadKind } from './royal'
+
+/* Chaque perle enfilée : sa sorte (celle d'un compartiment du boîtier) et
+   sa couleur, dans l'ordre du fil — du fermoir vers l'aiguille. */
+export type BeadKind = 'pearl' | 'glass' | 'crystal' | 'heart' | 'star' | 'flower' | 'spacer' | 'cube'
+export const BEAD_KINDS: BeadKind[] = ['pearl', 'glass', 'crystal', 'heart', 'star', 'flower', 'spacer', 'cube']
+export interface Bead { k: BeadKind; c: string }
+/** Un fil plein d'intercalaires dorés en tient à peu près autant. */
+export const BEADS_MAX = 80
+
+/** Relit un collier venu du stockage : les perles abîmées sont jetées,
+    l'ordre du fil est gardé, pas plus que le fil n'en tient. */
+export function normalizeBeads(x: unknown): Bead[] {
+  return (Array.isArray(x) ? x : []).flatMap(b => {
+    if (!b || typeof b !== 'object') return []
+    const q = b as Record<string, unknown>
+    if (!BEAD_KINDS.includes(q.k as BeadKind)) return []
+    return [{ k: q.k as BeadKind, c: typeof q.c === 'string' && /^#[0-9a-fA-F]{6}$/.test(q.c) ? q.c : '#F4F0EA' }]
+  }).slice(0, BEADS_MAX)
+}
 
 type Geo = import('three').BufferGeometry
 type Mat = import('three').Material

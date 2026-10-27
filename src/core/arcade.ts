@@ -184,8 +184,3 @@ export function arcade(ctx: GameContext, o: ArcadeOpts): Arcade {
   paint()
   return a
 }
-
-/** Barème simple par score : `[deux, trois]` = seuils des 2ᵉ et 3ᵉ étoiles. */
-export function starsByScore(th: [number, number]): (s: ArcadeState) => 1 | 2 | 3 {
-  return s => (s.score >= th[1] ? 3 : s.score >= th[0] ? 2 : 1)
-}

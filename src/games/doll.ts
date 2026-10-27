@@ -34,7 +34,6 @@ const HELD: Look['held'][] = ['none', 'balloon', 'wand', 'flower', 'icecream']
 
 interface State {
   look: Look
-  profileId: string
   running: boolean
   stage: Stage | null
   doll: Doll | null
@@ -74,7 +73,7 @@ function rebuild(me: State, joy = true) {
 }
 
 /** Chaque geste est sauvé : quitter sans « fini » ne perd plus le look. */
-function save(me: State) { useFerme.getState().setLook(me.profileId, { ...me.look }) }
+function save(me: State) { useFerme.getState().setLook({ ...me.look }) }
 
 function setLookProp(me: State, k: keyof Look, v: string) {
   if (du !== me || !me.running) return
@@ -111,7 +110,7 @@ export function mountDoll(c: GameContext): () => void {
     ctx = c
     const st0 = useFerme.getState()
     const me: State = {
-      look: normalizeLook(st0.profiles.find(p => p.id === st0.currentId)?.look), profileId: st0.currentId,
+      look: normalizeLook(st0.look),
       running: true, stage: null, doll: null, fx: null, yaw: -0.35, spin: 0, hop: 0, t: 0
     }
     du = me
