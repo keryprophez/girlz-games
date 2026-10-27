@@ -7,6 +7,7 @@ import { tone } from '../core/audio'
 import { createStage, loader, bumpyNormal, type Stage, type T3 } from '../core/three3d'
 import { particles, camShake, type Particles, type CamShake, toScreen } from '../core/scene3d'
 import { critterKit, type Critter, type CritterKit } from '../core/critters'
+import { generate, type Cell } from '../core/labyrinth'
 
 /* Labyrinthe — trois façons de se perdre : le jour (classique), la nuit
    (on ne voit qu'autour du poussin), la glace (on glisse jusqu'au mur).
@@ -39,7 +40,6 @@ import { critterKit, type Critter, type CritterKit } from '../core/critters'
    les haies ont de la neige sur le dos. La logique (génération, doigt qui
    suit le couloir, glisse sur la glace, graines) n'a pas changé. */
 
-interface Cell { walls: boolean[] } // haut, droite, bas, gauche
 type Mode = 'classic' | 'fog' | 'ice'
 
 interface Scene3D {
@@ -108,29 +108,6 @@ const MODES: { id: Mode; icon: string; factor: number; cap: string }[] = [
   { id: 'fog', icon: ICON.moon, factor: 1.6, cap: 'Nuit' },
   { id: 'ice', icon: ICON.snowflake, factor: 1.5, cap: 'Glace' }
 ]
-
-function generate(n: number): Cell[][] {
-  const g: Cell[][] = Array.from({ length: n }, () => Array.from({ length: n }, () => ({ walls: [true, true, true, true] })))
-  const seen = Array.from({ length: n }, () => Array(n).fill(false))
-  const stack: [number, number][] = [[0, 0]]
-  seen[0][0] = true
-  const DD: [number, number, number, number][] = [[0, -1, 0, 2], [1, 0, 1, 3], [0, 1, 2, 0], [-1, 0, 3, 1]]
-  while (stack.length) {
-    const [x, y] = stack[stack.length - 1]
-    const opts = shuffle([...DD]).filter(([dx, dy]) => {
-      const nx = x + dx, ny = y + dy
-      return nx >= 0 && ny >= 0 && nx < n && ny < n && !seen[ny][nx]
-    })
-    if (!opts.length) { stack.pop(); continue }
-    const [dx, dy, w, ow] = opts[0]
-    const nx = x + dx, ny = y + dy
-    g[y][x].walls[w] = false
-    g[ny][nx].walls[ow] = false
-    seen[ny][nx] = true
-    stack.push([nx, ny])
-  }
-  return g
-}
 
 /* Les tailles (27/09 : « beaucoup trop simple », puis décalées d'un cran le
    30/09) : à la fleur, 10 à 14 cases de côté ; la nuit un cran au-dessus ; la

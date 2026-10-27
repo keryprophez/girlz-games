@@ -2369,6 +2369,107 @@ await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est t
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))
 await scenario('cache-cache-nuit', () => cacheCache('exp', 'Trouvés dans le noir'))
 
+/* ☀️ 1, 2, 3… Soleil ! (27/10) : le doigt posé, le chat court ; levé au
+   troisième coup de tambour, il s'arrête avant que l'épouvantail ne regarde.
+   Le bot lit l'état UNE fois par image (piège « Bots à 4 fps ») et pose ou
+   lève vraiment le doigt (la souris) sur le canvas. Trois courses, au moins
+   une gagnée, puis l'écran de fin. */
+await scenario('soleil-trois-courses', async () => {
+  await openGame('1, 2, 3… Soleil !', '__so')
+  await page.waitForFunction(() => window.__so.state === 'run', null, { timeout: 60000, polling: 300 })
+  const box = await page.locator('#soArena canvas').boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.7)
+  let down = false, moved = false, last = null
+  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__so?.state, ph: window.__so?.phase, n: window.__so?.n, w: window.__so?.wins, x: window.__so?.x, l: window.__so?.lives }))
+  for (let i = 0; i < 6000; i++) {
+    const s = await page.evaluate(() => new Promise(r => requestAnimationFrame(() => {
+      const o = window.__so
+      r(o ? { st: o.state, ph: o.phase, b: o.beats, pt: o.pt, dur: o.dur, x: o.x, n: o.n, w: o.wins, l: o.lives } : null)
+    })))
+    if (!s || s.st === 'over') { last = s; break }
+    last = s
+    if (s.x > 0.5) moved = true
+    // Il court pendant le compte, lève le doigt au troisième coup
+    const want = s.st === 'run' && (s.ph === 'feint' || (s.ph === 'count' && s.b < 3))
+    if (want && !down) { await page.mouse.down(); down = true }
+    if (!want && down) { await page.mouse.up(); down = false }
+  }
+  if (down) await page.mouse.up()
+  if (!moved) throw new Error(`le doigt posé ne fait pas courir le chat (${await etat()})`)
+  await page.waitForFunction(() => document.querySelector('#result.show'), null, { timeout: 90000, polling: 500 })
+    .catch(async () => { throw new Error(`pas d'écran de fin (${await etat()})`) })
+  if (!last || last.w < 1) throw new Error(`aucune course gagnée (${JSON.stringify(last)})`)
+})
+
+/* 🔍 Le Jeu des différences (27/10) : un toucher dans le vide coûte un cœur,
+   un toucher tout près fait trembler (le « presque », gratuit) ; puis le bot
+   touche chaque différence qu'il VOIT (l'accroche ne rend que les points qui
+   la trouvent vraiment, d'ici), et fait tourner les fermes d'un glissé
+   quand il n'en voit plus. Trois manches, puis l'écran de fin. */
+await scenario('differences-trois-manches', async () => {
+  await openGame('Le Jeu des différences', '__df')
+  await page.waitForFunction(() => window.__df.phase === 'look', null, { timeout: 60000, polling: 300 })
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__df?.phase, r: window.__df?.round, f: window.__df?.found, t: window.__df?.total, l: window.__df?.lives, k: window.__df?.kinds }))
+  if (await page.evaluate(() => window.__df.total) !== 5) throw new Error(`pas cinq différences à la fleur (${await etat()})`)
+  const presque = await page.evaluate(() => window.__df.nearSpot())
+  if (presque) {
+    await page.mouse.click(presque.x, presque.y)
+    await page.waitForFunction(() => window.__df.near === 1, null, { timeout: 15000, polling: 200 })
+      .catch(async () => { throw new Error(`le toucher tout près ne fait pas trembler (${await etat()})`) })
+    if (await page.evaluate(() => window.__df.lives) !== 3) throw new Error('le « presque » a coûté un cœur')
+  }
+  const vide = await page.evaluate(() => window.__df.blank())
+  if (!vide) throw new Error('aucun coin de ferme loin des différences')
+  await page.mouse.click(vide.x, vide.y)
+  await page.waitForFunction(() => window.__df.lives === 2, null, { timeout: 15000, polling: 200 })
+    .catch(async () => { throw new Error(`un toucher dans le vide ne coûte pas de cœur (${await etat()})`) })
+  const box = await page.locator('#dfArena canvas').boundingBox()
+  let tours = 0
+  for (let i = 0; i < 200; i++) {
+    const st = await page.evaluate(() => ({ ph: window.__df?.phase, r: window.__df?.round, f: window.__df?.found, sp: window.__df?.phase === 'look' ? window.__df.spot() : null }))
+    if (!st.ph || st.r >= 3) break
+    if (st.ph !== 'look') { await page.waitForTimeout(400); continue }
+    if (st.sp) {
+      await page.mouse.click(st.sp.x, st.sp.y)
+      await page.waitForFunction(([f, r]) => window.__df.found > f || window.__df.round > r, [st.f, st.r], { timeout: 15000, polling: 200 })
+        .catch(async () => { throw new Error(`le toucher ne trouve pas « ${st.sp.kind} » (${await etat()})`) })
+    } else {
+      // Plus rien de visible d'ici : on tourne les deux fermes
+      if (++tours > 30) throw new Error(`des différences restent introuvables (${await etat()})`)
+      await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.85)
+      await page.mouse.down()
+      for (let k = 1; k <= 6; k++) await page.mouse.move(box.x + box.width * (0.3 + k * 0.04), box.y + box.height * 0.85)
+      await page.mouse.up()
+      await page.waitForFunction(() => !window.__df.moving, null, { timeout: 30000, polling: 250 })
+    }
+  }
+  await page.waitForFunction(() => document.querySelector('#result.show') && document.body.innerText.includes('Trois fermes'), null, { timeout: 90000, polling: 500 })
+    .catch(async () => { throw new Error(`pas d'écran de fin (${await etat()})`) })
+})
+
+/* 🎱 Le Labyrinthe à bille (27/10) : glisser le doigt depuis la bille penche
+   le plateau vers le doigt (sans gyroscope) ; puis le pilote des tests
+   (`autoPilot` de core/bille.ts) mène la bille sur les trois plateaux. */
+await scenario('bille-trois-plateaux', async () => {
+  await openGame('Le Labyrinthe à bille', '__bi')
+  await page.waitForFunction(() => window.__bi.state === 'play', null, { timeout: 60000, polling: 300 })
+  const etat = () => page.evaluate(() => JSON.stringify({ st: window.__bi?.state, n: window.__bi?.n, l: window.__bi?.lives, f: window.__bi?.flag, t: window.__bi?.tilt }))
+  // La bille roule vers le doigt (à 4 images/s, elle le rattrape vite : on regarde où elle va)
+  // (vers le premier couloir ouvert : ailleurs, un muret l'arrête)
+  const b = await page.evaluate(() => window.__bi.ball())
+  const [dx, dy] = await page.evaluate(() => window.__bi.firstStep)
+  await page.mouse.move(b.x, b.y)
+  await page.mouse.down()
+  for (let k = 1; k <= 6; k++) await page.mouse.move(b.x + dx * k * 30, b.y + dy * k * 30)
+  await page.waitForFunction(([b, dx, dy]) => { const p = window.__bi.ball(); return (p.x - b.x) * dx + (p.y - b.y) * dy > 25 }, [b, dx, dy], { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le doigt ne penche pas le plateau vers lui (${await etat()})`) })
+  await page.mouse.up()
+  await page.evaluate(() => { window.__bi.auto = true })
+  await page.waitForFunction(() => document.querySelector('#result.show'), null, { timeout: 600000, polling: 1000 })
+    .catch(async () => { throw new Error(`pas d'écran de fin (${await etat()})`) })
+  if (!(await page.evaluate(() => document.body.innerText.includes('Trois plateaux')))) throw new Error(`la bille n'a pas fini les trois plateaux (${await etat()})`)
+})
+
 
 await browser.close()
 if (failures.length) {

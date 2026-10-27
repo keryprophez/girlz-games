@@ -34,13 +34,17 @@ import { chateau } from './chateau'
 import { aquarium } from './aquarium'
 import { tracteur } from './tracteur'
 import { geoplan } from './geoplan'
+import { soleil } from './soleil'
+import { bille } from './bille'
+import { differences } from './differences'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, pinball, hideseek, drawguess, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments,
-  poterie, chateau, aquarium, tracteur, geoplan
+  poterie, chateau, aquarium, tracteur, geoplan,
+  soleil, bille, differences
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -64,7 +68,8 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
       icetower, ninja, pinball, hideseek, drawguess,
-      maze, taquin, memory, simonGame, connect4, mirror
+      maze, taquin, memory, simonGame, connect4, mirror,
+      soleil, differences, bille
     ]
   },
   {
