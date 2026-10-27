@@ -5,6 +5,7 @@ import { fxAt, JUICE } from '../core/fx'
 import { ICON } from '../core/icons'
 import { photoImg } from '../core/sprites'
 import { some, visible } from '../core/hand'
+import { recall, type Item, type Keyed, type Recall } from '../core/facts'
 
 /* Chasse aux lettres — retrouve les lettres du mot, dans l'ordre. Premier
    mot : ton prénom (quand on sait qui joue). Calibré CP pour Jade, mots plus
@@ -14,7 +15,14 @@ import { some, visible } from '../core/hand'
    grosses lettres à droite), manches en pastilles au lieu de « Mot 1/3 »,
    un haut-parleur pour réentendre le mot (contenu, règle 2), la lettre
    trouvée VOLE jusqu'à sa case, et après deux erreurs sur une même case la
-   bonne lettre se met à luire (de l'aide, pas une sanction). État typé. */
+   bonne lettre se met à luire (de l'aide, pas une sanction). État typé.
+
+   La mémoire (27/10, `core/facts.ts`) : chaque mot est un élément. Les
+   trois mots d'une partie restent différents ; d'abord ceux qui ont été
+   ratés (deux erreurs ou plus dans le mot), puis ceux qu'on n'a pas vus
+   depuis longtemps. Trois mots, c'est trop court pour qu'un raté revienne
+   trois mots plus loin : il revient en tête de la partie suivante.
+   Muette : rien ne s'affiche. */
 
 /* Des mots qu'on peut MONTRER (un animal de la planche) : le mot est vu,
    dit par la voix et illustré avant d'être cherché — plus d'essai-erreur. */
@@ -41,13 +49,22 @@ interface State {
   /** Erreurs sur la case en cours (l'aide s'allume à 2). */
   here: number
   mistakes: number
+  /** Erreurs dans le mot en cours : à deux, le mot est raté (en silence). */
+  slips: number
+  /** Les mots de la partie, tirés sans remise (`words` en est la liste). */
+  queue: Item<Keyed>[]
   running: boolean
   peeking: boolean
   root: HTMLElement
 }
 
+/** Un raté : deux erreurs ou plus dans le mot. */
+const SLIPS_MISS = 2
+
 let lg: State | null = null
 let ctx: GameContext
+/** La mémoire des mots (`ferme:memoire:letters`), ouverte au montage. */
+let memo: Recall
 
 const q = (me: State, sel: string) => me.root.querySelector<HTMLElement>(sel)!
 
@@ -61,6 +78,7 @@ function loadWord(me: State) {
   me.word = word
   me.pos = 0
   me.here = 0
+  me.slips = 0
   paintDots(me)
 
   // Le mot est d'abord MONTRÉ en entier, dit par la voix et illustré ;
@@ -138,6 +156,9 @@ function tapLetter(me: State, b: HTMLButtonElement, ch: string) {
     if (me.pos === me.word.length) {
       sfx('confirm', { vol: 0.8, delay: 0.3 })
       ctx.after(350, () => { if (lg === me) { ctx.say(me.word.toLowerCase()); q(me, '.lg-word').classList.add('won') } })
+      // Trouvé sans se tromper (ou presque) : gardé en silence ; un raté l'a
+      // déjà été, à sa deuxième erreur
+      if (me.slips < SLIPS_MISS && me.queue[me.round]) memo.note(me.queue[me.round], true)
       me.round++
       ctx.after(1700, () => {
         if (lg !== me || !me.running) return
@@ -150,6 +171,9 @@ function tapLetter(me: State, b: HTMLButtonElement, ch: string) {
     b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake')
     me.mistakes++
     me.here++
+    me.slips++
+    // Le mot est raté : il reviendra en tête de la prochaine partie
+    if (me.slips === SLIPS_MISS && me.queue[me.round]) memo.note(me.queue[me.round], false)
     sfx('drop', { vol: 0.35, rate: 0.8 })
     // Deux erreurs sur la même case : la bonne lettre se met à luire
     if (me.here >= 2) {
@@ -194,16 +218,21 @@ export const letters: GameDef = {
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
     const tierWords = c.byTier(WORDS.med, WORDS.exp, WORDS.ultra)
+    memo = recall('letters')
+    // Trois mots différents, tirés dans la mémoire : les ratés d'abord
+    const queue = memo.series(tierWords.map(key => ({ key })), 3)
     const me: State = {
-      words: shuffle([...tierWords]).slice(0, 3),
-      word: '', round: 0, pos: 0, here: 0, mistakes: 0, running: true, peeking: false, root: c.root
+      words: queue.map(it => it.fact.key), queue,
+      word: '', round: 0, pos: 0, here: 0, mistakes: 0, slips: 0, running: true, peeking: false, root: c.root
     }
     lg = me
     q(me, '.lg-say').onclick = () => { if (me.word) ctx.say(me.word.toLowerCase()) }
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __lg: unknown }).__lg = {
-        get word() { return me.word }, get pos() { return me.pos }, get peeking() { return me.peeking }, get round() { return me.round }
+        get word() { return me.word }, get pos() { return me.pos }, get peeking() { return me.peeking }, get round() { return me.round },
+        /** Les trois mots de la partie (sans remise). */
+        get words() { return [...me.words] }
       }
     }
     loadWord(me)
