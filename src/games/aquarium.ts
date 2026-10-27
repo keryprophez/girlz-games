@@ -8,6 +8,8 @@ import { createSheet, plushStrokes, renderStrokes, type DrawStroke, type Sheet }
 import { sfx, preloadSfx } from '../core/sfx'
 import { tone } from '../core/audio'
 import { visible, handNow, type HandMove } from '../core/hand'
+import { mine, snapScene, whoCards, paintCards, meButton, paintMe, trashButton, twoTaps, type Who } from '../core/mine'
+import { BADGE } from '../core/badges'
 
 /* 🐠 L'AQUARIUM (27/10, choisi par le père avec la Poterie et le Château de
    sable) — le petit frère de « Mon dessin prend vie » (la Ferme à
@@ -38,16 +40,29 @@ const DECO_NAME: Record<DecoKind, string> = { algue: 'Algues', rocher: 'Rochers'
 const MAX_FLAKES = 48
 const FISH_H = 0.3
 
-/* ---------- La sauvegarde : une seule pour la famille, pour l'instant ----------
-   Isolée ici (`load` / `save`) : l'orchestrateur la branchera sur les cartes
-   Jade / Joyce de `core/mine.ts`. Les traits des poissons (allégés), le décor. */
-const KEY = 'ferme:aquarium'
+/* ---------- La sauvegarde : un aquarium par fille (`core/mine.ts`) ----------
+   Les traits des poissons (allégés), le décor. La sauvegarde de famille
+   d'avant les cartes (`ferme:aquarium`) devient celle de la première fille
+   qui ouvre le jeu. */
+const box = mine('aquarium', { delay: 400 })
+const OLD_KEY = 'ferme:aquarium'
+let who: Who = 'jade'
 interface Saved { fish: Fish[]; deco: Deco[] }
-export function load(): Saved {
-  try { return readTank(JSON.parse(localStorage.getItem(KEY) || 'null')) } catch { return { fish: [], deco: [] } }
+/** L'ancien aquarium de la famille, repris par la première qui ouvre (puis retiré). */
+function adopt(w: Who) {
+  try {
+    const old = localStorage.getItem(OLD_KEY)
+    if (old === null || box.read(w) !== null) return
+    localStorage.setItem(box.key(w), old)
+    localStorage.removeItem(OLD_KEY)
+  } catch { /* stockage refusé */ }
+}
+export function load(w: Who): Saved {
+  adopt(w)
+  return readTank(box.read(w))
 }
 export function save(s: Saved) {
-  try { localStorage.setItem(KEY, JSON.stringify(packTank(s.fish, s.deco))) } catch { /* plein : tant pis */ }
+  box.save(who, () => packTank(s.fish, s.deco))
 }
 
 interface FishView {
@@ -313,6 +328,10 @@ function stepOutro(s: State, dt: number) {
 function endGame(s: State) {
   if (s.phase === 'done') return
   s.phase = 'done'
+  // Sa carte : la photo de l'aquarium allumé dans le soir
+  box.flush()
+  const url = snapScene(s.stage, 400)
+  if (url) box.setPhoto(who, url)
   ctx.finish({ title: 'Quel bel aquarium !', msg: s.fish.length ? 'Tes poissons nagent' : 'Le décor est prêt', stars: 3 })
 }
 
@@ -341,7 +360,7 @@ function frame(s: State, dt: number) {
 
 /* ---------- La scène ---------- */
 
-async function build(c: GameContext, arena: HTMLElement): Promise<State | null> {
+async function build(c: GameContext, arena: HTMLElement, saved: Saved): Promise<State | null> {
   const stage = await createStage(arena, {
     sky: '#DCE6EE', fov: 40, cam: CAM.p, target: CAM.t, fog: [2.6, 7.5], fogColor: '#2F8DB5',
     hemi: ['#CFF4FF', '#6A8FA8', 1.1], sun: { pos: [0.6, 4.5, 1.6], color: '#F2FBFF', intensity: 2.0, area: 2.2, far: 10 },
@@ -352,7 +371,6 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
   const tank = buildTank(T, stage)
   const flakes = flakeMesh(T, MAX_FLAKES)
   stage.scene.add(flakes)
-  const saved = load()
   const s: State = {
     stage, T, tank, saved, fish: [], decos: [], pick: null,
     flakes: Array.from({ length: MAX_FLAKES }, () => ({ x: 0, y: -9, z: 0, ph: 0, live: false, rest: 0 })), flakeMesh: flakes,
@@ -384,8 +402,9 @@ let sheet: Sheet | null = null
 export const aquarium: GameDef = {
   id: 'aquarium', name: 'L’Aquarium', icon: '🐠', sq: 'sq-sky', cat: 'creatif', noTier: true,
   subtitle: 'Dessine un poisson : il nage dans ton aquarium',
-  // La main : dessiner un poisson ; sur la feuille, tracer puis « Fini » ; ensuite, le tiroir du décor, les flocons
+  // La main : choisir son aquarium ; dessiner un poisson ; sur la feuille, tracer puis « Fini » ; ensuite, le tiroir du décor, les flocons
   hand: (root): HandMove | null => {
+    if (root.querySelector('.aq-wrap[data-who=""]')) return { choose: visible(root, '.aq-card') }
     const s = me
     if (sheet?.open) return sheet.hand()
     if (!s || s.phase !== 'make') return null
@@ -397,7 +416,10 @@ export const aquarium: GameDef = {
     ctx = c
     let dead = false
     c.root.innerHTML = `
-      <div class="arena g3-arena aq-wrap" id="aqWrap" data-phase="make">
+      <div class="arena g3-arena aq-wrap" id="aqWrap" data-who="" data-phase="make">
+        ${whoCards('aq')}
+        ${meButton('aqMe', 'aq-me', 'Changer d’aquarium')}
+        ${trashButton('aqReset', 'aq-reset', 'Vider l’aquarium')}
         <div class="aq-tools">
           <span class="tool-item"><button class="sn-tool aq-draw" id="aqDraw" aria-label="Dessiner un poisson">${DRAW_ICON}</button><i class="tool-cap">Dessiner</i></span>
           <span class="tool-item"><button class="sn-tool" id="aqFeed" aria-label="Nourrir">${FEED_ICON}</button><i class="tool-cap">Nourrir</i></span>
@@ -407,6 +429,17 @@ export const aquarium: GameDef = {
         <div class="aq-ripples" id="aqRip"></div>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#aqWrap')!
+    // La poubelle : deux touchers, les poissons remontent s'en aller, le décor s'efface
+    const trash = twoTaps(c.root.querySelector<HTMLElement>('#aqReset')!, c, () => {
+      const s = me
+      if (!s) return
+      for (const f of s.fish) if (!f.leaving) f.leaving = 0.001
+      s.pending.length = 0
+      s.saved.fish.length = 0
+      while (s.decos.length) removeDeco(s, 0)
+      sfx('whoosh', { vol: 0.6, rate: 0.7 })
+      s.dirty = 0.1
+    })
     preloadSfx(['pluck', 'tick', 'glass', 'confirm', 'select', 'cloth', 'open', 'close', 'whoosh', 'drop'])
     const showPal = () => {
       const s = me
@@ -444,18 +477,52 @@ export const aquarium: GameDef = {
     const still = (on: boolean) => { if (me) me.stage.render = on ? () => { /* image figée */ } : undefined }
     sheet = createSheet(arena, { done: born, closed: () => still(false), opened: () => still(true) })
 
-    const hideLoader = loader(arena, 'aquarium')
-    build(c, arena).then(s => {
+    /* Les deux cartes : la photo de l'aquarium de chacune, la dernière bordée */
+    const showCards = () => paintCards(arena, box, BADGE.aquarium || '')
+    showCards()
+    let hideLoader = () => { /* les cartes d'abord */ }
+    let starting = false
+    const choose = async (w: Who) => {
+      if (me || starting) return
+      starting = true
+      who = w
+      box.setLast(w)
+      arena.setAttribute('data-who', w)
+      paintMe(c.root, 'aqMe', w)
+      sfx('confirm', { vol: 0.5 })
+      hideLoader = loader(arena, 'aquarium')
+      const s = await build(c, arena, load(w)).catch(e => { console.error(e); return null })
+      starting = false
       hideLoader()
-      if (!s || dead) { if (s) s.stage.dispose(); return }
+      if (!s || dead) { if (s) s.stage.dispose(); else if (!dead) c.toast('La 3D n\'est pas disponible ici'); return }
       me = s
       s.stage.start(dt => { if (me === s) frame(s, dt) })
-    }).catch(e => { hideLoader(); console.error(e); if (!dead) c.toast('La 3D n\'est pas disponible ici') })
+    }
+    /** On quitte son aquarium (pour l'autre, ou pour sortir) : gardé, photographié. */
+    const leave = (s: State) => {
+      save(s.saved)
+      box.flush()
+      if (s.phase === 'make') { s.stage.render = undefined; const url = snapScene(s.stage, 400); if (url) box.setPhoto(who, url) }
+      me = null
+      for (const f of s.fish) f.plush.dispose()
+      try { s.stage.dispose() } catch { /* déjà démonté */ }
+    }
 
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement
+      const card = t.closest<HTMLElement>('.aq-card')
+      if (card?.dataset.who) { choose(card.dataset.who as Who); return }
       const s = me
       if (!s || s.phase !== 'make' || sheet?.open) return
+      if (!t.closest('#aqReset')) trash.disarm()
+      if (t.closest('#aqMe')) {
+        leave(s)
+        arena.setAttribute('data-who', '')
+        showCards()
+        sfx('select', { vol: 0.4 })
+        return
+      }
+      if (t.closest('#aqReset')) { trash.tap(); return }
       if (t.closest('#aqDraw')) { sheet?.show(); handNow(); return }
       if (t.closest('#aqFeed')) { feed(s); return }
       if (t.closest('#aqFini')) { startOutro(s); return }
@@ -535,6 +602,8 @@ export const aquarium: GameDef = {
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __aq: unknown }).__aq = {
+        get cards() { return arena.getAttribute('data-who') === '' },
+        get who() { return me ? who : null },
         get ready() { return !!me && me.phase === 'make' && !me.pending.length },
         get phase() { return me?.phase },
         get fish() { return me ? me.fish.filter(f => !f.leaving).length : 0 },
@@ -586,13 +655,7 @@ export const aquarium: GameDef = {
       c.root.removeEventListener('pointerdown', onDown)
       sheet?.dispose()
       sheet = null
-      const s = me
-      me = null
-      if (s) {
-        save(s.saved)
-        for (const f of s.fish) f.plush.dispose()
-        try { s.stage.dispose() } catch { /* déjà démonté */ }
-      }
+      if (me) leave(me)
       hideLoader()
     }
   }

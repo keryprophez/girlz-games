@@ -2076,15 +2076,26 @@ await scenario('monuments', async () => {
   await finDe('Quel beau monument', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
 })
 
-/* 🏺 La Poterie (27/10) : la motte qu'on fait monter au doigt, qu'on
+/* 🏺 La Poterie (27/10) : l'étagère de la famille reprise par Jade (la
+   première qui ouvre) ; la motte qu'on fait monter au doigt, qu'on
    évase sur le côté, qu'on creuse au centre ; le vase en un toucher ; un
    point (l'anneau de points) et une bande tenue sur le tour qui tourne ; le
-   four (elle ressort émaillée) ; « Fini » : sur l'étagère, gardée ; puis
-   reprise de l'étagère, elle revient sur le tour. */
+   four (elle ressort émaillée) ; « Fini » : sur l'étagère de Jade, gardée ;
+   la carte de Jade a sa photo, Joyce a son étagère à elle ; « Changer », et
+   Jade reprend son vase de l'étagère : il revient sur le tour. */
 await scenario('poterie', async () => {
+  // Une étagère de famille d'avant les cartes (un bol émaillé) : la première qui ouvre la reprend
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.evaluate(() => localStorage.removeItem('ferme:poterie'))
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('ferme:poterie')) localStorage.removeItem(k)
+    localStorage.setItem('ferme:poterie', JSON.stringify({ v: 1, cur: null, slot: null, shelf: [{ h: 0.24, d: 0.19, r: Array(36).fill(0.25), g: 1, p: [] }] }))
+  })
   await openGame('La Poterie', '__pt')
+  const carte = async qui => {
+    await page.waitForFunction(() => window.__pt.cards, null, { timeout: 60000, polling: 300 })
+    await page.locator(`.pt-card[data-who="${qui}"]`).click({ force: true })
+  }
+  await carte('jade')
   const pret = () => page.waitForFunction(() => window.__pt.ready, null, { timeout: 120000, polling: 300 })
   const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__pt.phase, st: window.__pt.step, c: window.__pt.clay, p: window.__pt.paint, g: window.__pt.glazed, sh: window.__pt.shelf }))
   const glisse = async (a, b, n = 10) => {
@@ -2093,6 +2104,9 @@ await scenario('poterie', async () => {
     await page.mouse.up()
   }
   await pret()
+  if (await page.evaluate(() => window.__pt.who) !== 'jade') throw new Error('ce n\'est pas l\'atelier de Jade')
+  if (await page.evaluate(() => window.__pt.shelf) !== 1 || await page.evaluate(() => localStorage.getItem('ferme:poterie') !== null))
+    throw new Error(`l'étagère de la famille n'est pas reprise par Jade (${await etat()})`)
   // Monter : le doigt glisse vers le haut sur la motte, elle grandit
   let c = await page.evaluate(() => window.__pt.clay)
   const h0 = c.h
@@ -2138,31 +2152,46 @@ await scenario('poterie', async () => {
   // Fini : sur l'étagère
   await page.locator('#ptFini').click({ force: true })
   await finDe('Quel joli pot', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
-  const garde = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:poterie') || 'null'))
-  if (!garde || garde.shelf.filter(Boolean).length !== 1 || !garde.shelf[0].g || garde.shelf[0].p.length !== 2) throw new Error(`le vase n'est pas gardé sur l'étagère (${JSON.stringify(garde).slice(0, 200)})`)
-  // Rouverte : on la reprend de l'étagère, elle revient sur le tour
+  const garde = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:poterie:jade') || 'null'))
+  if (!garde || garde.shelf.filter(Boolean).length !== 2 || !garde.shelf[1].g || garde.shelf[1].p.length !== 2) throw new Error(`le vase n'est pas gardé sur l'étagère de Jade (${JSON.stringify(garde).slice(0, 200)})`)
+  // Rouverte : la carte de Jade a sa photo ; Joyce a son étagère à elle, vide
   await openGame('La Poterie', '__pt')
+  await page.waitForFunction(() => window.__pt.cards && document.querySelector('.pt-card[data-who="jade"].last img'), null, { timeout: 60000, polling: 300 })
+    .catch(() => { throw new Error('la carte de Jade n\'a pas sa photo, ou n\'est pas bordée') })
+  await carte('joyce')
   await pret()
-  if (await page.evaluate(() => window.__pt.shelf) !== 1) throw new Error(`l'étagère est vide en rouvrant (${await etat()})`)
+  if (await page.evaluate(() => window.__pt.shelf) !== 0) throw new Error(`Joyce a l'étagère de Jade (${await etat()})`)
+  // « Changer » : retour aux cartes, Jade reprend son vase de l'étagère, il revient sur le tour
+  await page.locator('#ptMe').click({ force: true })
+  await carte('jade')
+  await pret()
+  if (await page.evaluate(() => window.__pt.shelf) !== 2) throw new Error(`l'étagère de Jade n'est plus là (${await etat()})`)
   await page.locator('.pt-step[data-step="etagere"]').click({ force: true })
   await page.waitForTimeout(2500) // la caméra va à l'étagère
-  const q = await page.evaluate(() => window.__pt.slot(0))
+  const q = await page.evaluate(() => window.__pt.slot(1))
   await page.mouse.click(q.x, q.y)
-  await page.waitForFunction(() => window.__pt.ready && window.__pt.clay.h > 0.7 && window.__pt.glazed && window.__pt.shelf === 0, null, { timeout: 60000, polling: 300 })
+  await page.waitForFunction(() => window.__pt.ready && window.__pt.clay.h > 0.7 && window.__pt.glazed && window.__pt.shelf === 1, null, { timeout: 60000, polling: 300 })
     .catch(async () => { throw new Error(`le vase ne revient pas sur le tour (${await etat()})`) })
 })
 
-/* 🏰 Le Château de sable (27/10) : une tour moulée (le seau se retourne,
+/* 🏰 Le Château de sable (27/10) : la plage de Joyce ; une tour moulée (le seau se retourne,
    ploc, la forme reste), une tour crénelée et une étoile, des douves
    tracées à la pelle (le sable s'amoncelle à côté), le seau d'eau qui les
    remplit, le sable lissé et tassé, un drapeau planté puis repris, et
-   « Fini » : la marée monte au coucher du soleil ; rouverte, la plage est
-   telle qu'on l'a laissée. */
+   « Fini » : la marée monte au coucher du soleil ; rouverte, la carte de
+   Joyce a sa photo, Jade a sa plage à elle ; « Changer » : la plage de
+   Joyce est telle qu'elle l'a laissée ; la poubelle (deux touchers). */
 await scenario('chateau', async () => {
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.evaluate(() => localStorage.removeItem('ferme:chateau'))
+  await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('ferme:chateau')) localStorage.removeItem(k) })
   await openGame('Le Château de sable', '__ch')
-  const pret = () => page.waitForFunction(() => window.__ch.ready, null, { timeout: 120000, polling: 300 })
+  const carte = async qui => {
+    await page.waitForFunction(() => window.__ch.cards, null, { timeout: 60000, polling: 300 })
+    await page.locator(`.ch-card[data-who="${qui}"]`).click({ force: true })
+  }
+  await carte('joyce')
+  // Le crabe se promène au hasard : un toucher près de lui lève ses pinces au lieu de jouer — on l'assoit dans un coin
+  const pret = () => page.waitForFunction(() => window.__ch.ready && (window.__ch.park(), true), null, { timeout: 120000, polling: 300 })
   const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__ch.phase, t: window.__ch.tool, st: window.__ch.stamps, d: window.__ch.decos, w: window.__ch.water }))
   const toucher = async (x, z) => { const q = await page.evaluate(([x, z]) => window.__ch.pt(x, z), [x, z]); await page.mouse.click(q.x, q.y) }
   const glisse = async (a, b, n = 14) => {
@@ -2214,26 +2243,58 @@ await scenario('chateau', async () => {
   // Fini : la marée monte au coucher du soleil
   await page.locator('#chFini').click({ force: true })
   await finDe('Quel beau château', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
-  // Rouverte : le château est là, ses douves pleines, son drapeau
+  // Rouverte : la carte de Joyce a sa photo ; Jade a sa plage à elle, toute lisse
   await openGame('Le Château de sable', '__ch')
+  await page.waitForFunction(() => window.__ch.cards && document.querySelector('.ch-card[data-who="joyce"].last img'), null, { timeout: 60000, polling: 300 })
+    .catch(() => { throw new Error('la carte de Joyce n\'a pas sa photo, ou n\'est pas bordée') })
+  await carte('jade')
+  await pret()
+  if (await page.evaluate(() => window.__ch.height(0, -0.3)) > 0.01) throw new Error('Jade a la plage de Joyce')
+  // « Changer » : Joyce retrouve son château, ses douves pleines, son drapeau
+  await page.locator('#chMe').click({ force: true })
+  await carte('joyce')
   await pret()
   const revu = await page.evaluate(() => ({ h: window.__ch.height(0, -0.3), w: window.__ch.water, d: window.__ch.decos }))
-  if (revu.h < 0.2 || revu.w < 20 || revu.d !== 1) throw new Error(`la plage n'est pas gardée (${JSON.stringify(revu)})`)
+  if (revu.h < 0.2 || revu.w < 20 || revu.d !== 1) throw new Error(`la plage de Joyce n'est pas gardée (${JSON.stringify(revu)})`)
+  // La poubelle : un toucher l'arme (rien ne bouge), le second remet la plage à plat
+  // (les deux d'un coup : sous la 3D logicielle, une image passe les 2,6 s où elle reste armée)
+  const arme = await page.evaluate(() => {
+    const b = document.querySelector('#chReset')
+    b.click()
+    const r = { arm: b.classList.contains('arm'), h: window.__ch.height(0, -0.3) }
+    b.click()
+    return r
+  })
+  if (!arme.arm || arme.h < 0.2) throw new Error(`le premier toucher n'arme pas la poubelle, ou efface déjà (${JSON.stringify(arme)})`)
+  await page.waitForFunction(() => window.__ch.height(0, -0.3) < 0.01 && window.__ch.decos === 0, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`la poubelle n'efface pas la plage (${await etat()})`) })
 })
 
-/* 🐠 L'Aquarium (27/10) : un poisson dessiné sur la feuille (un ovale, sa
+/* 🐠 L'Aquarium (27/10) : l'aquarium de la famille repris par Jade ; un poisson dessiné sur la feuille (un ovale, sa
    queue, son œil à droite), « Fini » : il naît, se gonfle et nage ; envoyé
    à gauche il se retourne (son dos), à droite il montre son dessin ; la
    vitre tapotée, il vient ; les flocons, il les mange ; un château posé
-   puis repris, une algue posée ; « Fini » : le soir tombe ; rouvert, le
-   poisson et l'algue sont toujours là. */
+   puis repris, une algue posée ; « Fini » : le soir tombe ; rouvert, la
+   carte de Jade a sa photo, Joyce a son aquarium à elle ; « Changer » : le
+   poisson et le décor de Jade sont toujours là. */
 await scenario('aquarium', async () => {
+  // Un aquarium de famille d'avant les cartes (un rocher) : la première qui ouvre le reprend
   await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.evaluate(() => localStorage.removeItem('ferme:aquarium'))
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('ferme:aquarium')) localStorage.removeItem(k)
+    localStorage.setItem('ferme:aquarium', JSON.stringify({ v: 1, fish: [], deco: [['rocher', 1.1, -0.2, 0]] }))
+  })
   await openGame('L’Aquarium', '__aq')
+  const carte = async qui => {
+    await page.waitForFunction(() => window.__aq.cards, null, { timeout: 60000, polling: 300 })
+    await page.locator(`.aq-card[data-who="${qui}"]`).click({ force: true })
+  }
+  await carte('jade')
   const pret = () => page.waitForFunction(() => window.__aq.ready, null, { timeout: 120000, polling: 300 })
   const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__aq.phase, f: window.__aq.fish, s: window.__aq.saved, sw: window.__aq.swim, sh: window.__aq.sheet }))
   await pret()
+  if (await page.evaluate(() => window.__aq.saved.deco) !== 1 || await page.evaluate(() => localStorage.getItem('ferme:aquarium') !== null))
+    throw new Error(`l'aquarium de la famille n'est pas repris par Jade (${await etat()})`)
   // La feuille : un poisson, la tête à droite (l'œil)
   await page.locator('#aqDraw').click({ force: true })
   await page.waitForFunction(() => window.__aq.sheet, null, { timeout: 20000, polling: 200 })
@@ -2274,25 +2335,33 @@ await scenario('aquarium', async () => {
   // Touché en pleine eau : il coule jusqu'au sable
   let q = await page.evaluate(() => window.__aq.sand(0.3, -0.1))
   await page.mouse.click(q.x, q.y - 160)
-  await page.waitForFunction(() => window.__aq.saved.deco === 1, null, { timeout: 20000, polling: 200 })
+  await page.waitForFunction(() => window.__aq.saved.deco === 2, null, { timeout: 20000, polling: 200 })
     .catch(async () => { throw new Error(`le château ne se pose pas (${await etat()})`) })
   await page.waitForTimeout(2500)
-  q = await page.evaluate(() => window.__aq.deco(0))
+  q = await page.evaluate(() => window.__aq.deco(1))
   await page.mouse.click(q.x, q.y)
-  await page.waitForFunction(() => window.__aq.saved.deco === 0, null, { timeout: 20000, polling: 200 })
+  await page.waitForFunction(() => window.__aq.saved.deco === 1, null, { timeout: 20000, polling: 200 })
     .catch(async () => { throw new Error(`le château ne se reprend pas (${await etat()})`) })
   await page.locator('.aq-opt[data-deco="algue"]').click({ force: true })
   q = await page.evaluate(() => window.__aq.sand(-0.9, -0.2))
   await page.mouse.click(q.x, q.y - 120)
-  await page.waitForFunction(() => window.__aq.saved.deco === 1, null, { timeout: 20000, polling: 200 })
+  await page.waitForFunction(() => window.__aq.saved.deco === 2, null, { timeout: 20000, polling: 200 })
   // Fini : le soir tombe, l'aquarium reste allumé
   await page.locator('#aqFini').click({ force: true })
   await finDe('Quel bel aquarium', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
-  // Rouvert : le poisson et l'algue sont là
+  // Rouvert : la carte de Jade a sa photo ; Joyce a son aquarium à elle, vide
   await openGame('L’Aquarium', '__aq')
+  await page.waitForFunction(() => window.__aq.cards && document.querySelector('.aq-card[data-who="jade"].last img'), null, { timeout: 60000, polling: 300 })
+    .catch(() => { throw new Error('la carte de Jade n\'a pas sa photo, ou n\'est pas bordée') })
+  await carte('joyce')
+  await pret()
+  if (await page.evaluate(() => window.__aq.fish + window.__aq.saved.deco) !== 0) throw new Error(`Joyce a l'aquarium de Jade (${await etat()})`)
+  // « Changer » : le poisson de Jade et son décor sont là
+  await page.locator('#aqMe').click({ force: true })
+  await carte('jade')
   await pret()
   const revu = await page.evaluate(() => ({ f: window.__aq.fish, d: window.__aq.saved.deco, d0: window.__aq.swim[0]?.d }))
-  if (revu.f !== 1 || revu.d !== 1 || revu.d0 !== 1) throw new Error(`l'aquarium n'est pas gardé (${JSON.stringify(revu)})`)
+  if (revu.f !== 1 || revu.d !== 2 || revu.d0 !== 1) throw new Error(`l'aquarium de Jade n'est pas gardé (${JSON.stringify(revu)})`)
 })
 
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))

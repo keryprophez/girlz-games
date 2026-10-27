@@ -6,6 +6,8 @@ import { clearSand, dig, heightAt, makeSand, MOLDS, MOLD_R, N, packSand, pat, po
 import { sfx, preloadSfx } from '../core/sfx'
 import { getCtx, isSoundOn, tone } from '../core/audio'
 import { onPause } from '../core/session'
+import { mine, snapScene, whoCards, paintCards, meButton, paintMe, trashButton, twoTaps, type Who } from '../core/mine'
+import { BADGE } from '../core/badges'
 import { visible, handNow, type HandMove } from '../core/hand'
 
 /* 🏰 LE CHÂTEAU DE SABLE (27/10, choisi par le père avec la Poterie et
@@ -38,15 +40,28 @@ const MAX_DECO = 40
 /** Le bord de la grille où les outils ne vont pas (le sable y rejoint la plage). */
 const EDGE = SIZE / 2 - 0.16
 
-/* ---------- La sauvegarde : une seule pour la famille, pour l'instant ----------
-   Isolée ici (`load` / `save`) : l'orchestrateur la branchera sur les cartes
-   Jade / Joyce de `core/mine.ts`. La plage compressée (quelques Ko) et la déco. */
-const KEY = 'ferme:chateau'
+/* ---------- La sauvegarde : une plage par fille (`core/mine.ts`) ----------
+   La plage compressée (quelques Ko) et la déco. La sauvegarde de famille
+   d'avant les cartes (`ferme:chateau`) devient celle de la première fille
+   qui ouvre le jeu. */
+const box = mine('chateau', { delay: 600 })
+const OLD_KEY = 'ferme:chateau'
+let who: Who = 'jade'
+/** L'ancienne plage de la famille, reprise par la première qui ouvre (puis retirée). */
+function adopt(w: Who) {
+  try {
+    const old = localStorage.getItem(OLD_KEY)
+    if (old === null || box.read(w) !== null) return
+    localStorage.setItem(box.key(w), old)
+    localStorage.removeItem(OLD_KEY)
+  } catch { /* stockage refusé */ }
+}
 interface Deco { k: DecoKind; x: number; z: number; r: number }
 interface Saved { sand: Sand; deco: Deco[] }
-export function load(): Saved {
+export function load(w: Who): Saved {
+  adopt(w)
   try {
-    const o = JSON.parse(localStorage.getItem(KEY) || 'null') as { v?: number; sand?: unknown; deco?: unknown } | null
+    const o = box.read(w) as { v?: number; sand?: unknown; deco?: unknown } | null
     if (o && o.v === 1) {
       const sand = unpackSand(o.sand)
       if (sand) {
@@ -61,7 +76,7 @@ export function load(): Saved {
 }
 export function save(s: Saved) {
   const q = (v: number) => Math.round(v * 1000) / 1000
-  try { localStorage.setItem(KEY, JSON.stringify({ v: 1, sand: packSand(s.sand), deco: s.deco.map(d => [d.k, q(d.x), q(d.z), q(d.r)]) })) } catch { /* plein : tant pis */ }
+  box.save(who, () => ({ v: 1, sand: packSand(s.sand), deco: s.deco.map(d => [d.k, q(d.x), q(d.z), q(d.r)]) }))
 }
 
 /** Le seau qui se retourne, se pose, se soulève ; ou le seau d'eau qui se vide. */
@@ -361,6 +376,10 @@ function stepOutro(s: State, dt: number) {
 function endGame(s: State) {
   if (s.phase === 'done') return
   s.phase = 'done'
+  // Sa carte : la photo du château dans le soir
+  box.flush()
+  const url = snapScene(s.stage, 400)
+  if (url) box.setPhoto(who, url)
   ctx.finish({ title: 'Quel beau château !', msg: 'La marée monte, il tient bon', stars: 3 })
 }
 
@@ -392,7 +411,7 @@ function frame(s: State, dt: number) {
 
 /* ---------- La scène ---------- */
 
-async function build(c: GameContext, arena: HTMLElement): Promise<State | null> {
+async function build(c: GameContext, arena: HTMLElement, saved: Saved): Promise<State | null> {
   const stage = await createStage(arena, {
     sky: '#D6EEFA', fov: 42, cam: CAM.p, target: CAM.t, fog: [24, 60], fogColor: '#D6EEFA',
     hemi: ['#DDEFFF', '#E8C9A0', 1.0], sun: { pos: [-3.0, 4.4, 1.0], color: '#FFF1DA', intensity: 2.6, area: 3.2, far: 16 },
@@ -400,7 +419,6 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
   })
   if (!c.alive()) { stage.dispose(); return null }
   const T = stage.T
-  const saved = load()
   const seaside = buildSeaside(T, stage)
   const sand = sandMesh(T, stage, saved.sand)
   stage.scene.add(sand.mesh, sand.water)
@@ -434,7 +452,6 @@ const TOOL_ICON: Record<Tool, string> = {
   deco: svg('<path d="M24 40c-9 0-15-6-15-14 0-6 4-11 8-11 2 0 3 1 3 3 0-3 2-5 4-5s4 2 4 5c0-2 1-3 3-3 4 0 8 5 8 11 0 8-6 14-15 14z" fill="#F7C6C0"/><path d="M24 40V18M18 39l-3-17M30 39l3-17" stroke="#E79A8E" stroke-width="2"/><path d="M38 6l2 5 5 .5-4 3.5 1.2 5-4.2-2.8-4.2 2.8L35 15l-4-3.5 5-.5z" fill="#FF8A3D"/>'),
   eau: svg('<path d="M10 16h22l-3 24H13z" fill="#2F9BE0"/><path d="M10 16c0-6 22-6 22 0" fill="none" stroke="#FFD34D" stroke-width="3"/><path d="M30 14c6 2 8 6 8 10" stroke="#7FD0F2" stroke-width="4" stroke-linecap="round"/><path d="M38 28c-2 3-3 5-3 7a3 3 0 0 0 6 0c0-2-1-4-3-7z" fill="#7FD0F2"/><ellipse cx="21" cy="17" rx="10" ry="2.4" fill="#7FD0F2"/>')
 }
-const TRASH_ICON = svg('<path d="M12 15h24l-2 25a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3z" fill="#E8574C"/><rect x="8" y="9" width="32" height="6" rx="2.5" fill="#C8453B"/><rect x="19" y="5" width="10" height="6" rx="2.5" fill="#C8453B"/><path d="M19 21v16M24 21v16M29 21v16" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>', 32)
 const FINI_ICON = svg('<circle cx="24" cy="24" r="18" fill="#5EC97B"/><path d="m15 24.5 6 6L33.5 18" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>')
 const DECO_ICON: Record<DecoKind, string> = {
   coquillage: svg('<path d="M24 42 8 22c0-9 7-15 16-15s16 6 16 15z" fill="#F7C6C0"/><path d="M24 42V8M24 42 12 13M24 42l12-29M24 42 9 19M24 42l15-23" stroke="#E79A8E" stroke-width="2"/><rect x="18" y="39" width="12" height="5" rx="2" fill="#F2B0A8"/>', 40),
@@ -449,8 +466,9 @@ const DECO_ICON: Record<DecoKind, string> = {
 export const chateau: GameDef = {
   id: 'chateau', name: 'Le Château de sable', icon: '🏰', sq: 'sq-sun', cat: 'creatif', noTier: true,
   subtitle: 'Moules, pelle et douves : à toi la plage',
-  // La main : poser une tour, tracer des douves, remplir d'eau, poser une déco
+  // La main : choisir sa plage ; poser une tour, tracer des douves, remplir d'eau, poser une déco
   hand: (root): HandMove | null => {
+    if (root.querySelector('.ch-wrap[data-who=""]')) return { choose: visible(root, '.ch-card') }
     const s = me
     if (!s || s.phase !== 'make' || s.anims.length) return null
     if (s.tool === 'moule') return { tap: sandScreen(s, s.stamps ? 0.4 : 0, -0.2) }
@@ -470,16 +488,25 @@ export const chateau: GameDef = {
     ctx = c
     let dead = false
     c.root.innerHTML = `
-      <div class="arena g3-arena ch-wrap" id="chWrap" data-phase="make">
+      <div class="arena g3-arena ch-wrap" id="chWrap" data-who="" data-phase="make">
+        ${whoCards('ch')}
+        ${meButton('chMe', 'ch-me', 'Changer de plage')}
         <div class="ch-tools">${TOOLS.map(t => `<span class="tool-item"><button class="sn-tool ch-tool${t === 'moule' ? ' sel' : ''}" data-tool="${t}" aria-label="${TOOL_NAME[t]}">${TOOL_ICON[t]}</button><i class="tool-cap">${TOOL_NAME[t]}</i></span>`).join('')}
           <span class="tool-item"><button class="sn-tool ch-fini" id="chFini" aria-label="Fini">${FINI_ICON}</button><i class="tool-cap">Fini</i></span></div>
-        <span class="tool-item ch-reset"><button class="sn-tool at-trash" id="chReset" aria-label="Effacer la plage">${TRASH_ICON}</button><i class="tool-cap">Effacer</i></span>
+        ${trashButton('chReset', 'ch-reset', 'Effacer la plage')}
         <div class="ch-pal" id="chPal"></div>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#chWrap')!
-    const resetB = c.root.querySelector<HTMLElement>('#chReset')!
-    let armed = false, armId = 0
-    const disarm = () => { armed = false; resetB.classList.remove('arm'); ctx.cancel(armId) }
+    // La poubelle : deux touchers, la plage redevient lisse
+    const trash = twoTaps(c.root.querySelector<HTMLElement>('#chReset')!, c, () => {
+      const s = me
+      if (!s) return
+      clearSand(s.saved.sand)
+      while (s.decos.length) removeDeco(s, 0)
+      sfx('whoosh', { vol: 0.6, rate: 0.7 })
+      s.fx.burst(new s.T.Vector3(0, 0.1, 0), { count: 60, color: ['#E6CFA2', '#FFFFFF', '#F2D6A8'], speed: 2, spread: 1, life: 0.8, size: 0.05, gravity: 2 })
+      s.dirty = 0.1
+    })
     preloadSfx(['step', 'drop', 'whoosh', 'pluck', 'confirm', 'select', 'switch', 'cloth', 'click'])
     const icons: Record<string, string> = {}
     for (const m of MOLDS) icons[m] = moldIcon(m)
@@ -503,37 +530,60 @@ export const chateau: GameDef = {
       handNow()
     }
 
-    let unPause = () => { /* posé au chargement */ }
-    const hideLoader = loader(arena, 'chateau')
-    build(c, arena).then(s => {
+    // En pause, la boucle s'arrête : la vague se tait avec elle
+    const unPause = onPause(p => { if (p) me?.surf?.set(0, 0) })
+    /* Les deux cartes : la photo de la plage de chacune, la dernière bordée */
+    const showCards = () => paintCards(arena, box, BADGE.chateau || '')
+    showCards()
+    let hideLoader = () => { /* les cartes d'abord */ }
+    let starting = false
+    const choose = async (w: Who) => {
+      if (me || starting) return
+      starting = true
+      who = w
+      box.setLast(w)
+      arena.setAttribute('data-who', w)
+      paintMe(c.root, 'chMe', w)
+      sfx('confirm', { vol: 0.5 })
+      hideLoader = loader(arena, 'chateau')
+      const s = await build(c, arena, load(w)).catch(e => { console.error(e); return null })
+      starting = false
       hideLoader()
-      if (!s || dead) { if (s) s.stage.dispose(); return }
+      if (!s || dead) { if (s) s.stage.dispose(); else if (!dead) c.toast('La 3D n\'est pas disponible ici'); return }
       me = s
       const ac = getCtx()
       if (ac) try { s.surf = surf(ac) } catch { /* sans la mer qui chante */ }
-      // En pause, la boucle s'arrête : la vague se tait avec elle
-      unPause = onPause(p => { if (p) me?.surf?.set(0, 0) })
       setTool('moule')
       s.stage.start(dt => { if (me === s) frame(s, dt) })
-    }).catch(e => { hideLoader(); console.error(e); if (!dead) c.toast('La 3D n\'est pas disponible ici') })
+    }
+    /** On quitte sa plage (pour l'autre, ou pour sortir) : gardée, photographiée. */
+    const leave = (s: State) => {
+      save(s.saved)
+      box.flush()
+      if (s.phase === 'make') { const url = snapScene(s.stage, 400); if (url) box.setPhoto(who, url) }
+      pts.clear()
+      me = null
+      s.surf?.stop()
+      try { s.stage.dispose() } catch { /* déjà démonté */ }
+    }
 
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement
+      const card = t.closest<HTMLElement>('.ch-card')
+      if (card?.dataset.who) { choose(card.dataset.who as Who); return }
       const s = me
       if (!s || s.phase !== 'make') return
-      if (armed && !t.closest('#chReset')) disarm()
-      if (t.closest('#chFini')) { startOutro(s); return }
-      if (t.closest('#chReset')) {
-        // Deux touchers : le premier arme la poubelle
-        if (!armed) { armed = true; resetB.classList.add('arm'); sfx('switch', { vol: 0.5 }); ctx.cancel(armId); armId = ctx.after(2600, disarm); return }
-        disarm()
-        clearSand(s.saved.sand)
-        while (s.decos.length) removeDeco(s, 0)
-        sfx('whoosh', { vol: 0.6, rate: 0.7 })
-        s.fx.burst(new s.T.Vector3(0, 0.1, 0), { count: 60, color: ['#E6CFA2', '#FFFFFF', '#F2D6A8'], speed: 2, spread: 1, life: 0.8, size: 0.05, gravity: 2 })
-        s.dirty = 0.1
+      if (!t.closest('#chReset')) trash.disarm()
+      if (t.closest('#chMe')) {
+        if (s.anims.length) return
+        leave(s)
+        arena.setAttribute('data-who', '')
+        showCards()
+        sfx('select', { vol: 0.4 })
         return
       }
+      if (t.closest('#chFini')) { startOutro(s); return }
+      if (t.closest('#chReset')) { trash.tap(); return }
       const tb = t.closest<HTMLElement>('.ch-tool')
       if (tb?.dataset.tool) { setTool(tb.dataset.tool as Tool); sfx('select', { vol: 0.5 }); return }
       const o = t.closest<HTMLElement>('.ch-opt')
@@ -556,7 +606,7 @@ export const chateau: GameDef = {
       if (s.phase !== 'make') return
       // Le crabe touché lève les pinces
       const cq = toScreen(s.stage, s.crab.c.g.position)
-      if (Math.hypot(cq.x - e.clientX, cq.y - e.clientY) < 40) { s.crab.clac = 0.8; s.crab.wait = Math.max(s.crab.wait, 1); sfx('click', { vol: 0.6, rate: 1.5 }); sfx('click', { vol: 0.5, rate: 1.8, delay: 0.12 }); return }
+      if (Math.hypot(cq.x - e.clientX, cq.y - e.clientY) < 32) { s.crab.clac = 0.8; s.crab.wait = Math.max(s.crab.wait, 1); sfx('click', { vol: 0.6, rate: 1.5 }); sfx('click', { vol: 0.5, rate: 1.8, delay: 0.12 }); return }
       const p = hitSand(s, e.clientX, e.clientY)
       const pt: Pt = { x: e.clientX, y: e.clientY, moved: 0, last: p, dug: null }
       pts.set(e.pointerId, pt)
@@ -636,6 +686,8 @@ export const chateau: GameDef = {
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __ch: unknown }).__ch = {
+        get cards() { return arena.getAttribute('data-who') === '' },
+        get who() { return me ? who : null },
         get ready() { return !!me && me.phase === 'make' && !me.anims.length },
         get phase() { return me?.phase },
         get tool() { return me?.tool },
@@ -647,6 +699,8 @@ export const chateau: GameDef = {
         /** Un point du sable (x, z en mètres) à l'écran. */
         pt(x: number, z: number) { return me ? sandScreen(me, x, z) : null },
         speed(k: number) { if (me) me.stage.timeScale = k },
+        /** Le crabe va s'asseoir dans un coin (il se promène au hasard : un toucher sur lui ne fait que lever ses pinces). */
+        park() { const c = me?.crab; if (c) { c.x = c.tx = 1.15; c.z = c.tz = 1.15; c.wait = 9999 } },
         /** L'affiche : un château à quatre tours, ses douves pleines, ses drapeaux et ses coquillages. */
         demo() {
           const s = me
@@ -685,13 +739,7 @@ export const chateau: GameDef = {
       window.removeEventListener('pointermove', follow)
       window.removeEventListener('pointerdown', follow)
       unPause()
-      const s = me
-      me = null
-      if (s) {
-        save(s.saved)
-        s.surf?.stop()
-        try { s.stage.dispose() } catch { /* déjà démonté */ }
-      }
+      if (me) leave(me)
       hideLoader()
     }
   }
