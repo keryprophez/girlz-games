@@ -1,5 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick, rnd } from '../core/utils'
+import { $, shuffle } from '../core/utils'
 import { photoImg } from '../core/sprites'
 import { sfx, preloadSfx } from '../core/sfx'
 import { fxAt, JUICE } from '../core/fx'
@@ -7,6 +7,7 @@ import { ICON } from '../core/icons'
 import { tone } from '../core/audio'
 import { moneyImages } from '../core/money3d'
 import { some, visible } from '../core/hand'
+import { comeBack, recall, type Item, type Keyed, type Recall } from '../core/facts'
 
 /* Le Marché de la Ferme — apprendre l'argent avec de VRAIES pièces en euros,
    en 3D depuis le 28/09 (`core/money3d.ts` : métal, relief, tranche, tailles
@@ -14,7 +15,15 @@ import { some, visible } from '../core/hand'
    la voix dit le total à chaque pièce posée. Trois façons de jouer :
    🔎 Découvre (tape une pièce, la voix dit sa valeur),
    🛒 Paye (compose le prix exact dans le panier),
-   💰 La monnaie (le client paye avec un billet : rends la différence). */
+   💰 La monnaie (le client paye avec un billet : rends la différence).
+
+   La mémoire (27/10, `core/facts.ts`) : chaque montant est un élément — le
+   prix à payer, ou celui dont on rend la monnaie. Une série ne pose jamais
+   deux fois le même, ni deux fois la même marchandise ; un montant raté
+   (le compte a dépassé) revient trois manches plus loin s'il reste la
+   place, sinon en tête de la série suivante. Un montant réussi, lui, n'est
+   pas une leçon à réviser : pas de révision, du neuf. Découvre n'a pas de
+   question, rien n'y est retenu. Muette : rien ne s'affiche. */
 
 interface Denom { v: number; kind: 'coin' | 'note' }
 const DENOMS: Denom[] = [
@@ -106,18 +115,51 @@ interface State {
   mistakes: number
   /** Ce qu'on a touché dans Découvre. */
   seen: Set<number>
+  /** Les montants de la série, tirés sans remise ; la manche en cours est
+      `queue[q]`. */
+  queue: Item<Amount>[]
+  /** Les marchandises de la série, mélangées : jamais deux fois la même. */
+  deck: string[]
+  /** Le compte a déjà dépassé dans cette manche : le montant est raté. */
+  slip: boolean
+  /** Numéro de la série : changer de mode fait taire la manche suivante de
+      l'ancien (les quatre secondes du compte bon). */
+  gen: number
 }
+
+/** Un montant de la mémoire : le prix à payer (`pay:735`), ou celui dont on
+    rend la monnaie (`change:735`). */
+interface Amount extends Keyed { price: number }
 
 let mk: State | null = null
 let ctx: GameContext
+/** La mémoire des montants (`ferme:memoire:market`), ouverte au montage. */
+let memo: Recall
 
 function bankDenoms(): number[] {
   return ctx.byTier([10, 20, 50, 100, 200, 500], [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], ALL)
 }
 
-function makePrice(): number {
-  // Jusqu'à 19,95 € au plus haut : le client paie encore d'un seul billet (le plus grand est 20 €)
-  return ctx.byTier(rnd(2, 19) * 50, rnd(35, 1450), rnd(105, 1995))
+const range = (a: number, b: number, step = 1) => Array.from({ length: Math.floor((b - a) / step) + 1 }, (_, i) => a + i * step)
+
+/** Tous les prix du niveau (de 1 € à 9,50 € de 50 c en 50 c, puis au
+    centime près). Jusqu'à 19,95 € au plus haut : le client paie encore d'un
+    seul billet (le plus grand est 20 €). */
+function prices(): number[] {
+  return ctx.byTier(range(100, 950, 50), range(35, 1450), range(105, 1995))
+}
+
+/** Le montant de la manche en cours. */
+const current = (me: State): Item<Amount> | undefined => me.queue[me.q]
+
+/** Le compte a dépassé : le montant est raté (une fois par manche), en
+    silence ; il reviendra trois manches plus loin, ou à la série suivante. */
+function slipped(me: State) {
+  const it = current(me)
+  if (me.slip || !it) return
+  me.slip = true
+  memo.note(it, false)
+  comeBack(me.queue, me.q)
 }
 
 function buildBank(me: State, denoms: number[]) {
@@ -173,7 +215,7 @@ function tapBank(me: State, v: number, b: HTMLElement) {
   renderTray(me)
   const sum = me.tray.reduce((a, b) => a + b, 0)
   if (sum === me.goal) return success(me)
-  if (sum > me.goal) { me.mistakes++; sfx('drop', { vol: 0.4, rate: 0.8 }) }
+  if (sum > me.goal) { me.mistakes++; sfx('drop', { vol: 0.4, rate: 0.8 }); slipped(me) }
   // Le geste pédagogique du marché : on dit le total courant à chaque pièce
   ctx.say(speak(sum))
 }
@@ -193,11 +235,16 @@ function success(me: State) {
   ring(me)
   fxAt($('mkTray'), JUICE.green, 14)
   ctx.say(speak(me.goal))
+  // Juste sans dépasser : gardé en silence (un raté l'a été en dépassant)
+  const it = current(me)
+  if (it && !me.slip) memo.note(it, true)
   me.q++
   // Le compte bon reste sous les yeux (30/09 : « ça part trop vite ») : les
-  // pièces dans la caisse et le total en vert, quatre secondes
+  // pièces dans la caisse et le total en vert, quatre secondes. Un
+  // changement de mode entre-temps fait taire la suite de l'ancien.
+  const gen = me.gen
   ctx.after(4000, () => {
-    if (mk !== me || !me.running) return
+    if (mk !== me || !me.running || me.gen !== gen) return
     me.lock = false
     if (me.q >= me.totalQ) return finish(me)
     nextRound(me)
@@ -206,8 +253,9 @@ function success(me: State) {
 
 function nextRound(me: State) {
   me.tray = []
-  const price = makePrice()
-  const item = pick(ITEMS)
+  me.slip = false
+  const price = current(me)?.fact.price ?? 100
+  const item = me.deck[me.q % me.deck.length]
   if (me.mode === 'pay') {
     me.goal = price
     $('mkItem').innerHTML = `<div class="mk-show">${photoImg(item, 210)}</div>
@@ -231,6 +279,7 @@ function setMode(me: State, mode: Mode) {
   document.querySelectorAll<HTMLElement>('.mk-mode').forEach(x => x.classList.toggle('sel', x.dataset.m === mode))
   me.lock = false
   me.q = 0; me.mistakes = 0; me.tray = []
+  me.gen++
   const explore = mode === 'explore'
   // Découvre : les pièces prennent tout l'étal ; Paye / Monnaie : l'étal, la caisse, la bourse
   $('mkArena').classList.toggle('explore', explore)
@@ -238,7 +287,12 @@ function setMode(me: State, mode: Mode) {
     me.seen = new Set()
     buildBank(me, DENOMS.map(d => d.v))
   } else {
-    me.totalQ = mode === 'pay' ? 4 : 3
+    // Les montants de la série, tirés sans remise dans la mémoire (les ratés
+    // d'abord, pas de révision des réussis), et autant de marchandises
+    const tag = mode === 'pay' ? 'pay' : 'change'
+    me.queue = memo.series(prices().map(price => ({ key: `${tag}:${price}`, price })), mode === 'pay' ? 4 : 3, { reviews: 0 })
+    me.totalQ = me.queue.length
+    me.deck = shuffle([...ITEMS])
     buildBank(me, bankDenoms())
     nextRound(me)
   }
@@ -290,8 +344,9 @@ export const market: GameDef = {
         <button class="sn-tool go mk-done" id="mkDone" aria-label="Fini">${ICON.check}</button>
       </div>`
     preloadSfx(['coins', 'confirm', 'drop'])
-    const me: State = { running: true, lock: false, mode: 'explore', tray: [], goal: 0, q: 0, totalQ: 0, mistakes: 0, seen: new Set() }
+    const me: State = { running: true, lock: false, mode: 'explore', tray: [], goal: 0, q: 0, totalQ: 0, mistakes: 0, seen: new Set(), queue: [], deck: [], slip: false, gen: 0 }
     mk = me
+    memo = recall('market')
     document.querySelectorAll<HTMLElement>('.mk-mode').forEach(b => {
       b.onclick = () => { if (me.running) setMode(me, b.dataset.m as Mode) }
     })
@@ -308,7 +363,9 @@ export const market: GameDef = {
       ;(window as unknown as { __mk: unknown }).__mk = {
         get goal() { return me.goal }, get q() { return me.q }, get lock() { return me.lock }, get sum() { return me.tray.reduce((a, b) => a + b, 0) },
       /** Les pièces et billets 3D sont-ils affichés ? */
-      get real() { return Object.keys(imgs).length === ALL.length && !!document.querySelector('#mkBank .mk-img') }
+      get real() { return Object.keys(imgs).length === ALL.length && !!document.querySelector('#mkBank .mk-img') },
+      /** Les montants de la série, dans l'ordre (sans remise). */
+      get plan() { return me.queue.map(it => it.fact.key) }
       }
     }
     setMode(me, 'explore')
