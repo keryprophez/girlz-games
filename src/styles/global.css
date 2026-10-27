@@ -2229,3 +2229,63 @@ body.playing .po-card{max-width:880px;}
 .dg-pips i.got{background:#FFF6D6;box-shadow:inset 0 0 0 3px #FFC94D;}
 .dg-pips i.miss{background:#EFEAE4;}
 .dg-pips i .ico{width:20px;height:20px;}
+
+/* ============================================================
+   1, 2, 3… SOLEIL ! (games/soleil.ts, 27/10)
+   ============================================================ */
+.so-flags{position:absolute;bottom:14px;left:14px;z-index:5;display:flex;gap:8px;padding:7px 12px;border-radius:99px;
+  background:rgba(255,255,255,.62);backdrop-filter:blur(6px);pointer-events:none;}
+.so-flags i{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#C8BDB2;
+  box-shadow:inset 0 0 0 2px rgba(69,54,42,.12);}
+.so-flags i .ico{width:24px;height:24px;}
+.so-flags i.now{box-shadow:inset 0 0 0 3px var(--lagoon);color:var(--lagoon);}
+.so-flags i.won{background:#FFF3C4;color:#E8A317;box-shadow:inset 0 0 0 3px #FFC94D;}
+.so-flags i.lost{background:#EFEAE4;color:#B5A99C;}
+/* Les trois coups de l'épouvantail, puis l'œil quand il regarde */
+.so-dots{position:absolute;top:86px;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:14px;align-items:center;
+  padding:9px 16px;border-radius:99px;background:rgba(255,255,255,.55);backdrop-filter:blur(6px);pointer-events:none;}
+.so-dots i{width:26px;height:26px;border-radius:50%;background:rgba(69,54,42,.16);transition:transform .15s var(--spring),background .15s;}
+.so-dots i.on{background:#FF9A3D;transform:scale(1.25);box-shadow:0 0 12px rgba(255,154,61,.8);}
+.so-dots b{display:none;width:58px;height:40px;}
+.so-dots b svg{width:100%;height:100%;}
+.so-dots.look{background:rgba(232,74,60,.88);}
+.so-dots.look i{display:none;}
+.so-dots.look b{display:block;animation:soEye .5s ease-in-out infinite alternate;}
+@keyframes soEye{to{transform:scale(1.12);}}
+.so-flash .so-ouf{display:inline-flex;color:#FF6B81;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25));}
+.so-flash .so-ouf .ico{width:1.4em;height:1.4em;}
+
+/* ============================================================
+   LE LABYRINTHE À BILLE (games/bille.ts, 27/10)
+   ============================================================ */
+.bi-arena{background:#3E2A1E;}
+.bi-pips{position:absolute;bottom:14px;left:14px;z-index:5;display:flex;gap:8px;padding:7px 12px;border-radius:99px;
+  background:rgba(255,248,236,.7);backdrop-filter:blur(6px);pointer-events:none;}
+.bi-pips i{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#C8BDB2;
+  box-shadow:inset 0 0 0 2px rgba(69,54,42,.12);}
+.bi-pips i .ico{width:24px;height:24px;}
+.bi-pips i.now{box-shadow:inset 0 0 0 3px var(--lagoon);color:var(--lagoon);}
+.bi-pips i.won{background:#FFF3C4;color:#E8A317;box-shadow:inset 0 0 0 3px #FFC94D;}
+/* La petite tablette du geste « pencher » (core/hand.ts) */
+.hand-tablet{position:absolute;left:0;top:0;width:150px;height:105px;opacity:0;will-change:transform,opacity;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.35));}
+.hand-tablet svg{display:block;width:100%;height:100%;overflow:visible;}
+
+/* ============================================================
+   LE JEU DES DIFFÉRENCES (games/differences.ts, 27/10)
+   ============================================================ */
+.df-pips{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:8px;padding:8px 14px;border-radius:99px;
+  background:rgba(255,255,255,.62);backdrop-filter:blur(6px);pointer-events:none;}
+.df-pips i{width:34px;height:34px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px rgba(69,54,42,.14);display:grid;place-items:center;color:#fff;}
+.df-pips i.got{background:#FFC94D;box-shadow:0 0 10px rgba(255,201,77,.8);animation:dfGot .4s var(--spring);}
+.df-pips i .ico{width:22px;height:22px;}
+@keyframes dfGot{from{transform:scale(.4)}}
+.df-rounds{position:absolute;bottom:14px;left:14px;z-index:5;display:flex;gap:8px;padding:7px 12px;border-radius:99px;
+  background:rgba(255,255,255,.62);backdrop-filter:blur(6px);pointer-events:none;}
+.df-rounds i{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#C8BDB2;box-shadow:inset 0 0 0 2px rgba(69,54,42,.12);}
+.df-rounds i .ico{width:24px;height:24px;}
+.df-rounds i.now{box-shadow:inset 0 0 0 3px var(--lagoon);color:var(--lagoon);}
+.df-rounds i.won{background:#FFF3C4;color:#E8A317;box-shadow:inset 0 0 0 3px #FFC94D;}
+/* Un toucher dans le vide : la vue tressaille */
+.df-arena canvas.df-no{animation:dfNo .32s ease-out;}
+@keyframes dfNo{20%{transform:translateX(-7px)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}

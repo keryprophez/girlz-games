@@ -1801,8 +1801,11 @@ async function kitOf(T: T3, keep: Pick<Stage, 'keep'>): Promise<Kit> {
     import('three/examples/jsm/utils/BufferGeometryUtils.js'),
     import('three/examples/jsm/geometries/RoundedBoxGeometry.js')
   ])
+  const M = mats(T, keep as Stage)
+  // Chaque matériau porte son nom : le Jeu des différences repeint la grange d'une des deux fermes
+  for (const [k, m] of Object.entries(M)) m.name = k
   return {
-    T, U, RB: RBmod.RoundedBoxGeometry, M: mats(T, keep as Stage),
+    T, U, RB: RBmod.RoundedBoxGeometry, M,
     box: keep.keep(new T.BoxGeometry(1, 1, 1)), sph: keep.keep(new T.SphereGeometry(1, 18, 12)), cyl: keep.keep(new T.CylinderGeometry(1, 1, 1, 14))
   }
 }
@@ -2128,4 +2131,17 @@ export async function buildFarm(stage: Stage, o: { night: boolean; empty?: boole
       if (o.night) for (const L of lights) L.intensity = (3 + partyK * 4) * (0.92 + Math.sin(t * 9) * 0.04 + Math.sin(t * 23) * 0.03)
     }
   }
+}
+
+/** L'épouvantail tout seul, pour le faire vivre (1, 2, 3… Soleil !, 27/10) : son
+    piquet reste planté (`post`), le reste (`body` : bras, chemise, tête, chapeau)
+    tourne dessus. Il regarde vers +z. */
+export async function scarecrowKit(T: T3, keep: Pick<Stage, 'keep'>): Promise<{ g: Group; post: Mesh; body: Group; mats: Record<string, Mat> }> {
+  const K = await kitOf(T, keep)
+  const g = scarecrow(K)
+  const post = g.children[0] as Mesh
+  const body = new T.Group()
+  for (const c of g.children.slice(1)) body.add(c)
+  g.add(body)
+  return { g, post, body, mats: K.M }
 }

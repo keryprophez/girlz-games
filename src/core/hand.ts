@@ -19,6 +19,11 @@ import type { GameContext } from './types'
      { choose: [cibles] }      « l'un de ceux-là » : la main survole sans
                                appuyer. C'est le geste des jeux Apprendre :
                                la main ne montre JAMAIS la réponse.
+     { hold: cible }           garder le doigt posé (1, 2, 3… Soleil ! : son
+                               animal court tant que le doigt reste), puis
+                               le lever
+     { tilt: cible, dx, dy }   pencher la tablette (le Labyrinthe à bille) :
+                               une petite tablette se penche vers (dx, dy)
    Une cible est un élément du DOM, un point de l'écran `{ x, y }` (ce que
    rend `toScreen` pour la 3D) ou une fraction de l'arène `{ fx, fy }`.
 
@@ -36,6 +41,8 @@ export type HandMove =
   | { swipe: [Spot, Spot] }
   | { trace: Spot[] }
   | { choose: Spot[] }
+  | { hold: Spot }
+  | { tilt: Spot; dx: number; dy: number }
 export type HandSpec = (root: HTMLElement) => HandMove | null
 
 /** Délai de la toute première démonstration d'un jeu (après le carton titre). */
@@ -48,6 +55,13 @@ export const HAND_SVG = `<svg viewBox="0 0 64 72" aria-hidden="true">
     fill="#fff" stroke="#4A3A34" stroke-width="2.4" stroke-linejoin="round"/>
   <path d="M26 29v9M36 30v8M45 31.4v6.6" fill="none" stroke="#4A3A34" stroke-width="2" stroke-linecap="round" opacity=".55"/>
   <path d="M19.5 9.5a2 2 0 0 1 3 0" fill="none" stroke="#F2B8A0" stroke-width="2" stroke-linecap="round"/>
+</svg>`
+/* La tablette du geste « pencher » : un cadre arrondi, un plateau de bois, une bille. */
+const TABLET_SVG = `<svg viewBox="0 0 120 84" aria-hidden="true">
+  <rect x="3" y="3" width="114" height="78" rx="12" fill="#3E4652" stroke="#fff" stroke-width="4"/>
+  <rect x="13" y="12" width="94" height="60" rx="5" fill="#E2B878"/>
+  <path d="M13 34h40M67 34v38M38 52h29M85 12v30" stroke="#9A6A36" stroke-width="5" stroke-linecap="round"/>
+  <g class="ht-ball"><circle cx="60" cy="43" r="8" fill="#C9D3DE" stroke="#5A6470" stroke-width="2"/><circle cx="57" cy="40" r="2.6" fill="#fff"/></g>
 </svg>`
 const W = 70, H = 79
 const TIP_X = 21 / 64 * W, TIP_Y = 3 / 72 * H
@@ -282,6 +296,48 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
             { transform: at(end), opacity: 0 }
           ], { duration: 560 }).finished
         }
+      } else if ('hold' in mv) {
+        // Le doigt se pose, RESTE posé (les ondes repartent tant qu'il appuie), puis se lève
+        const p = where(mv.hold)
+        if (!p) return
+        for (let rep = 0; rep < 2 && showing; rep++) {
+          await anim(hand, [
+            { transform: at({ x: p.x + 30, y: p.y + 40 }), opacity: 0 },
+            { transform: at(p), opacity: 1 }
+          ], { duration: 380, easing: 'ease-out' }).finished
+          for (let k = 0; k < 4; k++) press(p, k * 380)
+          await anim(hand, [
+            { transform: at(p) },
+            { transform: at(p, 0.84), offset: 0.12 },
+            { transform: at(p, 0.84), offset: 0.88 },
+            { transform: at(p) }
+          ], { duration: 1700, easing: 'ease-in-out' }).finished
+          await anim(hand, [
+            { transform: at(p), opacity: 1 },
+            { transform: at({ x: p.x + 14, y: p.y - 16 }), opacity: 0 }
+          ], { duration: 420, easing: 'ease-out' }).finished
+        }
+      } else if ('tilt' in mv) {
+        // Une petite tablette qui se penche, et sa bille qui roule du côté penché
+        const p = where(mv.tilt)
+        if (!p) return
+        const tab = document.createElement('div')
+        tab.className = 'hand-tablet'
+        tab.innerHTML = TABLET_SVG
+        layer.appendChild(tab)
+        const dot = tab.querySelector<SVGElement>('.ht-ball')!
+        const ry = Math.max(-1, Math.min(1, mv.dx)) * 26, rx = -Math.max(-1, Math.min(1, mv.dy)) * 26
+        const pose = (k: number) => `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) perspective(520px) rotateY(${ry * k}deg) rotateX(${rx * k}deg)`
+        const roll = (k: number) => `translate(${mv.dx * 20 * k}px, ${mv.dy * 14 * k}px)`
+        try {
+          await anim(tab, [{ transform: pose(0), opacity: 0 }, { transform: pose(0), opacity: 1 }], { duration: 300 }).finished
+          for (let rep = 0; rep < 2 && showing; rep++) {
+            anim(dot, [{ transform: roll(-1) }, { transform: roll(1) }], { duration: 900, easing: 'ease-in', delay: 150 })
+            await anim(tab, [{ transform: pose(0) }, { transform: pose(1), offset: 0.4 }, { transform: pose(1), offset: 0.8 }, { transform: pose(0) }],
+              { duration: 1400, easing: 'ease-in-out' }).finished
+          }
+          await anim(tab, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 }).finished
+        } finally { tab.remove() }
       } else {
         const pts = mv.choose.map(s => {
           const p = where(s)

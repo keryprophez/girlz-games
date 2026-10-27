@@ -24,7 +24,7 @@ import { appendFileSync, readFileSync } from 'node:fs'
 const OWN = {
   'pizza': ['src/games/pizza.ts', 'src/games/cuisine.ts'],
   'tour-trois-blocs': ['src/games/icetower.ts', 'src/core/winter.ts'],
-  'labyrinthe': ['src/games/maze.ts'],
+  'labyrinthe': ['src/games/maze.ts', 'src/core/labyrinth.ts'],
   'taquin': ['src/games/taquin.ts'],
   'puzzle': ['src/games/taquin.ts', 'src/games/jigsaw.ts', 'src/core/jigsaw.ts', 'src/core/pictures.ts'],
   'memory': ['src/games/memory.ts'],
@@ -53,6 +53,9 @@ const OWN = {
   'cartable': ['src/games/cartable.ts', 'src/core/satchel3d.ts'],
   'monuments': ['src/games/monuments.ts', 'src/core/monuments3d.ts'],
   'devine-mon-dessin': ['src/games/drawguess.ts', 'src/core/drawguess.ts'],
+  'soleil': ['src/games/soleil.ts', 'src/core/soleil.ts'],
+  'differences': ['src/games/differences.ts', 'src/core/differences.ts'],
+  'bille': ['src/games/bille.ts', 'src/core/bille.ts', 'src/core/labyrinth.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux
 const NO_BOT = new Set(['src/games/sentences.ts', 'src/games/index.ts'])

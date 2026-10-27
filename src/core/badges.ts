@@ -341,7 +341,55 @@ export const BADGE: Record<string, string> = {
     <circle cx="30" cy="24" r="3" fill="${C.coralDark}"/>
     <circle cx="22" cy="31" r="3" fill="${C.coralDark}"/>
     <circle cx="31" cy="15" r="2.2" fill="${C.meadow}"/>
-    <circle cx="15" cy="28" r="2.2" fill="${C.meadow}"/>`)
+    <circle cx="15" cy="28" r="2.2" fill="${C.meadow}"/>`),
+
+  /* 1, 2, 3… Soleil ! (27/10) : l'épouvantail de dos, bras en croix, son chapeau de paille ;
+     devant, le chemin et le chat qui s'est figé */
+  soleil: svg(`
+    <circle cx="38" cy="10" r="6" fill="${C.sun}"/>
+    <path d="M22 44 26 26h-4z" fill="${C.wood}" opacity=".55"/>
+    <rect x="22.6" y="14" width="2.8" height="22" rx="1.2" fill="${C.woodDark}"/>
+    <rect x="9" y="17" width="30" height="3" rx="1.5" fill="${C.woodDark}"/>
+    <path d="M15 16.5h18l-1.5 11h-15z" fill="${C.coral}"/>
+    <path d="M24 16.5h9l-1.5 11H24z" fill="${C.coralDark}"/>
+    <path d="M9 18.5 5.5 16v5zM39 18.5l3.5-2.5v5z" fill="${C.sun}"/>
+    <circle cx="24" cy="11.5" r="4.4" fill="${C.cream}"/>
+    <ellipse cx="24" cy="7.6" rx="8" ry="2" fill="${C.sun}"/>
+    <path d="M19.5 7.6c0-4 2-5.6 4.5-5.6s4.5 1.6 4.5 5.6z" fill="${C.sun}"/>
+    <rect x="19.6" y="5.6" width="8.8" height="1.6" fill="${C.coralDark}"/>
+    <path d="M14 46c0-6 3.5-9.5 7-9.5s7 3.5 7 9.5z" fill="${C.mango}"/>
+    <path d="M15.4 38.4 14.6 34l3.4 2.6zM26.6 38.4l.8-4.4-3.4 2.6z" fill="${C.mango}"/>
+    <path d="M28 44c4 0 5-3 3.5-5" fill="none" stroke="${C.mangoDark}" stroke-width="2.4" stroke-linecap="round"/>`),
+
+  /* Le Jeu des différences (27/10) : deux petites fermes rondes côte à côte, une grange
+     rouge et une grange bleue — et le cercle doré autour de celle qui change */
+  differences: svg(`
+    <ellipse cx="13" cy="33" rx="11" ry="7" fill="${C.meadowDark}"/>
+    <ellipse cx="13" cy="31" rx="11" ry="7" fill="${C.meadow}"/>
+    <path d="M7 31v-7l6-5 6 5v7z" fill="${C.coral}"/>
+    <path d="M5.6 24.6 13 18.4l7.4 6.2" fill="none" stroke="${C.coralDark}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="11" y="26" width="4" height="5" fill="${C.cream}"/>
+    <ellipse cx="35" cy="33" rx="11" ry="7" fill="${C.meadowDark}"/>
+    <ellipse cx="35" cy="31" rx="11" ry="7" fill="${C.meadow}"/>
+    <path d="M29 31v-7l6-5 6 5v7z" fill="${C.sky}"/>
+    <path d="M27.6 24.6 35 18.4l7.4 6.2" fill="none" stroke="${C.skyDark}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="33" y="26" width="4" height="5" fill="${C.cream}"/>
+    <circle cx="35" cy="25" r="11" fill="none" stroke="${C.sun}" stroke-width="3"/>
+    <circle cx="35" cy="25" r="11" fill="none" stroke="${C.white}" stroke-width="1" stroke-dasharray="2 3" opacity=".8"/>`),
+
+  /* Le Labyrinthe à bille (27/10) : le plateau de bois incliné, ses murets, un trou cerclé
+     de métal, le trou doré, la bille d'acier qui brille */
+  bille: svg(`
+    <path d="M6 12 42 8l2 30-40 4z" fill="${C.woodDark}"/>
+    <path d="M9 14.5 39.5 11l1.6 24.6L7 39z" fill="${C.wood}"/>
+    <path d="M18 13.6 18.6 27M18.6 27 30 25.8M30 25.8l.3-13.7M24 38.2l-.4-6.6" stroke="${C.woodDark}" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="13" cy="31.5" r="3.6" fill="${C.ink}"/>
+    <circle cx="13" cy="31.5" r="3.6" fill="none" stroke="#B9C2CB" stroke-width="1.4"/>
+    <circle cx="35" cy="31" r="3.8" fill="${C.mangoDark}"/>
+    <circle cx="35" cy="31" r="3.8" fill="none" stroke="${C.sun}" stroke-width="1.6"/>
+    <circle cx="24" cy="19.5" r="4.6" fill="#AEB8C2"/>
+    <circle cx="24" cy="19.5" r="4.6" fill="none" stroke="#6E7882" stroke-width="1"/>
+    <circle cx="22.4" cy="17.8" r="1.6" fill="${C.white}"/>`)
 }
 
 /** Les trois univers de l'accueil, dessinés eux aussi. */
