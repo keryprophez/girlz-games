@@ -6,6 +6,8 @@ import { copyClay, freshPot, hollow, isBlank, packPot, preset, profilePath, rais
 import { sfx, preloadSfx } from '../core/sfx'
 import { tone } from '../core/audio'
 import { visible, handNow, type HandMove } from '../core/hand'
+import { mine, snapScene, whoCards, paintCards, meButton, paintMe, trashButton, twoTaps, type Who } from '../core/mine'
+import { BADGE } from '../core/badges'
 
 /* 🏺 LA POTERIE (27/10, choisie par le père avec le Château de sable et
    l'Aquarium) — l'atelier du potier : le tour en alu dans son bac émaillé,
@@ -43,24 +45,35 @@ const SHELF_K = 0.4
 /** La vitesse du tour (radians par seconde) : assez lent pour qu'on voie la terre tourner. */
 const SPIN = 3.2
 
-/* ---------- La sauvegarde : une seule pour la famille, pour l'instant ----------
-   Isolée ici (`load` / `save`) : l'orchestrateur la branchera sur les cartes
-   Jade / Joyce de `core/mine.ts`. Des données légères : profils et traits. */
-const KEY = 'ferme:poterie'
+/* ---------- La sauvegarde : une étagère par fille (`core/mine.ts`) ----------
+   Des données légères : profils et traits, pas d'image (la photo de sa
+   carte à part). La sauvegarde de famille d'avant les cartes (`ferme:poterie`)
+   devient celle de la première fille qui ouvre le jeu. */
+const box = mine('poterie', { delay: 400 })
+const OLD_KEY = 'ferme:poterie'
+let who: Who = 'jade'
 interface Saved { cur: PotData; slot: number | null; shelf: (PotData | null)[] }
-export function load(): Saved {
+/** L'ancienne sauvegarde de la famille, reprise par la première qui ouvre (puis retirée). */
+function adopt(w: Who) {
   try {
-    const o = JSON.parse(localStorage.getItem(KEY) || 'null') as { v?: number; cur?: unknown; slot?: unknown; shelf?: unknown[] } | null
-    if (o && o.v === 1) {
-      const shelf = Array.from({ length: SHELF }, (_, i) => readPot(o.shelf?.[i]))
-      const slot = typeof o.slot === 'number' && o.slot >= 0 && o.slot < SHELF && !shelf[o.slot] ? o.slot : null
-      return { cur: readPot(o.cur) ?? freshPot(), slot, shelf }
-    }
-  } catch { /* une étagère neuve */ }
+    const old = localStorage.getItem(OLD_KEY)
+    if (old === null || box.read(w) !== null) return
+    localStorage.setItem(box.key(w), old)
+    localStorage.removeItem(OLD_KEY)
+  } catch { /* stockage refusé */ }
+}
+export function load(w: Who): Saved {
+  adopt(w)
+  const o = box.read(w) as { v?: number; cur?: unknown; slot?: unknown; shelf?: unknown[] } | null
+  if (o && o.v === 1) {
+    const shelf = Array.from({ length: SHELF }, (_, i) => readPot(o.shelf?.[i]))
+    const slot = typeof o.slot === 'number' && o.slot >= 0 && o.slot < SHELF && !shelf[o.slot] ? o.slot : null
+    return { cur: readPot(o.cur) ?? freshPot(), slot, shelf }
+  }
   return { cur: freshPot(), slot: null, shelf: Array(SHELF).fill(null) }
 }
 export function save(s: Saved) {
-  try { localStorage.setItem(KEY, JSON.stringify({ v: 1, cur: packPot(s.cur), slot: s.slot, shelf: s.shelf.map(p => p ? packPot(p) : null) })) } catch { /* plein : tant pis */ }
+  box.save(who, () => ({ v: 1, cur: packPot(s.cur), slot: s.slot, shelf: s.shelf.map(p => p ? packPot(p) : null) }))
 }
 
 interface Flight { view: PotView; from: import('three').Vector3; to: import('three').Vector3; k0: number; k1: number; t: number; dur: number; done: () => void }
@@ -174,6 +187,19 @@ function usePreset(s: State, p: Preset) {
   s.pot.mesh.scale.set(1.25, 0.6, 1.25)
   sfx('drop', { vol: 0.5, rate: 0.8 })
   claySound()
+  s.dirty = 0.1
+}
+
+/** La poubelle : la pièce du tour redevient une motte fraîche (l'étagère ne bouge pas). */
+function wipe(s: State) {
+  if (s.phase !== 'make' || s.flights.length) return
+  s.saved.cur = freshPot()
+  s.saved.slot = null
+  const d = potOf(s)
+  s.pot.setClay(d.clay); s.pot.setGlazed(false); s.pot.repaint(d)
+  s.pot.mesh.scale.set(1.3, 0.5, 1.3)
+  sfx('whoosh', { vol: 0.6, rate: 0.8 })
+  s.fx.burst(new s.T.Vector3(0, WHEEL_Y + 0.15, 0), { count: 40, color: ['#A98E7A', '#FFFFFF', '#8F7462'], speed: 1.6, spread: 1, life: 0.7, size: 0.04, gravity: 2 })
   s.dirty = 0.1
 }
 
@@ -392,12 +418,16 @@ function frame(s: State, dt: number) {
 function endGame(s: State) {
   if (s.phase === 'done') return
   s.phase = 'done'
+  // Sa carte : la photo de l'étagère, le pot à sa place
+  box.flush()
+  const url = snapScene(s.stage, 400)
+  if (url) box.setPhoto(who, url)
   ctx.finish({ title: 'Quel joli pot !', msg: 'Il est sur l’étagère', stars: 3 })
 }
 
 /* ---------- La scène ---------- */
 
-async function build(c: GameContext, arena: HTMLElement): Promise<State | null> {
+async function build(c: GameContext, arena: HTMLElement, saved: Saved): Promise<State | null> {
   const stage = await createStage(arena, {
     sky: '#EFE2CF', fov: 34, cam: [0, 1.25, 1.6], target: [0, 0.8, 0],
     hemi: ['#FFF4E4', '#B98A5E', 0.95], sun: { pos: [-1.6, 4.6, 3.2], color: '#FFF0D8', intensity: 2.5, area: 2.6, far: 14 },
@@ -406,7 +436,6 @@ async function build(c: GameContext, arena: HTMLElement): Promise<State | null> 
   if (!c.alive()) { stage.dispose(); return null }
   const T = stage.T
   const studio = buildStudio(T, stage)
-  const saved = load()
   const pot = potView(T, saved.cur, 1024, studio.rings)
   studio.head.add(pot.mesh)
   const shelf = saved.shelf.map((d, i) => {
@@ -454,8 +483,9 @@ function presetIcon(p: Preset) {
 export const poterie: GameDef = {
   id: 'poterie', name: 'La Poterie', icon: '🏺', sq: 'sq-peach', cat: 'creatif', noTier: true,
   subtitle: 'Tourne, peins et cuis ton pot',
-  // La main : faire monter la motte ; la creuser ; puis peindre en touchant la pièce ; reprendre une pièce de l'étagère
+  // La main : choisir son atelier ; faire monter la motte ; la creuser ; puis peindre en touchant la pièce ; reprendre une pièce de l'étagère
   hand: (root): HandMove | null => {
+    if (root.querySelector('.pt-wrap[data-who=""]')) return { choose: visible(root, '.pt-card') }
     const s = me
     if (!s || s.phase !== 'make' || s.flights.length) return null
     const c = potOf(s).clay
@@ -473,13 +503,18 @@ export const poterie: GameDef = {
     ctx = c
     let dead = false
     c.root.innerHTML = `
-      <div class="arena g3-arena pt-wrap" id="ptWrap" data-step="modeler" data-phase="make">
+      <div class="arena g3-arena pt-wrap" id="ptWrap" data-who="" data-step="modeler" data-phase="make">
+        ${whoCards('pt')}
+        ${meButton('ptMe', 'pt-me', 'Changer d’étagère')}
+        ${trashButton('ptReset', 'pt-reset', 'Effacer le pot')}
         <div class="pt-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool pt-step${st === 'modeler' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}
           <span class="tool-item"><button class="sn-tool pt-four" id="ptFour" aria-label="Le four">${FOUR_ICON}</button><i class="tool-cap">Four</i></span>
           <span class="tool-item"><button class="sn-tool pt-fini" id="ptFini" aria-label="Fini">${FINI_ICON}</button><i class="tool-cap">Fini</i></span></div>
         <div class="pt-pal" id="ptPal"></div>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#ptWrap')!
+    // La poubelle : deux touchers, la pièce du tour redevient une motte
+    const trash = twoTaps(c.root.querySelector<HTMLElement>('#ptReset')!, c, () => { if (me) wipe(me) })
     preloadSfx(['cloth', 'drop', 'whoosh', 'metal', 'creak', 'confirm', 'select', 'pluck', 'tick'])
     const opt = (attrs: string, icon: string, cap: string, sel: boolean, big = false) =>
       `<span class="tool-item"><button class="sn-tool pt-opt${big ? ' big' : ''}${sel ? ' sel' : ''}" ${attrs} aria-label="${cap}">${icon}</button><i class="tool-cap">${cap}</i></span>`
@@ -503,20 +538,61 @@ export const poterie: GameDef = {
       if (st !== 'modeler') handNow()
     }
 
-    const hideLoader = loader(arena, 'poterie')
-    build(c, arena).then(s => {
+    /* Les deux cartes : la photo de l'atelier de chacune, la dernière bordée */
+    const showCards = () => paintCards(arena, box, BADGE.poterie || '')
+    showCards()
+    let hideLoader = () => { /* les cartes d'abord */ }
+    let starting = false
+    const choose = async (w: Who) => {
+      if (me || starting) return
+      starting = true
+      who = w
+      box.setLast(w)
+      arena.setAttribute('data-who', w)
+      paintMe(c.root, 'ptMe', w)
+      sfx('confirm', { vol: 0.5 })
+      hideLoader = loader(arena, 'poterie')
+      const s = await build(c, arena, load(w)).catch(e => { console.error(e); return null })
+      starting = false
       hideLoader()
-      if (!s || dead) { if (s) { s.pot.dispose(); s.stage.dispose() } return }
+      if (!s || dead) { if (s) { s.pot.dispose(); s.shelf.forEach(v => v?.dispose()); s.stage.dispose() } else if (!dead) c.toast('La 3D n\'est pas disponible ici'); return }
       me = s
       s.paintTick = paintTick
+      arena.setAttribute('data-phase', 'make')
       setStep('modeler')
       s.stage.start(dt => { if (me === s) frame(s, dt) })
-    }).catch(e => { hideLoader(); console.error(e); if (!dead) c.toast('La 3D n\'est pas disponible ici') })
+    }
+    /** On quitte son atelier (pour l'autre, ou pour sortir) : gardé, photographié. */
+    const leave = (s: State) => {
+      // Quittée en plein vol ou au four : la pièce reste celle du tour, gardée telle quelle
+      if (s.phase !== 'done') save(s.saved)
+      box.flush()
+      const url = snapScene(s.stage, 400)
+      if (url) box.setPhoto(who, url)
+      pts.clear()
+      me = null
+      s.pot.dispose()
+      s.shelf.forEach(v => v?.dispose())
+      s.flights.forEach(f => f.view.dispose())
+      try { s.stage.dispose() } catch { /* déjà démonté */ }
+    }
 
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement
+      const card = t.closest<HTMLElement>('.pt-card')
+      if (card?.dataset.who) { choose(card.dataset.who as Who); return }
       const s = me
       if (!s || s.phase !== 'make') return
+      if (!t.closest('#ptReset')) trash.disarm()
+      if (t.closest('#ptMe')) {
+        if (s.flights.length) return
+        leave(s)
+        arena.setAttribute('data-who', '')
+        showCards()
+        sfx('select', { vol: 0.4 })
+        return
+      }
+      if (t.closest('#ptReset')) { trash.tap(); return }
       if (t.closest('#ptFour')) { if (!s.flights.length) startFire(s, 'back'); return }
       if (t.closest('#ptFini')) { if (!s.flights.length) { if (potOf(s).glazed) toShelf(s); else startFire(s, 'shelf') } return }
       const stepB = t.closest<HTMLElement>('.pt-step')
@@ -672,6 +748,8 @@ export const poterie: GameDef = {
     // Crochet pour les bots de test (scripts/play.mjs) — inerte en prod
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __pt: unknown }).__pt = {
+        get cards() { return arena.getAttribute('data-who') === '' },
+        get who() { return me ? who : null },
         get ready() { return !!me && me.phase === 'make' && !me.flights.length },
         get phase() { return me?.phase },
         get step() { return me?.step },
@@ -712,16 +790,7 @@ export const poterie: GameDef = {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
-      const s = me
-      me = null
-      if (s) {
-        // Quittée en plein vol ou au four : la pièce reste celle du tour, gardée telle quelle
-        if (s.phase !== 'done') save(s.saved)
-        s.pot.dispose()
-        s.shelf.forEach(v => v?.dispose())
-        s.flights.forEach(f => f.view.dispose())
-        try { s.stage.dispose() } catch { /* déjà démonté */ }
-      }
+      if (me) leave(me)
       hideLoader()
     }
   }
