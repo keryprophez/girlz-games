@@ -56,6 +56,9 @@ interface State {
   /** La tour posée, du bas vers le haut (corps figés : elle ne tremble pas). */
   tower: Block[]
   perfectRun: number
+  /** La plus longue série de « parfaits » (le texte de fin ; le combo, lui,
+      compte aussi les blocs posés de travers). */
+  bestPerfect: number
   swing: Swing | null
   placed: number
   topY: number
@@ -197,6 +200,7 @@ function judge(me: State) {
   me.tower.push(s)
   if (perfect) me.perfectRun++
   else me.perfectRun = 0
+  me.bestPerfect = Math.max(me.bestPerfect, me.perfectRun)
   if (perfect && me.perfectRun % 3 === 0) {
     // Trois parfaits d'affilée : la tour se remplume un peu
     const w2 = Math.min(BASE_W, s.w + 0.14)
@@ -286,10 +290,10 @@ function gameOver(me: State, collapsed: boolean) {
   me.stage.timeScale = 0.45
   if (collapsed) { impact(1, { matter: 'glace', noShake: true }); me.shake.hit(1) }
   const h = me.placed
-  const best = me.game.s.bestCombo
+  const best = me.bestPerfect
   me.game.end({
     title: h >= 14 ? 'Tour GÉANTE !' : h >= 7 ? 'Belle tour !' : 'La tour s\'écroule !',
-    msg: `Tu as empilé ${h} blocs de glace` + (best >= 4 ? ` et enchaîné ${Math.floor(best / 2)} parfaits` : ''),
+    msg: `Tu as empilé ${h} blocs de glace` + (best >= 2 ? ` et enchaîné ${best} parfaits` : ''),
     score: h,
     outroMs: OUTRO_MS
   })
@@ -405,7 +409,7 @@ export const icetower: GameDef = {
           clearcoat: 1, clearcoatRoughness: 0.06, emissive: 0x0A2236, envMapIntensity: 1.4
         }),
         game, fx: particles(stage, 500), shake: camShake(stage),
-        blocks: [], tower: [], perfectRun: 0, swing: null, placed: 0, topY: 0.3,
+        blocks: [], tower: [], perfectRun: 0, bestPerfect: 0, swing: null, placed: 0, topY: 0.3,
         swingSpeed: c.byTier(1.5, 1.9, 2.3),
         swingSpan: c.byTier(1.35, 1.55, 1.75),
         busy: false, camY: 1.1, over: false, winter, dusk: 0

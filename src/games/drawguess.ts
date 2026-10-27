@@ -36,7 +36,9 @@ import { guessDrawing, isGuessError, matches, spoken, POOLS, type Guess, type Gu
      au-dessus du chat. */
 
 type Mode = 'defi' | 'libre'
-type Phase = 'load' | 'draw' | 'think' | 'show' | 'win' | 'out'
+/** `wait` : entre deux temps (il secoue la tête, la manche passe) — aucun
+    bouton n'y répond, un double toucher ne saute plus rien. */
+type Phase = 'load' | 'draw' | 'think' | 'show' | 'wait' | 'win' | 'out'
 type Anim = 'idle' | 'think' | 'propose' | 'yes' | 'no' | 'shrug'
 
 /** La feuille : son dessin, en pixels de canvas (4:3,1). */
@@ -99,6 +101,8 @@ interface S {
   eraser: boolean
   strokes: Map<number, Stroke>
   abort: AbortController | null
+  /** Numéro de la manche : un changement de mode fait taire la précédente. */
+  gen: number
   error: GuessError | null
 }
 
@@ -197,6 +201,12 @@ function showError(s: S, why: GuessError) {
 function setAnim(s: S, a: Anim) { s.anim = a; s.animT = 0 }
 
 /* ---------- Les manches ---------- */
+/** Un minuteur de la manche en cours : muet si elle a changé entre-temps. */
+function later(s: S, ms: number, fn: () => void) {
+  const gen = s.gen
+  ctx.after(ms, () => { if (me === s && s.gen === gen) fn() })
+}
+
 function startRound(s: S) {
   s.phase = 'draw'; s.tries = 0; s.guess = null; s.gi = 0
   s.target = s.mode === 'defi' ? s.targets[s.round % s.targets.length] : null
@@ -240,17 +250,18 @@ async function onDone(s: S) {
     }
   } catch (e) {
     if (me !== s || !ctx.alive()) return
+    // Interrompu exprès (un changement de mode) : ce n'est pas une erreur
+    if ((e as Error | null)?.name === 'AbortError' || s.phase !== 'think') return
     const why = (e as { why?: unknown } | null)?.why
     // Une réponse qui n'est pas venue ne lui coûte pas un de ses trois essais
     s.tries--
     showError(s, isGuessError(why) ? why : 'autre')
     return
   } finally { s.abort = null }
-  if (me !== s || !ctx.alive()) return
+  if (me !== s || !ctx.alive() || s.phase !== 'think') return
   // Il réfléchit au moins un peu (une réponse instantanée ne se croit pas)
   const wait = Math.max(0, 1300 - (performance.now() - t0))
-  ctx.after(wait, () => {
-    if (me !== s) return
+  later(s, wait, () => {
     s.guess = g; s.gi = 0
     s.shown = s.mode === 'defi' ? ctx.byTier(3, 2, 1) : 3
     reveal(s)
@@ -269,8 +280,8 @@ function reveal(s: S) {
   const thumbs = $q('#dgThumbs')
   if (s.mode === 'libre') { thumbs.hidden = false; return }
   thumbs.hidden = true
-  ctx.after(1500, () => {
-    if (me !== s || s.phase !== 'show') return
+  later(s, 1500, () => {
+    if (s.phase !== 'show') return
     if (s.target && matches(it, s.target)) win(s)
     else wrong(s)
   })
@@ -278,20 +289,21 @@ function reveal(s: S) {
 
 /** Ce n'est pas ça : il secoue la tête, et propose la suivante… ou hausse les épaules. */
 function wrong(s: S) {
+  s.phase = 'wait'
   setAnim(s, 'no')
   sfx('cloth', { vol: 0.3, rate: 0.8 })
   s.gi++
   if (s.guess && s.gi < Math.min(s.shown, s.guess.items.length)) {
-    ctx.after(1100, () => { if (me === s && s.phase === 'show') reveal(s) })
+    later(s, 1100, () => { if (s.phase === 'wait') reveal(s) })
     return
   }
-  ctx.after(900, () => {
-    if (me !== s) return
+  later(s, 900, () => {
+    if (s.phase !== 'wait') return
     bubble(`<span class="dg-icon">${I.what}</span>`, 'dg-err')
     setAnim(s, 'shrug')
     $q('#dgThumbs').hidden = true
     // Elle peut ajouter des détails et le lui remontrer, ou passer ; au troisième essai, on passe
-    if (s.tries >= 3) { ctx.after(1600, () => { if (me === s) skip(s) }); return }
+    if (s.tries >= 3) { later(s, 1600, () => skip(s)); return }
     s.phase = 'draw'
     syncDone(s)
   })
@@ -304,15 +316,16 @@ function win(s: S) {
   if (!cry('chat', { vol: 0.8, max: 1.3 })) sfx('pluck', { vol: 0.6, rate: 1.4 })
   sfx('confirm', { vol: 0.5, delay: 0.15 })
   const head = s.cat.obj.position.clone().setY(SEAT.y + HEIGHT * 0.9)
-  for (let k = 0; k < 3; k++) ctx.after(k * 260, () => { if (me === s) s.fx.burst(head, { count: 30, color: [0xFFD34D, 0xFF6B81, 0x4FB8E7, 0x5EC97B, 0xB197FC], speed: 2.4, spread: 1, life: 1.2, size: 0.04, gravity: 2.5 }) })
+  for (let k = 0; k < 3; k++) later(s, k * 260, () => s.fx.burst(head, { count: 30, color: [0xFFD34D, 0xFF6B81, 0x4FB8E7, 0x5EC97B, 0xB197FC], speed: 2.4, spread: 1, life: 1.2, size: 0.04, gravity: 2.5 }))
   if (s.mode === 'defi') { s.found++; $q('#dgCard').classList.add('ok') }
-  ctx.after(2800, () => { if (me === s) next(s) })
+  later(s, 2800, () => next(s))
 }
 
 function skip(s: S) {
+  s.phase = 'wait'
   if (s.mode === 'defi') $q('#dgCard').classList.add('skip')
   sfx('whoosh', { vol: 0.25, rate: 0.9 })
-  ctx.after(s.mode === 'defi' ? 500 : 0, () => { if (me === s) next(s) })
+  later(s, s.mode === 'defi' ? 500 : 0, () => next(s))
 }
 
 function next(s: S) {
@@ -336,6 +349,7 @@ function outro(s: S) {
 function setMode(s: S, m: Mode) {
   if (m === s.mode && s.round === 0 && !s.dirty) return
   s.abort?.abort()
+  s.gen++
   s.mode = m
   ctx.root.querySelectorAll<HTMLElement>('.dg-mode').forEach(b => b.classList.toggle('sel', b.dataset.m === m))
   s.round = 0; s.found = 0
@@ -466,7 +480,7 @@ export const drawguess: GameDef = {
         stage, T, kit, cat, catY0, fx: particles(stage, 300),
         mode: 'defi', phase: 'load', round: 0, found: 0, targets: shuffle(POOLS[c.tier].slice()), target: null,
         guess: null, gi: 0, shown: 3, tries: 0, anim: 'idle', animT: 0, t: 0,
-        dirty: false, color: PALETTE[1], size: SIZES[1], eraser: false, strokes: new Map(), abort: null, error: null
+        dirty: false, color: PALETTE[1], size: SIZES[1], eraser: false, strokes: new Map(), abort: null, error: null, gen: 0
       }
       me = s
       hideLoader()

@@ -42,6 +42,9 @@ export async function idbPut(store: string, value: unknown, key?: IDBValidKey): 
       tx.objectStore(store).put(value, key)
       tx.oncomplete = () => res(true)
       tx.onerror = () => res(false)
+      // Une transaction qui avorte (quota, base fermée) ne passe pas par
+      // onerror : sans ceci, « Ranger » attendait pour toujours
+      tx.onabort = () => res(false)
     })
   } catch { return false } // stockage refusé (navigation privée) : rien n'est gardé, rien ne casse
 }
@@ -53,6 +56,7 @@ export async function idbDel(store: string, key: IDBValidKey) {
       tx.objectStore(store).delete(key)
       tx.oncomplete = () => res(true)
       tx.onerror = () => res(false)
+      tx.onabort = () => res(false)
     })
   } catch { /* rien à jeter */ }
 }

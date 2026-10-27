@@ -33,6 +33,9 @@ export interface Tier {
   /** Verser le nappage (la première fois, les coulures descendent) ou le reteindre depuis `at`. */
   pour(color: string, at: import('three').Vector3): void
   step(dt: number): void
+  /** Libère ce que l'étage a créé (géométries, matières) : un étage remplacé
+      (une autre forme, un autre nombre d'étages) ne reste pas en mémoire. */
+  dispose(): void
 }
 
 export interface CakeKit {
@@ -249,6 +252,7 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
      son nappage — le dessus, le bourrelet du bord, les coulures — caché tant
      qu'on ne l'a pas versé (`pour`). ---- */
   const tier: CakeKit['tier'] = (o): Tier => {
+    const from = own.length
     const { shape, r, h, seed = 7 } = o
     const rnd = rng(seed)
     const g = new T.Group()
@@ -323,6 +327,8 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
     }
     glazeG.add(drips)
     let pour = 0
+    // Tout ce que `k` a gardé pendant la construction de CET étage
+    const mine = own.slice(from)
     return {
       g, body, glaze: glazeG, bodyMat, glazeMat: gmat, outline: ring, h, r, shape,
       pour(color, at) {
@@ -333,6 +339,14 @@ export async function cakeKit(T: T3): Promise<CakeKit> {
       step(dt) {
         bodyMat.userData.step(dt); gmat.userData.step(dt)
         if (pour > 0 && pour < 1) { pour = Math.min(1, pour + dt * 1.1); drips.scale.y = Math.max(0.001, 1 - Math.pow(1 - pour, 3)) }
+      },
+      dispose() {
+        for (const x of mine) {
+          x.dispose()
+          const i = own.indexOf(x)
+          if (i >= 0) own.splice(i, 1)
+        }
+        mine.length = 0
       }
     }
   }

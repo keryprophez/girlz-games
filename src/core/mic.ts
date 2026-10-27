@@ -48,6 +48,17 @@ export async function openMic(onChunk: (x: Float32Array) => void, o: { raw?: boo
     const n = (e as { name?: string })?.name
     throw (n === 'NotAllowedError' || n === 'SecurityError' ? 'refuse' : n === 'NotFoundError' ? 'absent' : 'autre') as MicError
   }
+  // Le micro est ouvert : si la suite échoue, on le rend tout de suite (sinon
+  // il restait allumé jusqu'au rechargement, sans personne pour le couper)
+  try {
+    return await wire(ac, stream, onChunk)
+  } catch {
+    stream.getTracks().forEach(t => t.stop())
+    throw 'autre' as MicError
+  }
+}
+
+async function wire(ac: AudioContext, stream: MediaStream, onChunk: (x: Float32Array) => void): Promise<Mic> {
   if (ac.state === 'suspended') await ac.resume().catch(() => { /* au prochain geste */ })
   const src = ac.createMediaStreamSource(stream)
   // Une sortie muette : le nœud doit être tiré par le graphe pour travailler

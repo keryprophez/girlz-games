@@ -132,6 +132,12 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const [card, setCard] = useState(true)
   const [paused, setPausedState] = useState(isPaused())
   const [outro, setOutro] = useState(false)
+  // La partie est finie (outro en cours, ou écran de fin)
+  const endedRef = useRef(false)
+  // L'écran de fin ignore les touchers sa première seconde : la tape de trop
+  // d'une partie qui se termine relançait tout sans qu'on voie son score
+  const resultAt = useRef(0)
+  const armed = () => performance.now() - resultAt.current > 1000
   const store = useFerme()
 
   // Mode jeu : la coquille passe en plein écran (CSS). Le plein écran du
@@ -157,7 +163,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     cleanupRef.current = null
   }
   useEffect(() => {
-    const onErr = () => { safeCleanup(); setCrashed(true) }
+    // La musique et la voix se taisent aussi : rien ne joue sous « Oups »
+    const onErr = () => { safeCleanup(); stopMusic(); shutUp(); setCrashed(true) }
     window.addEventListener('error', onErr)
     window.addEventListener('unhandledrejection', onErr)
     return () => {
@@ -173,7 +180,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     const off = onPause(p => {
       setPausedState(p)
       if (p) stopMusic(0.25)
-      else if (game.music && !result) playMusic(game.music)
+      // Pendant l'outro, la musique s'éteint : une pause ne la rallume pas
+      else if (game.music && !result && !endedRef.current) playMusic(game.music)
     })
     const onVis = () => { if (document.hidden) setPaused(true) }
     document.addEventListener('visibilitychange', onVis)
@@ -210,6 +218,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     const session = new Session()
     sessionRef.current = session
     let finished = false
+    endedRef.current = false
     // Les minuteurs de la coquille (outro, encouragement) meurent avec la
     // partie : quitter pendant un outro ne doit rien afficher ni jouer après
     const hostTimers: number[] = []
@@ -237,6 +246,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       finish(payload) {
         if (finished) return
         finished = true
+        endedRef.current = true
         useFerme.getState().recordBest(gameId, payload.stars)
         // L'outro : le jeu reste monté pendant que la tour s'écroule, le
         // tracteur percute, la caméra recule — PUIS le score.
@@ -250,6 +260,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
           setPaused(true)
           ceremony(payload)
           hostTimers.push(window.setTimeout(() => playClip(payload.stars >= 2 ? 'bravo' : 'retry'), 800))
+          resultAt.current = performance.now()
           setResult(payload)
         }, outroMs))
       }
@@ -291,6 +302,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   }, [gameId, runId, tier])
 
   const replay = () => { setPaused(false); setResult(null); setRunId(r => r + 1) }
+  /** Un bouton de l'écran de fin : sans effet sa première seconde. */
+  const onEnd = (fn: () => void) => () => { if (armed()) fn() }
 
   /** Choisir (ou changer) la difficulté : le jeu repart de zéro à ce niveau. */
   const pickTier = (t: Tier) => {
@@ -440,7 +453,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
            coûter un geste, pas une visée. Le bouton reste pour les autres. */
         <div id="result" className={'show' + (game.cat === 'action' ? ' quickretry' : '') + (result.stars === 1 && !creative ? ' lost' : '')}
           onClick={game.cat === 'action'
-            ? e => { if (e.target === e.currentTarget) replay() }
+            ? e => { if (e.target === e.currentTarget && armed()) replay() }
             : undefined}>
           <div className="modal">
             <EndDoll looks={looks} mood={creative || result.stars === 3 ? 'joy' : result.stars === 2 ? 'soft' : 'again'} />
@@ -449,11 +462,11 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             <p>{result.msg}</p>
             {!creative && <Svg className="stars" html={starsHTML(result.stars)} />}
             <div className="rbtns">
-              <button className="bigbtn primary" onClick={replay}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
+              <button className="bigbtn primary" onClick={onEnd(replay)}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
               {/* Rejouer à un autre niveau (30/09) : le choix fleur / éclair / flamme revient */}
-              {tier && !game.noTier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={askTier}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
-              {tier && game.variants && <button className="bigbtn ghost" onClick={askTier}><Svg html={ICON.choices} /> Changer</button>}
-              <button className="bigbtn ghost" onClick={goHome}><Svg html={ICON.home} /> Menu</button>
+              {tier && !game.noTier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={onEnd(askTier)}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
+              {tier && game.variants && <button className="bigbtn ghost" onClick={onEnd(askTier)}><Svg html={ICON.choices} /> Changer</button>}
+              <button className="bigbtn ghost" onClick={onEnd(goHome)}><Svg html={ICON.home} /> Menu</button>
             </div>
             {game.cat === 'action' && <div className="retryhint">ou tape à côté pour rejouer</div>}
           </div>

@@ -148,6 +148,17 @@ export type Tier = 'easy' | 'med' | 'exp'
 
 /** Montre le dessin (une image PNG en base64, sans l'en-tête `data:`) et rend ses trois propositions.
  *  `tier` : le défi de ce niveau (parmi quels sujets il devine) ; null : Libre, parmi tout. */
+/** L'attente au plus (le Worker abandonne avant, réessai compris) : au-delà,
+    le chat dit « pas de réseau » au lieu de réfléchir une minute et demie. */
+export const ASK_MS = 35_000
+
+/** Le signal de l'appelant, plus le délai : `TimeoutError` (pas `AbortError`)
+    quand c'est le délai qui coupe. */
+export function withDeadline(signal?: AbortSignal, ms = ASK_MS): AbortSignal {
+  const t = AbortSignal.timeout(ms)
+  return signal ? AbortSignal.any([signal, t]) : t
+}
+
 export async function guessDrawing(png: string, tier: Tier | null, signal?: AbortSignal): Promise<Guess> {
   let res: Response
   try {
@@ -155,7 +166,7 @@ export async function guessDrawing(png: string, tier: Tier | null, signal?: Abor
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ png, tier: tier ?? 'libre' }),
-      signal
+      signal: withDeadline(signal)
     })
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e

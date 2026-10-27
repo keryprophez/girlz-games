@@ -45,12 +45,14 @@ const ANIMALS = [...FARM, ...WILD]
 const CATS = [
   { q: 'Les animaux de la ferme', maj: FARM, intr: WILD },
   { q: 'Les animaux sauvages', maj: WILD, intr: FARM },
-  { q: 'Les animaux de l\'eau', maj: WATER, intr: FARM },
+  // Le canard nage : il n'est jamais l'intrus des animaux de l'eau
+  { q: 'Les animaux de l\'eau', maj: WATER, intr: FARM.filter(a => a !== 'duck') },
   { q: 'Les oiseaux', maj: BIRD, intr: NONBIRD },
   { q: 'Les fruits', maj: FRUITS, intr: ANIMALS },
   { q: 'Les légumes', maj: VEG, intr: FRUITS },
   { q: 'À manger', maj: FOODS, intr: OBJECTS },
-  { q: 'Dans la cuisine', maj: OBJECTS, intr: FOODS }
+  // « Dans la cuisine » avait du pain pour intrus… qui est aussi dans la cuisine
+  { q: 'La vaisselle', maj: OBJECTS, intr: FOODS }
 ]
 
 /* Le panier d'osier où file la famille */

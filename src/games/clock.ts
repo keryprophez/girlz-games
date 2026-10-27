@@ -55,6 +55,9 @@ interface State {
       comme sur une horloge ordinaire (demande du 24/09). Retenu d'une partie
       à l'autre. */
   showMin: boolean
+  /** Numéro de la série : changer de mode fait taire la question suivante
+      de l'ancien mode. */
+  gen: number
 }
 
 const RING_KEY = 'ferme:horloge:minutes'
@@ -180,6 +183,7 @@ function paintSide(me: State) {
 function setMode(me: State, mode: Mode) {
   me.mode = mode
   me.round = 0; me.score = 0; me.lock = false
+  me.gen++
   document.querySelectorAll<HTMLElement>('.ck-tool').forEach(b => {
     const on = b.dataset.m === mode
     b.classList.toggle('sel', on)
@@ -279,8 +283,9 @@ function askOptions(me: State, opts: string[], good: string, onDone: () => void)
 function advance(me: State, next: (me: State) => void) {
   me.round++
   paintSide(me)
+  const gen = me.gen
   ctx.after(1500, () => {
-    if (ck !== me) return
+    if (ck !== me || me.gen !== gen) return
     if (me.round < me.total) next(me)
     else finishQuizMode(me)
   })
@@ -465,7 +470,7 @@ export const clock: GameDef = {
         </div>
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
-    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null, showMin: loadShowMin() }
+    const me: State = { mode: 'discover', h: 3, m: 0, th: 3, tm: 0, round: 0, total: 8, score: 0, lock: false, touched: 0, grab: null, showMin: loadShowMin(), gen: 0 }
     ck = me
     const paintRing = () => {
       $('ckRing').classList.toggle('sel', me.showMin)

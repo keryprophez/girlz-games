@@ -136,6 +136,17 @@ export function dollPortraits(looks: Look[], poses: DollPose[], px: number): Pro
   return p
 }
 
+/* Les images de la petite fille changent avec chaque habit essayé : on n'en
+   garde que les plus récentes (quatre poses de trois looks), sinon le
+   bouton surprise d'Habille-toi faisait grossir la mémoire sans fin. */
+const DOLL_KEEP = 12
+const dollKeys: string[] = []
+function keepDoll(key: string, url: string) {
+  cache.set(key, url)
+  dollKeys.push(key)
+  while (dollKeys.length > DOLL_KEEP) cache.delete(dollKeys.shift()!)
+}
+
 async function renderDolls(looks: Look[], poses: DollPose[], px: number): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
   const key = (p: DollPose) => 'doll:' + JSON.stringify(looks) + ':' + p + '@' + px
@@ -168,7 +179,7 @@ async function renderDolls(looks: Look[], poses: DollPose[], px: number): Promis
         cam.lookAt(0, 0.62, 0)
         renderer.render(scene, cam)
         const url = renderer.domElement.toDataURL('image/png')
-        cache.set(key(pose), url)
+        keepDoll(key(pose), url)
         out[pose] = url
         dolls.forEach(d => scene.remove(d.obj))
         scene.traverse(o => {

@@ -175,6 +175,9 @@ interface State {
   total: number
   busy: boolean
   over: boolean
+  /** Numéro de la série : changer de carte ou de mode fait taire ce que
+      l'ancienne avait en route (la question suivante, la réponse redite). */
+  gen: number
   ui: { bar: HTMLElement; ask: HTMLElement; askImg: HTMLElement; askText: HTMLElement; say: HTMLElement
     dots: HTMLElement; done: HTMLElement; name: HTMLElement }
   /** Dernier nom affiché : le haut-parleur du bandeau le redit. */
@@ -314,7 +317,8 @@ function judge(me: State, ok: boolean, tappedName: string | null) {
     sfx('confirm', { vol: 0.8 })
     me.ui.dots.querySelectorAll('i')[me.asked - 1]?.classList.add('ok')
     me.stage.timeScale = 1
-    ctx.after(1400, () => { if (geo === me) nextQuestion(me) })
+    const gen = me.gen
+    ctx.after(1400, () => { if (geo === me && me.gen === gen) nextQuestion(me) })
     return
   }
   me.tries++
@@ -333,7 +337,8 @@ function reveal(me: State) {
   else if (t.kind === 'region') selectRegion(me, t.nom)
   else pulseCity(me, t.city)
   showName(me, targetLabel(t), false)
-  ctx.after(700, () => { if (geo === me) speak(me) })
+  const gen = me.gen
+  ctx.after(700, () => { if (geo === me && me.gen === gen) speak(me) })
 }
 
 function finishRound(me: State) {
@@ -570,7 +575,7 @@ export const geoGame: GameDef = {
         globe, earth, overlay: { canvas, g, tex: otex }, france, regionMeshes, cityPins,
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
         zoom: 1, tgtZoom: 1, pan: { x: 0, z: 0 },
-        selected: null, target: null, tries: 0, asked: 0, errors: 0, total: c.byTier(8, 8, 12), busy: false, over: false,
+        selected: null, target: null, tries: 0, asked: 0, errors: 0, total: c.byTier(8, 8, 12), busy: false, over: false, gen: 0,
         ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, askText: ask.querySelector('.geo-asktext')!,
           say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl },
         lastName: null,
@@ -584,6 +589,7 @@ export const geoGame: GameDef = {
 
       const setMap = (m: MapId) => {
         me.map = m
+        me.gen++
         globe.visible = m === 'monde'
         france.visible = m === 'france'
         me.camTo.set(...(m === 'monde' ? [0, 0.6, 6.4] : [0, 6.6, 3.9]) as [number, number, number])
@@ -605,6 +611,7 @@ export const geoGame: GameDef = {
       }
       const setMode = (m: Mode) => {
         me.mode = m
+        me.gen++
         bar.querySelectorAll<HTMLElement>('[data-mode]').forEach(b => {
           const on = b.dataset.mode === m
           b.classList.toggle('on', on); b.parentElement?.classList.toggle('sel', on)

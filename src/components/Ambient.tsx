@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { critterPortraits, meadowBanner, dollPortraits } from '../core/portraits'
 import { familyDoll, useFerme } from '../core/store'
 
@@ -9,23 +9,29 @@ import { familyDoll, useFerme } from '../core/store'
    en images, une seule fois, un peu après l'ouverture : l'accueil s'affiche
    d'abord, le décor arrive ensuite (un rendu 3D logiciel peut prendre
    plusieurs secondes sur une machine sans carte graphique). */
-export function Ambient() {
+export function Ambient({ atHome }: { atHome: boolean }) {
   const [img, setImg] = useState<Record<string, string>>({})
   const [dolls, setDolls] = useState<Record<string, string>[]>([])
   const [pre, setPre] = useState('')
   const lookKey = useFerme(s => JSON.stringify(familyDoll(s)))
+  // Rien ne se rend pendant une partie (deux contextes WebGL, des shaders,
+  // des PNG encodés sur le fil principal : la scène du jeu hoquetait quand
+  // la petite fille d'Habille-toi changeait d'habit) — au retour à l'accueil
+  const meadowDone = useRef(false)
   useEffect(() => {
+    if (!atHome || meadowDone.current) return
     let on = true
     const t = window.setTimeout(async () => {
       const w = Math.min(2400, Math.round(window.innerWidth * Math.min(1.5, window.devicePixelRatio || 1)))
       const url = await meadowBanner(w, Math.round(w * 0.2))
       if (on) setPre(url)
       const r = await critterPortraits(['hen', 'chick'], 72)
-      if (on) setImg(r)
+      if (on) { setImg(r); meadowDone.current = true }
     }, 700)
     return () => { on = false; clearTimeout(t) }
-  }, [])
+  }, [atHome])
   useEffect(() => {
+    if (!atHome) return
     let on = true
     const t = window.setTimeout(() => {
       const look = familyDoll(useFerme.getState())
@@ -36,7 +42,7 @@ export function Ambient() {
       })
     }, 2500) // seulement si l'on reste sur l'accueil : un jeu lancé tout de suite n'attend personne
     return () => { on = false; clearTimeout(t) }
-  }, [lookKey])
+  }, [lookKey, atHome])
   return (
     <>
       <div className="halo h1" />

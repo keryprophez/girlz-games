@@ -74,7 +74,7 @@ export default function App() {
 
   return (
     <>
-      <Ambient />
+      <Ambient atHome={!session} />
       <div id="app">
         <ErrorBoundary onReset={() => setSession(null)}>
           {session

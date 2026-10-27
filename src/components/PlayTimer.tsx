@@ -3,7 +3,7 @@ import { useFerme } from '../core/store'
 import { rnd, toast } from '../core/utils'
 import { sGood, sNope, sPop, tone } from '../core/audio'
 import { say } from '../core/voice'
-import { setPaused } from '../core/session'
+import { isPaused, setPaused } from '../core/session'
 import { ICON } from '../core/icons'
 import { critterPortraits } from '../core/portraits'
 
@@ -153,15 +153,21 @@ export function PlayGuard() {
   })
 
   // À l'expiration : le jeu en cours se fige sous l'écran de nuit (il
-  // reprendra là où il en était si un parent débloque) et on sonne la pause
+  // reprendra là où il en était si un parent débloque) et on sonne la pause.
+  // Débloqué, la pause redevient celle d'avant : un jeu déjà figé derrière
+  // son écran de fin (ou mis en pause à la main) le reste
+  const pausedBefore = useRef(false)
+  const wasExpired = useRef(false)
   useEffect(() => {
     if (expired && !chimed.current) {
       chimed.current = true
+      pausedBefore.current = isPaused()
       setPaused(true)
       ;[392, 330, 262].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'sine', 0.1), i * 260))
       say('C\'est l\'heure de la pause ! Tu as très bien joué.')
     }
-    if (!expired) setPaused(false)
+    if (!expired && wasExpired.current) setPaused(pausedBefore.current)
+    wasExpired.current = expired
   }, [expired])
 
   // Les personnages de la ferme qui dorment aussi (plus d'emoji, 22/09)

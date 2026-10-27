@@ -711,7 +711,8 @@ export async function bagKit(T: T3) {
         const disc = k(new T.CylinderGeometry(0.0175, 0.0175, 0.0025, 18))
         disc.translate(0, 0, 0.0155) // la charnière en haut de l'écaille
         const sm = k(new T.MeshStandardMaterial({ color: '#FFFFFF', metalness: 0.85, roughness: 0.22 }))
-        const im = new T.InstancedMesh(disc, sm, n)
+        // Gardé avec le reste : ses tampons d'instances partent avec le cartable
+        const im = k(new T.InstancedMesh(disc, sm, n))
         seqMesh = im
         im.castShadow = false; im.receiveShadow = true
         im.userData.part = 'paillettes'

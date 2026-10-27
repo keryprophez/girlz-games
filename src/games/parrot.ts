@@ -6,7 +6,7 @@ import { critterKit, type Critter, type CritterKind, type CritterKit } from '../
 import { critterPortraits, portraitImg } from '../core/portraits'
 import { cry, preloadCries, type AnimalVoice } from '../core/sfx'
 import { getCtx, isSoundOn, tone } from '../core/audio'
-import { onPause } from '../core/session'
+import { isPaused, onPause } from '../core/session'
 import { openMic, type Mic, type MicError } from '../core/mic'
 import { Phrase, voiceOf, envelope, type VoiceStyle } from '../core/voicefx'
 import { visible } from '../core/hand'
@@ -169,7 +169,9 @@ async function startMic(s: State) {
   s.opening = true
   try {
     const mic = await openMic(x => onChunk(s, x), { raw: !!(window as unknown as { __BOT?: boolean }).__BOT })
-    if (!ctx.alive() || me !== s) { mic.stop(); return }
+    // Démonté, ou mis en pause pendant qu'on attendait l'autorisation : le
+    // micro se rend aussitôt (la reprise le rouvrira)
+    if (!ctx.alive() || me !== s || isPaused()) { mic.stop(); return }
     s.mic = mic
     s.micErr = null
     s.det = new Phrase({ sr: mic.sr })

@@ -116,6 +116,9 @@ function fly(from: HTMLElement, to: HTMLElement, ch: string, done: () => void) {
 
 function tapLetter(me: State, b: HTMLButtonElement, ch: string) {
   if (lg !== me || !me.running || me.peeking || b.classList.contains('used')) return
+  // Le mot est complet, c'est la fête : les touchers de plus ne comptent pas
+  // (deux suffisaient à perdre une étoile — une sanction dans Apprendre)
+  if (me.pos >= me.word.length) return
   if (ch === me.word[me.pos]) {
     b.classList.add('used')
     me.root.querySelectorAll('.lg-tile.help').forEach(t => t.classList.remove('help'))

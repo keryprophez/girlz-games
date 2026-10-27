@@ -37,6 +37,9 @@ interface State {
   pad: number
   /** Les pions dessinés : les personnages 3D du poussin et de la poule. */
   img: Record<string, string>
+  /** Numéro de la partie : une nouvelle partie (bouton de mode) fait taire
+      ce que la précédente avait encore en route (fin, coup de la poule). */
+  gen: number
 }
 
 let c4: State | null = null
@@ -160,6 +163,8 @@ function drop(me: State, col: number) {
   }
   me.lock = true
   ghostAt(me, null)
+  const gen = me.gen
+  const live = () => c4 === me && me.gen === gen
   me.grid[row][col] = me.turn
   const p = me.players[me.turn]
   const tok = document.createElement('div')
@@ -174,7 +179,7 @@ function drop(me: State, col: number) {
   requestAnimationFrame(() => { tok.style.top = me.pad + row * me.cell + 'px' })
   sfx('whoosh', { vol: 0.3, rate: 1.3 })
   ctx.after(180 + row * 50, () => {
-    if (c4 !== me) return
+    if (!live()) return
     impact(0.3 + row * 0.04, { matter: 'bois', noShake: true })
     const line = winLine(me.grid, me.turn)
     if (line) {
@@ -184,7 +189,7 @@ function drop(me: State, col: number) {
       for (const [r, c] of line) document.querySelector<HTMLElement>(`.c4-token[data-cell="${r}:${c}"]`)?.classList.add('c4-win')
       const winnerIsAI = me.solo && me.turn === 1
       ctx.after(1400, () => {
-        if (c4 !== me) return
+        if (!live()) return
         ctx.finish({
           title: winnerIsAI ? 'La poule a gagné !' : me.solo ? 'Tu as gagné !' : `${cap(p.name)} gagne !`,
           msg: winnerIsAI ? 'Bien joué, la revanche est à portée' : me.solo ? 'Quatre têtes alignées contre la poule' : 'Quatre à la suite, bravo les deux !',
@@ -195,7 +200,7 @@ function drop(me: State, col: number) {
     }
     if (me.grid.every(r => r.every(v => v !== -1))) {
       me.over = true
-      ctx.after(1000, () => { if (c4 === me) ctx.finish({ title: 'Égalité parfaite !', msg: 'La grille est pleine, match nul', stars: 2 }) })
+      ctx.after(1000, () => { if (live()) ctx.finish({ title: 'Égalité parfaite !', msg: 'La grille est pleine, match nul', stars: 2 }) })
       return
     }
     me.turn = 1 - me.turn
@@ -205,7 +210,7 @@ function drop(me: State, col: number) {
       me.lock = true
       const depth = ctx.byTier(4, 6, 7)
       ctx.after(550, () => {
-        if (c4 !== me) return
+        if (!live()) return
         me.lock = false
         drop(me, aiMove(me.grid, 1, depth))
       })
@@ -226,6 +231,7 @@ function refreshFaces(me: State) {
 function newGame(me: State) {
   me.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(-1))
   me.turn = 0; me.lock = false; me.over = false
+  me.gen++
   document.querySelectorAll('.c4-token:not(.c4-ghost)').forEach(t => t.remove())
   paintTurn(me)
 }
@@ -277,7 +283,7 @@ export const connect4: GameDef = {
         { name: 'le poussin', fallback: 'chick' },
         { name: 'la poule', fallback: 'hen' }
       ],
-      grid: [], turn: 0, lock: false, over: false, solo: false, cell, pad, img: {}
+      grid: [], turn: 0, lock: false, over: false, solo: false, cell, pad, img: {}, gen: 0
     }
     c4 = me
     document.querySelectorAll<HTMLElement>('.c4-mode').forEach(b => {

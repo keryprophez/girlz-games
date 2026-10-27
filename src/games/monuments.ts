@@ -285,7 +285,8 @@ const disposeTree = (o: Obj) => o.traverse(x => {
 
 function buildBulbs(s: State) {
   const T = s.T
-  if (s.bulbs) { s.m.obj.remove(s.bulbs); s.bulbs.geometry.dispose(); (s.bulbs.material as import('three').Material).dispose(); s.bulbs = null }
+  // `dispose()` de l'InstancedMesh lui-même : ses tampons d'instances (positions, couleurs) quittent le GPU
+  if (s.bulbs) { s.m.obj.remove(s.bulbs); s.bulbs.geometry.dispose(); (s.bulbs.material as import('three').Material).dispose(); s.bulbs.dispose(); s.bulbs = null }
   if (s.saved.lights === 'off' || s.saved.built < s.m.pieces.length) return
   const pts: V3[] = []
   for (const line of s.m.lights) {

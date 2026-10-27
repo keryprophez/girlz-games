@@ -150,7 +150,8 @@ const thumbs: Record<string, string> = {}
 /* ---------- Le gâteau ---------- */
 
 function buildBase(s: State) {
-  for (const t of s.tiers) s.cake.remove(t.g)
+  // Les anciens étages s'en vont pour de bon (chaque essai de forme en gardait plusieurs centaines de Ko)
+  for (const t of s.tiers) { s.cake.remove(t.g); t.dispose() }
   s.tiers = []; s.tierY = []
   let y = PLATE_Y
   SIZES[s.nTiers].forEach((sz, i) => {

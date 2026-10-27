@@ -13,7 +13,7 @@
    clé, pas de réseau), la peluche sautille sans cri (`DEFAULT`).
    Logique pure et testée ici (lue aussi par le Worker), sauf `askVivant`
    (l'appel réseau). */
-import { GuessFailure, isGuessError } from './drawguess'
+import { GuessFailure, isGuessError, withDeadline } from './drawguess'
 
 export type Allure = 'marche' | 'saute' | 'vole' | 'rampe' | 'nage'
 export type Regard = 'gauche' | 'droite' | 'face'
@@ -81,7 +81,7 @@ export async function askVivant(png: string, signal?: AbortSignal): Promise<Viva
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ png }),
-      signal
+      signal: withDeadline(signal)
     })
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e

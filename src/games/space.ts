@@ -444,7 +444,6 @@ function finale(me: State) {
     const R = me.cosmos.radius(p.id)
     me.fx.burst(me.cosmos.worldPos(p.id, me.tmp), { count: 18, color: ['#FFE08A', '#FFFFFF', me.cosmos.byId[p.id].color], speed: 6 + R * 2, life: 1.4, size: 4 + R, gravity: 0 })
   }
-  ctx.say('Bravo ! Tu as visité les huit planètes de la famille du Soleil.')
   ctx.finish({ title: 'Astronaute diplômée !', msg: 'Tu as visité les huit planètes', stars: 3, outroMs: 4200 })
 }
 
@@ -469,11 +468,13 @@ function nextQuestion(me: State) {
 
 /** Après une visite de Trouve : on rentre, puis la question suivante. */
 function backAndNext(me: State) {
+  const q = me.quiz
   ctx.after(1800, () => {
-    if (sp !== me) return
+    // Passée en Explore entre-temps (ou une nouvelle série) : plus rien à enchaîner
+    if (sp !== me || me.mode !== 'trouve' || me.quiz !== q) return
     const dur = home(me)
-    me.quiz.i++
-    ctx.after(dur * 1000 + 400, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
+    q.i++
+    ctx.after(dur * 1000 + 400, () => sp === me && me.mode === 'trouve' && me.quiz === q && nextQuestion(me))
   })
 }
 
@@ -496,10 +497,11 @@ function answer(me: State, id: string) {
   ctx.say(cap(me.cosmos.byId[id]?.name || ''))
   if (q.tries >= 2) {
     q.lock = true
+    const wanted = q.wanted
     ctx.after(1100, () => {
-      if (sp !== me) return
-      ctx.say(cap(me.cosmos.byId[q.wanted!].name))
-      go(me, q.wanted!)
+      if (sp !== me || me.mode !== 'trouve' || me.quiz !== q) return
+      ctx.say(cap(me.cosmos.byId[wanted].name))
+      go(me, wanted)
     })
   }
 }
@@ -529,7 +531,8 @@ function setMode(me: State, m: Mode) {
     const n = PLANETS.length
     me.quiz = { order: shuffle(PLANETS.map(p => p.id)).slice(0, n), i: 0, tries: 0, errors: 0, wanted: null, lock: false }
     me.ui.dots.innerHTML = Array.from({ length: n }, () => '<i></i>').join('')
-    ctx.after(dur * 1000 + 500, () => sp === me && me.mode === 'trouve' && nextQuestion(me))
+    const q = me.quiz
+    ctx.after(dur * 1000 + 500, () => sp === me && me.mode === 'trouve' && me.quiz === q && nextQuestion(me))
   } else {
     me.quiz.wanted = null
     me.ui.ask.classList.add('off')

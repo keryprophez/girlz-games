@@ -70,24 +70,21 @@ interface Scene3D {
 
 interface State {
   s3: Scene3D
-  running: boolean
-  ready: boolean
   mode: Mode
   sizes: number[]
   round: number
   grid: Cell[][]
   n: number
-  px: number
-  cell: number
   pos: { x: number; y: number }
   down: boolean
   swipe: { x: number; y: number } | null
-  t0: number
   lastBump: number
   won: boolean
+  /** Numéro de la manche : changer de mode fait taire la fin de la précédente. */
+  gen: number
   /** Position VISIBLE du poussin (en cases, à virgule) et son chemin à suivre. */
   vis: { x: number; y: number }
-  path: { x: number; y: number; fast?: boolean }[]
+  path: Step[]
   /** Où regarde le poussin (angle autour de Y) */
   heading: number
   lastPeep: number
@@ -96,6 +93,11 @@ interface State {
   grainsTotal: number
   grainsGot: number
 }
+
+/** Un point du chemin du poussin ; `through` : les cases qu'une glissade
+    sur la glace traverse sans s'y arrêter (leurs graines se ramassent au
+    passage). */
+interface Step { x: number; y: number; fast?: boolean; through?: { x: number; y: number }[] }
 
 let mz: State | null = null
 let ctx: GameContext
@@ -300,6 +302,14 @@ function advance(me: State, dt: number) {
   const dist = Math.hypot(dx, dy)
   const step = speed * dt
   if (dist > 0.01) me.heading = Math.atan2(dx, dy)
+  // Une glissade : chaque case traversée donne sa graine quand on y passe
+  if (w.through) {
+    w.through = w.through.filter(c => {
+      if (Math.hypot(c.x - me.vis.x, c.y - me.vis.y) > 0.5) return true
+      arrived(me, c.x, c.y)
+      return false
+    })
+  }
   if (dist <= step) {
     me.vis = { x: w.x, y: w.y }
     me.path.shift()
@@ -335,12 +345,22 @@ function arrived(me: State, x: number, y: number) {
 
 /** Un pas logique : la position de jeu change tout de suite (le doigt peut
     continuer), et le poussin visible rattrape en marchant. */
-function moveTo(me: State, x: number, y: number, fast = false) {
+function moveTo(me: State, x: number, y: number, fast = false, through?: Step['through']) {
   if (me.won) return
   me.pos = { x, y }
-  me.path.push({ x, y, fast })
-  // Un doigt très rapide ne doit pas laisser le poussin dix cases derrière
-  if (me.path.length > 8) { me.vis = { x: me.path[me.path.length - 6].x, y: me.path[me.path.length - 6].y }; me.path = me.path.slice(-5) }
+  me.path.push({ x, y, fast, through })
+  // Un doigt très rapide ne doit pas laisser le poussin dix cases derrière —
+  // les cases sautées donnent quand même leurs graines
+  if (me.path.length > 8) {
+    const skipped = me.path.slice(0, me.path.length - 5)
+    const last = skipped[skipped.length - 1]
+    me.vis = { x: last.x, y: last.y }
+    me.path = me.path.slice(-5)
+    for (const w of skipped) {
+      for (const c of w.through ?? []) arrived(me, c.x, c.y)
+      arrived(me, w.x, w.y)
+    }
+  }
 }
 
 /** Cogner un mur : ça se sent, mais pas plus de quatre fois par seconde. */
@@ -421,13 +441,15 @@ function slide(me: State, d: number) {
   let { x, y } = me.pos
   let cells = 0
   let toGoal = false
+  const through: { x: number; y: number }[] = []
   while (open(me, x, y, d)) {
+    if (cells) through.push({ x, y })
     x += D[d][0]; y += D[d][1]; cells++
     if (x === me.n - 1 && y === me.n - 1) { toGoal = true; break }
   }
   if (!cells) { bump(me, d); return }
   sfx('whoosh', { vol: 0.4, rate: 1.2 })
-  moveTo(me, x, y, true)
+  moveTo(me, x, y, true, through)
   // Le TOC contre le mur arrive quand le poussin s'arrête, pas avant
   if (!toGoal) {
     const ms = Math.min(0.55, 0.08 + cells * 0.05) * 1000
@@ -445,8 +467,9 @@ function roundWon(me: State) {
   S3.fx.burst({ x: p.x, y: 0.7, z: p.z }, { count: 22, color: [0xFF5A6E, 0xFFC533, 0xFFFFFF], speed: 1.6, spread: 1, life: 0.9, size: 0.11, gravity: 1 })
   me.round++
   paintDots(me)
-  if (me.round < me.sizes.length) ctx.after(1100, () => { if (mz === me) newRound(me) })
-  else ctx.after(1000, () => { if (mz === me) finish(me) })
+  const gen = me.gen
+  if (me.round < me.sizes.length) ctx.after(1100, () => { if (mz === me && me.gen === gen) newRound(me) })
+  else ctx.after(1000, () => { if (mz === me && me.gen === gen) finish(me) })
 }
 
 function setMode(me: State, mode: Mode) {
@@ -454,7 +477,7 @@ function setMode(me: State, mode: Mode) {
   me.sizes = sizesFor(mode)
   me.round = 0
   me.grainsTotal = 0; me.grainsGot = 0
-  me.t0 = performance.now()
+  me.gen++
   document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
     const on = b.dataset.m === mode
     b.classList.toggle('sel', on)
@@ -571,15 +594,15 @@ export const maze: GameDef = {
           shake: camShake(stage), lantern, hemi, ground, groundMat, hedgeMat, snowMat, grainGeo, grainMat,
           ray: new T.Raycaster(), hug: 0, bumpT: 0, t: 0
         },
-        running: true, ready: true, mode: 'classic', sizes: [], round: 0, grid: [], n: 0, px: 0, cell: 1,
-        pos: { x: 0, y: 0 }, down: false, swipe: null, t0: performance.now(), lastBump: 0, won: false,
+        mode: 'classic', sizes: [], round: 0, grid: [], n: 0,
+        pos: { x: 0, y: 0 }, down: false, swipe: null, lastBump: 0, won: false, gen: 0,
         vis: { x: 0, y: 0 }, path: [], heading: 0, lastPeep: 0, grains: new Set(), grainsTotal: 0, grainsGot: 0
       }
       mz = me
       hideLoader()
 
       document.querySelectorAll<HTMLElement>('.mz-tool').forEach(b => {
-        b.onclick = () => { if (mz === me && me.ready) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
+        b.onclick = () => { if (mz === me) { sfx('click', { vol: 0.4 }); setMode(me, b.dataset.m as Mode) } }
       })
       // Le doigt → la case visée, par un rayon sur le sol (la vue est de biais)
       const ndc = new T.Vector2(), hit = new T.Vector3(), plane = new T.Plane(new T.Vector3(0, 1, 0), 0)
@@ -591,7 +614,7 @@ export const maze: GameDef = {
         return { tx: Math.floor(hit.x + me.n / 2), ty: Math.floor(hit.z + me.n / 2) }
       }
       const onMove = (e: PointerEvent) => {
-        if (mz !== me || !me.down || !me.ready || me.mode === 'ice') return
+        if (mz !== me || !me.down || me.mode === 'ice') return
         const { tx, ty } = cellAt(e)
         if (tx >= 0 && ty >= 0 && tx < me.n && ty < me.n) walkTo(me, tx, ty)
       }
@@ -604,14 +627,14 @@ export const maze: GameDef = {
       const onUp = (e: PointerEvent) => {
         if (mz !== me) return
         me.down = false
-        if (me.mode === 'ice' && me.swipe && me.ready) {
+        if (me.mode === 'ice' && me.swipe) {
           const dx = e.clientX - me.swipe.x, dy = e.clientY - me.swipe.y
           if (Math.abs(dx) + Math.abs(dy) > 24) slide(me, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0))
         }
         me.swipe = null
       }
       const onKey = (e: KeyboardEvent) => {
-        if (mz !== me || !me.ready) return
+        if (mz !== me) return
         const dirs: Record<string, number> = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
         if (!(e.key in dirs)) return
         e.preventDefault()
@@ -700,7 +723,7 @@ export const maze: GameDef = {
       dead = true
       const me = mz
       mz = null
-      if (me) { me.running = false; try { me.s3.stage.dispose() } catch { /* déjà démonté */ } }
+      if (me) { try { me.s3.stage.dispose() } catch { /* déjà démonté */ } }
     }
   }
 }
