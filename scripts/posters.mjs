@@ -53,6 +53,45 @@ const STAGE = {
     after: 1500, zoom: 1.12, cy: 0.46
   },
   maze: { wait: 5000 },
+  // 1, 2, 3… Soleil ! : le chat, le cochon et le mouton en pleine course, l'épouvantail de dos qui compte
+  soleil: {
+    tier: 'med', ready: () => window.__so && window.__so.state === 'run', wait: 600,
+    act: async (p, box) => {
+      await p.mouse.move(box.x + box.width / 2, box.y + box.height * 0.7)
+      let down = false
+      for (let i = 0; i < 3000; i++) {
+        const s = await p.evaluate(() => new Promise(r => requestAnimationFrame(() => { const o = window.__so; r({ ph: o.phase, b: o.beats, x: o.x }) })))
+        if (s.x > 3.6 && s.ph === 'count' && s.b >= 1) break
+        const want = s.ph === 'feint' || (s.ph === 'count' && (s.b < 2 || s.b === 2))
+        if (want && !down) { await p.mouse.down(); down = true }
+        if (!want && down) { await p.mouse.up(); down = false }
+      }
+      await p.locator('.pbtn[aria-label="Pause"]').click({ force: true })
+      if (down) await p.mouse.up()
+    },
+    after: 300, zoom: 1.12, cy: 0.52
+  },
+  // Le Jeu des différences : les deux fermes, deux différences déjà cerclées d'or
+  differences: {
+    tier: 'med', ready: () => window.__df && window.__df.phase === 'look', wait: 1500,
+    act: async p => {
+      for (let k = 0; k < 2; k++) {
+        const s = await p.evaluate(() => window.__df.spot())
+        if (s) { await p.mouse.click(s.x, s.y); await p.waitForTimeout(900) }
+      }
+    },
+    after: 1500, zoom: 1.02
+  },
+  // Le Labyrinthe à bille : le plateau penché, la bille d'acier en route, un drapeau passé
+  bille: {
+    ready: () => window.__bi && window.__bi.state === 'play', wait: 1200,
+    act: async p => {
+      await p.evaluate(() => { window.__bi.auto = true })
+      await p.waitForFunction(() => window.__bi.flag > 0 && window.__bi.state === 'play', null, { timeout: 120000, polling: 200 }).catch(() => {})
+      await p.locator('.pbtn[aria-label="Pause"]').click({ force: true })
+    },
+    after: 300, zoom: 1.08, cy: 0.5
+  },
   // La Cuisine : la pizza et le gâteau, côte à côte sur la tuile
   cuisine: { variants: ['pizza', 'gateau'] },
   // Le gâteau : tout fait, ses bougies allumées
