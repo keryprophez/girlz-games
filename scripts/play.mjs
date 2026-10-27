@@ -1924,6 +1924,151 @@ await scenario('monuments', async () => {
   await finDe('Quel beau monument', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
 })
 
+/* 🏺 La Poterie (27/10) : la motte qu'on fait monter au doigt, qu'on
+   évase sur le côté, qu'on creuse au centre ; le vase en un toucher ; un
+   point (l'anneau de points) et une bande tenue sur le tour qui tourne ; le
+   four (elle ressort émaillée) ; « Fini » : sur l'étagère, gardée ; puis
+   reprise de l'étagère, elle revient sur le tour. */
+await scenario('poterie', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.evaluate(() => localStorage.removeItem('ferme:poterie'))
+  await openGame('La Poterie', '__pt')
+  const pret = () => page.waitForFunction(() => window.__pt.ready, null, { timeout: 120000, polling: 300 })
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__pt.phase, st: window.__pt.step, c: window.__pt.clay, p: window.__pt.paint, g: window.__pt.glazed, sh: window.__pt.shelf }))
+  const glisse = async (a, b, n = 10) => {
+    await page.mouse.move(a.x, a.y); await page.mouse.down()
+    for (let i = 1; i <= n; i++) { await page.mouse.move(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n); await page.waitForTimeout(40) }
+    await page.mouse.up()
+  }
+  await pret()
+  // Monter : le doigt glisse vers le haut sur la motte, elle grandit
+  let c = await page.evaluate(() => window.__pt.clay)
+  const h0 = c.h
+  let a = await page.evaluate(c => window.__pt.pt(c.r[8] * 0.5, c.h * 0.3), c)
+  await glisse(a, { x: a.x, y: a.y - 160 })
+  c = await page.evaluate(() => window.__pt.clay)
+  if (c.h < h0 + 0.08) throw new Error(`la terre ne monte pas (${await etat()})`)
+  // Sur le côté : vers l'extérieur, elle s'évase autour du doigt
+  const mid = Math.round((c.r.length - 1) * 0.5), r0 = c.r[mid]
+  a = await page.evaluate(c => window.__pt.pt(c.r[Math.round((c.r.length - 1) * 0.5)] * 0.9, c.h * 0.5), c)
+  await glisse(a, { x: a.x + 120, y: a.y })
+  c = await page.evaluate(() => window.__pt.clay)
+  if (c.r[mid] < r0 + 0.03) throw new Error(`elle ne s'évase pas (${await etat()})`)
+  // Au centre, en haut : le doigt creuse
+  a = await page.evaluate(c => window.__pt.pt(0, c.h - 0.01), c)
+  await glisse(a, { x: a.x, y: a.y + 90 })
+  c = await page.evaluate(() => window.__pt.clay)
+  if (c.depth < 0.05) throw new Error(`elle ne se creuse pas (${await etat()})`)
+  // Le vase, d'un toucher
+  await page.locator('.pt-opt[data-preset="vase"]').click({ force: true })
+  await page.waitForFunction(() => window.__pt.clay.h > 0.7, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`pas de vase (${await etat()})`) })
+  await page.waitForTimeout(2500) // la caméra recule pour le vase
+  // Peindre : un toucher (l'anneau de points), puis un doigt tenu (la bande)
+  await page.locator('.pt-step[data-step="peindre"]').click({ force: true })
+  await page.locator('.pt-opt[data-color="#E8414F"]').click({ force: true })
+  c = await page.evaluate(() => window.__pt.clay)
+  a = await page.evaluate(c => window.__pt.pt(0, c.h * 0.3), c)
+  await page.mouse.click(a.x, a.y)
+  await page.waitForFunction(() => window.__pt.paint === 1, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le toucher ne pose pas de points (${await etat()})`) })
+  await page.locator('.pt-opt[data-color="#2F6FD0"]').click({ force: true })
+  a = await page.evaluate(c => window.__pt.pt(0, c.h * 0.5), c)
+  await page.mouse.move(a.x, a.y); await page.mouse.down()
+  await page.waitForTimeout(3000)
+  await page.mouse.up()
+  if (await page.evaluate(() => window.__pt.paint) !== 2) throw new Error(`le doigt tenu ne trace pas de bande (${await etat()})`)
+  // Le four : elle y entre crue, elle en ressort émaillée, de retour sur le tour
+  await page.locator('#ptFour').click({ force: true })
+  await page.waitForFunction(() => window.__pt.phase === 'fire', null, { timeout: 20000, polling: 200 })
+  await page.waitForFunction(() => window.__pt.glazed && window.__pt.ready, null, { timeout: 120000, polling: 300 })
+    .catch(async () => { throw new Error(`elle ne ressort pas du four émaillée (${await etat()})`) })
+  // Fini : sur l'étagère
+  await page.locator('#ptFini').click({ force: true })
+  await finDe('Quel joli pot', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
+  const garde = await page.evaluate(() => JSON.parse(localStorage.getItem('ferme:poterie') || 'null'))
+  if (!garde || garde.shelf.filter(Boolean).length !== 1 || !garde.shelf[0].g || garde.shelf[0].p.length !== 2) throw new Error(`le vase n'est pas gardé sur l'étagère (${JSON.stringify(garde).slice(0, 200)})`)
+  // Rouverte : on la reprend de l'étagère, elle revient sur le tour
+  await openGame('La Poterie', '__pt')
+  await pret()
+  if (await page.evaluate(() => window.__pt.shelf) !== 1) throw new Error(`l'étagère est vide en rouvrant (${await etat()})`)
+  await page.locator('.pt-step[data-step="etagere"]').click({ force: true })
+  await page.waitForTimeout(2500) // la caméra va à l'étagère
+  const q = await page.evaluate(() => window.__pt.slot(0))
+  await page.mouse.click(q.x, q.y)
+  await page.waitForFunction(() => window.__pt.ready && window.__pt.clay.h > 0.7 && window.__pt.glazed && window.__pt.shelf === 0, null, { timeout: 60000, polling: 300 })
+    .catch(async () => { throw new Error(`le vase ne revient pas sur le tour (${await etat()})`) })
+})
+
+/* 🏰 Le Château de sable (27/10) : une tour moulée (le seau se retourne,
+   ploc, la forme reste), une tour crénelée et une étoile, des douves
+   tracées à la pelle (le sable s'amoncelle à côté), le seau d'eau qui les
+   remplit, le sable lissé et tassé, un drapeau planté puis repris, et
+   « Fini » : la marée monte au coucher du soleil ; rouverte, la plage est
+   telle qu'on l'a laissée. */
+await scenario('chateau', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.evaluate(() => localStorage.removeItem('ferme:chateau'))
+  await openGame('Le Château de sable', '__ch')
+  const pret = () => page.waitForFunction(() => window.__ch.ready, null, { timeout: 120000, polling: 300 })
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__ch.phase, t: window.__ch.tool, st: window.__ch.stamps, d: window.__ch.decos, w: window.__ch.water }))
+  const toucher = async (x, z) => { const q = await page.evaluate(([x, z]) => window.__ch.pt(x, z), [x, z]); await page.mouse.click(q.x, q.y) }
+  const glisse = async (a, b, n = 14) => {
+    const p = await page.evaluate(([x, z]) => window.__ch.pt(x, z), a), q = await page.evaluate(([x, z]) => window.__ch.pt(x, z), b)
+    await page.mouse.move(p.x, p.y); await page.mouse.down()
+    for (let i = 1; i <= n; i++) { await page.mouse.move(p.x + (q.x - p.x) * i / n, p.y + (q.y - p.y) * i / n); await page.waitForTimeout(40) }
+    await page.mouse.up()
+  }
+  await pret()
+  // Les moules : la tour (le moule de départ), la tour crénelée, l'étoile
+  await toucher(0, -0.3)
+  await page.waitForFunction(() => window.__ch.stamps === 1 && window.__ch.ready, null, { timeout: 60000, polling: 200 })
+    .catch(async () => { throw new Error(`le moule ne laisse pas sa tour (${await etat()})`) })
+  if (await page.evaluate(() => window.__ch.height(0, -0.3)) < 0.2) throw new Error(`la tour est trop basse (${await etat()})`)
+  await page.locator('.ch-opt[data-mold="creneaux"]').click({ force: true })
+  await toucher(0.5, -0.3)
+  await page.waitForFunction(() => window.__ch.stamps === 2 && window.__ch.ready, null, { timeout: 60000, polling: 200 })
+  await page.locator('.ch-opt[data-mold="etoile"]').click({ force: true })
+  await toucher(-0.5, -0.3)
+  await page.waitForFunction(() => window.__ch.stamps === 3 && window.__ch.ready, null, { timeout: 60000, polling: 200 })
+    .catch(async () => { throw new Error(`pas d'étoile (${await etat()})`) })
+  // La pelle : des douves devant le château, le sable à côté
+  await page.locator('.ch-tool[data-tool="pelle"]').click({ force: true })
+  await glisse([-0.7, 0.2], [0.7, 0.2])
+  const creux = await page.evaluate(() => [window.__ch.height(0, 0.2), Math.max(window.__ch.height(0, 0.32), window.__ch.height(0, 0.08))])
+  if (creux[0] > -0.015 || creux[1] <= 0) throw new Error(`pas de douves, ou pas de sable à côté (${creux})`)
+  // L'eau : le seau les remplit
+  await page.locator('.ch-tool[data-tool="eau"]').click({ force: true })
+  await toucher(0, 0.2)
+  await page.waitForFunction(() => window.__ch.water > 20 && window.__ch.ready, null, { timeout: 60000, polling: 200 })
+    .catch(async () => { throw new Error(`les douves restent sèches (${await etat()})`) })
+  // La main : lisser, tasser
+  await page.locator('.ch-tool[data-tool="main"]').click({ force: true })
+  await glisse([-0.8, 0.8], [-0.2, 0.8], 8)
+  await toucher(0.6, 0.8)
+  // La déco : un drapeau sur la tour, repris d'un toucher, replanté
+  await page.locator('.ch-tool[data-tool="deco"]').click({ force: true })
+  await page.locator('.ch-opt[data-deco="drapeau"]').click({ force: true })
+  await toucher(0, -0.3)
+  await page.waitForFunction(() => window.__ch.decos === 1, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le drapeau ne se plante pas (${await etat()})`) })
+  await page.waitForTimeout(800)
+  await toucher(0, -0.3)
+  await page.waitForFunction(() => window.__ch.decos === 0, null, { timeout: 20000, polling: 200 })
+    .catch(async () => { throw new Error(`le drapeau ne se reprend pas (${await etat()})`) })
+  await page.waitForTimeout(500)
+  await toucher(0, -0.3)
+  await page.waitForFunction(() => window.__ch.decos === 1, null, { timeout: 20000, polling: 200 })
+  // Fini : la marée monte au coucher du soleil
+  await page.locator('#chFini').click({ force: true })
+  await finDe('Quel beau château', 120000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
+  // Rouverte : le château est là, ses douves pleines, son drapeau
+  await openGame('Le Château de sable', '__ch')
+  await pret()
+  const revu = await page.evaluate(() => ({ h: window.__ch.height(0, -0.3), w: window.__ch.water, d: window.__ch.decos }))
+  if (revu.h < 0.2 || revu.w < 20 || revu.d !== 1) throw new Error(`la plage n'est pas gardée (${JSON.stringify(revu)})`)
+})
+
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))
 // L'éclair (6/10) : la grande ferme de jour, des animaux cachés en entier à fouiller
 await scenario('cache-cache-eclair', () => cacheCache('med', 'Tout le monde est trouvé'))
