@@ -146,6 +146,38 @@ export const BADGE: Record<string, string> = {
     <rect x="23" y="2.8" width="2" height="5.4" rx="1" fill="${C.woodDark}"/>
     <path d="M38 6l1.6 4.4L44 12l-4.4 1.6L38 18l-1.6-4.4L32 12l4.4-1.6z" fill="${C.sun}"/>
     <circle cx="9" cy="14" r="2.2" fill="${C.pink}"/>`),
+  // La Poterie : un vase sur le plateau du tour, deux bandes de couleur, l'émail qui brille
+  poterie: svg(`
+    <ellipse cx="24" cy="42" rx="19" ry="3.8" fill="${C.iceDark}"/>
+    <ellipse cx="24" cy="40.6" rx="17" ry="3.2" fill="${C.ice}"/>
+    <path d="M16 40c-3-5-4-11-1-16 2-3 4-5 3.4-10h11.2c-.6 5 1.4 7 3.4 10 3 5 2 11-1 16z" fill="${C.mango}"/>
+    <path d="M28 40c3-5 3.6-11 .8-16-1.6-3-3.2-5-2.6-10h3.4c-.6 5 1.4 7 3.4 10 3 5 2 11-1 16z" fill="${C.mangoDark}"/>
+    <path d="M13.6 30.4h20.8v3.6H13.6z" fill="${C.sky}"/>
+    <path d="M15.6 22.6h16.8v2.4H15.6z" fill="${C.coral}"/>
+    <ellipse cx="24" cy="14" rx="6.2" ry="1.8" fill="${C.woodDark}"/>
+    <path d="M18.6 21c-1.6 3-1.4 6 0 8.4" fill="none" stroke="${C.white}" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>`),
+  // Le Château de sable : deux tours crénelées, la porte, un drapeau, la mer derrière
+  chateau: svg(`
+    <path d="M2 30c4-2 8 2 11 0s7-2 11 0 7 2 11 0 7-2 11 0v6H2z" fill="${C.sky}"/>
+    <ellipse cx="24" cy="41" rx="21" ry="5" fill="${C.sun}"/>
+    <path d="M9 40V24h3v2h2v-2h3v2h2v-2h3v16z" fill="${C.wood}"/>
+    <path d="M26 40V24h3v2h2v-2h3v2h2v-2h3v16z" fill="${C.wood}"/>
+    <path d="M17 40V18h3v2h2.5v-2h3v2H28v-2h3v22z" fill="${C.cream}"/>
+    <path d="M28 18h3v22h-3z" fill="${C.wood}" opacity=".45"/>
+    <path d="M21 40v-6a3 3 0 0 1 6 0v6z" fill="${C.woodDark}"/>
+    <path d="M24 18V6" stroke="${C.ink}" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M24.6 6.2 33 9l-8.4 2.8z" fill="${C.coral}"/>`),
+  // L'Aquarium : le bac de verre, le sable, une algue, un poisson-peluche et ses bulles
+  aquarium: svg(`
+    <rect x="5" y="9" width="38" height="31" rx="4" fill="${C.ice}"/>
+    <rect x="5" y="13" width="38" height="27" rx="3" fill="${C.sky}"/>
+    <path d="M5 35c6-3 12-1 19-2s12-3 19 0v4a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="${C.sun}"/>
+    <path d="M12 36c-2-5 2-8 0-13 3 3 4 8 2 13z" fill="${C.meadow}"/>
+    <path d="M17 24c2.4-4 8.6-5.6 13-1.6l5-3.6-1.2 6 1.2 6-5-3.6c-4.4 4-10.6 2.4-13-1.6z" fill="${C.coral}"/>
+    <path d="M20.4 20.6c2.4 1.6 3.4 5.4 2 8.6" fill="none" stroke="${C.pink}" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="20.2" cy="24.4" r="1.4" fill="${C.ink}"/>
+    <circle cx="13" cy="17" r="2" fill="${C.white}" opacity=".85"/><circle cx="16" cy="12.6" r="1.3" fill="${C.white}" opacity=".85"/>
+    <rect x="3" y="7" width="42" height="4" rx="2" fill="${C.woodDark}"/>`),
   bakery: svg(`
     <ellipse cx="24" cy="42" rx="19" ry="3.6" fill="${C.wood}"/>
     <rect x="8" y="27" width="32" height="14" rx="3" fill="${C.pink}"/>
