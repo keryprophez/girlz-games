@@ -1,5 +1,5 @@
 import type { GameContext, GameDef } from '../core/types'
-import { $, pick } from '../core/utils'
+import { $ } from '../core/utils'
 import { photoImg } from '../core/sprites'
 import { createStage, loader, loadThree, picker, dotTex, type Stage, type T3 } from '../core/three3d'
 import { particles, type Particles, toScreen } from '../core/scene3d'
@@ -9,6 +9,7 @@ import { feature } from 'topojson-client'
 import type { Topology, GeometryCollection } from 'topojson-specification'
 import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson'
 import { some } from '../core/hand'
+import { comeBack, recall, type Item, type Keyed, type Recall } from '../core/facts'
 
 /* Le Tour du Monde — de la VRAIE géographie (2/09).
 
@@ -25,7 +26,16 @@ import { some } from '../core/hand'
      le continent où il vit — et on cherche. Deuxième essai, puis on montre.
 
    Le niveau choisit la question : douce = animaux et grandes villes ;
-   normale = mélange ; expert = pays et régions. */
+   normale = mélange ; expert = pays et régions.
+
+   La mémoire (27/10, `core/facts.ts`) : chaque animal, pays, région et
+   ville est un élément. Une manche de Trouve se tire SANS REMISE (avant,
+   au hasard avec remise : huit questions parmi treize régions ou douze
+   parmi quatorze villes posaient presque toujours deux fois la même) :
+   d'abord ce qui a été raté, puis ce qui n'a pas été vu depuis longtemps.
+   À la fleur, autant d'animaux que de pays (ou de villes que de régions),
+   mêlés. Raté = un premier toucher faux ; il revient trois questions plus
+   loin, sinon en tête de la manche suivante. Muette : rien ne s'affiche. */
 
 /* ---------- Données : continents, animaux, pays, villes ---------- */
 type ContinentId = 'europe' | 'afrique' | 'asie' | 'oceanie' | 'amNord' | 'amSud' | 'antarctique'
@@ -147,6 +157,9 @@ type Target =
   | { kind: 'pays'; name: string }
   | { kind: 'ville'; city: typeof CITIES[number] }
   | { kind: 'region'; nom: string }
+/** Une question de la mémoire : ce qu'on cherche, sous sa clé
+    (`animal:panda`, `pays:France`, `region:Bretagne`, `ville:Paris`). */
+interface Spot extends Keyed { t: Target }
 
 interface State {
   stage: Stage
@@ -178,6 +191,9 @@ interface State {
   /** Numéro de la série : changer de carte ou de mode fait taire ce que
       l'ancienne avait en route (la question suivante, la réponse redite). */
   gen: number
+  /** Les questions de la manche, tirées sans remise ; la question en cours
+      est `queue[asked - 1]`. */
+  queue: Item<Spot>[]
   ui: { bar: HTMLElement; ask: HTMLElement; askImg: HTMLElement; askText: HTMLElement; say: HTMLElement
     dots: HTMLElement; done: HTMLElement; name: HTMLElement }
   /** Dernier nom affiché : le haut-parleur du bandeau le redit. */
@@ -191,6 +207,8 @@ interface State {
 
 let geo: State | null = null
 let ctx: GameContext
+/** La mémoire du Tour du Monde (`ferme:memoire:geo`), ouverte au montage. */
+let memo: Recall
 
 /* ---------- Le globe : peindre l'habillage (frontières + sélection) ---------- */
 function paintOverlay(me: State, fill: { names: string[]; color: number } | null) {
@@ -277,24 +295,33 @@ function targetLabel(t: Target): string {
     : t.nom
 }
 
+/** La manche de Trouve, tirée SANS REMISE dans la mémoire. Sur le globe :
+    décalé d'un cran le 30/09, la fleur mêle animaux et pays (l'ancien
+    normal), autant des uns que des autres ; l'éclair et la flamme ne
+    demandent que des pays. En France : villes et régions (fleur), les
+    régions (éclair), rien que des villes, petites comprises (flamme). */
+function planRound(me: State): Item<Spot>[] {
+  const n = me.total, half = Math.ceil(n / 2)
+  if (me.map === 'monde') {
+    const pays: Spot[] = Object.keys(COUNTRIES_FR).filter(name => me.countries.some(f => f.properties!.name === name))
+      .map(name => ({ key: `pays:${name}`, t: { kind: 'pays', name } }))
+    if (ctx.tier !== 'easy') return memo.series(pays, n)
+    const animals: Spot[] = ANIMALS.map(animal => ({ key: `animal:${animal.photo}`, t: { kind: 'animal', animal } }))
+    return memo.mix([{ pool: animals, n: half }, { pool: pays, n: n - half }])
+  }
+  const villes: Spot[] = CITIES.map(city => ({ key: `ville:${city.fr}`, t: { kind: 'ville', city } }))
+  const regions: Spot[] = me.regions.map(r => (r.properties as { nom: string }).nom)
+    .map(nom => ({ key: `region:${nom}`, t: { kind: 'region', nom } }))
+  if (ctx.tier === 'easy') return memo.mix([{ pool: villes, n: half }, { pool: regions, n: n - half }])
+  return memo.series(ctx.tier === 'exp' ? villes : regions, n)
+}
+
 function nextQuestion(me: State) {
   if (me.over) return
-  if (me.asked >= me.total) { finishRound(me); return }
+  if (me.asked >= me.total || !me.queue[me.asked]) { finishRound(me); return }
   me.tries = 0
   me.busy = false
-  const tier = ctx.tier
-  let t: Target
-  if (me.map === 'monde') {
-    // Décalé d'un cran le 30/09 : la fleur mêle animaux et pays (l'ancien normal), l'éclair et la flamme ne demandent que des pays
-    const animal = tier === 'easy' ? Math.random() < 0.5 : false
-    if (animal) t = { kind: 'animal', animal: pick(ANIMALS) }
-    else t = { kind: 'pays', name: pick(Object.keys(COUNTRIES_FR).filter(n => me.countries.some(f => f.properties!.name === n))) }
-  } else {
-    // En France : villes et régions (fleur), les régions (éclair), rien que des villes, petites comprises (flamme)
-    const city = tier === 'easy' ? Math.random() < 0.5 : tier === 'exp'
-    if (city) t = { kind: 'ville', city: pick(CITIES) }
-    else t = { kind: 'region', nom: pick(me.regions.map(r => (r.properties as { nom: string }).nom)) }
-  }
+  const t = me.queue[me.asked].fact.t
   me.target = t
   me.asked++
   // La carte de question : l'animal en grand, ou un haut-parleur pour réentendre
@@ -312,8 +339,11 @@ function nextQuestion(me: State) {
 
 function judge(me: State, ok: boolean, tappedName: string | null) {
   if (me.busy) return
+  const it = me.queue[me.asked - 1]
   if (ok) {
     me.busy = true
+    // Trouvé du premier coup : gardé en silence dans la mémoire
+    if (me.tries === 0 && it) memo.note(it, true)
     sfx('confirm', { vol: 0.8 })
     me.ui.dots.querySelectorAll('i')[me.asked - 1]?.classList.add('ok')
     me.stage.timeScale = 1
@@ -321,6 +351,9 @@ function judge(me: State, ok: boolean, tappedName: string | null) {
     ctx.after(1400, () => { if (geo === me && me.gen === gen) nextQuestion(me) })
     return
   }
+  // Un premier toucher faux : raté, il reviendra trois questions plus loin
+  // (ou en tête de la manche suivante)
+  if (me.tries === 0 && it) { memo.note(it, false); comeBack(me.queue, me.asked - 1) }
   me.tries++
   me.errors++
   sfx('error', { vol: 0.45 })
@@ -425,6 +458,7 @@ export const geoGame: GameDef = {
   },
   mount(c) {
     ctx = c
+    memo = recall('geo')
     c.root.innerHTML = `<div class="arena g3-arena geo-arena" id="geoArena"></div>`
     const arena = $('geoArena')
     const hideLoader = loader(arena, 'geo', 25000)
@@ -575,7 +609,7 @@ export const geoGame: GameDef = {
         globe, earth, overlay: { canvas, g, tex: otex }, france, regionMeshes, cityPins,
         map: 'monde', mode: 'explore', spin: 0, tilt: 0.25, vSpin: 0, vTilt: 0, idle: 0,
         zoom: 1, tgtZoom: 1, pan: { x: 0, z: 0 },
-        selected: null, target: null, tries: 0, asked: 0, errors: 0, total: c.byTier(8, 8, 12), busy: false, over: false, gen: 0,
+        selected: null, target: null, tries: 0, asked: 0, errors: 0, total: c.byTier(8, 8, 12), busy: false, over: false, gen: 0, queue: [],
         ui: { bar, ask, askImg: ask.querySelector('.geo-askimg')!, askText: ask.querySelector('.geo-asktext')!,
           say: ask.querySelector('.geo-say')!, dots: ask.querySelector('.geo-dots')!, done, name: nameEl },
         lastName: null,
@@ -607,6 +641,7 @@ export const geoGame: GameDef = {
       const startRound = () => {
         me.asked = 0; me.errors = 0; me.over = false; me.target = null
         me.ui.dots.querySelectorAll('i').forEach(d => d.classList.remove('ok', 'cur'))
+        me.queue = planRound(me)
         nextQuestion(me)
       }
       const setMode = (m: Mode) => {
@@ -744,7 +779,8 @@ export const geoGame: GameDef = {
           pick: (lon: number, lat: number) => countries.find(c => inFeature(c, lon, lat))?.properties.name ?? null,
           continentOf: (n: string) => CONTINENT_OF[n] ?? null,
           unassigned: () => countries.filter(c => !CONTINENT_OF[c.properties.name]).map(c => c.properties.name),
-          state: () => ({ map: me.map, mode: me.mode, asked: me.asked, target: me.target, selected: me.selected, zoom: me.zoom, spin: me.spin, vSpin: me.vSpin }),
+          state: () => ({ map: me.map, mode: me.mode, asked: me.asked, target: me.target, selected: me.selected, zoom: me.zoom, spin: me.spin, vSpin: me.vSpin,
+            plan: me.queue.map(it => it.fact.key) }),
           tapAt: (x: number, y: number) => {
             const hits = pick3({ clientX: x, clientY: y }, [earth], false)
             if (!hits.length) return null
