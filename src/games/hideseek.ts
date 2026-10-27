@@ -1,6 +1,7 @@
 import type { GameContext, GameDef } from '../core/types'
 import { $, shuffle } from '../core/utils'
 import { sfx, preloadSfx, cry, preloadCries, CRY, type AnimalVoice } from '../core/sfx'
+import { tone } from '../core/audio'
 import { playMusic, setMusicIntensity } from '../core/music'
 import { onPause } from '../core/session'
 import { createStage, loader, dotTex, type Stage, type T3 } from '../core/three3d'
@@ -57,6 +58,12 @@ import { buildFarm, bake, type Farm, type FarmSpot, type FarmSlot, type Matter, 
    - Plus aucun indice qui vient tout seul, même à la fleur (6/10) : caché,
      un animal ne bouge pas. À la fleur seulement, le « presque » : un
      toucher tout près, il glousse et passe la tête.
+   - L'aide (27/10, le père : « quand on ne trouve pas du tout »), un bouton
+     sur le côté, toujours là pendant qu'on cherche : la vue recule sur toute
+     la ferme et ceux qui restent cachés brillent cinq secondes — un halo
+     doré vu À TRAVERS leur cachette (on sait où toucher, même pour ceux
+     cachés en entier), une étoile qui tourne, des étincelles qui montent.
+     Elle ne coûte rien : pas une étoile de moins.
    - La fin : la fête dans l'enclos, tout le monde saute et chante, la ferme
      tourne. Les étoiles viennent du temps passé à chercher. */
 
@@ -116,6 +123,8 @@ const SOFT: Record<Matter, () => void> = {
 const PAW = `<svg class="ico" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><ellipse cx="12" cy="16" rx="5.4" ry="4.6" fill="currentColor"/><ellipse cx="5.6" cy="10.4" rx="2.3" ry="2.9" fill="currentColor"/><ellipse cx="9.4" cy="6.4" rx="2.3" ry="3" fill="currentColor"/><ellipse cx="14.6" cy="6.4" rx="2.3" ry="3" fill="currentColor"/><ellipse cx="18.4" cy="10.4" rx="2.3" ry="2.9" fill="currentColor"/></svg>`
 /** Deux mains qui cachent les yeux (le compte du cache-cache). */
 /** « Toute la ferme » : une mire (la vue revient au milieu). */
+/** L'aide : des étoiles qui scintillent. */
+const SPARK = `<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><path d="M21 5c1.3 9.2 4.8 12.7 14 14-9.2 1.3-12.7 4.8-14 14-1.3-9.2-4.8-12.7-14-14 9.2-1.3 12.7-4.8 14-14z" fill="#FFC94D" stroke="#E0A230" stroke-width="1.6" stroke-linejoin="round"/><path d="M36 27c.7 4.6 2.4 6.3 7 7-4.6.7-6.3 2.4-7 7-.7-4.6-2.4-6.3-7-7 4.6-.7 6.3-2.4 7-7z" fill="#FF8FB8"/><circle cx="11" cy="38" r="3.2" fill="#8FD8FF"/></svg>`
 const CENTRE = `<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><circle cx="24" cy="24" r="15" fill="none" stroke="#4FB8E7" stroke-width="4"/><circle cx="24" cy="24" r="5" fill="#4FB8E7"/><path d="M24 3v8M24 37v8M3 24h8M37 24h8" stroke="#4FB8E7" stroke-width="4" stroke-linecap="round"/></svg>`
 const HAND = `<svg viewBox="0 0 100 150" aria-hidden="true"><path d="M24 150V86c-6-6-14-14-15-22-1-6 5-9 10-5l9 9V30c0-5 3-8 7-8s7 3 7 8v34-46c0-5 3-8 7-8s7 3 7 8v46-40c0-5 3-8 7-8s7 3 7 8v42-30c0-5 3-7 6-7s6 2 6 7v56c0 20-10 32-18 38v22z" fill="#FFDCC0" stroke="#B9785A" stroke-width="3.5" stroke-linejoin="round"/><path d="M42 64v14M56 62v16M70 64v14" stroke="#D9A486" stroke-width="3" stroke-linecap="round"/></svg>`
 
@@ -153,6 +162,8 @@ interface Hider {
   hop: number
   sang: boolean
   glow: import('three').Sprite[]
+  /** L'aide : son halo et son étoile, le temps qu'elle dure. */
+  halo: import('three').Sprite[]
 }
 
 interface State {
@@ -192,6 +203,11 @@ interface State {
   torch: { spot: import('three').SpotLight; beam: Mesh; beamMat: import('three').ShaderMaterial; aim: V3; want: V3 } | null
   tray: HTMLElement
   veil: HTMLElement
+  wrap: HTMLElement
+  help: HTMLElement
+  /** L'aide en cours : depuis quand ; la prochaine bouffée d'étincelles. */
+  hint: { t: number; spark: number } | null
+  hintMat: { halo: import('three').SpriteMaterial; star: import('three').SpriteMaterial }
 }
 
 /** L'angle de la caméra au-dessus du plateau (≈ 42°) : assez haut pour voir
@@ -322,7 +338,7 @@ function makeHider(me: { T: T3; U: BGU; kit: Kit; mats: Record<string, import('t
     base: new T.Vector3(), ry: 0, k: 1, pts: [], body,
     state: 'pen', found: false,
     ph: Math.random() * 10,
-    boost: 0, giggle: -9, tw: null, pen: i, hop: 1 + Math.random() * 3, sang: false, glow
+    boost: 0, giggle: -9, tw: null, pen: i, hop: 1 + Math.random() * 3, sang: false, glow, halo: []
   }
 }
 
@@ -603,6 +619,8 @@ function find(me: State, h: Hider, at: V3) {
   h.state = 'jump'
   h.spot = null; h.slot = null
   for (const g of h.glow) g.visible = false
+  for (const g of h.halo) g.removeFromParent()
+  h.halo = []
   h.c.obj.traverse(x => { x.castShadow = true })
   if (h.raised && h.hang) { h.raised.visible = true; h.hang.visible = false }
   // Sa vraie voix ; le lapin, qui n'en a pas, fait boing
@@ -723,6 +741,8 @@ function startHide(me: State, assign: { h: Hider; spot: FarmSpot; slot: FarmSlot
 }
 
 function outro(me: State) {
+  endHint(me)
+  me.wrap.classList.remove('seek')
   const n = me.hiders.length
   const secs = me.t - me.seekT0
   const par = ctx.byTier(9, 18, 20) * n
@@ -733,6 +753,103 @@ function outro(me: State) {
     msg: `Tu as retrouvé les ${n} animaux de la ferme`,
     stars, score: n, scoreIcon: PAW, outroMs: 5600
   })
+}
+
+/* ---------- L'aide : ceux qui restent brillent ---------- */
+function glowCanvas(T: T3, draw: (g: CanvasRenderingContext2D) => void) {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')!
+  g.translate(64, 64)
+  draw(g)
+  const t = new T.CanvasTexture(c)
+  t.colorSpace = T.SRGBColorSpace
+  return t
+}
+/** Le halo : doré, doux, plus clair au cœur. */
+const haloTex = (T: T3) => glowCanvas(T, g => {
+  const r = g.createRadialGradient(0, 0, 0, 0, 0, 64)
+  r.addColorStop(0, 'rgba(255,250,220,1)'); r.addColorStop(0.25, 'rgba(255,222,130,.85)')
+  r.addColorStop(0.6, 'rgba(255,190,70,.3)'); r.addColorStop(1, 'rgba(255,180,60,0)')
+  g.fillStyle = r; g.fillRect(-64, -64, 128, 128)
+})
+/** L'étoile : quatre longs rayons, quatre courts, un cœur blanc. */
+const starTex = (T: T3) => glowCanvas(T, g => {
+  for (let k = 0; k < 4; k++) {
+    const L = k < 2 ? 62 : 34
+    g.save(); g.rotate(k * Math.PI / 2 + (k < 2 ? 0 : Math.PI / 4))
+    const gr = g.createLinearGradient(-L, 0, L, 0)
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,235,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = gr
+    g.beginPath(); g.ellipse(0, 0, L, k < 2 ? 4.5 : 3, 0, 0, Math.PI * 2); g.fill()
+    g.restore()
+  }
+  const r = g.createRadialGradient(0, 0, 0, 0, 0, 20)
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = r; g.fillRect(-20, -20, 40, 40)
+})
+
+const HINT_S = 5
+
+function hint(me: State) {
+  if (me.phase !== 'seek') return
+  recenter(me)
+  me.hint = { t: 0, spark: 0 }
+  for (const h of me.hiders) {
+    if (h.found || h.halo.length) continue
+    // Au milieu de son corps (repère de l'animal)
+    const c = new me.T.Vector3(0, h.head * 0.5, (h.minZ + h.maxZ) / 2)
+    for (const m of [me.hintMat.halo, me.hintMat.star]) {
+      const sp = new me.T.Sprite(m)
+      sp.position.copy(c)
+      sp.userData.glow = true
+      sp.renderOrder = 10
+      h.c.obj.add(sp)
+      h.halo.push(sp)
+    }
+  }
+  me.help.classList.add('on')
+  sfx('whoosh', { vol: 0.25, rate: 1.4 })
+  ;[1047, 1319, 1568, 2093].forEach((f, k) => tone(f, 0.22, 'triangle', 0.06, k * 0.07))
+}
+
+function endHint(me: State) {
+  if (!me.hint) return
+  me.hint = null
+  for (const h of me.hiders) { for (const g of h.halo) g.removeFromParent(); h.halo = [] }
+  me.help.classList.remove('on')
+}
+
+/** Le halo bat, l'étoile tourne ; leur taille : plus grands que l'animal, et
+    jamais si petits qu'on les perde à l'écran (la carte ×4 vue de loin). */
+function stepHint(me: State, dt: number) {
+  const hn = me.hint
+  if (!hn) return
+  hn.t += dt
+  if (hn.t >= HINT_S) { endHint(me); return }
+  const env = Math.min(1, hn.t / 0.3) * Math.min(1, HINT_S - hn.t)
+  const beat = Math.sin(hn.t * 6)
+  me.hintMat.halo.opacity = env * (0.8 + beat * 0.2)
+  me.hintMat.star.opacity = env
+  me.hintMat.star.rotation = hn.t * 0.9
+  const cam = me.stage.camera
+  const tanH = Math.tan(cam.fov * Math.PI / 360)
+  const puff = hn.t > hn.spark
+  if (puff) hn.spark = hn.t + 0.4
+  const p = new me.T.Vector3(), q = new me.T.Vector3()
+  for (const h of me.hiders) {
+    if (h.halo.length < 2) continue
+    const [halo, star] = h.halo
+    halo.getWorldPosition(p)
+    const ws = Math.max(0.01, h.c.obj.getWorldScale(q).x)
+    const d = p.distanceTo(cam.position)
+    // La hauteur d'un objet de taille 1 à l'écran, en fraction de l'écran : 1 / (2 d tan)
+    const body = Math.max(h.head, h.maxZ - h.minZ) * ws
+    const sz = Math.max(body * 2.2, 0.2 * d * tanH) * (1 + beat * 0.1)
+    halo.scale.setScalar(sz / ws)
+    star.scale.setScalar(sz * 0.85 / ws)
+    if (puff && env > 0.5) me.fx.burst(p, { count: 5, color: [0xFFF3B0, 0xFFD34D, 0xFFFFFF], speed: 0.9, spread: 0.7, life: 0.9, size: Math.max(0.07, d * tanH * 0.012), gravity: -1.4 })
+  }
 }
 
 /** Le cadrage : la distance la plus courte (et la visée) où le plateau tient
@@ -881,6 +998,7 @@ function step(me: State, dt: number) {
     const ready = me.hiders.every(h => !h.tw)
     if (u > 2.5 && ready) {
       me.veil.classList.remove('on')
+      me.wrap.classList.add('seek')
       me.phase = 'seek'; me.phaseT = t; me.seekT0 = t; me.lastFind = t
       // La carte ×4 : on partait de l'enclos, on recule sur toute la ferme (ils sont quelque part là-dedans)
       if (me.big) me.tgtZoom = 1
@@ -929,6 +1047,7 @@ function step(me: State, dt: number) {
     else if (h.state === 'pen') animPen(me, h, dt)
   }
   if (me.glowMat) me.glowMat.opacity = 0.7 + Math.sin(t * 2.6) * 0.25
+  stepHint(me, dt)
   const tc = me.torch
   if (tc) {
     const cam = me.stage.camera.position
@@ -995,8 +1114,11 @@ export const hideseek: GameDef = {
         <div class="cc-veil${c.tier === 'easy' ? ' peek' : ''}" id="ccVeil">
           <div class="cc-hands"><i class="cc-hand cc-l">${HAND}</i><i class="cc-hand cc-r">${HAND}</i></div>
           <div class="cc-count"><b></b><b></b><b></b></div>
-        </div>${big ? `
-        <span class="tool-item cc-centre"><button class="sn-tool" id="ccCentre" aria-label="Toute la ferme">${CENTRE}</button><i class="tool-cap">Toute la ferme</i></span>` : ''}
+        </div>
+        <div class="cc-side">
+          <span class="tool-item cc-help"><button class="sn-tool" id="ccHelp" aria-label="Aide">${SPARK}</button><i class="tool-cap">Aide</i></span>${big ? `
+          <span class="tool-item cc-centre"><button class="sn-tool" id="ccCentre" aria-label="Toute la ferme">${CENTRE}</button><i class="tool-cap">Toute la ferme</i></span>` : ''}
+        </div>
       </div>`
     preloadSfx(['cloth', 'tick', 'click', 'drop', 'metal', 'pluck', 'confirm', 'whoosh', 'bong'])
     preloadCries(kinds.map(k => CRY[k]).filter((v): v is AnimalVoice => !!v))
@@ -1043,6 +1165,9 @@ export const hideseek: GameDef = {
       }
       const sphereGeo = new T.SphereGeometry(1, 14, 10)
       const kitX: Kit = Object.assign(kit, { sphereGeo })
+      // L'aide : vue à travers les cachettes (sans profondeur), et ses couleurs telles quelles
+      const hintOpts = { transparent: true, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, toneMapped: false, opacity: 0 }
+      const hintMat = { halo: new T.SpriteMaterial({ map: stage.keep(haloTex(T)), ...hintOpts }), star: new T.SpriteMaterial({ map: stage.keep(starTex(T)), ...hintOpts }) }
       const glowMat = night ? new T.SpriteMaterial({ map: stage.keep(dotTex(T, '#FFF4B0')), color: 0xFFE070, transparent: true, depthWrite: false, blending: T.AdditiveBlending }) : null
       const U = await import('three/examples/jsm/utils/BufferGeometryUtils.js')
       if (dead || !stage.alive) { stage.dispose(); return }
@@ -1065,7 +1190,7 @@ export const hideseek: GameDef = {
         lastFind: 0, streak: 0,
         penNext: 0, outroBurst: 0,
         fx: particles(stage, 500), shake: camShake(stage), ray: new T.Raycaster(),
-        glowMat, torch: null, tray, veil
+        glowMat, torch: null, tray, veil, wrap: arena, help: $('ccHelp'), hint: null, hintMat
       }
       // L'enclos se remplit dans l'ordre : chacun sa place
       hiders.forEach(h => { h.pen = h.i })
@@ -1126,6 +1251,7 @@ export const hideseek: GameDef = {
       }
       const turned = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b))
       $('ccCentre')?.addEventListener('click', () => { if (cc === me) { recenter(me); sfx('whoosh', { vol: 0.3, rate: 1.2 }) } })
+      $('ccHelp').addEventListener('click', () => { if (cc === me) hint(me) })
       const onDown = (e: PointerEvent) => {
         if (cc !== me || e.target !== el) return
         pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -1216,6 +1342,8 @@ export const hideseek: GameDef = {
           get phase() { return me.phase }, get found() { return me.hiders.filter(h => h.found).length },
           get total() { return me.hiders.length }, get spin() { return me.drag ? 1 : me.vRot }, get night() { return me.night },
           get calls() { return stage.renderer.info.render.calls },
+          /** Combien brillent (l'aide). */
+          get hint() { return me.hiders.filter(h => h.halo.length).length },
           // Seulement les points qu'un doigt toucherait vraiment (pas sous un bouton de la barre)
           animals: () => me.hiders.map(h => {
             const p = h.found ? null : central(seen(me, h).filter(q => document.elementFromPoint(q.x, q.y) === el))
@@ -1309,6 +1437,7 @@ export const hideseek: GameDef = {
           sphereGeo.dispose()
           Object.values(tm).forEach(m => m.dispose())
           glowMat?.dispose()
+          hintMat.halo.dispose(); hintMat.star.dispose()
           delete (window as { __cc?: unknown }).__cc
         }
       })

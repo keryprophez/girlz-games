@@ -27,6 +27,9 @@ import { BADGE } from '../core/badges'
    - Remplir   : le rabat s'ouvre (la fermeture éclair du sac à dos) ; la
                  trousse, les cahiers, la règle, la gourde, la pomme : un
                  toucher, et elles filent dedans ; tout rangé, clac, il se ferme
+   La poubelle, sous la carte de la fille (27/10, le père : « un bouton pour
+   remettre le cartable à zéro ») : deux touchers, comme dans l'Atelier (le
+   premier l'arme) ; pouf, il repousse tel qu'au premier jour.
    « Fini » : la petite fille d'Habille-toi arrive, le met sur son dos, saute
    de joie et part à l'école (un toucher passe). Un cartable par fille (deux
    cartes à l'ouverture, avec sa photo), gardé tel qu'elle l'a laissé.
@@ -94,6 +97,9 @@ interface State {
   openWant: number
   items: Item[]
   squash: number
+  /** Effacé : il rapetisse en tournant, attend son remplaçant, qui repousse d'un bond et finit
+      sa pirouette de face (de l'angle `a` à `b`). */
+  poof: { st: 'shrink' | 'wait' | 'grow'; t: number; a: number; b: number } | null
   phase: 'make' | 'outro' | 'done'
   outro: { doll: Doll; t: number; worn: boolean } | null
   fx: Particles
@@ -239,6 +245,8 @@ function makeItem(T: T3, stage: Stage, id: ItemId) {
 /* ---------- Le cartable : construit, reconstruit ---------- */
 
 const BAG_X = 0.12
+/** Son angle de repos : de trois quarts, le devant vers nous. */
+const REST = -0.32
 
 async function rebuild(s: State) {
   if (s.building) { s.again = true; return }
@@ -260,8 +268,10 @@ async function rebuild(s: State) {
   } finally { s.building = false }
   save(s)
 }
+/** La hauteur de son centre, posé sur le pupitre (à l'échelle k). */
+const bagY = (s: State, bag: Bag, k = 1) => bag.H / 2 * k + (s.look.model === 'roulettes' ? 0.11 * k : 0)
 function placeBag(s: State, bag: Bag) {
-  bag.obj.position.set(BAG_X, bag.H / 2 + (s.look.model === 'roulettes' ? 0.11 : 0), 0)
+  bag.obj.position.set(BAG_X, bagY(s, bag), 0)
   bag.obj.rotation.y = s.rot
   bag.obj.traverse(o => { if ((o as import('three').Mesh).isMesh) o.castShadow = true })
   s.stage.scene.add(bag.obj)
@@ -342,6 +352,34 @@ function pack(s: State, it: Item) {
   sfx('whoosh', { vol: 0.4, rate: 1.2 })
 }
 
+/** Effacer : pouf, le cartable de départ de cette fille, sans une paillette retournée. */
+function reset(s: State) {
+  Object.assign(s.look, defaultLook(who))
+  s.seq = null
+  // Les faces des paillettes passeraient au cartable suivant (`rebuild`) : toutes sur la face A
+  s.bag.sequins?.want.fill(0)
+  s.pick = null
+  s.color = COLORS[0][0]
+  s.vRot = 0
+  s.poof = { st: 'shrink', t: 0, a: 0, b: 0 }
+  sfx('whoosh', { vol: 0.6, rate: 0.8 })
+  const c = s.bag.obj.localToWorld(new s.T.Vector3(0, 0, 0))
+  s.fx.burst(c, { count: 46, color: ['#FFFFFF', '#FFF3B0', '#FFD1E3', '#CDEBFF'], speed: 1.7, spread: 1, life: 0.8, size: 0.06, gravity: 0.3 })
+  // Tout petit, il est remplacé par le cartable neuf, qui repousse
+  ctx.after(280, () => {
+    if (me !== s) return
+    const grow = () => {
+      if (me !== s) return
+      // Il finit son tour de face, comme au premier jour
+      s.poof = { st: 'grow', t: 0, a: s.rot, b: REST + Math.ceil((s.rot + 1 - REST) / (Math.PI * 2)) * Math.PI * 2 }
+      sfx('pluck', { vol: 0.5, rate: 1.2 })
+      tone(880, 0.12, 'triangle', 0.07); tone(1320, 0.18, 'triangle', 0.06, 0.09)
+    }
+    // Même si le neuf n'a pas pu se construire : jamais un cartable resté tout petit
+    rebuild(s).then(grow, grow)
+  })
+}
+
 /* ---------- Chaque image ---------- */
 
 const ease = (k: number) => k * k * (3 - 2 * k)
@@ -400,6 +438,23 @@ function frame(s: State, dt: number) {
     s.squash = Math.max(0, s.squash - dt * 3)
     const q = Math.sin(s.squash * Math.PI) * 0.06
     s.bag.obj.scale.set(1 + q * 0.6, 1 - q, 1 + q * 0.6)
+  }
+  // Effacé : il rapetisse sur le pupitre ; le neuf repousse, dépasse un peu sa taille et revient
+  const pf = s.poof
+  if (pf) {
+    let k = 0.15
+    s.vRot = 0
+    if (pf.st === 'shrink') { pf.t = Math.min(1, pf.t + dt / 0.26); k = 1 - 0.85 * ease(pf.t); if (pf.t === 1) pf.st = 'wait' }
+    if (pf.st !== 'grow') s.rot += dt * 14
+    else {
+      pf.t = Math.min(1, pf.t + dt / 0.55)
+      const u = pf.t - 1
+      k = 0.15 + 0.85 * (1 + 2.70158 * u * u * u + 1.70158 * u * u)
+      s.rot = pf.a + (pf.b - pf.a) * (1 - Math.pow(1 - pf.t, 3))
+      if (pf.t === 1) { k = 1; s.rot = REST; s.poof = null }
+    }
+    s.bag.obj.scale.setScalar(k)
+    s.bag.obj.position.y = bagY(s, s.bag, k)
   }
   if (s.phase === 'outro' || s.phase === 'done') stepOutro(s, dt)
   else s.bag.obj.rotation.y = s.rot
@@ -511,7 +566,7 @@ async function build(c: GameContext, arena: HTMLElement, saved: Saved): Promise<
   })
   const s: State = {
     stage, T, kit, bag, look, seq: saved.seq ?? null, step: 'modele', color: COLORS[0][0], pick: null,
-    rot: -0.32, vRot: 0, building: false, again: false, openK: 0, openWant: 0, items, squash: 0,
+    rot: REST, vRot: 0, building: false, again: false, openK: 0, openWant: 0, items, squash: 0, poof: null,
     phase: 'make', outro: null, fx: particles(stage, 300), ray: new T.Raycaster(),
     cam: { p: new T.Vector3(...CAMS.make.p), t: new T.Vector3(...CAMS.make.t) }, t: 0
   }
@@ -566,6 +621,7 @@ const STEP_ICON: Record<Step, string> = {
   deco: svg('<path d="M24 41C10 31 7 24 9 18c2-6 10-8 15-2 5-6 13-4 15 2 2 6-1 13-15 23z" fill="#FF6B81" stroke="#C93F5A" stroke-width="2.4" stroke-dasharray="3 2"/><circle cx="36" cy="12" r="7" fill="#FFC94D" stroke="#C9CED6" stroke-width="2"/>'),
   remplir: svg('<rect x="8" y="14" width="20" height="26" rx="2.5" fill="#4FB8E7"/><rect x="11" y="18" width="14" height="3" rx="1.5" fill="#fff" opacity=".8"/><path d="M33 8l6 6-14 22-7 2 1-7z" fill="#FFC94D"/><path d="M18 31l7 5-7 2z" fill="#F4D6B0"/><path d="M33 8l6 6 2-3-6-6z" fill="#FF8FAB"/>')
 }
+const TRASH_ICON = svg('<path d="M12 15h24l-2 25a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3z" fill="#E8574C"/><rect x="8" y="9" width="32" height="6" rx="2.5" fill="#C8453B"/><rect x="19" y="5" width="10" height="6" rx="2.5" fill="#C8453B"/><path d="M19 21v16M24 21v16M29 21v16" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>', 32)
 const FINI_ICON = svg('<circle cx="24" cy="24" r="18" fill="#5EC97B"/><path d="m15 24.5 6 6L33.5 18" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>')
 const girl = (color: string, sz = 40) => svg(`<path d="M11 45c1-8 6-11 13-11s12 3 13 11z" fill="${color}"/><circle cx="24" cy="22" r="11" fill="#FFD9B8"/><path d="M12.5 22c0-9 5-14 11.5-14S35.5 13 35.5 22c-3-5-6.5-7-11.5-7s-8.5 2-11.5 7z" fill="#6B3E26"/><circle cx="10" cy="21" r="4.5" fill="#6B3E26"/><circle cx="38" cy="21" r="4.5" fill="#6B3E26"/><circle cx="20" cy="23.5" r="1.5" fill="#45362A"/><circle cx="28" cy="23.5" r="1.5" fill="#45362A"/><path d="M21 28c2 1.5 4 1.5 6 0" fill="none" stroke="#C0605A" stroke-width="1.5" stroke-linecap="round"/>`, sz)
 
@@ -603,10 +659,14 @@ export const cartable: GameDef = {
         </div>
         <div class="ct-steps">${STEPS.map(st => `<span class="tool-item"><button class="sn-tool ct-step${st === 'modele' ? ' sel' : ''}" data-step="${st}" aria-label="${STEP_NAME[st]}">${STEP_ICON[st]}</button><i class="tool-cap">${STEP_NAME[st]}</i></span>`).join('')}<span class="tool-item"><button class="sn-tool ct-fini" id="ctFini" aria-label="Fini">${FINI_ICON}</button><i class="tool-cap">Fini</i></span></div>
         <span class="tool-item ct-me"><button class="sn-tool" id="ctMe" aria-label="Changer de cartable"></button><i class="tool-cap" id="ctMeCap"></i></span>
+        <span class="tool-item ct-reset"><button class="sn-tool at-trash" id="ctReset" aria-label="Effacer le cartable">${TRASH_ICON}</button><i class="tool-cap">Effacer</i></span>
         <div class="ct-pal" id="ctPal"></div>
       </div>`
     const arena = c.root.querySelector<HTMLElement>('#ctWrap')!
-    preloadSfx(['pluck', 'cloth', 'select', 'confirm', 'drop', 'whoosh', 'metal', 'open'])
+    const resetB = c.root.querySelector<HTMLElement>('#ctReset')!
+    let armed = false, armId = 0
+    const disarm = () => { armed = false; resetB.classList.remove('arm'); ctx.cancel(armId) }
+    preloadSfx(['pluck', 'cloth', 'select', 'confirm', 'drop', 'whoosh', 'metal', 'open', 'switch'])
 
     const opt = (attrs: string, icon: string, cap: string, sel: boolean, big = false) =>
       `<span class="tool-item"><button class="sn-tool ct-opt${big ? ' big' : ''}${sel ? ' sel' : ''}" ${attrs} aria-label="${cap}">${icon}</button><i class="tool-cap">${cap}</i></span>`
@@ -692,6 +752,8 @@ export const cartable: GameDef = {
     }
     /** On quitte son cartable (pour l'autre, ou pour sortir) : gardé, photographié. */
     const leave = (s: State) => {
+      // Quitté en plein pouf : la photo le montre à sa taille
+      if (s.poof) { s.poof = null; s.bag.obj.scale.setScalar(1); s.bag.obj.position.y = bagY(s, s.bag) }
       if (s.phase === 'make') { s.bag.open(0); snap(s) }
       save(s)
       clearTimeout(saveTimer)
@@ -709,6 +771,7 @@ export const cartable: GameDef = {
       if (card?.dataset.who) { choose(card.dataset.who as Who); return }
       const s = me
       if (!s) return
+      if (armed && !t.closest('#ctReset')) disarm()
       if (t.closest('#ctMe')) {
         if (s.phase !== 'make') return
         leave(s)
@@ -717,7 +780,23 @@ export const cartable: GameDef = {
         sfx('select', { vol: 0.4 })
         return
       }
-      if (t.closest('#ctFini')) { startOutro(s); return }
+      if (t.closest('#ctFini')) { if (!s.poof) startOutro(s); return }
+      if (t.closest('#ctReset')) {
+        if (s.phase !== 'make') return
+        // Deux touchers : le premier arme la poubelle
+        if (!armed) {
+          armed = true
+          resetB.classList.add('arm')
+          sfx('switch', { vol: 0.5 })
+          ctx.cancel(armId)
+          armId = ctx.after(2600, disarm)
+          return
+        }
+        disarm()
+        reset(s)
+        setStep('modele')
+        return
+      }
       const stepB = t.closest<HTMLElement>('.ct-step')
       if (stepB?.dataset.step) { setStep(stepB.dataset.step as Step); sfx('select', { vol: 0.5 }); return }
       const o = t.closest<HTMLElement>('.ct-opt')
@@ -833,7 +912,7 @@ export const cartable: GameDef = {
     if ((window as unknown as { __BOT?: boolean }).__BOT) {
       ;(window as unknown as { __ct: unknown }).__ct = {
         get cards() { return arena.getAttribute('data-who') === '' },
-        get ready() { return !!me && !me.building },
+        get ready() { return !!me && !me.building && !me.poof },
         get who() { return who },
         get step() { return me?.step },
         get phase() { return me?.phase },
@@ -865,7 +944,7 @@ export const cartable: GameDef = {
             }
             sq.snap()
           }
-          s.rot = -0.32; s.vRot = 0
+          s.rot = REST; s.vRot = 0
         },
         bits() { return me?.bag.sequins ? packBits(me.bag.sequins.want) : null }
       }

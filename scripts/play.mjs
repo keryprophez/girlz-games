@@ -1307,7 +1307,9 @@ await scenario('habille-toi', async () => {
    carte ×4 (éclair et flamme, 6/10) : un glissé doit promener la vue et la
    molette zoomer ; quand il ne voit rien, il s'approche d'un animal (comme
    un enfant qui zoome sur un coin), en tournant un peu à chaque fois. La
-   nuit (flamme), dix-huit animaux à la lampe torche. */
+   nuit (flamme), dix-huit animaux à la lampe torche. Avant de chercher, il
+   appuie sur l'aide (27/10) : tous brillent, la carte ×4 recule en entier,
+   et ses touchers passent à travers les halos. */
 const cacheCache = async (tier, fin) => {
   await openGame('Cache-Cache', '__cc', tier)
   await page.waitForFunction(() => window.__cc.phase === 'seek', null, { timeout: 120000, polling: 500 })
@@ -1340,9 +1342,15 @@ const cacheCache = async (tier, fin) => {
     await page.mouse.wheel(0, -600)
     await calme()
     if (await page.evaluate(() => window.__cc.zoom) < zoom0 * 1.5) throw new Error('la molette ne zoome pas')
-    await page.evaluate(() => window.__cc.recenter())
-    await calme()
   }
+  // L'aide : tous ceux qui restent cachés brillent ; sur la carte ×4, la vue recule sur toute la ferme
+  await page.locator('#ccHelp').click()
+  await page.waitForFunction(() => window.__cc.hint > 0, null, { timeout: 30000, polling: 200 })
+    .catch(() => { throw new Error('l\'aide ne fait briller personne') })
+  const brillent = await page.evaluate(() => window.__cc.hint)
+  if (brillent !== total) throw new Error(`${brillent} animaux brillent au lieu de ${total}`)
+  await calme()
+  if (carte && await page.evaluate(() => window.__cc.zoom) > 1.1) throw new Error('l\'aide ne recule pas sur toute la ferme')
   let tours = 0, rates = 0
   for (let i = 0; i < 260; i++) {
     // Ceux qu'on voit dépasser, puis ceux qui se cachent EN ENTIER : on fouille leur cachette
@@ -1730,7 +1738,8 @@ await scenario('patisserie-sans-bougie', async () => {
 /* 🎒 Mon cartable (19/10) : le cartable de Joyce, de bout en bout — le
    modèle, les paillettes caressées vers le haut (elles se retournent), la
    couleur du corps au doigt, un motif, un écusson posé puis repris, un
-   porte-clés, les six affaires rangées, et « Fini » : elle part à l'école. */
+   porte-clés, la poubelle (deux touchers : le cartable de départ), les six
+   affaires rangées, et « Fini » : elle part à l'école. */
 await scenario('cartable', async () => {
   await openGame('Mon cartable', '__ct')
   await page.evaluate(() => { localStorage.removeItem('ferme:cartable:joyce'); localStorage.removeItem('ferme:cartable:photo:joyce') })
@@ -1777,6 +1786,24 @@ await scenario('cartable', async () => {
   await page.mouse.click(ou.x, ou.y); await pret()
   await page.locator('.ct-opt[data-charm="chick"]').click({ force: true }); await pret()
   if (await page.evaluate(() => window.__ct.look.charms.length) !== 1) throw new Error(`pas de porte-clés (${await etat()})`)
+  // Effacer : un toucher arme la poubelle (rien ne change), le second rend le cartable de départ, à
+  // l'étape Modèle — et ses paillettes retournées ne reviennent pas avec les paillettes
+  // (les deux d'un coup : sous la 3D logicielle, une image passe les 2,6 s où elle reste armée)
+  const arme = await page.evaluate(() => {
+    const b = document.querySelector('#ctReset')
+    b.click()
+    const r = { arm: b.classList.contains('arm'), charms: window.__ct.look.charms.length }
+    b.click()
+    return r
+  })
+  if (!arme.arm || arme.charms !== 1) throw new Error(`le premier toucher n'arme pas la poubelle, ou efface déjà (${JSON.stringify(arme)})`)
+  await pret()
+  const neuf = await page.evaluate(() => ({ st: window.__ct.step, l: window.__ct.look }))
+  if (neuf.st !== 'modele' || neuf.l.fabric !== 'toile' || neuf.l.body !== '#DCD3F5' || neuf.l.motif !== 'uni' || neuf.l.charms.length || neuf.l.patches.length)
+    throw new Error(`le cartable n'est pas remis à zéro (${await etat()})`)
+  await page.locator('.ct-step[data-step="matiere"]').click({ force: true })
+  await page.locator('.ct-opt[data-fabric="paillettes"]').click({ force: true }); await pret()
+  if (await page.evaluate(() => window.__ct.flipped) !== 0) throw new Error(`les paillettes retournées reviennent après Effacer (${await etat()})`)
   // Remplir : il s'ouvre, les six affaires y filent, il se referme
   await page.locator('.ct-step[data-step="remplir"]').click({ force: true })
   await page.waitForFunction(() => window.__ct.open > 0.9, null, { timeout: 60000, polling: 300 })

@@ -470,7 +470,9 @@ ensemble incline ; la ferme tourne autour du point regardé (`pan`, la
 racine du plateau décalée) ; de loin ni ombre ni détails, de près une
 ombre serrée (`closeUp`) ; le toucher à la mesure de ce qu'on voit ; des
 animaux cachés en entier qu'on fouille, `peek: 'cache'` — dans un grand
-coin, là où l'on touche) · `parrot` (l'Animal
+coin, là où l'on touche ; depuis le 27/10, le bouton « Aide » sur le côté,
+toujours là : la vue recule sur toute la ferme et ceux qui restent brillent
+5 s, un halo vu à travers leur cachette, sans coûter d'étoile) · `parrot` (l'Animal
 qui répète, 5/10 : un animal sur sa botte de foin dans l'enclos de cette
 ferme, `critterKit(T, { fine: true })` pour les gros plans ; le micro ne
 s'ouvre que là, se coupe en pause et en sortant, et n'écoute pas pendant
@@ -503,7 +505,9 @@ dedans ; une affaire manquée de peu est prise quand même : la règle est
 fine) ; les paillettes se CARESSENT (vers le haut elles se retournent, vers
 le bas elles reviennent) ; « Fini » : la petite fille d'Habille-toi le met
 sur son dos et part à l'école ; un cartable par fille, comme la Ferme à
-construire, avec sa photo ; son bot : `cartable`) · `monuments` (Les
+construire, avec sa photo ; depuis le 27/10, la poubelle sous sa carte (deux
+touchers, comme dans l'Atelier) le rend tel qu'au premier jour ; son bot :
+`cartable`) · `monuments` (Les
 Monuments, 19/10, Créer, demandé par Jade : `core/monuments3d.ts`, huit
 monuments dans leur décor — parc, désert, baie, île ; on le CONSTRUIT pièce
 par pièce : la pièce attend à côté, on la glisse sur sa forme en

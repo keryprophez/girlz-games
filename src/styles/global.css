@@ -1930,8 +1930,13 @@ body.playing .po-card{max-width:880px;}
 @keyframes ccPop{40%{transform:scale(1.32) rotate(-8deg)}}
 .cc-night .cc-tray{background:rgba(20,26,56,.55);}
 /* « Toute la ferme » (la carte ×4, 6/10) : la vue revient au milieu */
-.cc-centre{position:absolute;right:max(16px,2vw);bottom:max(18px,2.4vh);z-index:6;}
-.cc-centre .sn-tool{width:64px;height:64px;}
+.cc-side{position:absolute;right:max(16px,2vw);bottom:max(18px,2.4vh);z-index:6;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.cc-side .sn-tool{width:64px;height:64px;}
+/* L'aide (27/10) : seulement pendant qu'on cherche ; allumée, elle bat */
+.cc-help{transition:opacity .4s;}
+.cc-wrap:not(.seek) .cc-help{opacity:0;pointer-events:none;}
+.cc-help .sn-tool.on{box-shadow:0 0 0 4px #FFC94D,0 0 22px 6px rgba(255,201,77,.6);animation:ccHelp .6s ease-in-out infinite alternate;}
+@keyframes ccHelp{to{transform:scale(1.1)}}
 
 .cc-night .cc-pip{background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);}
 .cc-night .cc-pip img{filter:brightness(0) invert(1);opacity:.3;}
@@ -2105,10 +2110,13 @@ body.playing .po-card{max-width:880px;}
 .ct-dot{display:block;width:58%;height:58%;border-radius:50%;margin:auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 0 0 2px rgba(69,54,42,.12);}
 .ct-me{position:absolute;right:18px;top:84px;z-index:6;}
 .ct-me .sn-tool{width:60px;height:60px;}
+/* La poubelle (27/10), sous la carte de la fille : deux touchers, comme dans l'Atelier */
+.ct-reset{position:absolute;right:18px;top:176px;z-index:6;transition:opacity .4s;}
+.ct-reset .sn-tool{width:60px;height:60px;}
 .ct-who{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;gap:clamp(28px,6vw,80px);
   padding:80px 24px 24px;background:linear-gradient(180deg,#F8EEDD 0%,#FBD9B4 100%);}
 .ct-wrap[data-who=""] .ct-who{display:flex;}
-.ct-wrap[data-who=""] .ct-steps,.ct-wrap[data-who=""] .ct-pal,.ct-wrap[data-who=""] .ct-me{display:none;}
+.ct-wrap[data-who=""] .ct-steps,.ct-wrap[data-who=""] .ct-pal,.ct-wrap[data-who=""] .ct-me,.ct-wrap[data-who=""] .ct-reset{display:none;}
 .ct-card{width:clamp(220px,34vw,440px);aspect-ratio:16/10;border-radius:28px;border:6px solid var(--c);padding:0;overflow:hidden;
   background:#FFF8F0;box-shadow:var(--e2);cursor:pointer;transition:transform .25s var(--spring);}
 .ct-card:active{transform:scale(.95);}
@@ -2119,7 +2127,7 @@ body.playing .po-card{max-width:880px;}
 .ct-empty svg{width:42%;height:auto;}
 .ct-card-name{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,3.4vw,36px);color:#45362A;}
 /* Fini : la petite fille part à l'école, plus rien d'autre à l'écran */
-.ct-wrap[data-phase="outro"] .ct-steps,.ct-wrap[data-phase="outro"] .ct-pal,.ct-wrap[data-phase="outro"] .ct-me{opacity:0;pointer-events:none;}
+.ct-wrap[data-phase="outro"] .ct-steps,.ct-wrap[data-phase="outro"] .ct-pal,.ct-wrap[data-phase="outro"] .ct-me,.ct-wrap[data-phase="outro"] .ct-reset{opacity:0;pointer-events:none;}
 /* Les Monuments (19/10) : les cartes des filles, la grille des huit monuments, puis
    les étapes du cartable à gauche, la palette en bas, le pointillé du câble à tracer */
 .mn-wrap{background:linear-gradient(180deg,#BFE4F6 0%,#F8EEDD 100%);touch-action:none;overflow:hidden;}
