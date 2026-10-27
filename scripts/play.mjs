@@ -421,17 +421,21 @@ await scenario('puissance4-contre-la-poule', async () => {
   if (!fini) throw new Error('la partie contre la poule ne s\'est pas terminée')
 })
 
-/* 🕐 Quelle heure : mode « les heures », huit bonnes réponses lues sur le crochet. */
+/* 🕐 Quelle heure : mode « les heures », huit bonnes réponses lues sur le crochet,
+   huit heures différentes (27/10 : la série se tire sans remise). */
 await scenario('horloge-huit-heures', async () => {
   await openGame('Quelle heure')
   await page.waitForFunction(() => window.__ck, null, { timeout: 15000 })
   await page.locator('.ck-tool[data-m="hours"]').click()
+  const posees = []
   for (let i = 0; i < 8; i++) {
     await page.waitForFunction(r => window.__ck.round === r && !window.__ck.lock, i, { timeout: 15000 })
     const h = await page.evaluate(() => window.__ck.h)
+    posees.push(h)
     await page.locator('.qopt', { hasText: new RegExp('^' + h + ' h$') }).click()
     await page.waitForTimeout(200)
   }
+  if (new Set(posees).size !== posees.length) throw new Error('la même heure posée deux fois dans la série : ' + posees.join(' '))
   await page.waitForTimeout(2200)
   const fini = await page.evaluate(() => document.body.innerText.includes('Maîtresse du temps'))
   if (!fini) throw new Error('l\'écran de fin de l\'horloge n\'est pas apparu')
@@ -776,7 +780,8 @@ await scenario('flipper-partie-complete', async () => {
 })
 
 /* 🌍 Le Tour du Monde : les vrais pays répondent à la bonne longitude/latitude,
-   tous ont un continent, et la question de Trouve se pose bien. */
+   tous ont un continent, et la question de Trouve se pose bien — dans une
+   manche sans doublon (27/10). */
 await scenario('tour-du-monde-vrais-pays', async () => {
   await openGame('Tour du Monde')
   await page.waitForSelector('.nj-loading', { state: 'detached', timeout: 30000 })
@@ -792,6 +797,7 @@ await scenario('tour-du-monde-vrais-pays', async () => {
   await page.waitForTimeout(300)
   const st = await page.evaluate(() => window.__geo.state())
   if (st.asked !== 1 || !st.target) throw new Error('pas de question posée')
+  if (!st.plan?.length || new Set(st.plan).size !== st.plan.length) throw new Error('manche avec doublon : ' + JSON.stringify(st.plan))
   await page.evaluate(() => window.__geo.setMap('france'))
   await page.waitForTimeout(300)
   if ((await page.evaluate(() => window.__geo.state())).map !== 'france') throw new Error('la France ne s\'affiche pas')
@@ -880,17 +886,20 @@ await scenario('suites-six-manches', async () => {
   await finDe('Sacré sens logique')
 })
 
-/* 🔤 Chasse aux lettres : trois mots, lettre après lettre (la lettre vole). */
+/* 🔤 Chasse aux lettres : trois mots différents, lettre après lettre (la lettre vole). */
 await scenario('lettres-trois-mots', async () => {
   await openGame('Chasse aux lettres', '__lg')
+  const mots = []
   for (let r = 0; r < 3; r++) {
     await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 15000 })
     const word = await page.evaluate(() => window.__lg.word)
+    mots.push(word)
     for (const ch of word) {
       await page.locator(`.lg-tile:not(.used)[data-ch="${ch}"]`).first().click()
       await page.waitForTimeout(120)
     }
   }
+  if (new Set(mots).size !== mots.length) throw new Error('le même mot deux fois : ' + mots.join(' '))
   await finDe('Tous les mots trouvés')
 })
 
@@ -988,19 +997,23 @@ await scenario('perles-miroir-flamme-au-fer', async () => {
 })
 
 /* 💶 Le Marché : quatre paiements exacts, pièces choisies de la plus grosse
-   à la plus petite (le bot rend la monnaie comme un marchand). */
+   à la plus petite (le bot rend la monnaie comme un marchand), quatre prix
+   différents (27/10 : sans remise). */
 await scenario('marche-quatre-paiements', async () => {
   await openGame('Le Marché', '__mk')
   await page.locator('.mk-mode[data-m="pay"]').click()
+  const prix = []
   for (let q = 0; q < 4; q++) {
     await page.waitForFunction(k => window.__mk.q === k && !window.__mk.lock && window.__mk.goal > 0, q, { timeout: 15000 })
     const denoms = await page.$$eval('#mkBank .mk-coin', els => els.map(e => +e.dataset.v).sort((a, b) => b - a))
     let reste = await page.evaluate(() => window.__mk.goal)
+    prix.push(reste)
     for (const v of denoms) {
       while (reste >= v) { await page.locator(`#mkBank .mk-coin[data-v="${v}"]`).click(); reste -= v; await page.waitForTimeout(80) }
     }
     if (reste) throw new Error('prix impossible à payer avec la banque : reste ' + reste)
   }
+  if (new Set(prix).size !== prix.length) throw new Error('le même prix deux fois : ' + prix.join(' '))
   await finDe('Le compte est bon')
 })
 

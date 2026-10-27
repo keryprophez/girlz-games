@@ -20,7 +20,9 @@ import { appendFileSync, readFileSync } from 'node:fs'
 /* Mot-clé des scénarios de `play.mjs` (BOTS=… garde ceux dont le nom le
    contient) → les fichiers qui n'appartiennent qu'à ce jeu. Un module
    partagé par plusieurs jeux n'y figure pas, sauf s'il est le cœur de
-   chacun (les perles à repasser : le Miroir et les Bijoux). */
+   chacun (les perles à repasser : le Miroir et les Bijoux ; la mémoire de
+   `facts.ts`, qui tire les questions du Potager, de l'Horloge, du Tour du
+   Monde, des Lettres et du Marché, 27/10). */
 const OWN = {
   'pizza': ['src/games/pizza.ts', 'src/games/cuisine.ts'],
   'tour-trois-blocs': ['src/games/icetower.ts', 'src/core/winter.ts'],
@@ -30,16 +32,16 @@ const OWN = {
   'memory': ['src/games/memory.ts'],
   'choeur': ['src/games/simon.ts'],
   'puissance4': ['src/games/connect4.ts'],
-  'horloge': ['src/games/clock.ts'],
+  'horloge': ['src/games/clock.ts', 'src/core/facts.ts'],
   'potager': ['src/games/potager.ts', 'src/core/facts.ts', 'src/core/plants.ts'],
   'intrus': ['src/games/intrus.ts'],
   'ninja': ['src/games/ninja.ts'],
   'flipper': ['src/games/pinball.ts', 'src/core/pinball.ts'],
-  'tour-du-monde': ['src/games/geo.ts'],
+  'tour-du-monde': ['src/games/geo.ts', 'src/core/facts.ts'],
   'suites': ['src/games/patterns.ts', 'src/core/train3d.ts'],
-  'lettres': ['src/games/letters.ts'],
+  'lettres': ['src/games/letters.ts', 'src/core/facts.ts'],
   'perles-miroir': ['src/games/mirror.ts', 'src/core/hama3d.ts', 'src/core/perles.ts'],
-  'marche': ['src/games/market.ts', 'src/core/money3d.ts'],
+  'marche': ['src/games/market.ts', 'src/core/money3d.ts', 'src/core/facts.ts'],
   'espace': ['src/games/space.ts', 'src/core/cosmos.ts', 'src/core/rocket3d.ts'],
   'piano': ['src/games/piano.ts'],
   'atelier': ['src/games/coloring.ts', 'src/core/lineart.ts'],
