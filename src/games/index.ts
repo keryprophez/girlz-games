@@ -29,12 +29,15 @@ import { drawguess } from './drawguess'
 import { cartable } from './cartable'
 import { monuments } from './monuments'
 import { cuisine } from './cuisine'
+import { tracteur } from './tracteur'
+import { geoplan } from './geoplan'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, pinball, hideseek, drawguess, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
-  dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments
+  dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments,
+  tracteur, geoplan
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -63,7 +66,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, potager, market, intrus, geoGame, space, patterns, letters, sentences]
+    games: [clock, potager, market, intrus, geoGame, space, patterns, letters, sentences, tracteur, geoplan]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',

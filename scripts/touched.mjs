@@ -53,6 +53,8 @@ const OWN = {
   'cartable': ['src/games/cartable.ts', 'src/core/satchel3d.ts'],
   'monuments': ['src/games/monuments.ts', 'src/core/monuments3d.ts'],
   'devine-mon-dessin': ['src/games/drawguess.ts', 'src/core/drawguess.ts'],
+  'tracteur': ['src/games/tracteur.ts', 'src/core/tracteur.ts'],
+  'geoplan': ['src/games/geoplan.ts', 'src/core/geoplan.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux
 const NO_BOT = new Set(['src/games/sentences.ts', 'src/games/index.ts'])
