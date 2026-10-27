@@ -1,10 +1,10 @@
 /* Des images GARDÉES d'une ouverture de l'appli à l'autre (Cache API du
-   navigateur) : ce qui coûte un calcul 3D — les portraits des princesses de
-   l'écran de fin, les vignettes de la garde-robe — ne se refait que pour une
-   tenue nouvelle. Chaque espace (`ns`) a son plafond : au-delà, les plus
+   navigateur) : ce qui coûte un calcul 3D — le pré de l'accueil, les
+   portraits des animaux et de la petite fille, les pièces de la Ferme, les
+   pages à colorier — ne se refait pas à chaque ouverture. Chaque espace (`ns`) a son plafond : au-delà, les plus
    anciennes s'en vont. Rien ne sort de la tablette. */
 
-const DISK = 'ferme-princesses-v1'
+const DISK = 'ferme-princesses-v1' // le nom date des princesses : le changer abandonnerait tout
 
 export const hashKey = (s: string) => {
   let h = 5381

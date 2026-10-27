@@ -17,6 +17,15 @@ import { diskGet, diskPut } from './diskcache'
 
 const cache = new Map<string, string>()
 
+/* Le pré de l'accueil et les portraits se rendaient à CHAQUE ouverture de
+   l'appli (27/10 : en 3D logicielle, 17 s de fil principal bloqué, les
+   tuiles ne répondaient plus) : ils sont gardés sur le disque, sous le nom
+   du paquet compilé — une nouvelle version les rend à nouveau, une fois. En
+   développement, rien n'est gardé (le rendu change sans changer de nom). */
+const BUILD = import.meta.env.DEV ? '' : new URL(import.meta.url).pathname.split('/').pop() ?? ''
+const fromDisk = (key: string) => (BUILD ? diskGet('portraits', BUILD + ':' + key) : Promise.resolve(null))
+const toDisk = (key: string, url: string) => { if (BUILD) void diskPut('portraits', BUILD + ':' + key, url, 40) }
+
 
 type Renderer = import('three').WebGLRenderer
 
@@ -71,11 +80,11 @@ function lights(T: T3, scene: import('three').Scene, env: import('three').Textur
 /** Les portraits (dataURL PNG, `px` de côté) des personnages demandés. */
 export async function critterPortraits(kinds: CritterKind[], px: number): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
-  const missing = kinds.filter(k => {
-    const hit = cache.get(k + '@' + px)
-    if (hit) out[k] = hit
-    return !hit
-  })
+  const missing: CritterKind[] = []
+  for (const k of kinds) {
+    const hit = cache.get(k + '@' + px) ?? await fromDisk(k + '@' + px)
+    if (hit) { cache.set(k + '@' + px, hit); out[k] = hit } else missing.push(k)
+  }
   if (!missing.length) return out
   const size = Math.min(512, Math.round(px * 2)) // rendu ×2 : net sur la tablette
   await withRenderer(size, size, (T, renderer, env) => renderPortraits(T, renderer, env, missing, px, out))
@@ -110,6 +119,7 @@ function renderPortraits(T: T3, renderer: Renderer, env: import('three').Texture
       renderer.render(scene, cam)
       const url = renderer.domElement.toDataURL('image/png')
       cache.set(kind + '@' + px, url)
+      toDisk(kind + '@' + px, url)
       out[kind] = url
       blob.geometry.dispose(); (blob.material as import('three').Material).dispose()
     }
@@ -150,7 +160,13 @@ function keepDoll(key: string, url: string) {
 async function renderDolls(looks: Look[], poses: DollPose[], px: number): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
   const key = (p: DollPose) => 'doll:' + JSON.stringify(looks) + ':' + p + '@' + px
-  const missing = poses.filter(p => { const hit = cache.get(key(p)); if (hit) out[p] = hit; return !hit })
+  const missing: DollPose[] = []
+  for (const p of poses) {
+    const mem = cache.get(key(p))
+    const hit = mem ?? await fromDisk(key(p))
+    if (hit && !mem) keepDoll(key(p), hit)
+    if (hit) out[p] = hit; else missing.push(p)
+  }
   if (!missing.length || !looks.length) return out
   const H = Math.min(640, Math.round(px * 2))
   const W = Math.round(H * (looks.length > 1 ? 1.35 : 0.8))
@@ -180,6 +196,7 @@ async function renderDolls(looks: Look[], poses: DollPose[], px: number): Promis
         renderer.render(scene, cam)
         const url = renderer.domElement.toDataURL('image/png')
         keepDoll(key(pose), url)
+        toDisk(key(pose), url)
         out[pose] = url
         dolls.forEach(d => scene.remove(d.obj))
         scene.traverse(o => {
@@ -205,8 +222,8 @@ export const portraitImg = (url: string | undefined, px: number, cls = '') =>
     garde un seul contexte WebGL jetable, aucun rendu en continu. */
 export async function meadowBanner(w: number, h: number): Promise<string> {
   const key = `pre-large@${w}x${h}`
-  const hit = cache.get(key)
-  if (hit) return hit
+  const hit = cache.get(key) ?? await fromDisk(key)
+  if (hit) { cache.set(key, hit); return hit }
   const url = await withRenderer(w, h, async (T, renderer, env) => {
     const scene = new T.Scene()
     lights(T, scene, env)
@@ -295,7 +312,7 @@ export async function meadowBanner(w: number, h: number): Promise<string> {
       })
     }
   }).catch(() => '')
-  if (url) cache.set(key, url)
+  if (url) { cache.set(key, url); toDisk(key, url) }
   return url
 }
 
