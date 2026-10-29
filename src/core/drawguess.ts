@@ -13,37 +13,25 @@
    - La réponse est une FICHE imposée (`SCHEMA`) : trois propositions
      courtes, chacune avec la photo de l'imagier qui lui correspond (ou
      « aucune »). Rien d'autre ne peut sortir ; `parseGuess` revérifie tout
-     et tronque, au Worker puis dans le jeu.
+     (une photo inconnue devient « aucune ») et tronque, au Worker puis dans
+     le jeu.
    - Le défi : selon le niveau, il choisit parmi les sujets du niveau (la
      fleur), parmi plus de sujets (l'éclair), ou parmi tout (la flamme).
    Logique pure et testée ici (lue aussi par le Worker), sauf `guessDrawing`
    (l'appel réseau). */
 
-/** Le mot de chaque photo de l'imagier, avec son article. */
-export const WORDS: Record<string, [string, string]> = {
-  apple: ['une', 'pomme'], baguette: ['une', 'baguette'], banana: ['une', 'banane'], bear: ['un', 'ours'], bison: ['un', 'bison'],
-  bread: ['du', 'pain'], broccoli: ['un', 'brocoli'], butterfly: ['un', 'papillon'], cabbage: ['un', 'chou'], cake: ['un', 'gâteau'],
-  carrot: ['une', 'carotte'], cat: ['un', 'chat'], cheese: ['du', 'fromage'], cherries: ['des', 'cerises'], chick: ['un', 'poussin'],
-  chicken: ['une', 'poule'], cookie: ['un', 'biscuit'], corn: ['du', 'maïs'], cow: ['une', 'vache'], croissant: ['un', 'croissant'],
-  cucumber: ['un', 'concombre'], cup: ['une', 'tasse'], deer: ['un', 'cerf'], dog: ['un', 'chien'], duck: ['un', 'canard'],
-  egg: ['un', 'œuf'], eggplant: ['une', 'aubergine'], elephant: ['un', 'éléphant'], fish: ['un', 'poisson'], fox: ['un', 'renard'],
-  frog: ['une', 'grenouille'], giraffe: ['une', 'girafe'], glass: ['un', 'verre'], goat: ['une', 'chèvre'], grapes: ['du', 'raisin'],
-  hedgehog: ['un', 'hérisson'], hippo: ['un', 'hippopotame'], honey: ['du', 'miel'], horse: ['un', 'cheval'], kangaroo: ['un', 'kangourou'],
-  koala: ['un', 'koala'], lemon: ['un', 'citron'], lion: ['un', 'lion'], llama: ['un', 'lama'], milk: ['du', 'lait'],
-  monkey: ['un', 'singe'], moose: ['un', 'élan'], muffin: ['un', 'muffin'], mushroom: ['un', 'champignon'], onion: ['un', 'oignon'],
-  orange: ['une', 'orange'], owl: ['un', 'hibou'], panda: ['un', 'panda'], parrot: ['un', 'perroquet'], peach: ['une', 'pêche'],
-  pear: ['une', 'poire'], penguin: ['un', 'pingouin'], pig: ['un', 'cochon'], plate: ['une', 'assiette'], plum: ['une', 'prune'],
-  pot: ['une', 'casserole'], potato: ['une', 'pomme de terre'], pumpkin: ['une', 'citrouille'], rabbit: ['un', 'lapin'], radish: ['un', 'radis'],
-  sheep: ['un', 'mouton'], sloth: ['un', 'paresseux'], snake: ['un', 'serpent'], spoon: ['une', 'cuillère'], strawberry: ['une', 'fraise'],
-  tiger: ['un', 'tigre'], tomato: ['une', 'tomate'], turtle: ['une', 'tortue'], watermelon: ['une', 'pastèque'], whale: ['une', 'baleine'],
-  zebra: ['un', 'zèbre']
-}
+import { IMAGIER } from './imagier'
 
-/** Les défis par niveau : ce qu'une enfant sait dessiner, du plus simple au plus dur. */
+/** Le mot de chaque photo de l'imagier, avec son article (`core/imagier.ts`). */
+export const WORDS: Record<string, [string, string]> = Object.fromEntries(IMAGIER.map(p => [p.id, [p.article, p.mot]]))
+
+/** Les défis par niveau : ce qu'une enfant sait dessiner, du plus simple au
+    plus dur (29/10 : la colonne « dessin » de l'imagier, une centaine de
+    sujets au lieu de quarante-quatre ; la tarte aux fruits est sortie). */
 export const POOLS: Record<'easy' | 'med' | 'exp', string[]> = {
-  easy: ['apple', 'banana', 'cat', 'fish', 'strawberry', 'carrot', 'mushroom', 'egg', 'cherries', 'snake', 'butterfly', 'cup', 'pear', 'lemon'],
-  med: ['dog', 'pig', 'rabbit', 'turtle', 'duck', 'chick', 'owl', 'whale', 'cake', 'pumpkin', 'watermelon', 'spoon', 'croissant', 'frog', 'lion'],
-  exp: ['elephant', 'giraffe', 'zebra', 'penguin', 'horse', 'cow', 'sheep', 'hedgehog', 'kangaroo', 'monkey', 'parrot', 'chicken', 'fox', 'bear', 'broccoli']
+  easy: IMAGIER.filter(p => p.dessin === 1).map(p => p.id),
+  med: IMAGIER.filter(p => p.dessin === 2).map(p => p.id),
+  exp: IMAGIER.filter(p => p.dessin === 3).map(p => p.id)
 }
 
 /** Ce qu'il peut répondre au défi : les sujets du niveau (fleur), ceux de la fleur et de l'éclair (éclair), tout (flamme : null). */
@@ -69,7 +57,10 @@ export const SCHEMA = {
         properties: {
           article: { type: 'string', enum: ['un', 'une', 'des', 'du', 'de la', "de l'"] },
           mot: { type: 'string' },
-          photo: { type: 'string', enum: [...PHOTO_IDS, 'aucune'] }
+          // Pas d'`enum` (29/10) : cinq cents identifiants alourdiraient la
+          // grammaire de la réponse ; la liste est dans le message système,
+          // et `parseGuess` écarte ce qui n'est pas une photo de l'imagier
+          photo: { type: 'string' }
         },
         required: ['article', 'mot', 'photo'],
         additionalProperties: false

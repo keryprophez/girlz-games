@@ -344,7 +344,8 @@ await scenario('puzzle-complet', async () => {
 /* 🃏 Memory : le bot connaît le paquet, il retourne les paires dans l'ordre
    sur les trois manches — l'écran de fin doit venir. */
 await scenario('memory-toutes-les-paires', async () => {
-  await openGame('Memory', '__mem')
+  // Les thèmes (29/10) : un jeu de cartes, puis le niveau
+  await openGame('Memory', '__mem', 'easy', null, 'espace')
   await page.waitForFunction(() => window.__mem && window.__mem.deck.length > 0, null, { timeout: 30000 })
   const rounds = await page.evaluate(() => window.__mem.rounds)
   for (let r = 0; r < rounds; r++) {
@@ -894,7 +895,8 @@ await scenario('lettres-trois-mots', async () => {
     await page.waitForFunction(k => window.__lg.round === k && !window.__lg.peeking && window.__lg.pos === 0, r, { timeout: 15000 })
     const word = await page.evaluate(() => window.__lg.word)
     mots.push(word)
-    for (const ch of word) {
+    // Les blancs, tirets et apostrophes sont posés d'avance (étoile de mer, 29/10)
+    for (const ch of word.replace(/[ '-]/g, '')) {
       await page.locator(`.lg-tile:not(.used)[data-ch="${ch}"]`).first().click()
       await page.waitForTimeout(120)
     }

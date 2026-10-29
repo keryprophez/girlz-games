@@ -87,6 +87,7 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `voice.ts` · `voicefx.ts` · `mic.ts` | la voix (contenu seulement), la voix rigolote, le micro ouvert à la demande et coupé pour de bon |
 | `hand.ts` | la main qui montre le geste de chaque jeu |
 | `badges.ts` · `icons.ts` · `posters.ts` | vignettes dessinées, icônes SVG, liste des affiches (écrite par `posters.mjs`) |
+| `imagier.ts` | **l'imagier** (29/10) : chaque photo, son mot, son thème, son niveau d'orthographe (Chasse aux lettres) et de dessin (Devine mon dessin) ; le Memory en tire ses thèmes — testé (chaque photo existe et est créditée) |
 | `sprites.ts` · `portraits.ts` · `pictures.ts` · `lineart.ts` · `diskcache.ts` | photos des imagiers ; personnages 3D rendus en images ; images du Puzzle ; pages à colorier ; cache sur le disque |
 | `critters.ts` · `doll3d.ts` + `character.ts` | les animaux de la ferme en formes rondes (`FARM`, `FARM_MORE`) ; la petite fille d'Habille-toi et son look |
 | `farm3d.ts` | la ferme en diorama (Cache-Cache, la Ferme à construire, les Différences, le Tracteur, Soleil) : cachettes, places, pièces, carte ×4, l'épouvantail |
@@ -113,14 +114,17 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `atelierdb.ts` | l'IndexedDB de l'Atelier (dessins, coloriages) |
 | `fps.ts` | la sonde `?fps` pour la tablette |
 
-**Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : 76 sujets dans
-`public/assets/photos/*.jpg` (animaux : iNaturalist ; le reste : Wikimedia
-Commons), carrés de 512 px, crédités dans `photos/CREDITS.json` et
-`public/assets/CREDITS.md` (licences CC BY-NC acceptées : app privée, sans
-usage commercial). `photoImg(nom, px)` et `hasPhoto(nom)` dans `sprites.ts`.
-Ajouter un mot : une ligne dans `TERMS` (+ `VIVANT` ou `CATEG`),
-`node scripts/import-photos.mjs candidats <id>`, **regarder** la
-planche-contact, écrire `photos.picks.json`, puis `… garder`.
+**Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : 324 sujets
+depuis le 29/10 (Joyce : « toujours les mêmes mots »),
+dans `public/assets/photos/*.jpg` (animaux : iNaturalist ; l'espace : NASA ;
+le reste : Wikimedia Commons), carrés de 512 px, crédités dans
+`photos/CREDITS.json` et `public/assets/CREDITS.md` (licences CC BY-NC
+acceptées : app privée, sans usage commercial). La liste fait foi dans
+`core/imagier.ts` ; `photoImg(nom, px)` dans `sprites.ts`. Ajouter un mot :
+sa ligne dans `imagier.ts` ET dans `MORE` du script (`i:` taxon latin, `c:`
+catégorie Commons, `n:` recherche NASA), `node scripts/import-photos.mjs
+candidats <id>`, **regarder** la planche-contact, écrire `photos.picks.json`,
+puis `… garder`.
 
 **Règle du père : jamais deux styles.** Ce qui est PION ou DÉCOR est fait des
 personnages 3D de la ferme (`critters.ts`), rendus en images par
@@ -185,9 +189,12 @@ fige sa boucle dessus tout seul.
   fois, le + par défaut, retenues (`ferme:ops:<id>`), `ctx.ops` ;
 - `duo: true` (Ninja, Flipper) : « seule / à deux », `ctx.duo` = deux sœurs EN
   ÉQUIPE sur la même tablette, un seul score, jamais qui a fait quoi ;
-- `variants` (la Cuisine : pizza ou gâteau) : de grandes images à la place
-  de la flèche, `ctx.variant`, la dernière retenue (`ferme:variante:<id>`) ;
-  le bouton de la barre et « Changer » à la fin rouvrent le choix.
+- `variants` (la Cuisine : pizza ou gâteau ; le Memory : son thème) : de
+  grandes images à la place de la flèche, `ctx.variant`, la dernière retenue
+  (`ferme:variante:<id>`) ; le bouton de la barre et « Changer » à la fin
+  rouvrent le choix. Un jeu à variantes ET à niveaux (le Memory, 29/10) :
+  le thème, puis le niveau (sa vignette au-dessus ramène aux thèmes) ;
+  « Niveau » va droit aux niveaux.
 
 **La coquille en jeu** : `body.playing` met tout en **plein écran**, la barre
 ronde (maison, niveau, son, pause, rejouer) flotte par-dessus sans texte, le

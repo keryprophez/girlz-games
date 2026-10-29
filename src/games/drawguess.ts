@@ -6,7 +6,7 @@ import { critterKit, type Critter, type CritterKit } from '../core/critters'
 import { cry, preloadCries, sfx, preloadSfx } from '../core/sfx'
 import { photoImg } from '../core/sprites'
 import { ICON } from '../core/icons'
-import { shuffle } from '../core/utils'
+import { recall, type Item, type Keyed, type Recall } from '../core/facts'
 import { visible } from '../core/hand'
 import { guessDrawing, isGuessError, matches, spoken, POOLS, type Guess, type GuessError } from '../core/drawguess'
 
@@ -24,8 +24,12 @@ import { guessDrawing, isGuessError, matches, spoken, POOLS, type Guess, type Gu
      la flamme), puis hausse les épaules : on peut ajouter des détails et
      lui remontrer, ou passer (« Suivant »). Cinq dessins par partie.
    - La rampe est dans ce qu'il connaît : à la fleur il choisit parmi les
-     quatorze sujets de la fleur, à l'éclair parmi vingt-neuf, à la flamme
-     parmi tout (et il n'a droit qu'à une réponse).
+     sujets de la fleur, à l'éclair parmi ceux de la fleur et de l'éclair, à
+     la flamme parmi tout l'imagier (et il n'a droit qu'à une réponse).
+   - Les défis (29/10) : une centaine de sujets qui se dessinent (la colonne
+     « dessin » de `core/imagier.ts`), tirés sans remise d'une partie à
+     l'autre — plus de tarte aux fruits, plus de sujets qui tournent en
+     boucle.
    - Libre : elle dessine ce qu'elle veut ; il propose, elle répond du
      pouce (Oui / Non). Pas de score : une création ne se note pas.
    - Sans clé (pas encore posée au Worker), sans réseau : on dessine quand
@@ -85,6 +89,8 @@ interface S {
   round: number
   found: number
   targets: string[]
+  /** Les défis de la partie, dans la mémoire du jeu (`targets` en est la liste). */
+  deck: Item<Keyed>[]
   target: string | null
   guess: Guess | null
   /** Quelle proposition est montrée ; combien il a le droit d'en montrer. */
@@ -108,6 +114,8 @@ interface S {
 
 let me: S | null = null
 let ctx: GameContext
+/** La mémoire des défis (`ferme:memoire:drawguess`), ouverte au montage. */
+let memo: Recall
 /** Le bot (scripts/play.mjs) répond à la place de Claude : jamais de vrai appel en intégration.
  *  Il peut aussi « échouer » : lancer `{ why: 'cle' }` (le cadenas). */
 type Fake = (target: string | null) => Guess | Promise<Guess>
@@ -202,6 +210,14 @@ function setAnim(s: S, a: Anim) { s.anim = a; s.animT = 0 }
 
 /* ---------- Les manches ---------- */
 /** Un minuteur de la manche en cours : muet si elle a changé entre-temps. */
+/** Les cinq défis d'une partie, tirés sans remise d'une partie à l'autre
+    (29/10, le père : « des images qui tournent en boucle ») : la mémoire du
+    jeu (`core/facts.ts`, `ferme:memoire:drawguess`) fait passer tous les
+    sujets du niveau avant d'en remontrer un. */
+function deal(): Item<Keyed>[] {
+  return memo.series(POOLS[ctx.tier].map(key => ({ key })), ROUNDS)
+}
+
 function later(s: S, ms: number, fn: () => void) {
   const gen = s.gen
   ctx.after(ms, () => { if (me === s && s.gen === gen) fn() })
@@ -210,6 +226,9 @@ function later(s: S, ms: number, fn: () => void) {
 function startRound(s: S) {
   s.phase = 'draw'; s.tries = 0; s.guess = null; s.gi = 0
   s.target = s.mode === 'defi' ? s.targets[s.round % s.targets.length] : null
+  // Montré : il ne reviendra qu'après tous les autres sujets du niveau
+  const it = s.mode === 'defi' ? s.deck[s.round % s.deck.length] : null
+  if (it && it.fact.key === s.target) memo.note(it, true)
   const card = $q('#dgCard')
   card.hidden = s.mode !== 'defi'
   if (s.target) {
@@ -353,7 +372,7 @@ function setMode(s: S, m: Mode) {
   s.mode = m
   ctx.root.querySelectorAll<HTMLElement>('.dg-mode').forEach(b => b.classList.toggle('sel', b.dataset.m === m))
   s.round = 0; s.found = 0
-  s.targets = shuffle(POOLS[ctx.tier].slice())
+  s.deck = deal(); s.targets = s.deck.map(it => it.fact.key)
   $q('#dgThumbs').hidden = true
   startRound(s)
   sfx('select', { vol: 0.3 })
@@ -478,11 +497,13 @@ export const drawguess: GameDef = {
       stage.renderer.domElement.classList.add('dg-gl')
       const s: S = {
         stage, T, kit, cat, catY0, fx: particles(stage, 300),
-        mode: 'defi', phase: 'load', round: 0, found: 0, targets: shuffle(POOLS[c.tier].slice()), target: null,
+        mode: 'defi', phase: 'load', round: 0, found: 0, deck: [], targets: [], target: null,
         guess: null, gi: 0, shown: 3, tries: 0, anim: 'idle', animT: 0, t: 0,
         dirty: false, color: PALETTE[1], size: SIZES[1], eraser: false, strokes: new Map(), abort: null, error: null, gen: 0
       }
       me = s
+      memo = recall('drawguess')
+      s.deck = deal(); s.targets = s.deck.map(it => it.fact.key)
       hideLoader()
       stage.start(dt => { if (me === s) frame(s, dt) })
       startRound(s)

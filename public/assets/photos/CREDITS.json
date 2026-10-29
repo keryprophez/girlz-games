@@ -372,10 +372,10 @@
   },
   "cake": {
     "fr": "gâteau",
-    "titre": "-365 shortcakes (27397449543).jpg",
-    "auteur": "terri_bateman",
-    "licence": "CC0",
-    "source": "https://commons.wikimedia.org/wiki/File:-365_shortcakes_(27397449543).jpg"
+    "titre": "- panoramio (7).jpg",
+    "auteur": "claareee",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-_panoramio_(7).jpg"
   },
   "cookie": {
     "fr": "biscuit",
@@ -530,5 +530,1741 @@
     "auteur": "Lucyin",
     "licence": "CC-BY-SA",
     "source": "https://www.inaturalist.org/photos/188007033"
+  },
+  "mouse": {
+    "fr": "souris",
+    "titre": "Mouse white background.jpg",
+    "auteur": "Unknown authorUnknown author (original) / Ilmari Karonen (editing)",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Mouse_white_background.jpg"
+  },
+  "donkey": {
+    "fr": "âne",
+    "titre": "Donkey (Equus asinus)",
+    "auteur": "Angela Marie",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/266668199"
+  },
+  "turkey": {
+    "fr": "dindon",
+    "titre": "Wild Turkey (Meleagris gallopavo)",
+    "auteur": "Matt K",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/31353610"
+  },
+  "hamster": {
+    "fr": "hamster",
+    "titre": "Golden Hamster (Mesocricetus auratus)",
+    "auteur": "Sqrt",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/147106686"
+  },
+  "budgie": {
+    "fr": "perruche",
+    "titre": "Budgerigar (Melopsittacus undulatus)",
+    "auteur": "Joseph j7uy5",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/66388650"
+  },
+  "rhino": {
+    "fr": "rhinocéros",
+    "titre": "White Rhinoceros (Ceratotherium simum)",
+    "auteur": "copper",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/14357926"
+  },
+  "chimp": {
+    "fr": "chimpanzé",
+    "titre": "Chimpanzee (Pan troglodytes)",
+    "auteur": "Martin Grimm",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/11268628"
+  },
+  "orangutan": {
+    "fr": "orang-outan",
+    "titre": "Bornean Orangutan (Pongo pygmaeus)",
+    "auteur": "Pirataber",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/62662319"
+  },
+  "cheetah": {
+    "fr": "guépard",
+    "titre": "Cheetah (Acinonyx jubatus)",
+    "auteur": "Irene Domhoff",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/57582224"
+  },
+  "leopard": {
+    "fr": "léopard",
+    "titre": "Leopard (Panthera pardus)",
+    "auteur": "janaohrner",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/8666580"
+  },
+  "jaguar": {
+    "fr": "jaguar",
+    "titre": "Jaguar (Panthera onca)",
+    "auteur": "rdwilcox51",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/51015966"
+  },
+  "wolf": {
+    "fr": "loup",
+    "titre": "Gray Wolf (Canis lupus)",
+    "auteur": "Ryan O'Donnell",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/21371987"
+  },
+  "polarbear": {
+    "fr": "ours polaire",
+    "titre": "Polar Bear (Ursus maritimus)",
+    "auteur": "Peter K",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/102785980"
+  },
+  "reindeer": {
+    "fr": "renne",
+    "titre": "Caribou (Rangifer tarandus)",
+    "auteur": "Amanda Graham",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/151118671"
+  },
+  "camel": {
+    "fr": "chameau",
+    "titre": "Domestic Bactrian Camel (Camelus bactrianus)",
+    "auteur": "Pavel Shukov",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/107439185"
+  },
+  "dromedary": {
+    "fr": "dromadaire",
+    "titre": "Dromedary Camel (Camelus dromedarius)",
+    "auteur": "Philipp salzgeber",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/70717528"
+  },
+  "crocodile": {
+    "fr": "crocodile",
+    "titre": "Nile Crocodile (Crocodylus niloticus)",
+    "auteur": "David Roche",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/545741360"
+  },
+  "chameleon": {
+    "fr": "caméléon",
+    "titre": "Veiled Chameleon (Chamaeleo calyptratus)",
+    "auteur": "Bobby Bok",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/473857256"
+  },
+  "iguana": {
+    "fr": "iguane",
+    "titre": "Green Iguana (Iguana iguana)",
+    "auteur": "Rainer Hungershausen",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/356025444"
+  },
+  "gorilla": {
+    "fr": "gorille",
+    "titre": "Western Gorilla (Gorilla gorilla)",
+    "auteur": "Recherche Monitoring",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/337066706"
+  },
+  "lizard": {
+    "fr": "lézard",
+    "titre": "Common Wall Lizard (Podarcis muralis)",
+    "auteur": "Marek R. Swadzba",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/349199966"
+  },
+  "beaver": {
+    "fr": "castor",
+    "titre": "Eurasian Beaver (Castor fiber)",
+    "auteur": "no rights reserved",
+    "licence": "CC0",
+    "source": "https://www.inaturalist.org/photos/120665558"
+  },
+  "squirrel": {
+    "fr": "écureuil",
+    "titre": "Eurasian Red Squirrel (Sciurus vulgaris)",
+    "auteur": "Rhododendrites",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/462357539"
+  },
+  "raccoon": {
+    "fr": "raton laveur",
+    "titre": "Common Raccoon (Procyon lotor)",
+    "auteur": "Kat Halsey",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/290431922"
+  },
+  "otter": {
+    "fr": "loutre",
+    "titre": "Eurasian Otter (Lutra lutra)",
+    "auteur": "Cloudtail the Snow Leopard",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/150213353"
+  },
+  "badger": {
+    "fr": "blaireau",
+    "titre": "European Badger (Meles meles)",
+    "auteur": "Paul Bowyer",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/53653140"
+  },
+  "boar": {
+    "fr": "sanglier",
+    "titre": "Wild Boar (Sus scrofa)",
+    "auteur": "Carlos N. G. Bocos",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/45828104"
+  },
+  "lynx": {
+    "fr": "lynx",
+    "titre": "Eurasian Lynx (Lynx lynx)",
+    "auteur": "Julia Moning",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/246545275"
+  },
+  "meerkat": {
+    "fr": "suricate",
+    "titre": "Meerkat (Suricata suricatta)",
+    "auteur": "魔笛",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/626719914"
+  },
+  "lemur": {
+    "fr": "lémurien",
+    "titre": "Ring-tailed Lemur (Lemur catta)",
+    "auteur": "Tambako The Jaguar",
+    "licence": "CC-BY-ND",
+    "source": "https://www.inaturalist.org/photos/25492"
+  },
+  "redpanda": {
+    "fr": "panda roux",
+    "titre": "Red Panda (Ailurus fulgens)",
+    "auteur": "Joachim S. Müller",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/110641178"
+  },
+  "armadillo": {
+    "fr": "tatou",
+    "titre": "Southern Long-nosed Armadillo (Dasypus novemcinctus)",
+    "auteur": "javierluque89",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/528221418"
+  },
+  "anteater": {
+    "fr": "fourmilier",
+    "titre": "Giant Anteater (Myrmecophaga tridactyla)",
+    "auteur": "João Vitor Andriola",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/76788283"
+  },
+  "platypus": {
+    "fr": "ornithorynque",
+    "titre": "Platypus (Ornithorhynchus anatinus)",
+    "auteur": "Jono Dashper",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/278342378"
+  },
+  "hyena": {
+    "fr": "hyène",
+    "titre": "Spotted Hyena (Crocuta crocuta)",
+    "auteur": "pgkaestner",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/117295967"
+  },
+  "gazelle": {
+    "fr": "gazelle",
+    "titre": "Thomson's Gazelle (Eudorcas thomsonii)",
+    "auteur": "Nancy Christensen",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/132041009"
+  },
+  "okapi": {
+    "fr": "okapi",
+    "titre": "Okapi (Okapia johnstoni)",
+    "auteur": "Idriss AYAYA",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/35649248"
+  },
+  "tapir": {
+    "fr": "tapir",
+    "titre": "South American Tapir (Tapirus terrestris)",
+    "auteur": "Jens-Christian Svenning",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/73961577"
+  },
+  "hare": {
+    "fr": "lièvre",
+    "titre": "Brown Hare (Lepus europaeus)",
+    "auteur": "Paul Cools",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/1843520"
+  },
+  "mole": {
+    "fr": "taupe",
+    "titre": "European Mole (Talpa europaea)",
+    "auteur": "Bogdan V. Kryzhatyuk",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/79276172"
+  },
+  "bat": {
+    "fr": "chauve-souris",
+    "titre": "Indian Flying Fox (Pteropus medius)",
+    "auteur": "Matthew Blissett",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/31963525"
+  },
+  "fennec": {
+    "fr": "fennec",
+    "titre": "Fennec Fox (Vulpes zerda)",
+    "auteur": "Tarek Nagah",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/178694522"
+  },
+  "porcupine": {
+    "fr": "porc-épic",
+    "titre": "Crested Porcupine (Hystrix cristata)",
+    "auteur": "Howard Chalkley",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/113319357"
+  },
+  "buffalo": {
+    "fr": "buffle",
+    "titre": "African Buffalo (Syncerus caffer)",
+    "auteur": "Michael Jansen",
+    "licence": "CC-BY-ND",
+    "source": "https://www.inaturalist.org/photos/97834193"
+  },
+  "warthog": {
+    "fr": "phacochère",
+    "titre": "Common Warthog (Phacochoerus africanus)",
+    "auteur": "Bernard DUPONT",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/251735512"
+  },
+  "alpaca": {
+    "fr": "alpaga",
+    "titre": "Alpaca (Lama pacos)",
+    "auteur": "shiranhersh",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/22703716"
+  },
+  "yak": {
+    "fr": "yak",
+    "titre": "Domestic Yak (Bos grunniens)",
+    "auteur": "Chriest",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/79366025"
+  },
+  "capybara": {
+    "fr": "capybara",
+    "titre": "Capybara (Hydrochoerus hydrochaeris)",
+    "auteur": "Carlos Sanchez",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/91546944"
+  },
+  "marmot": {
+    "fr": "marmotte",
+    "titre": "Alpine Marmot (Marmota marmota)",
+    "auteur": "Marco Piga",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/238850548"
+  },
+  "chamois": {
+    "fr": "chamois",
+    "titre": "Northern Chamois (Rupicapra rupicapra)",
+    "auteur": "Giles Laurent",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/456684191"
+  },
+  "ibex": {
+    "fr": "bouquetin",
+    "titre": "Alpine Ibex (Capra ibex)",
+    "auteur": "Jérémy Calvo",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/373820446"
+  },
+  "flamingo": {
+    "fr": "flamant rose",
+    "titre": "Greater Flamingo (Phoenicopterus roseus)",
+    "auteur": "Pierre-Marie Epiney",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/346681268"
+  },
+  "peacock": {
+    "fr": "paon",
+    "titre": "Indian Peafowl (Pavo cristatus)",
+    "auteur": "Cloudtail the Snow Leopard",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/165318600"
+  },
+  "toucan": {
+    "fr": "toucan",
+    "titre": "Toco Toucan (Ramphastos toco)",
+    "auteur": "Paul Steeves",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/63281117"
+  },
+  "hummingbird": {
+    "fr": "colibri",
+    "titre": "Anna's Hummingbird (Calypte anna)",
+    "auteur": "Nancy Christensen",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/358438292"
+  },
+  "eagle": {
+    "fr": "aigle",
+    "titre": "Golden Eagle (Aquila chrysaetos)",
+    "auteur": "Carlos N. G. Bocos",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/168362446"
+  },
+  "swan": {
+    "fr": "cygne",
+    "titre": "Mute Swan (Cygnus olor)",
+    "auteur": "Mark Sikking",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/264781420"
+  },
+  "pelican": {
+    "fr": "pélican",
+    "titre": "Great White Pelican (Pelecanus onocrotalus)",
+    "auteur": "David Kidwell",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/407844113"
+  },
+  "seagull": {
+    "fr": "mouette",
+    "titre": "Black-headed Gull (Chroicocephalus ridibundus)",
+    "auteur": "Sam Hambly",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/248819610"
+  },
+  "robin": {
+    "fr": "rouge-gorge",
+    "titre": "European Robin (Erithacus rubecula)",
+    "auteur": "Jakob W.",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/331946615"
+  },
+  "bluetit": {
+    "fr": "mésange",
+    "titre": "Eurasian Blue Tit (Cyanistes caeruleus)",
+    "auteur": "rorygardner79",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/41677354"
+  },
+  "magpie": {
+    "fr": "pie",
+    "titre": "Eurasian Magpie (Pica pica)",
+    "auteur": "Agustín Povedano",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/103446096"
+  },
+  "crow": {
+    "fr": "corbeau",
+    "titre": "Common Raven (Corvus corax)",
+    "auteur": "Tim Healy",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/651411222"
+  },
+  "sparrow": {
+    "fr": "moineau",
+    "titre": "House Sparrow (Passer domesticus)",
+    "auteur": "hedera.baltica",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/181802756"
+  },
+  "pigeon": {
+    "fr": "pigeon",
+    "titre": "Rock Pigeon (Columba livia)",
+    "auteur": "Birds of Gilgit-Baltistan",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/466776981"
+  },
+  "ostrich": {
+    "fr": "autruche",
+    "titre": "Common Ostrich (Struthio camelus)",
+    "auteur": "tlim",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/2568822"
+  },
+  "stork": {
+    "fr": "cigogne",
+    "titre": "White Stork (Ciconia ciconia)",
+    "auteur": "xulescu_g",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/269104502"
+  },
+  "heron": {
+    "fr": "héron",
+    "titre": "Grey Heron (Ardea cinerea)",
+    "auteur": "Anton Dangl",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/334606225"
+  },
+  "kingfisher": {
+    "fr": "martin-pêcheur",
+    "titre": "Common Kingfisher (Alcedo atthis)",
+    "auteur": "Frank Sengpiel",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/33183952"
+  },
+  "puffin": {
+    "fr": "macareux",
+    "titre": "Atlantic Puffin (Fratercula arctica)",
+    "auteur": "Jackson W.F. Chu",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/94420777"
+  },
+  "woodpecker": {
+    "fr": "pic vert",
+    "titre": "Eurasian Green Woodpecker (Picus viridis)",
+    "auteur": "Andrea Poggi",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/242668015"
+  },
+  "swallow": {
+    "fr": "hirondelle",
+    "titre": "Barn Swallow (Hirundo rustica)",
+    "auteur": "Ad Konings",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/122469139"
+  },
+  "blackbird": {
+    "fr": "merle",
+    "titre": "Eurasian Blackbird (Turdus merula)",
+    "auteur": "Luiz Lapa",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/356885346"
+  },
+  "vulture": {
+    "fr": "vautour",
+    "titre": "Eurasian Griffon (Gyps fulvus)",
+    "auteur": "Titouan Roguet",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/181654370"
+  },
+  "falcon": {
+    "fr": "faucon",
+    "titre": "Peregrine Falcon (Falco peregrinus)",
+    "auteur": "Grigory Heaton",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/330133179"
+  },
+  "barnowl": {
+    "fr": "chouette",
+    "titre": "Western Barn Owl (Tyto alba)",
+    "auteur": "caroline legg",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/165796939"
+  },
+  "jay": {
+    "fr": "geai",
+    "titre": "Eurasian Jay (Garrulus glandarius)",
+    "auteur": "Luc Viatour",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/168146456"
+  },
+  "goldfinch": {
+    "fr": "chardonneret",
+    "titre": "European Goldfinch (Carduelis carduelis)",
+    "auteur": "Antti Henttonen",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/369311714"
+  },
+  "pheasant": {
+    "fr": "faisan",
+    "titre": "Ring-necked Pheasant (Phasianus colchicus)",
+    "auteur": "Frank Lin",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/176733796"
+  },
+  "cockatoo": {
+    "fr": "cacatoès",
+    "titre": "Sulphur-crested Cockatoo (Cacatua galerita)",
+    "auteur": "Hyme852052",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/248913955"
+  },
+  "dolphin": {
+    "fr": "dauphin",
+    "titre": "Common Bottlenose Dolphin (Tursiops truncatus)",
+    "auteur": "Frank Krasovec",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/611231392"
+  },
+  "shark": {
+    "fr": "requin",
+    "titre": "Great White Shark (Carcharodon carcharias)",
+    "auteur": "René Campbell",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/31212995"
+  },
+  "octopus": {
+    "fr": "pieuvre",
+    "titre": "Common Octopus (Octopus vulgaris)",
+    "auteur": "Pero Ugarković",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/629729927"
+  },
+  "jellyfish": {
+    "fr": "méduse",
+    "titre": "Common Moon Jelly (Aurelia aurita)",
+    "auteur": "Bianca Bahlert",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/492583365"
+  },
+  "starfish": {
+    "fr": "étoile de mer",
+    "titre": "Common Sea Star (Asterias rubens)",
+    "auteur": "ipat",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/111381060"
+  },
+  "seahorse": {
+    "fr": "hippocampe",
+    "titre": "Common Seahorse (Hippocampus kuda)",
+    "auteur": "seahorses_of_the_world",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/49705000"
+  },
+  "clownfish": {
+    "fr": "poisson-clown",
+    "titre": "Clown fish in the Andaman Coral Reef.jpg",
+    "auteur": "Ritiks",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Clown_fish_in_the_Andaman_Coral_Reef.jpg"
+  },
+  "seaturtle": {
+    "fr": "tortue de mer",
+    "titre": "Green Sea Turtle (Chelonia mydas)",
+    "auteur": "Andresvilla92",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/464187430"
+  },
+  "crab": {
+    "fr": "crabe",
+    "titre": "Sally Lightfoot Crab (Grapsus grapsus)",
+    "auteur": "John Sullivan",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/110627975"
+  },
+  "lobster": {
+    "fr": "homard",
+    "titre": "European lobster (Homarus gammarus)",
+    "auteur": "luismartinezartola",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/88240797"
+  },
+  "shrimp": {
+    "fr": "crevette",
+    "titre": "Ambon Cleaner Shrimp (Lysmata amboinensis)",
+    "auteur": "Lucas Thompson",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/112849274"
+  },
+  "seal": {
+    "fr": "phoque",
+    "titre": "Harbor Seal (Phoca vitulina)",
+    "auteur": "Dan Roach",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/65060962"
+  },
+  "sealion": {
+    "fr": "otarie",
+    "titre": "California Sea Lion (Zalophus californianus)",
+    "auteur": "Jennifer Digdigan",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/11888923"
+  },
+  "walrus": {
+    "fr": "morse",
+    "titre": "Walrus (Odobenus rosmarus)",
+    "auteur": "Charles Young",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/65857"
+  },
+  "orca": {
+    "fr": "orque",
+    "titre": "Orca (Orcinus orca)",
+    "auteur": "Sherry Kirkvold",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/223550594"
+  },
+  "manta": {
+    "fr": "raie",
+    "titre": "Oceanic Manta Ray (Mobula birostris)",
+    "auteur": "Sarichia Cacciatore",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/177202542"
+  },
+  "urchin": {
+    "fr": "oursin",
+    "titre": "Atlantic Purple Sea Urchin (Paracentrotus lividus)",
+    "auteur": "Sylvain Le Bris",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/322561355"
+  },
+  "anemone": {
+    "fr": "anémone",
+    "titre": "Atlantic Beadlet Anemone (Actinia equina)",
+    "auteur": "Heather G.",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/19571233"
+  },
+  "squid": {
+    "fr": "calamar",
+    "titre": "Bigfin Reef Squid (Sepioteuthis lessoniana)",
+    "auteur": "Doug Finney",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/114424866"
+  },
+  "moray": {
+    "fr": "murène",
+    "titre": "Mediterranean Moray (Muraena helena)",
+    "auteur": "Bernat Garrigós",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/54968435"
+  },
+  "hermitcrab": {
+    "fr": "bernard-l'ermite",
+    "titre": "Common Hermit Crab (Pagurus bernhardus)",
+    "auteur": "Stefan",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/13213119"
+  },
+  "mussel": {
+    "fr": "moule",
+    "titre": "Blue Mussels (Mytilus edulis)",
+    "auteur": "Christine Morrow",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/73540771"
+  },
+  "manatee": {
+    "fr": "lamantin",
+    "titre": "West Indian Manatee (Trichechus manatus)",
+    "auteur": "Szecska",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/9596501"
+  },
+  "salmon": {
+    "fr": "saumon",
+    "titre": "Atlantic Salmon (Salmo salar)",
+    "auteur": "chirleu",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/60703307"
+  },
+  "beluga": {
+    "fr": "béluga",
+    "titre": "Beluga (Delphinapterus leucas)",
+    "auteur": "Fundación Caja Mediterráneo",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/66927701"
+  },
+  "pufferfish": {
+    "fr": "poisson-globe",
+    "titre": "White-spotted Puffer (Arothron hispidus)",
+    "auteur": "Luis P. B.",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/487402233"
+  },
+  "ladybug": {
+    "fr": "coccinelle",
+    "titre": "Seven-spotted Lady Beetle (Coccinella septempunctata)",
+    "auteur": "Thomas Shahan",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/267168450"
+  },
+  "bee": {
+    "fr": "abeille",
+    "titre": "Western Honey Bee (Apis mellifera)",
+    "auteur": "Lê Thanh Hoa",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/389898647"
+  },
+  "dragonfly": {
+    "fr": "libellule",
+    "titre": "Blue Emperor (Anax imperator)",
+    "auteur": "Alain Roujas",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/201497583"
+  },
+  "ant": {
+    "fr": "fourmi",
+    "titre": "rufa-group Wood Ants (Formica rufa)",
+    "auteur": "no rights reserved",
+    "licence": "CC0",
+    "source": "https://www.inaturalist.org/photos/284616242"
+  },
+  "snail": {
+    "fr": "escargot",
+    "titre": "Garden Snail (Cornu aspersum)",
+    "auteur": "Ferran Turmo Gort",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/16302570"
+  },
+  "spider": {
+    "fr": "araignée",
+    "titre": "Cross Orbweaver (Araneus diadematus)",
+    "auteur": "John Cramer III",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/4094545"
+  },
+  "grasshopper": {
+    "fr": "sauterelle",
+    "titre": "Great Green Bush-cricket (Tettigonia viridissima)",
+    "auteur": "Erik Lerbæk",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/10607935"
+  },
+  "cricket": {
+    "fr": "grillon",
+    "titre": "European Field Cricket (Gryllus campestris)",
+    "auteur": "Ryszard",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/157317382"
+  },
+  "beetle": {
+    "fr": "scarabée",
+    "titre": "European Rose Chafer (Cetonia aurata)",
+    "auteur": "Frank Deschandol",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/61588023"
+  },
+  "earthworm": {
+    "fr": "ver de terre",
+    "titre": "Nightcrawler (Lumbricus terrestris)",
+    "auteur": "tiskolin",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/2746352"
+  },
+  "mantis": {
+    "fr": "mante religieuse",
+    "titre": "European Mantis (Mantis religiosa)",
+    "auteur": "Charles J. Sharp\n",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/264035768"
+  },
+  "bumblebee": {
+    "fr": "bourdon",
+    "titre": "Buff-tailed Bumble Bee (Bombus terrestris)",
+    "auteur": "Bill Lucas",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/43060997"
+  },
+  "wasp": {
+    "fr": "guêpe",
+    "titre": "Common European Yellowjacket (Vespula vulgaris)",
+    "auteur": "Jakob Fahr",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/6661326"
+  },
+  "fly": {
+    "fr": "mouche",
+    "titre": "Common House Fly (Musca domestica)",
+    "auteur": "no rights reserved",
+    "licence": "CC0",
+    "source": "https://www.inaturalist.org/photos/79611144"
+  },
+  "mosquito": {
+    "fr": "moustique",
+    "titre": "House Mosquito Complex (Culex pipiens)",
+    "auteur": "gernotkunz",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/80260716"
+  },
+  "cicada": {
+    "fr": "cigale",
+    "titre": "Common Cicada (Lyristes plebejus)",
+    "auteur": "jasius",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/351231745"
+  },
+  "slug": {
+    "fr": "limace",
+    "titre": "Red Slug in Marburg Hessen Germany.jpg",
+    "auteur": "© Colin Erickson",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Red_Slug_in_Marburg_Hessen_Germany.jpg"
+  },
+  "millipede": {
+    "fr": "mille-pattes",
+    "titre": "American Giant Millipede Complex (Narceus americanus)",
+    "auteur": "sebastiancaraballo",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/20076496"
+  },
+  "woodlouse": {
+    "fr": "cloporte",
+    "titre": "Common Shiny Woodlouse (Oniscus asellus)",
+    "auteur": "Katja Schulz",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/2954551"
+  },
+  "stickinsect": {
+    "fr": "phasme",
+    "titre": "Indian Walking Stick (Carausius morosus)",
+    "auteur": "Christian Schwarz",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/2402554"
+  },
+  "scorpion": {
+    "fr": "scorpion",
+    "titre": "Common Emperor Scorpion (Pandinus imperator)",
+    "auteur": "Jan Ebr &amp; Ivana Ebrová",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/344669761"
+  },
+  "cockchafer": {
+    "fr": "hanneton",
+    "titre": "Common Cockchafer (Melolontha melolontha)",
+    "auteur": "Gilles San Martin",
+    "licence": "CC-BY-SA",
+    "source": "https://www.inaturalist.org/photos/128069579"
+  },
+  "hornet": {
+    "fr": "frelon",
+    "titre": "European Hornet (Vespa crabro)",
+    "auteur": "Jürgen Mangelsdorf",
+    "licence": "CC-BY-NC-ND",
+    "source": "https://www.inaturalist.org/photos/55845563"
+  },
+  "monarch": {
+    "fr": "monarque",
+    "titre": "Monarch (Danaus plexippus)",
+    "auteur": "Alejandro Lopez",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/227923335"
+  },
+  "morpho": {
+    "fr": "morpho",
+    "titre": "Morpho helenor peleides (Morpho helenor peleides)",
+    "auteur": "Ivo Antušek",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/1589763"
+  },
+  "peacockbutterfly": {
+    "fr": "paon-du-jour",
+    "titre": "European Peacock Butterfly (Aglais io)",
+    "auteur": "S. Rae",
+    "licence": "CC-BY",
+    "source": "https://www.inaturalist.org/photos/4710619"
+  },
+  "sunflower": {
+    "fr": "tournesol",
+    "titre": "Common Sunflower (Helianthus annuus)",
+    "auteur": "Emily Scherer",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/323768723"
+  },
+  "tulip": {
+    "fr": "tulipe",
+    "titre": "Garden Tulip (Tulipa gesneriana)",
+    "auteur": "sustainablemanny",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/282813232"
+  },
+  "poppy": {
+    "fr": "coquelicot",
+    "titre": "common poppy (Papaver rhoeas)",
+    "auteur": "David Neale",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/234132991"
+  },
+  "daisy": {
+    "fr": "marguerite",
+    "titre": "Leucanthemum vulgare 'Filigran' Flower 2200px.jpg",
+    "auteur": "Photo by and (c)2008 Derek Ramsey (Ram-Man).  Co-attribution must be given to th",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Leucanthemum_vulgare_%27Filigran%27_Flower_2200px.jpg"
+  },
+  "lavender": {
+    "fr": "lavande",
+    "titre": "Common Lavender (Lavandula angustifolia)",
+    "auteur": "epicnom",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/157057"
+  },
+  "waterlily": {
+    "fr": "nénuphar",
+    "titre": "European White Waterlily (Nymphaea alba)",
+    "auteur": "Kristin A. Bakkegard",
+    "licence": "CC-BY-NC",
+    "source": "https://www.inaturalist.org/photos/169681028"
+  },
+  "dandelion": {
+    "fr": "pissenlit",
+    "titre": "common dandelion (Taraxacum officinale)",
+    "auteur": "Paul Reeves",
+    "licence": "CC-BY-NC-SA",
+    "source": "https://www.inaturalist.org/photos/23575133"
+  },
+  "pineapple": {
+    "fr": "ananas",
+    "titre": "കൈതച്ചക്ക.jpg",
+    "auteur": "Suniltg at Malayalam Wikipedia",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg"
+  },
+  "pepper": {
+    "fr": "poivron",
+    "titre": "Green-Yellow-Red-Pepper-2009.jpg",
+    "auteur": "Kham Tran - www.khamtran.com",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Green-Yellow-Red-Pepper-2009.jpg"
+  },
+  "salad": {
+    "fr": "salade",
+    "titre": "Iceberg lettuce in SB.jpg",
+    "auteur": "en:User:Geographer",
+    "licence": "CC BY 1.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Iceberg_lettuce_in_SB.jpg"
+  },
+  "goose": {
+    "fr": "oie",
+    "titre": "Domestic Goose.jpg",
+    "auteur": "JJ Harrison",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Domestic_Goose.jpg"
+  },
+  "pony": {
+    "fr": "poney",
+    "titre": "IcelandicHorseInWinter.jpg",
+    "auteur": "Andreas Tille",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:IcelandicHorseInWinter.jpg"
+  },
+  "calf": {
+    "fr": "veau",
+    "titre": "Close-up photograph of a calf's head looking at the viewer in Don Det Laos.jpg",
+    "auteur": "Basile Morin",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Close-up_photograph_of_a_calf%27s_head_looking_at_the_viewer_in_Don_Det_Laos.jpg"
+  },
+  "lamb": {
+    "fr": "agneau",
+    "titre": "Sheep, Stodmarsh 6.jpg",
+    "auteur": "Keven Law, Los Angeles, USA",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sheep,_Stodmarsh_6.jpg"
+  },
+  "rooster": {
+    "fr": "coq",
+    "titre": "101C9183.JPG",
+    "auteur": "Au Domaine Des 3 Coqs",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:101C9183.JPG"
+  },
+  "puppy": {
+    "fr": "chiot",
+    "titre": "Golde33443.jpg",
+    "auteur": "Golden Trvs Gol twister",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Golde33443.jpg"
+  },
+  "kitten": {
+    "fr": "chaton",
+    "titre": "Juvenile Ragdoll.jpg",
+    "auteur": "Leijurv",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Juvenile_Ragdoll.jpg"
+  },
+  "scarecrow": {
+    "fr": "épouvantail",
+    "titre": "Kakashi2.jpg",
+    "auteur": "inconnu",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Kakashi2.jpg"
+  },
+  "canary": {
+    "fr": "canari",
+    "titre": "GelbA.JPG",
+    "auteur": "NEWSchr",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:GelbA.JPG"
+  },
+  "coral": {
+    "fr": "corail",
+    "titre": "Acropora coral ffs.jpg",
+    "auteur": "Andy Collins, NOAA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Acropora_coral_ffs.jpg"
+  },
+  "oyster": {
+    "fr": "huître",
+    "titre": "Crassostrea gigas p1040848.jpg",
+    "auteur": "David Monniaux",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Crassostrea_gigas_p1040848.jpg"
+  },
+  "sardine": {
+    "fr": "sardine",
+    "titre": "003 Caixa d'arengades al Mercat del Ram de Vic.jpg",
+    "auteur": "Enric",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:003_Caixa_d%27arengades_al_Mercat_del_Ram_de_Vic.jpg"
+  },
+  "caterpillar": {
+    "fr": "chenille",
+    "titre": "Chenille de Grand porte queue (macaon).jpg",
+    "auteur": "Didier Descouens",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Chenille_de_Grand_porte_queue_(macaon).jpg"
+  },
+  "tadpole": {
+    "fr": "têtard",
+    "titre": "RanaTemporariaLarva2.jpg",
+    "auteur": "Viridiflavus",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:RanaTemporariaLarva2.jpg"
+  },
+  "spiderweb": {
+    "fr": "toile d'araignée",
+    "titre": "A classic circular form spider's web.jpg",
+    "auteur": "Stephencdickson",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:A_classic_circular_form_spider%27s_web.jpg"
+  },
+  "rainbow": {
+    "fr": "arc-en-ciel",
+    "titre": "Double-alaskan-rainbow.jpg",
+    "auteur": "Eric Rolph at English Wikipedia",
+    "licence": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Double-alaskan-rainbow.jpg"
+  },
+  "volcano": {
+    "fr": "volcan",
+    "titre": "Augustine volcano Jan 24 2006 - Cyrus Read.jpg",
+    "auteur": "Cyrus Read\nGeophysicist\nUSGS, Alaska Volcano Observatory\n\ncread@usgs.gov",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Augustine_volcano_Jan_24_2006_-_Cyrus_Read.jpg"
+  },
+  "waterfall": {
+    "fr": "cascade",
+    "titre": "Cascada Dynjandi, Vestfirðir, Islandia, 2014-08-14, DD 136-138 HDR.JPG",
+    "auteur": "Diego Delso",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cascada_Dynjandi,_Vestfir%C3%B0ir,_Islandia,_2014-08-14,_DD_136-138_HDR.JPG"
+  },
+  "aurora": {
+    "fr": "aurore boréale",
+    "titre": "Aurora borealis over Eielson Air Force Base, Alaska.jpg",
+    "auteur": "United States Air Force photo by Senior Airman Joshua Strang",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Aurora_borealis_over_Eielson_Air_Force_Base,_Alaska.jpg"
+  },
+  "lightning": {
+    "fr": "éclair",
+    "titre": "Lightning Pritzerbe 01 (MK).jpg",
+    "auteur": "Mathias Krumbholz",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Lightning_Pritzerbe_01_(MK).jpg"
+  },
+  "mountain": {
+    "fr": "montagne",
+    "titre": "Matterhorn from Domhütte - 2.jpg",
+    "auteur": "Photo: chil, on Camptocamp.org\nDerivative work:Zacharie Grossen",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Matterhorn_from_Domh%C3%BCtte_-_2.jpg"
+  },
+  "glacier": {
+    "fr": "glacier",
+    "titre": "Aialik Glacier from a boat.jpg",
+    "auteur": "RndmCrs",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Aialik_Glacier_from_a_boat.jpg"
+  },
+  "iceberg": {
+    "fr": "iceberg",
+    "titre": "Iceberg in the Arctic with its underside exposed.jpg",
+    "auteur": "AWeith",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Iceberg_in_the_Arctic_with_its_underside_exposed.jpg"
+  },
+  "desert": {
+    "fr": "désert",
+    "titre": "Rub al Khali 002.JPG",
+    "auteur": "Nepenthes",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Rub_al_Khali_002.JPG"
+  },
+  "island": {
+    "fr": "île",
+    "titre": "500px photo (39601158).jpeg",
+    "auteur": "Jorge Cortell",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:500px_photo_(39601158).jpeg"
+  },
+  "beach": {
+    "fr": "plage",
+    "titre": "10-star-fish-sea-beach-sand-wallpaper.jpg",
+    "auteur": "Hashm hady",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:10-star-fish-sea-beach-sand-wallpaper.jpg"
+  },
+  "forest": {
+    "fr": "forêt",
+    "titre": "- panoramio (4047).jpg",
+    "auteur": "tomyst",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-_panoramio_(4047).jpg"
+  },
+  "lake": {
+    "fr": "lac",
+    "titre": "Lake Idro Italy 2005-08-16.jpg",
+    "auteur": "No machine-readable author provided. Marius~commonswiki assumed (based on copyri",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Lake_Idro_Italy_2005-08-16.jpg"
+  },
+  "river": {
+    "fr": "rivière",
+    "titre": "Pirogue running on the Mekong at golden hour between Don Det and Don Khon Laos.jpg",
+    "auteur": "Basile Morin",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pirogue_running_on_the_Mekong_at_golden_hour_between_Don_Det_and_Don_Khon_Laos.jpg"
+  },
+  "snowflake": {
+    "fr": "flocon",
+    "titre": "Snowflake (lumehelves).jpg",
+    "auteur": "Janek Lass",
+    "licence": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Snowflake_(lumehelves).jpg"
+  },
+  "crystal": {
+    "fr": "cristal",
+    "titre": "Amatista Laye 2.jpg",
+    "auteur": "Gonzalo Devia",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Amatista_Laye_2.jpg"
+  },
+  "geyser": {
+    "fr": "geyser",
+    "titre": "Strokkur Geysir (14135319580) (cropped).jpg",
+    "auteur": "Christoph Strässler from Oberdorf BL, Schweiz",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Strokkur_Geysir_(14135319580)_(cropped).jpg"
+  },
+  "cave": {
+    "fr": "grotte",
+    "titre": "Lechuguilla Cave Pearlsian Gulf.jpg",
+    "auteur": "Dave Bunnell / Under Earth Images",
+    "licence": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Lechuguilla_Cave_Pearlsian_Gulf.jpg"
+  },
+  "cloud": {
+    "fr": "nuage",
+    "titre": "Img20050526 0007 en tannheim cumulus.jpg",
+    "auteur": "Glg, edited by User:drini",
+    "licence": "CC BY-SA 2.0 DE",
+    "source": "https://commons.wikimedia.org/wiki/File:Img20050526_0007_en_tannheim_cumulus.jpg"
+  },
+  "snowman": {
+    "fr": "bonhomme de neige",
+    "titre": "Snowman in Indiana 2014.jpg",
+    "auteur": "GutMaze",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Snowman_in_Indiana_2014.jpg"
+  },
+  "cactus": {
+    "fr": "cactus",
+    "titre": "Carnegiea gigantea in Saguaro National Park near Tucson, Arizona during November (58).jpg",
+    "auteur": "WClarke",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Carnegiea_gigantea_in_Saguaro_National_Park_near_Tucson,_Arizona_during_November_(58).jpg"
+  },
+  "baobab": {
+    "fr": "baobab",
+    "titre": "Adansonia grandidieri04.jpg",
+    "auteur": "Bernard Gagnon",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Adansonia_grandidieri04.jpg"
+  },
+  "palmtree": {
+    "fr": "palmier",
+    "titre": "1859-Martinique.web.jpg",
+    "auteur": "Patrick Verdier, Free On Line Photos",
+    "licence": "COPYRIGHTED FREE USE",
+    "source": "https://commons.wikimedia.org/wiki/File:1859-Martinique.web.jpg"
+  },
+  "tree": {
+    "fr": "arbre",
+    "titre": "Usamljeni jasen - panoramio (cropped).jpg",
+    "auteur": "menergo",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Usamljeni_jasen_-_panoramio_(cropped).jpg"
+  },
+  "rose": {
+    "fr": "rose",
+    "titre": "Roses, Mussoorie Mall Road.jpg",
+    "auteur": "Anoushka Trivedi",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Roses,_Mussoorie_Mall_Road.jpg"
+  },
+  "orchid": {
+    "fr": "orchidée",
+    "titre": "Phalaenopsis (aka).jpg",
+    "auteur": "André Karwath aka Aka",
+    "licence": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Phalaenopsis_(aka).jpg"
+  },
+  "leaf": {
+    "fr": "feuille",
+    "titre": "Lisc lipy.jpg",
+    "auteur": "Krzysztof P. Jasiutowicz",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Lisc_lipy.jpg"
+  },
+  "acorn": {
+    "fr": "gland",
+    "titre": "Acorn (2881856339).jpg",
+    "auteur": "Randi Hausken from Bærum, Norway",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Acorn_(2881856339).jpg"
+  },
+  "pinecone": {
+    "fr": "pomme de pin",
+    "titre": "Pinus coulteri MHNT Cone.jpg",
+    "auteur": "Didier Descouens",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pinus_coulteri_MHNT_Cone.jpg"
+  },
+  "chestnut": {
+    "fr": "marron",
+    "titre": "Conker.jpg",
+    "auteur": "Sharonkcooper at English Wikipedia",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Conker.jpg"
+  },
+  "hazelnut": {
+    "fr": "noisette",
+    "titre": "Hazelnuts (Corylus avellana) - whole with kernels.jpg",
+    "auteur": "Ivar Leidus",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hazelnuts_(Corylus_avellana)_-_whole_with_kernels.jpg"
+  },
+  "walnut": {
+    "fr": "noix",
+    "titre": "Walnuts - whole and open with halved kernel.jpg",
+    "auteur": "Ivar Leidus",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Walnuts_-_whole_and_open_with_halved_kernel.jpg"
+  },
+  "pebble": {
+    "fr": "caillou",
+    "titre": "Pebble Dash (15366562092).jpg",
+    "auteur": "wardyboy400",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pebble_Dash_(15366562092).jpg"
+  },
+  "tornado": {
+    "fr": "tornade",
+    "titre": "F5 tornado Elie Manitoba 2007.jpg",
+    "auteur": "Justin Hobson (Justin1569 at English Wikipedia)",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:F5_tornado_Elie_Manitoba_2007.jpg"
+  },
+  "sun": {
+    "fr": "soleil",
+    "titre": "Pulses from the Sun",
+    "auteur": "NASA/SDO/AIA",
+    "licence": "DOMAINE PUBLIC (NASA)",
+    "source": "https://images.nasa.gov/details/PIA17669"
+  },
+  "moon": {
+    "fr": "lune",
+    "titre": "FullMoon2010.jpg",
+    "auteur": "Gregory H. Revera",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:FullMoon2010.jpg"
+  },
+  "earth": {
+    "fr": "Terre",
+    "titre": "Blue Marble, Eastern Hemisphere March 2014",
+    "auteur": "NASA GSFC",
+    "licence": "DOMAINE PUBLIC (NASA)",
+    "source": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001016"
+  },
+  "mercury": {
+    "fr": "Mercure",
+    "titre": "Mercury in true color.jpg",
+    "auteur": "NASA/Johns Hopkins University Applied Physics Laboratory/Arizona State Universit",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Mercury_in_true_color.jpg"
+  },
+  "venus": {
+    "fr": "Vénus",
+    "titre": "Venus from Mariner 10.jpg",
+    "auteur": "NASA/JPL-Caltech",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Venus_from_Mariner_10.jpg"
+  },
+  "mars": {
+    "fr": "Mars",
+    "titre": "Hubble Sharpest View Of Mars",
+    "auteur": "NASA/JPL",
+    "licence": "DOMAINE PUBLIC (NASA)",
+    "source": "https://images.nasa.gov/details/PIA01249"
+  },
+  "jupiter": {
+    "fr": "Jupiter",
+    "titre": "Jupiter OPAL 2024.png",
+    "auteur": "NASA/STSCI (S.T.A.R.S)",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Jupiter_OPAL_2024.png"
+  },
+  "bull": {
+    "fr": "taureau",
+    "titre": "2010 - djurparken i Höör 035 (cropped).JPG",
+    "auteur": "Mikael Parkvall",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2010_-_djurparken_i_H%C3%B6%C3%B6r_035_(cropped).JPG"
+  },
+  "firtree": {
+    "fr": "sapin",
+    "titre": "Abies nordmanniana (Uludag National Park, Turkey).jpg",
+    "auteur": "johngibson139",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Abies_nordmanniana_(Uludag_National_Park,_Turkey).jpg"
+  },
+  "feather": {
+    "fr": "plume",
+    "titre": "2011-12-07 12-49-02-plume-paon-57f.jpg",
+    "auteur": "Thomas Bresson",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2011-12-07_12-49-02-plume-paon-57f.jpg"
+  },
+  "saturn": {
+    "fr": "Saturne",
+    "titre": "Saturn global view from Cassini, rings open Better Colour.png",
+    "auteur": "NASA / JPL-Caltech / SSI / color composite by Gordan Ugarkovic",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Saturn_global_view_from_Cassini,_rings_open_Better_Colour.png"
+  },
+  "uranus": {
+    "fr": "Uranus",
+    "titre": "Uranus as seen by NASA Voyager 2",
+    "auteur": "NASA/JPL-Caltech",
+    "licence": "DOMAINE PUBLIC (NASA)",
+    "source": "https://images.nasa.gov/details/PIA18182"
+  },
+  "neptune": {
+    "fr": "Neptune",
+    "titre": "Neptune",
+    "auteur": "NASA/JPL",
+    "licence": "DOMAINE PUBLIC (NASA)",
+    "source": "https://images.nasa.gov/details/PIA02210"
+  },
+  "pluto": {
+    "fr": "Pluton",
+    "titre": "Pluto in True Color - High-Res.png",
+    "auteur": "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Inst",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Pluto_in_True_Color_-_High-Res.png"
+  },
+  "comet": {
+    "fr": "comète",
+    "titre": "Comet 2020 F3 (NEOWISE) on Jul 14 2020 aligned to stars.jpg",
+    "auteur": "SimgDe",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Comet_2020_F3_(NEOWISE)_on_Jul_14_2020_aligned_to_stars.jpg"
+  },
+  "galaxy": {
+    "fr": "galaxie",
+    "titre": "M31-Andromede-16-09-2023-Hamois.jpg",
+    "auteur": "Lviatour",
+    "licence": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:M31-Andromede-16-09-2023-Hamois.jpg"
+  },
+  "nebula": {
+    "fr": "nébuleuse",
+    "titre": "Planetary Nebula",
+    "auteur": "NASA GSFC",
+    "licence": "DOMAINE PUBLIC (NASA)",
+    "source": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001465"
+  },
+  "astronaut": {
+    "fr": "astronaute",
+    "titre": "Bruce McCandless II during EVA in 1984.jpg",
+    "auteur": "NASA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Bruce_McCandless_II_during_EVA_in_1984.jpg"
+  },
+  "rocket": {
+    "fr": "fusée",
+    "titre": "Apollo 11 Launch - GPN-2000-000630.jpg",
+    "auteur": "NASA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Apollo_11_Launch_-_GPN-2000-000630.jpg"
+  },
+  "shuttle": {
+    "fr": "navette",
+    "titre": "STS120LaunchHiRes-edit1.jpg",
+    "auteur": "NASA; edited by jjron (tilt corrected)",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:STS120LaunchHiRes-edit1.jpg"
+  },
+  "station": {
+    "fr": "station spatiale",
+    "titre": "The station pictured from the SpaceX Crew Dragon 5.jpg",
+    "auteur": "NASA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:The_station_pictured_from_the_SpaceX_Crew_Dragon_5.jpg"
+  },
+  "satellite": {
+    "fr": "satellite",
+    "titre": "Two 3U CubeSats.jpg",
+    "auteur": "NASA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Two_3U_CubeSats.jpg"
+  },
+  "telescope": {
+    "fr": "télescope",
+    "titre": "Hubble 2009 close-up 2.jpg",
+    "auteur": "NASA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Hubble_2009_close-up_2.jpg"
+  },
+  "eclipse": {
+    "fr": "éclipse",
+    "titre": "Solar eclipse 1999 4.jpg",
+    "auteur": "Luc Viatour",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Solar_eclipse_1999_4.jpg"
+  },
+  "meteor": {
+    "fr": "étoile filante",
+    "titre": "Perseid Meteor Shower at Mojave National Preserve (51374983157) (cropped).jpg",
+    "auteur": "Jim Vajda from Oxford, Ohio, USA",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Perseid_Meteor_Shower_at_Mojave_National_Preserve_(51374983157)_(cropped).jpg"
+  },
+  "asteroid": {
+    "fr": "astéroïde",
+    "titre": "Bennu mosaic OSIRIS-REx (square).png",
+    "auteur": "NASA/Goddard/University of Arizona",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Bennu_mosaic_OSIRIS-REx_(square).png"
+  },
+  "crater": {
+    "fr": "cratère",
+    "titre": "Tycho LRO.png",
+    "auteur": "NASA",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Tycho_LRO.png"
+  },
+  "star": {
+    "fr": "étoile",
+    "titre": "Pleiades large.jpg",
+    "auteur": "NASA, ESA, AURA/Caltech, Palomar Observatory\n\nThe science team consists of: D. S",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Pleiades_large.jpg"
+  },
+  "kiwi": {
+    "fr": "kiwi",
+    "titre": "Kiwi Kaleidoscope Nature's Circular Elegance by Raju C Reddy.jpg",
+    "auteur": "rajucreddy",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kiwi_Kaleidoscope_Nature%27s_Circular_Elegance_by_Raju_C_Reddy.jpg"
+  },
+  "mango": {
+    "fr": "mangue",
+    "titre": "Mangos - single and halved.jpg",
+    "auteur": "Ivar Leidus",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mangos_-_single_and_halved.jpg"
+  },
+  "raspberry": {
+    "fr": "framboise",
+    "titre": "-365 june raspberries (27599222722).jpg",
+    "auteur": "terri_bateman",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:-365_june_raspberries_(27599222722).jpg"
+  },
+  "blueberry": {
+    "fr": "myrtille",
+    "titre": "Blueberries.jpg",
+    "auteur": "The original Uploader was Oven Fresh at English Wikipedia",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Blueberries.jpg"
+  },
+  "blackberry": {
+    "fr": "mûre",
+    "titre": "-2020-08-30 Punnet of foraged Blackberries, Trimingham, Norfolk (1).JPG",
+    "auteur": "Kolforn (Kolforn)\nI'd appreciate if you could mail me (Kolforn@gmail.com) if you",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:-2020-08-30_Punnet_of_foraged_Blackberries,_Trimingham,_Norfolk_(1).JPG"
+  },
+  "pomegranate": {
+    "fr": "grenade",
+    "titre": "Pomegranate Juice (2019).jpg",
+    "auteur": "Augustus Binu : flickr",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pomegranate_Juice_(2019).jpg"
+  },
+  "apricot": {
+    "fr": "abricot",
+    "titre": "20070107 Apricot.jpg",
+    "auteur": "Ian W. Fieggen",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:20070107_Apricot.jpg"
+  },
+  "melon": {
+    "fr": "melon",
+    "titre": "Cucumis melo var. reticulatus (photo by Scott Bauer).jpg",
+    "auteur": "USDA photo by Scott Bauer. Image Number K7355-11.",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Cucumis_melo_var._reticulatus_(photo_by_Scott_Bauer).jpg"
+  },
+  "lychee": {
+    "fr": "litchi",
+    "titre": "Litchi chinensis fruits.JPG",
+    "auteur": "B.navez",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Litchi_chinensis_fruits.JPG"
+  },
+  "redcurrant": {
+    "fr": "groseille",
+    "titre": "Redcurrant (Ribes rubrum) fruits.jpg",
+    "auteur": "Ivar Leidus",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Redcurrant_(Ribes_rubrum)_fruits.jpg"
+  },
+  "clementine": {
+    "fr": "clémentine",
+    "titre": "Clementines whole, peeled, half and sectioned.jpg",
+    "auteur": "carol",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Clementines_whole,_peeled,_half_and_sectioned.jpg"
+  },
+  "icecream": {
+    "fr": "glace",
+    "titre": "Strawberry ice cream cone (5076899310).jpg",
+    "auteur": "TheCulinaryGeek from Chicago, USA",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Strawberry_ice_cream_cone_(5076899310).jpg"
+  },
+  "lollipop": {
+    "fr": "sucette",
+    "titre": "Farbenfrohe Lollipops, Austria.jpg",
+    "auteur": "Naturpuur",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Farbenfrohe_Lollipops,_Austria.jpg"
+  },
+  "candy": {
+    "fr": "bonbon",
+    "titre": "Candy in Damascus.jpg",
+    "auteur": "Elisa  Azzali",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Candy_in_Damascus.jpg"
+  },
+  "chocolate": {
+    "fr": "chocolat",
+    "titre": "Green and Black's dark chocolate bar 2.jpg",
+    "auteur": "Mx. Granger",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Green_and_Black%27s_dark_chocolate_bar_2.jpg"
+  },
+  "crepe": {
+    "fr": "crêpe",
+    "titre": "Crepes dsc07085.jpg",
+    "auteur": "David Monniaux",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Crepes_dsc07085.jpg"
+  },
+  "waffle": {
+    "fr": "gaufre",
+    "titre": "Waffles with Strawberries.jpg",
+    "auteur": "Parkerman &amp; Christie from San Diego, USA",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Waffles_with_Strawberries.jpg"
+  },
+  "donut": {
+    "fr": "beignet",
+    "titre": "Glazed-Donut.jpg",
+    "auteur": "Evan-Amos",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:Glazed-Donut.jpg"
+  },
+  "macaron": {
+    "fr": "macaron",
+    "titre": "120329-A-ON889-050 (6896018536).jpg",
+    "auteur": "U.S. Army Corps of Engineers Norfolk District from United States",
+    "licence": "PUBLIC DOMAIN",
+    "source": "https://commons.wikimedia.org/wiki/File:120329-A-ON889-050_(6896018536).jpg"
+  },
+  "pie": {
+    "fr": "tarte",
+    "titre": "Blueberry Strawberry Fruit Tart 1 2016-05-23.jpg",
+    "auteur": "FASTILY",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Blueberry_Strawberry_Fruit_Tart_1_2016-05-23.jpg"
+  },
+  "marshmallow": {
+    "fr": "guimauve",
+    "titre": "White Marshmallows.jpg",
+    "auteur": "John Morgan",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:White_Marshmallows.jpg"
+  },
+  "cottoncandy": {
+    "fr": "barbe à papa",
+    "titre": "Cotton candy Μαλλί της γριάς.JPG",
+    "auteur": "FocalPoint",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cotton_candy_%CE%9C%CE%B1%CE%BB%CE%BB%CE%AF_%CF%84%CE%B7%CF%82_%CE%B3%CF%81%CE%B9%CE%AC%CF%82.JPG"
+  },
+  "brioche": {
+    "fr": "brioche",
+    "titre": "Brioche.jpg",
+    "auteur": "inconnu",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Brioche.jpg"
+  },
+  "madeleine": {
+    "fr": "madeleine",
+    "titre": "A Shell Leines.jpg",
+    "auteur": "Miyuki Meinaka",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:A_Shell_Leines.jpg"
+  },
+  "popcorn": {
+    "fr": "pop-corn",
+    "titre": "104 365 Popcorn (3520531694).jpg",
+    "auteur": "jon collier from waltham, ma, usa",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:104_365_Popcorn_(3520531694).jpg"
+  },
+  "pizza": {
+    "fr": "pizza",
+    "titre": "Neapolitan pizza at Trappica (48701940197).jpg",
+    "auteur": "Bex Walton from London, England",
+    "licence": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Neapolitan_pizza_at_Trappica_(48701940197).jpg"
+  },
+  "fries": {
+    "fr": "frites",
+    "titre": "French Fries.JPG",
+    "auteur": "StockSnap",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:French_Fries.JPG"
+  },
+  "sandwich": {
+    "fr": "sandwich",
+    "titre": "Bacon, lettuce, tomato, and avocado.jpg",
+    "auteur": "Jami430",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bacon,_lettuce,_tomato,_and_avocado.jpg"
+  },
+  "soup": {
+    "fr": "soupe",
+    "titre": "Asparagus soup (spargelsuppe).jpg",
+    "auteur": "Petar Milošević",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Asparagus_soup_(spargelsuppe).jpg"
   }
 }

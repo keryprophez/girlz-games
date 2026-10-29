@@ -3,7 +3,8 @@ import { $, shuffle } from '../core/utils'
 import { sfx, preloadSfx } from '../core/sfx'
 import { confetti } from '../core/fx'
 import { ICON } from '../core/icons'
-import { PHOTOS, photoUrl } from '../core/sprites'
+import { photoUrl } from '../core/sprites'
+import { IMAGIER, ofThemes, type Theme } from '../core/imagier'
 import { createStage, loader, woodTex, picker, type Stage, type T3 } from '../core/three3d'
 import { particles, type Particles, toScreen } from '../core/scene3d'
 import { some } from '../core/hand'
@@ -23,7 +24,34 @@ import { some } from '../core/hand'
 
    L'aperçu du début ne vide pas le défi : bref à la fleur, absent à
    l'éclair et à la flamme. Plus rien à lire : manches en pastilles, coups en
-   chiffre à côté d'une main. */
+   chiffre à côté d'une main.
+
+   Les thèmes (29/10, le père : « de belles banques d'images, des planètes,
+   des animaux, des trucs stylés ») : à l'ouverture, de grandes photos pour
+   choisir son jeu de cartes — l'espace (photos de la NASA), la mer, les
+   petites bêtes, les animaux du monde, les oiseaux, la nature, les
+   gourmandises, ou tout mélangé — puis le niveau. Une partie pioche dans
+   son thème sans remise : une carte ne revient qu'une fois le paquet
+   épuisé. Tout est ouvert dès le début (rien à débloquer). */
+
+/** Les jeux de cartes : leur photo de couverture et les thèmes de l'imagier
+    qu'ils mélangent (`null` : tout l'imagier, sous quatre photos en carré —
+    `affiches/memory-melange.webp`, assemblée une fois pour toutes). */
+const DECKS: { id: string; name: string; cover: string; themes: Theme[] | null }[] = [
+  { id: 'espace', name: 'Espace', cover: 'nebula', themes: ['espace'] },
+  { id: 'mer', name: 'Mer', cover: 'dolphin', themes: ['mer'] },
+  { id: 'betes', name: 'Petites bêtes', cover: 'ladybug', themes: ['betes'] },
+  { id: 'monde', name: 'Animaux', cover: 'panda', themes: ['monde'] },
+  { id: 'oiseaux', name: 'Oiseaux', cover: 'flamingo', themes: ['oiseaux'] },
+  { id: 'nature', name: 'Nature', cover: 'aurora', themes: ['nature'] },
+  { id: 'gourmand', name: 'Gourmandises', cover: 'macaron', themes: ['fruits', 'desserts'] },
+  { id: 'melange', name: 'Tout mélangé', cover: '', themes: null }
+]
+/** Les photos d'un jeu de cartes. */
+export const deckOf = (id: string) => {
+  const d = DECKS.find(x => x.id === id) ?? DECKS[0]
+  return (d.themes ? ofThemes(d.themes) : IMAGIER).map(p => p.id)
+}
 
 const CW = 1          // côté d'une carte
 const GAP = 0.16
@@ -54,6 +82,9 @@ interface State {
   first: Card | null
   lock: boolean
   deck: string[]
+  /** Les photos du thème ; `bag` : celles pas encore sorties dans la partie. */
+  pool: string[]
+  bag: string[]
   cards: Card[]
   /** Nombre de manches distribuées : les bots attendent la suivante dessus. */
   dealt: number
@@ -212,7 +243,12 @@ function layout(me: State, n: number) {
 
 async function loadRound(me: State) {
   const pairs = me.rounds[me.round]
-  const picks = shuffle([...PHOTOS]).slice(0, pairs)
+  // Sans remise : le sac se remplit quand il est vide, sans les cartes déjà tirées
+  const picks: string[] = []
+  while (picks.length < pairs) {
+    if (!me.bag.length) me.bag = shuffle(me.pool.filter(k => !picks.includes(k)))
+    picks.push(me.bag.pop()!)
+  }
   me.lock = true
   await Promise.all(picks.filter(k => !me.faceTex.has(k)).map(async k => me.faceTex.set(k, await loadFace(me.T, k))))
   if (mem !== me) return
@@ -317,6 +353,7 @@ function finish(me: State) {
 export const memory: GameDef = {
   id: 'memory', name: 'Memory', icon: '🃏', sq: 'sq-peach', cat: 'memoire',
   subtitle: 'Mémorise pendant l\'aperçu, puis retrouve les paires',
+  variants: DECKS.map(d => ({ id: d.id, name: d.name, img: d.cover ? photoUrl(d.cover) : import.meta.env.BASE_URL + 'assets/affiches/memory-melange.webp' })),
   // La main : une carte face cachée ; pour la deuxième, « l'une de celles-là »
   // (montrer la paire, ce serait jouer à sa place)
   hand: () => {
@@ -378,7 +415,7 @@ export const memory: GameDef = {
       const me: State = {
         stage, T,
         rounds: c.byTier([4, 6, 8], [6, 8, 10], [8, 10, 12]), round: 0, moves: 0,
-        pairs: 0, found: 0, first: null, lock: true, deck: [], cards: [], dealt: 0,
+        pairs: 0, found: 0, first: null, lock: true, deck: [], pool: deckOf(c.variant), bag: [], cards: [], dealt: 0,
         fx: particles(stage, 300), backTex: stage.keep(backTexture(T)), faceTex: new Map(),
         geo, bodyMat: new T.MeshStandardMaterial({ color: 0xFFFBF2, roughness: 0.6 }),
         pile: new T.Vector3(), piled: 0, gone: []

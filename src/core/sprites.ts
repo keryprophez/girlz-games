@@ -1,3 +1,5 @@
+import { IMAGIER } from './imagier'
+
 /* Images des jeux en DOM — les photos des imagiers et les icônes du Food Kit.
 
    Les planches 2D de Kenney (animaux, nature, objets, poissons) sont sorties
@@ -19,30 +21,13 @@
    (Puissance 4, Simon, Taquin) est fait des personnages 3D
    de la ferme ; le Tour du Monde montre aussi ses animaux en photo (22/09).
 
-   Les animaux viennent d'iNaturalist (photos identifiées par l'espèce), le
-   reste des catégories de Wikimedia Commons. Toutes sont ramenées au même
-   moule à l'import : carré, 512 px (voir scripts/import-photos.mjs). */
-export const PHOTOS = new Set([
-  // Ferme
-  'cow', 'pig', 'chicken', 'chick', 'duck', 'horse', 'goat', 'sheep', 'rabbit', 'dog', 'cat',
-  // Sauvages
-  'elephant', 'giraffe', 'lion', 'monkey', 'bear', 'zebra', 'fox', 'deer', 'hedgehog',
-  'frog', 'snake', 'owl', 'parrot', 'penguin', 'whale', 'fish', 'turtle', 'butterfly',
-  // Un animal par continent, pour le Tour du Monde (22/09)
-  'panda', 'tiger', 'kangaroo', 'koala', 'hippo', 'bison', 'moose', 'sloth', 'llama',
-  // Fruits
-  // Pas d'ananas : les seules photos libres le montrent sur son pied, vert et
-  // noyé dans ses feuilles — irreconnaissable à 6 ans. Onze fruits suffisent.
-  'apple', 'banana', 'strawberry', 'grapes', 'cherries', 'orange', 'pear', 'lemon',
-  'watermelon', 'peach', 'plum',
-  // Légumes
-  'carrot', 'tomato', 'broccoli', 'corn', 'eggplant', 'onion', 'cabbage', 'pumpkin',
-  'radish', 'potato', 'cucumber', 'mushroom',
-  // À manger
-  'bread', 'baguette', 'cheese', 'cake', 'cookie', 'muffin', 'croissant', 'egg', 'milk', 'honey',
-  // Objets de la cuisine
-  'plate', 'cup', 'pot', 'spoon', 'glass'
-])
+   Les animaux viennent d'iNaturalist, l'espace de la NASA, le reste des
+   catégories de Wikimedia Commons. Toutes sont ramenées au même moule à
+   l'import : carré, 512 px (voir scripts/import-photos.mjs).
+
+   Depuis le 29/10, la liste est dans `core/imagier.ts` : 324 photos, avec
+   leur mot, leur thème et leurs niveaux. */
+export const PHOTOS = new Set(IMAGIER.map(p => p.id))
 export const photoUrl = (name: string) => `${import.meta.env.BASE_URL}assets/photos/${name}.jpg`
 /** Une photo prête à insérer : carrée, coins arrondis, recadrée au centre. */
 export const photoImg = (name: string, px: number) =>

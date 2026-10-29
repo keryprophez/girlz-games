@@ -73,6 +73,26 @@ manche est moitié animaux, moitié pays (au lieu d'un pile ou face à chaque
 question) ; le Labyrinthe à bille a sa propre tuile (pas un 4ᵉ mode du
 Labyrinthe) ; l'épouvantail de Soleil.
 
+## Le lot du 29/10 — l'imagier (plan validé : « parfait 500 mots, parfait memory »)
+
+Joyce : « c'est quasiment toujours les mêmes mots ».
+
+1. ✅ **La Chasse aux lettres, à la flamme** : le mot n'est plus montré au
+   début (la photo et la voix seulement).
+2. ✅ **L'imagier** (`core/imagier.ts`) : de 76 photos à 324 (le père : « on
+   peut s'arrêter à 200 photos »),
+   rangées par thème (iNaturalist, NASA, Commons ; chaque photo regardée sur
+   planche-contact). Chacune porte son niveau d'orthographe (fleur ≈ CP,
+   éclair ≈ CE1, flamme ≈ CE2-CM1) et son défi de dessin.
+3. ✅ **La Chasse aux lettres** tire ses mots de l'imagier (vingt-deux avant),
+   sans remise d'une partie à l'autre ; mots composés (blancs et tirets posés
+   d'avance) ; à la flamme, les lettres en trop sont des fautes probables.
+4. ✅ **Devine mon dessin** : une centaine de sujets qui se dessinent (la tarte aux
+   fruits est sortie), sans remise d'une partie à l'autre ; le devineur
+   connaît tout l'imagier.
+5. ✅ **Le Memory à thèmes** : Espace, Mer, Petites bêtes, Animaux, Oiseaux,
+   Nature, Gourmandises, Tout mélangé — le thème, puis le niveau.
+
 ## À mesurer sur la tablette (`?fps`)
 
 Rien n'a encore été relevé sur la Tab A9+ : la Tour de Glace (une cinquantaine

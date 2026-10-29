@@ -316,7 +316,9 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     setTier(t)
     setRunId(r => r + 1)
   }
-  const askTier = () => { setPaused(false); setResult(null); setTier(null); setStep(1) }
+  /** Rouvre le choix : `2` va droit aux niveaux (« Niveau » d'un jeu à thèmes). */
+  const askTier = (at: 1 | 2 = 1) => { setPaused(false); setResult(null); setTier(null); setStep(at) }
+  const variantOf = game.variants?.find(v => v.id === variantRef.current) ?? game.variants?.[0]
   /** Allume ou éteint une étiquette ; la dernière allumée reste allumée. */
   const toggleOp = (o: Op) => {
     const on = ops.includes(o)
@@ -330,7 +332,9 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   const pickVariant = (v: string) => {
     try { localStorage.setItem(variantKey(gameId), v) } catch { /* stockage refusé */ }
     variantRef.current = v
-    pickTier('easy')
+    // Un jeu à variantes ET à niveaux (le Memory, 29/10) : le thème, puis le niveau
+    if (game.noTier) pickTier('easy')
+    else { tone(520, 0.1, 'sine', 0.1); setStep(2) }
   }
   const pickDuo = (v: boolean) => {
     try { localStorage.setItem(duoKey(gameId), v ? '1' : '0') } catch { /* stockage refusé */ }
@@ -345,9 +349,9 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       <div className="playbar">
         <button className="pbtn" onClick={goHome} aria-label="Menu"><Svg html={ICON.home} /></button>
         <span className="playbar-right">
-          {tier && !game.noTier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={askTier} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
-          {tier && game.noTier && game.duo && <button className="pbtn" onClick={askTier} aria-label="Seule ou à deux"><Svg html={duo ? ICON.duo : ICON.solo} /></button>}
-          {tier && game.variants && <button className="pbtn" onClick={askTier} aria-label="Changer"><Svg html={ICON.choices} /></button>}
+          {tier && !game.noTier && <button className={'pbtn pbtn-tier tier-' + tier} onClick={() => askTier(game.variants ? 2 : 1)} aria-label="Difficulté"><Svg html={TIER_ICON[tier]} /></button>}
+          {tier && game.noTier && game.duo && <button className="pbtn" onClick={() => askTier()} aria-label="Seule ou à deux"><Svg html={duo ? ICON.duo : ICON.solo} /></button>}
+          {tier && game.variants && <button className="pbtn" onClick={() => askTier()} aria-label="Changer"><Svg html={ICON.choices} /></button>}
           <button className="pbtn" onClick={() => {
             store.toggleSound()
             // `store.sound` est encore l'état d'AVANT : s'il était allumé, on
@@ -392,7 +396,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             </div>
           )}
           {/* Plusieurs jeux sous la tuile : leurs grandes images, le dernier choix bordé */}
-          {game.variants && <div className="tierrow">
+          {game.variants && (game.noTier || step === 1) && <div className={'tierrow' + (game.variants.length > 3 ? ' varmany' : '')}>
             {game.variants.map(v => (
               <span key={v.id} className="tier-item">
                 <button className={'varbtn' + (variantRef.current === v.id ? ' last' : '')} data-v={v.id}
@@ -408,7 +412,13 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
               <i className="tool-cap">Jouer</i>
             </span>
           </div>}
-          {!game.noTier && (!game.ops || step === 2) && <div className="tierrow">
+          {!game.ops && !game.noTier && game.variants && step === 2 && variantOf && (
+            <span className="tier-item">
+              <button className="varrecap" style={{ backgroundImage: `url("${variantOf.img}")` }} onClick={() => setStep(1)} aria-label={variantOf.name} />
+              <i className="tool-cap">{variantOf.name}</i>
+            </span>
+          )}
+          {!game.noTier && (!(game.ops || game.variants) || step === 2) && <div className="tierrow">
             {TIERS.map(t => (
               <span key={t} className="tier-item">
                 <button className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
@@ -466,8 +476,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
             <div className="rbtns">
               <button className="bigbtn primary" onClick={onEnd(replay)}><Svg html={ICON.replay} /> {result.stars === 1 && !creative ? 'Encore !' : 'Rejouer'}</button>
               {/* Rejouer à un autre niveau (30/09) : le choix fleur / éclair / flamme revient */}
-              {tier && !game.noTier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={onEnd(askTier)}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
-              {tier && game.variants && <button className="bigbtn ghost" onClick={onEnd(askTier)}><Svg html={ICON.choices} /> Changer</button>}
+              {tier && !game.noTier && <button className={'bigbtn ghost rb-tier tier-' + tier} onClick={onEnd(() => askTier(game.variants ? 2 : 1))}><Svg html={TIER_ICON[tier]} /> Niveau</button>}
+              {tier && game.variants && <button className="bigbtn ghost" onClick={onEnd(() => askTier())}><Svg html={ICON.choices} /> Changer</button>}
               <button className="bigbtn ghost" onClick={onEnd(goHome)}><Svg html={ICON.home} /> Menu</button>
             </div>
             {game.cat === 'action' && <div className="retryhint">ou tape à côté pour rejouer</div>}

@@ -553,7 +553,11 @@ body.playing .g3-bar{max-width:820px;}
 .lg-name{display:grid;place-items:center;width:min(220px,30vh);aspect-ratio:1;border-radius:28px;background:#fff;
   font-family:'Baloo 2';font-weight:800;font-size:120px;color:var(--lagoon);box-shadow:var(--e2);}
 .lg-right{display:flex;flex-direction:column;align-items:center;gap:clamp(16px,4vh,36px);}
-.lg-word{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.lg-word{display:flex;gap:14px 30px;justify-content:center;flex-wrap:wrap;}
+/* Un morceau par mot (étoile / de / mer) : la ligne ne se coupe qu'entre deux mots */
+.lg-chunk{display:flex;gap:10px;}
+.lg-word.long .lg-chunk{gap:7px;}
+.lg-word.long .lg-slot{width:clamp(36px,5.6vmin,60px);height:clamp(48px,7.4vmin,76px);font-size:clamp(24px,4.6vmin,40px);border-radius:13px;}
 .lg-word.won .lg-slot{animation:ptwave .5s var(--spring) both;}
 .lg-word.won .lg-slot:nth-child(2){animation-delay:.06s;}.lg-word.won .lg-slot:nth-child(3){animation-delay:.12s;}
 .lg-word.won .lg-slot:nth-child(4){animation-delay:.18s;}.lg-word.won .lg-slot:nth-child(5){animation-delay:.24s;}
@@ -565,6 +569,8 @@ body.playing .g3-bar{max-width:820px;}
 @keyframes lgpulse{50%{transform:scale(1.08);}}
 .lg-slot.fill{border:3px solid var(--meadow);background:#E3F7E8;animation:goodp .4s var(--spring);}
 .lg-slot.peek{background:#FFF4D6;border-color:var(--mango);color:var(--ink);}
+/* Le tiret et l'apostrophe sont posés d'avance : pas une case à remplir */
+.lg-word .lg-slot.sep{width:auto;min-width:10px;border:0;background:none;color:var(--ink);opacity:.55;animation:none;}
 .lg-grid{display:grid;gap:clamp(8px,1.6vmin,14px);width:min(calc(var(--cols) * 104px),calc((100vh - 290px) / var(--rows) * var(--cols)));}
 .lg-tile{aspect-ratio:1;border:2px solid var(--line);border-radius:20px;background:#fff;
   cursor:pointer;font-family:'Baloo 2';font-weight:800;font-size:clamp(28px,6vmin,46px);
@@ -985,6 +991,12 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
   transition:transform .2s var(--spring);}
 .varbtn:active{transform:scale(.95);}
 .varbtn.last{box-shadow:0 0 0 5px var(--mango),var(--e2);}
+/* Beaucoup de thèmes (le Memory, 29/10) : des vignettes carrées, sur deux rangs */
+.tierrow.varmany{flex-wrap:wrap;justify-content:center;max-width:min(92vw,1000px);gap:14px 16px;}
+.tierrow.varmany .varbtn{width:clamp(108px,min(17vw,21vh),190px);aspect-ratio:1;border-radius:24px;}
+/* Le thème choisi, au-dessus des niveaux : le toucher ramène aux thèmes */
+.varrecap{width:clamp(84px,13vmin,112px);aspect-ratio:1;border-radius:22px;border:4px solid #fff;cursor:pointer;
+  background:var(--card) center/cover no-repeat;box-shadow:var(--e2);}
 .duorow{display:flex;gap:6px;padding:6px;border-radius:99px;background:rgba(255,255,255,.8);box-shadow:var(--e1);}
 .duobtn{width:64px;height:52px;border-radius:99px;border:none;background:transparent;cursor:pointer;color:var(--ink-soft);
   font-size:30px;display:grid;place-items:center;transition:transform .2s var(--spring),background .2s;}

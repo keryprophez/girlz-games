@@ -57,7 +57,8 @@ describe('ce qu\'il dit, ce qu\'on lui dit', () => {
   it('un message système figé (il se garde en cache), qui nomme chaque photo', () => {
     expect(systemPrompt()).toBe(systemPrompt())
     expect(systemPrompt()).toContain('cat = chat')
-    expect(SCHEMA.properties.propositions.items.properties.photo.enum).toContain('aucune')
+    // Pas d'enum de cinq cents photos dans la fiche : c'est parseGuess qui trie
+    expect(SCHEMA.properties.propositions.items.properties.photo).toEqual({ type: 'string' })
   })
   it('ne connaît que ses erreurs', () => {
     expect(isGuessError('cle')).toBe(true)

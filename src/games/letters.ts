@@ -6,6 +6,7 @@ import { ICON } from '../core/icons'
 import { photoImg } from '../core/sprites'
 import { some, visible } from '../core/hand'
 import { recall, type Item, type Keyed, type Recall } from '../core/facts'
+import { IMAGIER, PIC } from '../core/imagier'
 
 /* Chasse aux lettres — retrouve les lettres du mot, dans l'ordre. Premier
    mot : ton prénom (quand on sait qui joue). Calibré CP pour Jade, mots plus
@@ -26,26 +27,47 @@ import { recall, type Item, type Keyed, type Recall } from '../core/facts'
 
    La flamme (29/10, demande du père) : le mot n'est plus montré du tout.
    Seules la photo et la voix le donnent ; les cases vides disent sa
-   longueur, à toi de l'écrire. */
+   longueur, à toi de l'écrire.
 
-/* Des mots qu'on peut MONTRER (un animal de la planche) : le mot est vu,
-   dit par la voix et illustré avant d'être cherché — plus d'essai-erreur. */
-const WORDS = {
-  easy: ['CHAT', 'VACHE', 'POULE', 'CHIEN'],
-  med: ['LAPIN', 'CHEVAL', 'COCHON', 'CANARD', 'HIBOU'],
-  exp: ['GRENOUILLE', 'PERROQUET', 'PINGOUIN', 'ÉLÉPHANT', 'GIRAFE'],
-  // La flamme (30/09) : les longs mots qui ont leur photo
-  ultra: ['HIPPOPOTAME', 'CHAMPIGNON', 'CITROUILLE', 'KANGOUROU', 'PAPILLON', 'AUBERGINE', 'CONCOMBRE', 'HÉRISSON']
+   Le même jour, Joyce : « c'est quasiment toujours les mêmes mots ». Il y
+   en avait vingt-deux ; ce sont maintenant ceux de l'imagier
+   (`core/imagier.ts`), plus de trois cents, classés par difficulté
+   d'orthographe : la fleur ≈ CP, l'éclair ≈ CE1, la flamme ≈ CE2-CM1. La
+   mémoire les fait tous passer avant d'en remontrer un. Les mots composés
+   (étoile de mer, arc-en-ciel) ont leurs blancs, tirets et apostrophes déjà
+   posés ; à la flamme, les lettres en trop sont les fautes qu'on fait
+   vraiment (é pour è, f pour ph, s pour c…) : une vraie dictée. */
+
+/** Ce qui n'est pas une lettre à chercher : posé d'avance dans le mot. */
+const SEP = /[ '-]/
+/** La case suivante à remplir, en sautant les blancs, tirets et apostrophes. */
+const skip = (w: string, i: number) => { while (i < w.length && SEP.test(w[i])) i++; return i }
+
+/** Les pièges de la flamme : pour chaque lettre du mot, celles qu'on écrit
+    à sa place quand on hésite (le son est le même, l'accent change). */
+const TWINS: Record<string, string> = {
+  E: 'ÉÈÊ', É: 'EÈÊ', È: 'ÉÊE', Ê: 'ÈÉE', Ë: 'EÉ', A: 'ÂÀ', Â: 'A', À: 'A', I: 'YÎ', Î: 'I', Ï: 'IÎ', Y: 'I',
+  O: 'Ô', Ô: 'O', U: 'Û', Û: 'U', C: 'SKQÇ', Ç: 'CS', S: 'ZC', Z: 'S', X: 'S', K: 'CQ', Q: 'KC',
+  G: 'J', J: 'G', M: 'N', N: 'M', T: 'D', D: 'T', P: 'B', B: 'P', Œ: 'EO'
 }
-const PICS: Record<string, string> = {
-  CHAT: 'cat', VACHE: 'cow', POULE: 'chicken', CHIEN: 'dog', LAPIN: 'rabbit', CHEVAL: 'horse', COCHON: 'pig',
-  CANARD: 'duck', HIBOU: 'owl', GRENOUILLE: 'frog', PERROQUET: 'parrot', PINGOUIN: 'penguin', ÉLÉPHANT: 'elephant', GIRAFE: 'giraffe',
-  HIPPOPOTAME: 'hippo', CHAMPIGNON: 'mushroom', CITROUILLE: 'pumpkin', KANGOUROU: 'kangaroo', PAPILLON: 'butterfly',
-  AUBERGINE: 'eggplant', CONCOMBRE: 'cucumber', HÉRISSON: 'hedgehog'
+/** Les pièges d'un mot : les lettres jumelles, et les sons qui s'écrivent
+    autrement (ph/f, au/o, ai/è, en/an), sans les lettres du mot lui-même. */
+export function traps(word: string): string[] {
+  const out = new Set<string>()
+  for (const ch of word) for (const t of TWINS[ch] ?? '') out.add(t)
+  if (word.includes('PH')) out.add('F')
+  if (/E?AU/.test(word)) out.add('O')
+  if (word.includes('AI')) { out.add('È'); out.add('É') }
+  if (word.includes('EN')) out.add('A')
+  if (word.includes('AN')) out.add('E')
+  for (const ch of word) out.delete(ch)
+  return [...out]
 }
+
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 interface State {
+  /** Les mots de la partie, en capitales (`queue` en garde les photos). */
   words: string[]
   word: string
   round: number
@@ -80,7 +102,7 @@ function paintDots(me: State) {
 function loadWord(me: State) {
   const word = me.words[me.round]
   me.word = word
-  me.pos = 0
+  me.pos = skip(word, 0)
   me.here = 0
   me.slips = 0
   paintDots(me)
@@ -88,30 +110,33 @@ function loadWord(me: State) {
   // Le mot est d'abord MONTRÉ en entier, dit par la voix et illustré ;
   // puis les lettres s'effacent et il faut les retrouver dans l'ordre.
   // À la flamme, rien n'est montré : la photo, la voix, des cases vides
-  const pic = PICS[word]
+  const pic = me.queue[me.round]?.fact.key
   q(me, '.lg-pic').innerHTML = pic ? photoImg(pic, 260) : `<span class="lg-name">${word.charAt(0)}</span>`
   const slots = q(me, '.lg-word')
   ctx.say(word.toLowerCase())
-  if (ctx.tier === 'exp') {
-    slots.innerHTML = word.split('').map((_, i) =>
-      `<span class="lg-slot${i === 0 ? ' next' : ''}" data-i="${i}"></span>`).join('')
-    me.peeking = false
-  } else {
-    slots.innerHTML = word.split('').map((ch, i) =>
-      `<span class="lg-slot peek" data-i="${i}">${ch}</span>`).join('')
-    me.peeking = true
-  }
+  me.peeking = ctx.tier !== 'exp'
+  // Un morceau par mot (étoile / de / mer) : la ligne ne se coupe qu'entre deux mots
+  const letters = word.split('').filter(ch => !SEP.test(ch))
+  slots.classList.toggle('long', letters.length > 9)
+  slots.innerHTML = word.split(' ').map((part, k, all) => {
+    const at = all.slice(0, k).reduce((n, p) => n + p.length + 1, 0)
+    return '<span class="lg-chunk">' + part.split('').map((ch, j) => {
+      const i = at + j
+      if (SEP.test(ch)) return `<span class="lg-slot sep" data-i="${i}">${ch}</span>`
+      return `<span class="lg-slot${me.peeking ? ' peek' : i === me.pos ? ' next' : ''}" data-i="${i}">${me.peeking ? ch : ''}</span>`
+    }).join('') + '</span>'
+  }).join('')
   if (me.peeking) ctx.after(3000, () => {
     if (lg !== me || !me.running || me.word !== word) return
     me.peeking = false
-    slots.querySelectorAll<HTMLElement>('.lg-slot').forEach((sl, i) => { sl.textContent = ''; sl.classList.remove('peek'); if (i === 0) sl.classList.add('next') })
+    slots.querySelectorAll<HTMLElement>('.lg-slot:not(.sep)').forEach(sl => { sl.textContent = ''; sl.classList.remove('peek'); sl.classList.toggle('next', sl.dataset.i === String(me.pos)) })
   })
 
-  // La grille : lettres du mot + intrus
-  const gridSize = ctx.byTier(Math.max(12, word.length + 5), Math.max(14, word.length + 6), Math.max(16, word.length + 6))
-  const decoys: string[] = []
-  while (decoys.length < gridSize - word.length) decoys.push(pick(ALPHABET.split('')))
-  const tiles = shuffle([...word.split(''), ...decoys])
+  // La grille : lettres du mot + intrus (à la flamme, d'abord les pièges)
+  const gridSize = ctx.byTier(Math.max(12, letters.length + 5), Math.max(14, letters.length + 6), Math.max(16, letters.length + 6))
+  const decoys: string[] = ctx.tier === 'exp' ? shuffle(traps(word)).slice(0, Math.ceil((gridSize - letters.length) * 0.6)) : []
+  while (decoys.length < gridSize - letters.length) decoys.push(pick(ALPHABET.split('')))
+  const tiles = shuffle([...letters, ...decoys])
   const grid = q(me, '.lg-grid')
   const cols = tiles.length <= 8 ? 4 : tiles.length <= 12 ? 4 : 5
   grid.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`
@@ -154,7 +179,7 @@ function tapLetter(me: State, b: HTMLButtonElement, ch: string) {
     sfx('tick', { vol: 0.4, rate: 1.3 })
     const i = me.pos
     const slot = q(me, `.lg-slot[data-i="${i}"]`)
-    me.pos++
+    me.pos = skip(me.word, me.pos + 1)
     me.here = 0
     slot.classList.remove('next')
     fly(b, slot, ch, () => {
@@ -228,12 +253,13 @@ export const letters: GameDef = {
         <div class="tq-side"><div class="mem-dots lg-dots"></div></div>
       </div>`
     preloadSfx(['tick', 'confirm', 'drop'])
-    const tierWords = c.byTier(WORDS.med, WORDS.exp, WORDS.ultra)
+    const level = c.byTier(1, 2, 3)
     memo = recall('letters')
-    // Trois mots différents, tirés dans la mémoire : les ratés d'abord
-    const queue = memo.series(tierWords.map(key => ({ key })), 3)
+    // Trois mots différents, tirés dans la mémoire : les ratés d'abord, puis
+    // ceux qu'on n'a pas vus depuis le plus longtemps (la clé : la photo)
+    const queue = memo.series(IMAGIER.filter(p => p.niveau === level).map(p => ({ key: p.id })), 3)
     const me: State = {
-      words: queue.map(it => it.fact.key), queue,
+      words: queue.map(it => PIC[it.fact.key].mot.toUpperCase()), queue,
       word: '', round: 0, pos: 0, here: 0, mistakes: 0, slips: 0, running: true, peeking: false, root: c.root
     }
     lg = me
