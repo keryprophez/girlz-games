@@ -22,7 +22,11 @@ import { recall, type Item, type Keyed, type Recall } from '../core/facts'
    ratés (deux erreurs ou plus dans le mot), puis ceux qu'on n'a pas vus
    depuis longtemps. Trois mots, c'est trop court pour qu'un raté revienne
    trois mots plus loin : il revient en tête de la partie suivante.
-   Muette : rien ne s'affiche. */
+   Muette : rien ne s'affiche.
+
+   La flamme (29/10, demande du père) : le mot n'est plus montré du tout.
+   Seules la photo et la voix le donnent ; les cases vides disent sa
+   longueur, à toi de l'écrire. */
 
 /* Des mots qu'on peut MONTRER (un animal de la planche) : le mot est vu,
    dit par la voix et illustré avant d'être cherché — plus d'essai-erreur. */
@@ -82,15 +86,22 @@ function loadWord(me: State) {
   paintDots(me)
 
   // Le mot est d'abord MONTRÉ en entier, dit par la voix et illustré ;
-  // puis les lettres s'effacent et il faut les retrouver dans l'ordre
+  // puis les lettres s'effacent et il faut les retrouver dans l'ordre.
+  // À la flamme, rien n'est montré : la photo, la voix, des cases vides
   const pic = PICS[word]
   q(me, '.lg-pic').innerHTML = pic ? photoImg(pic, 260) : `<span class="lg-name">${word.charAt(0)}</span>`
   const slots = q(me, '.lg-word')
-  slots.innerHTML = word.split('').map((ch, i) =>
-    `<span class="lg-slot peek" data-i="${i}">${ch}</span>`).join('')
   ctx.say(word.toLowerCase())
-  me.peeking = true
-  ctx.after(3000, () => {
+  if (ctx.tier === 'exp') {
+    slots.innerHTML = word.split('').map((_, i) =>
+      `<span class="lg-slot${i === 0 ? ' next' : ''}" data-i="${i}"></span>`).join('')
+    me.peeking = false
+  } else {
+    slots.innerHTML = word.split('').map((ch, i) =>
+      `<span class="lg-slot peek" data-i="${i}">${ch}</span>`).join('')
+    me.peeking = true
+  }
+  if (me.peeking) ctx.after(3000, () => {
     if (lg !== me || !me.running || me.word !== word) return
     me.peeking = false
     slots.querySelectorAll<HTMLElement>('.lg-slot').forEach((sl, i) => { sl.textContent = ''; sl.classList.remove('peek'); if (i === 0) sl.classList.add('next') })
