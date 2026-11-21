@@ -1,0 +1,54 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Maquette coiffure</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#F1DADF;font-family:'Baloo 2',system-ui,sans-serif}
+#scene{position:absolute;inset:0}#scene canvas{width:100%;height:100%;display:block}
+.ui{position:absolute;z-index:5}
+.round{width:76px;height:76px;border-radius:50%;background:#FFFDF6;box-shadow:0 4px 0 rgba(69,54,42,.18),0 6px 18px rgba(69,54,42,.16);display:grid;place-items:center}
+.round svg{width:38px;height:38px}
+.big{width:104px;height:104px}.big svg{width:54px;height:54px}
+.bar{left:50%;bottom:26px;transform:translateX(-50%);display:flex;align-items:center;gap:26px}
+.steps{display:flex;gap:10px;padding:12px 18px;border-radius:99px;background:rgba(255,253,246,.9);box-shadow:0 3px 10px rgba(69,54,42,.14)}
+.steps i{width:18px;height:18px;border-radius:50%;background:rgba(69,54,42,.15);border:2px solid rgba(69,54,42,.25)}
+.steps i.on{background:#4FB8E7;border-color:#4FB8E7}.steps i.cur{border-color:#FFA94D;transform:scale(1.25);background:#FFF}
+.dad{left:50%;bottom:150px;transform:translateX(-50%);padding:10px 22px;border-radius:16px;background:rgba(69,54,42,.82);color:#FFF6E8;font-size:24px;font-weight:600;white-space:nowrap}
+.dad b{color:#FFD34D;margin-right:10px}
+.cards{left:26px;top:120px;display:flex;flex-direction:column;gap:16px}
+.card{width:150px;height:112px;border-radius:20px;background:#FFFDF6;box-shadow:0 4px 0 rgba(69,54,42,.18);display:grid;place-items:center;border:4px solid transparent}
+.card.sel{border-color:#FFA94D}.card svg{width:84px;height:84px}
+.tools{right:26px;top:120px;display:flex;flex-direction:column;gap:18px;align-items:center}
+.tools span{font-size:17px;font-weight:700;color:#45362A;margin-top:-12px}
+.top{left:22px;top:18px}.topr{right:22px;top:18px;display:flex;gap:12px}
+</style></head><body>
+<div id="scene"></div>
+<div id="ui"></div>
+<script type="module">
+const q = new URLSearchParams(location.search)
+const ico = {
+  prev:'<svg viewBox="0 0 24 24"><path d="M15 4l-8 8 8 8" fill="none" stroke="#45362A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  next:'<svg viewBox="0 0 24 24"><path d="M9 4l8 8-8 8" fill="none" stroke="#FFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  again:'<svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 1 2.5 5.4" fill="none" stroke="#45362A" stroke-width="3.2" stroke-linecap="round"/><path d="M3 15l2.6 3.6L9 16" fill="none" stroke="#45362A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  home:'<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="#45362A"/></svg>',
+  brush:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="12" height="8" rx="4" fill="#E8427C"/><path d="M5 12v3M8 12v4M11 12v4M14 12v3" stroke="#45362A" stroke-width="1.6" stroke-linecap="round"/><rect x="14" y="6.5" width="8" height="3" rx="1.5" fill="#C99A5F"/></svg>',
+  elastic:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="#3D9BF0" stroke-width="4.5"/></svg>',
+  clip:'<svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6" rx="3" fill="#FFB627"/><circle cx="7" cy="12" r="1.3" fill="#FFF"/><circle cx="12" cy="12" r="1.3" fill="#FFF"/><circle cx="17" cy="12" r="1.3" fill="#FFF"/></svg>',
+  bow:'<svg viewBox="0 0 24 24"><path d="M12 12L4 6v12zM12 12l8-6v12z" fill="#E8427C"/><circle cx="12" cy="12" r="2.6" fill="#C9305F"/></svg>',
+  s1:'<svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="13" fill="#6B4424"/><path d="M24 26c8 2 7 14 2 19-4-6-6-13-2-19z" fill="#6B4424"/><circle cx="25" cy="27" r="3.5" fill="#E8427C"/></svg>',
+  s2:'<svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="13" fill="#6B4424"/><path d="M11 20c-6 3-6 14-3 20 4-5 6-12 3-20zM37 20c6 3 6 14 3 20-4-5-6-12-3-20z" fill="#6B4424"/><circle cx="11" cy="21" r="3" fill="#3D9BF0"/><circle cx="37" cy="21" r="3" fill="#3D9BF0"/></svg>',
+  s3:'<svg viewBox="0 0 48 48"><circle cx="24" cy="16" r="12" fill="#6B4424"/><path d="M24 26l-5 4 5 4-5 4 5 4-5 3h10l-5-3 5-4-5-4 5-4z" fill="#6B4424"/><circle cx="24" cy="45" r="2.5" fill="#E8427C"/></svg>',
+  s4:'<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="13" fill="#6B4424"/><circle cx="24" cy="9" r="7" fill="#6B4424"/><circle cx="24" cy="15" r="2.5" fill="#E8427C"/></svg>'
+}
+const ui = document.getElementById('ui')
+const mode = q.get('ui') || ''
+let h = `<div class="ui top round">${ico.home}</div>`
+if (mode === 'tuto') {
+  const n = +(q.get('n') || 6), cur = +(q.get('cur') || 3)
+  h += `<div class="ui dad"><b>${cur}</b>${q.get('txt') || ''}</div>
+  <div class="ui bar"><div class="round">${ico.prev}</div><div class="round">${ico.again}</div>
+  <div class="steps">${Array.from({length:n},(_, i) => `<i class="${i < cur - 1 ? 'on' : i === cur - 1 ? 'cur' : ''}"></i>`).join('')}</div>
+  <div class="round big" style="background:#41C26A">${ico.next}</div></div>`
+}
+if (mode === 'choix') h += `<div class="ui cards"><div class="card">${ico.s1}</div><div class="card">${ico.s2}</div><div class="card sel">${ico.s3}</div><div class="card">${ico.s4}</div></div>`
+if (mode === 'libre') h += `<div class="ui tools"><div class="round big">${ico.brush}</div><span>Brosse</span><div class="round big">${ico.elastic}</div><span>Élastique</span><div class="round big">${ico.clip}</div><span>Barrette</span><div class="round big">${ico.bow}</div><span>Nœud</span></div>`
+ui.innerHTML = h
+import('./hair.ts')
+</script></body></html>
