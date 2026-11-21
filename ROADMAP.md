@@ -13,17 +13,17 @@ jeu par itération, livré, joué, capturé.
 
 ---
 
-## Le catalogue (27/10) — 38 jeux
+## Le catalogue (21/11) — 39 jeux
 
 | Univers | Jeux |
 |---|---|
 | **Jouer** (14) — on s'amuse, on peut perdre | La Tour de Glace · Ninja Verger · Le Flipper · Cache-Cache · Devine mon dessin · Labyrinthe · Puzzle (et son mode Taquin) · Memory · Le Chœur · Puissance 4 · Perles Miroir · 1, 2, 3… Soleil ! · Le Jeu des différences · Le Labyrinthe à bille |
-| **Apprendre** (11) — on travaille, jamais de sanction | Quelle heure ? · Le Potager (+ − × ÷) · Le Marché · L'Intrus · Le Tour du Monde · Voyage dans l'Espace · Suites Logiques · Chasse aux lettres · La Poste aux Phrases · Le Tracteur · Le Géoplan |
+| **Apprendre** (12) — on travaille, jamais de sanction | Quelle heure ? · Le Potager (+ − × ÷) · Le Marché · L'Intrus · Le Tour du Monde · Voyage dans l'Espace · Suites Logiques · Chasse aux lettres · La Poste aux Phrases · Le Tracteur · Le Géoplan · Les Échecs |
 | **Créer** (13) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments · La Poterie · Le Château de sable · L'Aquarium |
 
 Jeux en vraie 3D : la Tour, le Flipper, Cache-Cache, Labyrinthe, Puzzle,
 Memory, le Chœur, Perles Miroir, Soleil, les Différences, la Bille, l'Espace,
-Suites Logiques, Tour du Monde, le Tracteur, le Géoplan, Habille-toi, les
+Suites Logiques, Tour du Monde, le Tracteur, le Géoplan, les Échecs, Habille-toi, les
 Bijoux, la Cuisine, l'Animal qui répète, la Ferme à construire, Mon cartable,
 les Monuments, la Poterie, le Château de sable, l'Aquarium.
 
@@ -92,6 +92,28 @@ Joyce : « c'est quasiment toujours les mêmes mots ».
    connaît tout l'imagier.
 5. ✅ **Le Memory à thèmes** : Espace, Mer, Petites bêtes, Animaux, Oiseaux,
    Nature, Gourmandises, Tout mélangé — le thème, puis le niveau.
+
+## Le lot du 21/11 — deux jeux demandés par le père (plan validé : « OK »)
+
+1. **Les Échecs** (Apprendre) — **fait**. Pas une partie : huit exercices
+   par séance sur un échiquier de bois, pièces Staunton (choix du père, pour
+   les reconnaître sur un vrai jeu). Six leçons : ranger · bouger (des
+   pommes à attraper) · prendre · sortir d'un échec · mat en un coup · le
+   roque, la promotion, la prise en passant. Fleur = les trois premières,
+   éclair = + l'échec, flamme = le mat et les coups spéciaux. Règles et
+   tirages dans `core/chess.ts` (testés).
+   **À voir sur la tablette** : la lisibilité des pièces blanches, `?fps`.
+   **Pistes si ça plaît** : jouer une vraie partie à deux sur la tablette ;
+   le mat en deux coups ; la fourchette du cavalier.
+2. **Le Salon de coiffure** (Créer) — **à faire**, maquettes d'abord. Une
+   tête de petite fille (celle d'Habille-toi) vue de près ; un mode pas à pas
+   qui sert aussi au père (une ligne de texte par étape, pour lui : il l'a
+   demandée), un mode libre. Cheveux FINS (ceux de Jade et Joyce) : queue de
+   cheval, couettes, demi-queue, chignon, tresse, deux tresses, tresse
+   collée, couronne. Des mèches épaisses, pas une simulation cheveu par
+   cheveu ; mesurer avec `?fps` avant d'adopter.
+
+---
 
 ## À mesurer sur la tablette (`?fps`)
 

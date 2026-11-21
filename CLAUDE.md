@@ -96,6 +96,7 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `labyrinth.ts` | le générateur de labyrinthes, leur chemin et leurs distances (Labyrinthe, Labyrinthe à bille) |
 | `soleil.ts` · `differences.ts` · `bille.ts` | la course de 1, 2, 3… Soleil ! ; le tirage d'une manche des Différences ; le plateau et la physique de la bille (pas fixe) — testés |
 | `tracteur.ts` · `geoplan.ts` | le pré quadrillé et le programme du Tracteur ; les figures du Géoplan — testés |
+| `chess.ts` + `chess3d.ts` | les Échecs (21/11) : les règles (coups permis, échec, mat, roque, prise en passant) et le tirage des exercices — testés ; l'échiquier et les pièces Staunton tournées |
 | `pottery.ts` + `pottery3d.ts` · `sand.ts` + `beach3d.ts` · `fishtank.ts` + `aquarium3d.ts` | la Poterie, le Château de sable, l'Aquarium : la logique (testée) et la scène |
 | `facts.ts` | la mémoire d'Apprendre : celle des calculs du Potager (aides, révisions espacées, « presque ») et, depuis le 27/10, les séries sans remise de l'Horloge, du Tour du Monde, des Lettres et du Marché (`recall(jeu)`, `ferme:memoire:<jeu>` ; un raté revient trois questions plus loin) — testé |
 | `plants.ts` | les dix plantes illustrées du Potager |

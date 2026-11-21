@@ -1102,6 +1102,90 @@ const geoplan = async (tier, manches) => {
 await scenario('geoplan-fleur', () => geoplan('easy', 5))
 await scenario('geoplan-flamme', () => geoplan('exp', 6))
 
+/* ♟️ Les Échecs (21/11) : huit exercices jusqu'à l'écran de fin. Le jeu dit
+   le bon coup (`next`) ; le bot le joue au doigt — un toucher sur la pièce
+   puis sur la case, ou la pièce glissée — et vérifie ce qui doit être
+   refusé : une pièce posée sur la mauvaise case, un coup qui laisse le roi
+   en échec, un coup qui ne fait pas mat (tout revient en place). */
+const echecs = async tier => {
+  await openGame('Les Échecs', '__ec', tier)
+  const etat = () => page.evaluate(() => JSON.stringify({ exercice: window.__ec.round, phase: window.__ec.phase, lecon: window.__ec.lesson, id: window.__ec.id, rates: window.__ec.misses }))
+  const ec = (f, ...a) => page.evaluate(([k, args]) => { const v = window.__ec[k]; return typeof v === 'function' ? v(...args) : v }, [f, a])
+  const pret = r => page.waitForFunction(k => window.__ec.round > k || window.__ec.phase === 'play' || window.__ec.phase === 'done', r, { timeout: 90000, polling: 200 })
+    .catch(async () => { throw new Error(`le jeu ne rend pas la main (${await etat()})`) })
+  const touche = async s => { const p = await ec('aim', s); await page.mouse.click(p.x, p.y) }
+  const glisse = async (A, B) => {
+    await page.mouse.move(A.x, A.y); await page.mouse.down()
+    for (let i = 1; i <= 6; i++) await page.mouse.move(A.x + (B.x - A.x) * i / 6, A.y + (B.y - A.y) * i / 6)
+    await page.mouse.up()
+  }
+  const total = await ec('total')
+  const vu = new Set()
+  let refus = false
+  for (let r = 0; r < total; r++) {
+    await page.waitForFunction(k => window.__ec.round === k && window.__ec.phase === 'play', r, { timeout: 120000, polling: 250 })
+      .catch(async () => { throw new Error(`exercice ${r + 1} jamais prêt (${await etat()})`) })
+    const lecon = await ec('lesson'), but = await ec('goal')
+    vu.add(lecon)
+    if (but === 'place') {
+      if (tier === 'easy' && !(await ec('ghosts'))) throw new Error('la fleur sans les silhouettes des pièces à poser')
+      if (tier !== 'easy' && (await ec('ghosts'))) throw new Error('des silhouettes ailleurs qu’à la fleur')
+      // Une pièce glissée sur une mauvaise case revient sur le côté : un raté, rien de posé
+      // (essayé à la fleur seulement : à la flamme, ce raté chasserait un coup spécial)
+      let cote = await ec('tray')
+      const n = cote.length, avant = await ec('misses')
+      if (tier === 'easy' && cote[0].wrong >= 0) {
+        await glisse(cote[0], await ec('at', cote[0].wrong, cote[0].h))
+        await pret(r)
+        await page.waitForTimeout(500)
+        if ((await ec('tray')).length !== n || (await ec('misses')) !== avant + 1) throw new Error(`une pièce posée sur une mauvaise case y reste (${await etat()})`)
+      }
+      for (let k = 0; ; k++) {
+        cote = await ec('tray')
+        if (!cote.length || (await ec('round')) !== r) break
+        const t = cote[0]
+        // Une fois glissée, une fois touchée puis la case touchée
+        if (k % 2) { await page.mouse.click(t.x, t.y); await touche(t.to) } else await glisse(t, await ec('at', t.to, t.h))
+        await pret(r)
+        if ((await ec('round')) === r && (await ec('tray')).length !== cote.length - 1) throw new Error(`la pièce ${t.k} ne se pose pas sur sa case (${await etat()})`)
+      }
+    } else {
+      // Ce qui doit être refusé : le roi laissé en échec, le coup qui ne fait pas mat
+      // (un raté fait revenir l'exercice trois plus loin, À LA PLACE du dernier de la
+      // partie : un seul raté tôt, les autres quand il n'y a plus la place de revenir)
+      const faux = (lecon === 'echec' ? !refus : r >= total - 3) ? await ec('bad') : null
+      if (faux) {
+        refus = true
+        const avant = await ec('misses')
+        await touche(faux.from); await touche(faux.to)
+        await page.waitForTimeout(300)
+        await pret(r)
+        if ((await ec('round')) !== r || (await ec('misses')) !== avant + 1) throw new Error(`${lecon} : un mauvais coup est accepté (${await etat()})`)
+      }
+      for (let k = 0; k < 12; k++) {
+        if ((await ec('round')) !== r) break
+        const coup = await ec('next')
+        if (!coup) throw new Error(`pas de coup à jouer (${await etat()})`)
+        if (k % 2) {
+          const A = await ec('aim', coup.from)
+          await glisse(A, await ec('at', coup.to, A.h))
+        } else {
+          await touche(coup.from)
+          if (k === 0 && tier !== 'exp' && !faux && !(await ec('dots')) && lecon === 'bouger') throw new Error(`la pièce touchée ne montre pas où elle va (${await etat()})`)
+          await touche(coup.to)
+        }
+        await pret(r)
+      }
+      if ((await ec('round')) === r) throw new Error(`l'exercice ne finit pas (${await etat()})`)
+    }
+  }
+  const attendu = tier === 'easy' ? ['ranger', 'bouger', 'prendre'] : ['ranger', 'echec', 'mat', 'special']
+  for (const l of attendu) if (!vu.has(l)) throw new Error(`la leçon « ${l} » n'est pas venue`)
+  await finDe('Bien joué', 60000)
+}
+await scenario('echecs-fleur', () => echecs('easy'))
+await scenario('echecs-flamme', () => echecs('exp'))
+
 /* 💶 Le Marché : quatre paiements exacts, pièces choisies de la plus grosse
    à la plus petite (le bot rend la monnaie comme un marchand), quatre prix
    différents (27/10 : sans remise). */

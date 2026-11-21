@@ -53,9 +53,11 @@ Suites logiques, Chasse
 aux lettres, la Poste aux Phrases (les types de phrases : on tamponne la
 phrase avec le bon signe, et le point s'imprime tout seul), le Tracteur à
 programmer (une file de flèches pour aller chercher l'animal sur le pré
-quadrillé, comme le Bee-Bot de l'école ; à la flamme, la boucle « ×2 ») et
+quadrillé, comme le Bee-Bot de l'école ; à la flamme, la boucle « ×2 »),
 le Géoplan (des élastiques tendus d'un picot à l'autre pour reproduire une
-figure ; à la flamme, agrandie, tournée ou en miroir).
+figure ; à la flamme, agrandie, tournée ou en miroir) et les Échecs (pas une
+partie : ranger les pièces, les bouger, prendre, sortir d'un échec, faire
+mat, le roque — huit petits exercices sur un échiquier de bois).
 
 **Créer** — sans score : Habille-toi (la petite fille à couettes en 3D,
 qu'on habille — robe ou tee-shirt, couleurs, coiffure, chapeau, lunettes —

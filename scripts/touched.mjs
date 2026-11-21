@@ -60,6 +60,7 @@ const OWN = {
   'aquarium': ['src/games/aquarium.ts', 'src/core/fishtank.ts', 'src/core/aquarium3d.ts'],
   'tracteur': ['src/games/tracteur.ts', 'src/core/tracteur.ts'],
   'geoplan': ['src/games/geoplan.ts', 'src/core/geoplan.ts'],
+  'echecs': ['src/games/echecs.ts', 'src/core/chess.ts', 'src/core/chess3d.ts'],
   'soleil': ['src/games/soleil.ts', 'src/core/soleil.ts'],
   'differences': ['src/games/differences.ts', 'src/core/differences.ts'],
   'bille': ['src/games/bille.ts', 'src/core/bille.ts', 'src/core/labyrinth.ts'],

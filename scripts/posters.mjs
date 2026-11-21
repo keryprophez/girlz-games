@@ -275,6 +275,21 @@ const STAGE = {
     },
     after: 1500, cx: 0.5
   },
+  // Les Échecs : le plateau presque rangé, les dernières pièces blanches attendent sur le côté
+  echecs: {
+    tier: 'easy', ready: () => window.__ec && window.__ec.phase === 'play', wait: 800,
+    act: async p => {
+      for (;;) {
+        const tray = await p.evaluate(() => window.__ec.tray())
+        if (tray.length <= 2) break
+        await p.mouse.click(tray[0].x, tray[0].y)
+        const to = await p.evaluate(s => window.__ec.aim(s), tray[0].to)
+        await p.mouse.click(to.x, to.y)
+        await p.waitForFunction(() => window.__ec.phase === 'play', null, { timeout: 60000, polling: 200 })
+      }
+    },
+    after: 1200, zoom: 1.08, cx: 0.52, cy: 0.52
+  },
   // Les Perles Miroir : un papillon ou une tête de cochon à moitié reflété,
   // les rangées du haut déjà posées, celles du bas encore à faire
   mirror: {

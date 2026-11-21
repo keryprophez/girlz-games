@@ -315,6 +315,16 @@ export const BADGE: Record<string, string> = {
     <circle cx="21.5" cy="39" r="3" fill="${C.ink}"/><circle cx="21.5" cy="39" r="1.2" fill="${C.sun}"/>`),
 
   /* Le Géoplan : la plaque à picots, une maison tendue en élastiques de couleur. */
+  /* Un pion clair sur son échiquier : deux rangées de cases, le pion devant. */
+  echecs: svg(`
+    <rect x="5" y="27" width="38" height="16" rx="4" fill="${C.woodDark}"/>
+    ${[0, 1, 2, 3].map(i => `<rect x="${7 + i * 8.5}" y="${i % 2 ? 35 : 29}" width="8.5" height="6" fill="${C.cream}"/>`).join('')}
+    ${[0, 1, 2, 3].map(i => `<rect x="${7 + i * 8.5}" y="${i % 2 ? 29 : 35}" width="8.5" height="6" fill="${C.wood}"/>`).join('')}
+    <circle cx="24" cy="12" r="6.5" fill="${C.cream}"/>
+    <path d="M17 20h14l-3 3 4 12H16l4-12z" fill="${C.cream}"/>
+    <path d="M24 5.5a6.5 6.5 0 0 1 0 13zM24 20h7l-3 3 4 12h-8z" fill="${C.mango}" opacity=".45"/>
+    <rect x="13" y="34" width="22" height="5" rx="2.5" fill="${C.mangoDark}"/>`),
+
   geoplan: svg(`
     <rect x="4" y="6" width="40" height="38" rx="6" fill="${C.iceDark}"/>
     <rect x="4" y="5" width="40" height="37" rx="6" fill="${C.ice}"/>

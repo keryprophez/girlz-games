@@ -37,13 +37,14 @@ import { geoplan } from './geoplan'
 import { soleil } from './soleil'
 import { bille } from './bille'
 import { differences } from './differences'
+import { echecs } from './echecs'
 
 export const GAMES: GameDef[] = [
   icetower, ninja, pinball, hideseek, drawguess, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments,
-  poterie, chateau, aquarium, tracteur, geoplan,
+  poterie, chateau, aquarium, tracteur, geoplan, echecs,
   soleil, bille, differences
 ]
 
@@ -74,7 +75,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
   },
   {
     id: 'apprendre', label: 'Apprendre', icon: '📚',
-    games: [clock, potager, market, intrus, geoGame, space, patterns, letters, sentences, tracteur, geoplan]
+    games: [clock, potager, market, intrus, geoGame, space, patterns, letters, sentences, tracteur, geoplan, echecs]
   },
   {
     id: 'creer', label: 'Créer', icon: '🎨',

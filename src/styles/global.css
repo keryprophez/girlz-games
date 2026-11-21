@@ -2244,6 +2244,11 @@ body.playing .po-card{max-width:880px;}
 .tr-go:active{transform:translateY(3px) scale(.94);}
 
 /* ===== Le Géoplan (27/10) ===== */
+/* Les Échecs (21/11) : l'échiquier plein écran, les points des exercices en haut */
+.ec-arena{position:relative;padding:0;overflow:hidden;background:#DDE9D6;touch-action:none;}
+.ec-scene{position:absolute;inset:0;}
+.ec-scene canvas{display:block;width:100%;height:100%;}
+.ec-dots{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:3;}
 .gp-arena{position:relative;padding:0;overflow:hidden;background:#E6D5BE;touch-action:none;}
 .gp-arena [hidden]{display:none !important;}
 .gp-scene{position:absolute;inset:0;}
