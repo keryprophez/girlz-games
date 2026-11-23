@@ -103,7 +103,7 @@ describe('la physique', () => {
     const h = make()
     run(h, 3)
     const n = h.comb([0, -0.6, -6], [0, 0, 1], 0.5, [0.3, 0, 0], 0.25)
-    expect(n).toBeGreaterThan(0)
+    expect(n.size).toBeGreaterThan(0)
     run(h, 1)
     expect(finite(h)).toBe(true)
   })
@@ -112,5 +112,25 @@ describe('la physique', () => {
     run(h, 3)
     expect(h.pick([0, -0.8, -6], [0, 0, 1], 0.35, 0.4).length).toBeGreaterThan(0)
     expect(h.pick([5, 0, -6], [0, 0, 1], 0.35, 0.4).length).toBe(0)
+  })
+  it('la queue de cheval : chaque mèche attachée part de sa racine, passe sur le crâne et pend sous l’attache', () => {
+    const h = make()
+    run(h, 1)
+    const tieAt: [number, number, number] = [0, 0.1, -1.2]
+    for (let g = 0; g < h.G; g++) h.tie(g, tieAt, (g % 10) * 0.02)
+    run(h, 3)
+    expect(finite(h)).toBe(true)
+    expect(inside(h, SKULL)).toBe(0)
+    for (let g = 0; g < h.G; g++) {
+      const j = h.tieIdx[g], p = h.point(g, j), tip = h.point(g, h.P - 1)
+      // l'attache est au point d'attache, la pointe pend en dessous
+      expect(Math.hypot(p[0] - tieAt[0], p[1] - tieAt[1], p[2] - tieAt[2])).toBeLessThan(0.05)
+      expect(tip[1]).toBeLessThan(tieAt[1])
+    }
+    // la queue suit la tête qui tourne, puis se repose
+    for (let i = 0; i < 40; i++) { h.setHead(i / 40, 0); h.step(STEP) }
+    run(h, 4)
+    expect(finite(h)).toBe(true)
+    expect(h.asleep.every(a => a === 1)).toBe(true)
   })
 })

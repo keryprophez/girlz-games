@@ -25,6 +25,8 @@ export const S = 24
 
 export interface HairView {
   mesh: import('three').Mesh
+  /** La lueur de chaque mèche (0..1) : celles à prendre maintenant. */
+  glow: Float32Array
   /** À appeler à chaque image, après la physique. */
   update(): void
   setColor(hex: string): void
@@ -89,7 +91,8 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
     width: { value: o.width ?? 0.03 },
     base: { value: new T.Color('#6B4A2B') },
     light: { value: new T.Vector3(-0.4, 0.8, -0.45).normalize() },
-    center: { value: new T.Vector3() }
+    center: { value: new T.Vector3() },
+    time: { value: 0 }
   }
   const mat = new T.ShaderMaterial({
     uniforms,
@@ -102,7 +105,7 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
       uniform float width;
       uniform vec3 center;
       attribute vec3 iG; attribute vec3 iW; attribute vec4 iO;
-      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd;
+      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd; varying float vGlow;
       const float S = ${S}.0;
       void at(float g, float i, out vec3 p, out vec3 t) {
         p = texelFetch(guides, ivec2(int(i), int(g)), 0).xyz;
@@ -141,12 +144,14 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         wp.xyz += side * position.y * w * 0.5;
         vT = normalize(mat3(modelMatrix) * T); vN = normalize(mat3(modelMatrix) * N);
         vPos = wp.xyz; vt = t; vSide = position.y; vRnd = iO.z;
+        vGlow = texelFetch(guides, ivec2(int(i), int(iG.x)), 0).w;
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 base;
       uniform vec3 light;
-      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd;
+      uniform float time;
+      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd; varying float vGlow;
       float strand(vec3 T, vec3 H, float e) {
         float th = dot(T, H);
         return pow(max(0.0, sqrt(max(0.0, 1.0 - th * th))), e);
@@ -166,6 +171,9 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         float s2 = strand(normalize(T - N * (0.18 - shift)), H, 22.0);
         float sp = smoothstep(0.04, 0.2, vt) * vol;
         c += vec3(1.0, 0.96, 0.9) * s1 * 0.22 * sp + base * s2 * 0.45 * sp;
+        // les mèches à prendre maintenant : une lueur dorée qui respire
+        float pulse = 0.55 + 0.45 * sin(time * 4.0);
+        c = mix(c, c * 1.25 + vec3(0.32, 0.22, 0.02) * pulse, vGlow * 0.85);
         float a = 1.0 - smoothstep(0.45, 1.0, abs(vSide));
         a *= 1.0 - smoothstep(0.86, 1.0, vt);
         // la racine se fond dans le cuir chevelu : aucun départ de fil ne se voit
@@ -181,6 +189,7 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
 
   /* ---- Chaque image : les guides lissés dans la texture ---- */
   const p = hair.pos
+  const glow = new Float32Array(G)
   function update() {
     for (let g = 0; g < G; g++) {
       const base = g * P
@@ -194,14 +203,17 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
           data[o + x] = 0.5 * (2 * p1 + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f2 + (-p0 + 3 * p1 - 3 * p2 + p3) * f3)
           data[ot + x] = 0.5 * ((-p0 + p2) + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * f + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * f2)
         }
+        data[o + 3] = glow[g]
       }
     }
+    uniforms.time.value = performance.now() / 1000
     tex.needsUpdate = true
   }
   update()
 
   return {
     mesh,
+    glow,
     update,
     setColor: hex => { uniforms.base.value.set(hex) },
     setLight: (x, y, z) => { uniforms.light.value.set(x, y, z).normalize() },

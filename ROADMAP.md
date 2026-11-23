@@ -105,13 +105,28 @@ Joyce : « c'est quasiment toujours les mêmes mots ».
    **À voir sur la tablette** : la lisibilité des pièces blanches, `?fps`.
    **Pistes si ça plaît** : jouer une vraie partie à deux sur la tablette ;
    le mat en deux coups ; la fourchette du cavalier.
-2. **Le Salon de coiffure** (Créer) — **à faire**, maquettes d'abord. Une
-   tête de petite fille (celle d'Habille-toi) vue de près ; un mode pas à pas
-   qui sert aussi au père (une ligne de texte par étape, pour lui : il l'a
-   demandée), un mode libre. Cheveux FINS (ceux de Jade et Joyce) : queue de
-   cheval, couettes, demi-queue, chignon, tresse, deux tresses, tresse
-   collée, couronne. Des mèches épaisses, pas une simulation cheveu par
-   cheveu ; mesurer avec `?fps` avant d'adopter.
+2. **Le Salon de coiffure** (Créer) — **en cours**. Trois essais refusés
+   (une tête en formes simples : « vieux pantin de bois » ; une illustration
+   Canva découpée et animée : « flou, lagguy, de la daube » ; des rubans
+   étirés). Le plan validé (« go », 23/11) : des cheveux faits de FILS.
+   - **Phase 1, validée (« c'est good », 23/11)** : `core/hair.ts` (300
+     mèches guides, pas fixe, inextensibles, une forme de repos, le sommeil
+     des mèches immobiles, tout dans le repère de la tête — testé) et
+     `core/hair3d.ts` (≈ 3 600 fils, lumière des cheveux, teinte au choix).
+     Démo hors de l'app : `.maquette/coiffure/` (publiée en page privée).
+   - Décisions du père : le **visage 1** (le corps de base de VRoid, CC0,
+     sans coiffure : `Base_Female.vrm`) ; des cheveux **légers**, sans
+     rebond, qui ne passent jamais devant les yeux ; **le doigt prend ce
+     qu'il touche** — des cheveux : on les attrape (même tout en bas du
+     dos) ; le corps ou le vide : le buste tourne. Aucun bouton ni zone
+     pour tourner (« pas de clic supplémentaire »). Ligne de texte pour le
+     père toujours affichée ; cinq teintes.
+   - **Phase 2, en cours** : queue de cheval (brosser → rassembler dans le
+     rond → l'élastique), puis couettes et tresse, en pas à pas.
+   - Phase 3 : les autres coiffures, le salon libre, le miroir, la
+     sauvegarde par fille, l'intégration dans l'app (vignette, affiche, bot).
+   - À faire : la calotte du cuir chevelu trop sombre (un casque), les
+     vêtements d'origine du modèle, mesurer `?fps` sur la tablette.
 
 ---
 
