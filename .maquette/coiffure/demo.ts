@@ -29,8 +29,8 @@ scene.add(fill)
 
 let model: VRM | null = null
 let skullDbg = ''
-/** La hauteur du nœud papillon (monde) : en dessous, on tourne le buste. */
-const turnAt = new THREE.Vector3()
+/** Le corps du modèle (pour savoir si le doigt touche le corps ou les cheveux). */
+const bodyMeshes: THREE.Object3D[] = []
 const scalpMats: THREE.MeshBasicMaterial[] = []
 function paintScalp(hex: string) {
   for (const m of scalpMats) {
@@ -113,7 +113,7 @@ async function load() {
   // les épaules et le cou, en unités de tête
   const ls = vrm.humanoid.getNormalizedBoneNode('leftUpperArm')!.getWorldPosition(new THREE.Vector3())
   const ch = (vrm.humanoid.getNormalizedBoneNode('upperChest') ?? vrm.humanoid.getNormalizedBoneNode('chest'))!.getWorldPosition(new THREE.Vector3())
-  turnAt.copy(Nk).lerp(ch, 0.45)
+  bodyMeshes.push(...skin)
   const u = (p: THREE.Vector3): V3 => [(p.x - C.x) / R, (p.y - C.y) / R, (p.z - C.z) / R]
   const neck: Ellipsoid = { c: u(Nk), r: [0.42, 0.9, 0.45] }
   neck.c[1] -= 0.2
@@ -157,7 +157,8 @@ async function load() {
       return [skullDbg, out.length, ...out.slice(0, 6)].join('\n')
     },
     still() { return hair!.asleep.reduce((a, b) => a + b, 0) / hair!.G },
-    get G() { return hair!.G }
+    get G() { return hair!.G },
+    get yaw() { return yaw }
   }
   document.body.classList.add('pret')
 }
@@ -181,13 +182,26 @@ let grab: Grab | null = null
 const at = (o: V3, d: V3, t: number): V3 => [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t]
 const cv = renderer.domElement
 cv.style.touchAction = 'none'
+/** La distance au corps sous le doigt (vêtements, peau), ou l'infini. */
+const bodyCaster = new THREE.Raycaster()
+function bodyRay(e: { clientX: number; clientY: number }) {
+  const r = renderer.domElement.getBoundingClientRect()
+  bodyCaster.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera)
+  const hit = bodyCaster.intersectObjects(bodyMeshes, false)[0]
+  return hit ? hit.distance : Infinity
+}
 cv.addEventListener('pointerdown', e => {
   if (!hair || grab) return
   cv.setPointerCapture(e.pointerId)
   const [o, d] = simRay(e)
-  // sous le nœud papillon (une limite horizontale), un glissé fait tourner le buste
-  const below = e.clientY > new THREE.Vector3().copy(turnAt).project(camera).y * -0.5 * renderer.domElement.clientHeight + renderer.domElement.clientHeight / 2 + renderer.domElement.getBoundingClientRect().top
-  const hits = below ? [] : hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3)
+  // le doigt prend ce qu'il touche VRAIMENT (le père, 23/11) : des cheveux
+  // sous le doigt → on les attrape (même tout en bas du dos) ; le corps
+  // devant les cheveux, ou le vide → le buste tourne
+  const under = hair.pick(o, d, 0.12, 0.7, 2)
+  const hairT = under.length ? Math.min(...under.map(h => h.t)) * R : Infinity
+  const body = bodyRay(e)
+  const onHair = under.length > 0 && !(body < hairT - R * 0.05)
+  const hits = onHair ? hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3) : []
   if (!hits.length) { grab = { id: e.pointerId, kind: 'tourner', t: 0, held: [], x: e.clientX, y: e.clientY, last: null }; return }
   const tmin = Math.min(...hits.map(h => h.t))
   const p0 = at(o, d, tmin)
@@ -206,8 +220,8 @@ function move(e: PointerEvent) {
   if (grab.kind === 'tourner') {
     const dx = e.clientX - grab.x
     grab.x = e.clientX
-    vYaw = dx * 0.012 / Math.max(1 / 120, 1 / 60)
-    yaw += dx * 0.012
+    vYaw = dx * 0.009 * 60
+    yaw += dx * 0.009
     return
   }
   const [o, d] = simRay(e)
