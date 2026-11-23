@@ -6,7 +6,7 @@ html,body{height:100%}
 body{margin:0;background:var(--fond);color:var(--encre);font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #scene{position:absolute;inset:0}
 #scene canvas{width:100%;height:100%;display:block}
-.barre{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;align-items:flex-end;gap:18px;flex-wrap:wrap;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
+.barre{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end;align-items:flex-end;gap:18px;flex-wrap:wrap;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
 .groupe{display:flex;gap:10px;align-items:flex-end;pointer-events:auto;background:rgba(255,253,246,.72);padding:8px 12px;border-radius:22px;backdrop-filter:blur(6px)}
 .outil{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:13px;font-weight:700}
 button{border:0;cursor:pointer;font:inherit;color:inherit}
@@ -22,16 +22,32 @@ button{border:0;cursor:pointer;font:inherit;color:inherit}
 .pret #charge{display:none}
 #err{position:absolute;left:12px;top:12px;color:#B00020;font-weight:700}
 button:focus-visible{outline:3px solid #41C26A}
+.haut{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px))}
+.bas{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:min(92vw,760px)}
+.consigne{background:rgba(69,54,42,.86);color:#FFF6E8;border-radius:16px;padding:9px 20px;font-size:clamp(16px,2.2vw,22px);font-weight:600;text-align:center;text-wrap:balance}
+.consigne b{color:#FFD34D;margin-right:10px}
+.etapes{display:flex;gap:9px;padding:8px 14px;border-radius:99px;background:rgba(255,253,246,.9)}
+.etapes i{width:15px;height:15px;border-radius:50%;background:rgba(69,54,42,.15);border:2px solid rgba(69,54,42,.25)}
+.etapes i.on{background:#4FB8E7;border-color:#4FB8E7}.etapes i.cur{border-color:#F0A03C;background:#FFF;transform:scale(1.25)}
+#plateau{position:absolute;right:max(24px,env(safe-area-inset-right,0px));top:42%}
+.gros{width:96px;height:96px;animation:respire 1.2s ease-in-out infinite}.gros svg{width:64px;height:64px}
+@keyframes respire{50%{transform:scale(1.08)}}
+#vol{position:absolute;width:84px;height:84px;transform:translate(-50%,-50%);pointer-events:none;z-index:9}
+#fete{position:absolute;left:0;right:0;top:40%;pointer-events:none}
+#fete i{position:absolute;width:12px;height:12px;border-radius:3px;animation:vole 1.6s ease-out forwards}
+@keyframes vole{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.gros{animation:none}#fete i{animation:none;display:none}}
 </style>
 <div id="scene"></div>
 <div id="charge">Chargement de la tête…</div>
 <div id="err"></div>
 <div id="fps"></div>
+<button class="rond haut" id="recommencer" aria-label="Recommencer"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 1 2.5 5.4" fill="none" stroke="#45362A" stroke-width="3" stroke-linecap="round"/><path d="M3 15l2.6 3.6L9 16" fill="none" stroke="#45362A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<div class="bas"><div class="consigne" id="texte"></div><div class="etapes" id="etapes"></div></div>
+<div id="plateau" hidden><button class="rond gros" id="elastique" aria-label="L’élastique"><svg viewBox="0 0 48 48"><ellipse cx="24" cy="24" rx="15" ry="12" fill="none" stroke="#E8427C" stroke-width="7"/><path d="M12 19a13 9 0 0 1 22-3" fill="none" stroke="#FF9CBE" stroke-width="2.5" stroke-linecap="round"/></svg></button></div>
+<div id="vol" hidden><svg viewBox="0 0 48 48"><ellipse cx="24" cy="24" rx="15" ry="12" fill="none" stroke="#E8427C" stroke-width="7"/></svg></div>
+<div id="fete"></div>
 <div class="barre">
-  <div class="groupe">
-    <span class="outil"><button class="rond sel" data-mode="main" aria-label="Attraper les cheveux"><svg viewBox="0 0 24 24"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11m0-5.5V4a1.5 1.5 0 0 1 3 0v7m0-5.5a1.5 1.5 0 0 1 3 0V12m0-4a1.5 1.5 0 0 1 3 0v6.5a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.7-2.9L4 15.3a1.6 1.6 0 0 1 2.5-2L8 15" fill="#FFE2C8" stroke="#45362A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>Main</span>
-    <span class="outil"><button class="rond" data-mode="brosse" aria-label="Brosser"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="12" height="8" rx="4" fill="#E8427C"/><path d="M5 12v3.5M8 12v4.5M11 12v4.5M14 12v3.5" stroke="#45362A" stroke-width="1.6" stroke-linecap="round"/><rect x="14" y="6.5" width="8" height="3" rx="1.5" fill="#C99A5F"/></svg></button>Brosse</span>
-  </div>
   <div class="groupe">
     <button class="teinte" data-teinte="0" aria-label="Blond"></button>
     <button class="teinte sel" data-teinte="1" aria-label="Châtain"></button>
