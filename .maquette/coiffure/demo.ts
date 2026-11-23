@@ -28,6 +28,8 @@ scene.add(fill)
 
 let model: VRM | null = null
 let skullDbg = ''
+/** La hauteur du nœud papillon (monde) : en dessous, on tourne le buste. */
+const turnAt = new THREE.Vector3()
 const scalpMats: THREE.MeshBasicMaterial[] = []
 function paintScalp(hex: string) {
   for (const m of scalpMats) {
@@ -110,6 +112,7 @@ async function load() {
   // les épaules et le cou, en unités de tête
   const ls = vrm.humanoid.getNormalizedBoneNode('leftUpperArm')!.getWorldPosition(new THREE.Vector3())
   const ch = (vrm.humanoid.getNormalizedBoneNode('upperChest') ?? vrm.humanoid.getNormalizedBoneNode('chest'))!.getWorldPosition(new THREE.Vector3())
+  turnAt.copy(Nk).lerp(ch, 0.45)
   const u = (p: THREE.Vector3): V3 => [(p.x - C.x) / R, (p.y - C.y) / R, (p.z - C.z) / R]
   const neck: Ellipsoid = { c: u(Nk), r: [0.42, 0.9, 0.45] }
   neck.c[1] -= 0.2
@@ -159,7 +162,7 @@ async function load() {
 }
 
 /* ---- Le doigt ---- */
-type Mode = 'main' | 'brosse' | 'tourner'
+type Mode = 'main' | 'brosse'
 let mode: Mode = 'main'
 const ray = new THREE.Raycaster()
 function simRay(e: { clientX: number; clientY: number }): [V3, V3] {
@@ -181,8 +184,9 @@ cv.addEventListener('pointerdown', e => {
   if (!hair || grab) return
   cv.setPointerCapture(e.pointerId)
   const [o, d] = simRay(e)
-  // l'outil « Tourner » : n'importe quel glissé fait tourner la tête
-  const hits = mode === 'tourner' ? [] : hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3)
+  // sous le nœud papillon (une limite horizontale), un glissé fait tourner le buste
+  const below = e.clientY > new THREE.Vector3().copy(turnAt).project(camera).y * -0.5 * renderer.domElement.clientHeight + renderer.domElement.clientHeight / 2 + renderer.domElement.getBoundingClientRect().top
+  const hits = below ? [] : hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3)
   if (!hits.length) { grab = { id: e.pointerId, kind: 'tourner', t: 0, held: [], x: e.clientX, y: e.clientY, last: null }; return }
   const tmin = Math.min(...hits.map(h => h.t))
   const p0 = at(o, d, tmin)
