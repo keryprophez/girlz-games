@@ -601,15 +601,22 @@ export interface ScalpOpts {
     Repère de la tête : y en haut, z vers le visage, x vers la gauche de
     l'enfant. Renvoie vrai si un point du crâne (unitaire) porte des cheveux. */
 export function onScalp(x: number, y: number, z: number): boolean {
-  // le front : pas de cheveux sous ce niveau quand on regarde le visage
-  if (z > 0.1 && y < 0.5 + 0.2 * (1 - Math.abs(x))) return false
-  // la lisière du front, plus haut au milieu
-  if (z > 0.45 && y < 0.82) return false
-  // les tempes et les oreilles
-  if (z > -0.25 && y < 0.05 && Math.abs(x) > 0.55) return false
-  // la nuque
-  if (y < -0.55) return false
-  return y > -0.55
+  return y > hairline(x, z)
+}
+
+/** La hauteur de la lisière selon le tour de la tête (sur la sphère unité) :
+    haute au front, plus basse au-dessus de l'oreille, à la nuque derrière,
+    en une courbe continue (une règle en marches découpait une encoche
+    rectangulaire près de l'oreille, 23/11). */
+export function hairline(x: number, z: number): number {
+  const a = Math.abs(Math.atan2(x, z))           // 0 : le front, π : la nuque
+  const front = 0.78, ear = 0.1, nape = -0.55
+  if (a < Math.PI / 2) {
+    const u = a / (Math.PI / 2)
+    return front + (ear - front) * (1 - Math.cos(u * Math.PI)) / 2
+  }
+  const u = (a - Math.PI / 2) / (Math.PI / 2)
+  return ear + (nape - ear) * (1 - Math.cos(u * Math.PI)) / 2
 }
 
 /** L'obstacle du visage : un ellipsoïde devant le visage, qui écarte les

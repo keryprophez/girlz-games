@@ -2,8 +2,8 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm'
-import { Hair, faceGuard, scalp, type Ellipsoid, type V3 } from '../../src/core/hair'
-import { hairView } from '../../src/core/hair3d'
+import { Hair, faceGuard, onScalp, scalp, type Ellipsoid, type V3 } from '../../src/core/hair'
+import { hairCap, hairView } from '../../src/core/hair3d'
 
 // le visage 1, choisi par le père (23/11)
 const TETES: Record<string, string> = { base: 'Base_Female.vrm.wasm' }
@@ -28,6 +28,7 @@ const fill = new THREE.DirectionalLight('#FFE6F0', 0.7)
 scene.add(fill)
 
 let model: VRM | null = null
+let cap: ReturnType<typeof hairCap> | null = null
 let skullDbg = ''
 
 /* ---- Le pas à pas : la queue de cheval ---- */
@@ -46,7 +47,7 @@ let brushed = new Uint8Array(0)
 const brushedNow = new Set<number>()
 const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.85, depthTest: false }))
 ring.renderOrder = 10
-const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 16, 40), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
+const band = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.048, 16, 40), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
 let bandPop = 0
 const isBack = (g: number) => hair!.rootL[g * 3 + 2] < 0.35
 function setEtape(e: Etape) {
@@ -68,14 +69,14 @@ function placeBand(dt: number) {
   for (let g = 0; g < h.G; g++) {
     const j = h.tieIdx[g]
     if (j < 0 || j + 1 >= h.P) continue
-    const a = h.point(g, j), b = h.point(g, j + 1)
+    const a = h.point(g, j), b = h.point(g, Math.min(h.P - 1, j + 2))
     c.x += a[0]; c.y += a[1]; c.z += a[2]
     d.x += b[0] - a[0]; d.y += b[1] - a[1]; d.z += b[2] - a[2]
     n++
   }
   if (!n) return
   c.divideScalar(n); d.normalize()
-  band.position.copy(c).addScaledVector(d, 0.05)
+  band.position.copy(c).addScaledVector(d, 0.01)
   band.quaternion.setFromUnitVectors(bandAxis, d)
   if (bandPop > 0) {
     bandPop = Math.max(0, bandPop - dt * 2.5)
@@ -245,11 +246,35 @@ async function load() {
   ;(window as unknown as { __temps: string[] }).__temps = tm
   hairGroup.scale.setScalar(R)
   hairGroup.add(view.mesh)
+  // la calotte juste AU-DESSUS du vrai crâne : l'ellipsoïde ajusté est plus
+  // petit que la tête (sinon la calotte reste dessous, invisible)
+  const ratios: number[] = []
+  for (const m of headCopy) {
+    const a = m.geometry.getAttribute('position')
+    for (let i = 0; i < a.count; i++) {
+      const x = (a.getX(i) - C.x) / R / skull.r[0], y = (a.getY(i) - C.y) / R / skull.r[1], z = (a.getZ(i) - C.z) / R / skull.r[2]
+      const l = Math.hypot(x, y, z)
+      if (l > 0.5 && l < 1.6 && onScalp(x / l, y / l, z / l)) ratios.push(l)
+    }
+  }
+  ratios.sort((a, b) => a - b)
+  const k = ratios.length ? ratios[Math.floor(ratios.length * 0.97)] : 1
+  const capR: V3 = [skull.r[0] * k + 0.03, skull.r[1] * k + 0.03, skull.r[2] * k + 0.03]
+  cap = hairCap(THREE, { c: skull.c, r: [skull.r[0] * k, skull.r[1] * k, skull.r[2] * k] }, onScalp)
+  // l'attache : JUSTE au-dessus de la calotte (l'élastique se pose sur la
+  // chevelure ; plus loin, un grand dôme avalait le haut de la queue)
+  {
+    const u = new THREE.Vector3(0, 0.2, -1).normalize()
+    const rad = 1 / Math.hypot(u.x / capR[0], u.y / capR[1], u.z / capR[2])
+    TIE = [u.x * (rad + 0.06), u.y * (rad + 0.06), u.z * (rad + 0.06)]
+  }
+  hairGroup.add(cap.mesh)
+  cap.setLight(-0.35, 0.8, 0.5)
   view.setColor(TEINTES[1])
+  cap.setColor(TEINTES[1])
   paintScalp(TEINTES[1])
   initial = { pos: hair.pos.slice(), rest: hair.rest.slice() }
   // la queue de cheval : haute, à l'arrière du crâne
-  TIE = [0, skull.r[1] * 0.2, -skull.r[2] * 1.14]
   ring.position.set(TIE[0], TIE[1], TIE[2] - 0.16)
   hairGroup.add(ring)
   hairGroup.add(band)
@@ -431,7 +456,7 @@ document.getElementById('recommencer')!.onclick = () => recommencer()
 }
 document.querySelectorAll<HTMLButtonElement>('[data-teinte]').forEach((b, i) => {
   b.style.background = TEINTES[i]
-  b.onclick = () => { view?.setColor(TEINTES[i]); paintScalp(TEINTES[i]); document.querySelectorAll('[data-teinte]').forEach(x => x.classList.toggle('sel', x === b)) }
+  b.onclick = () => { view?.setColor(TEINTES[i]); cap?.setColor(TEINTES[i]); paintScalp(TEINTES[i]); document.querySelectorAll('[data-teinte]').forEach(x => x.classList.toggle('sel', x === b)) }
 })
 
 /* ---- La boucle ---- */
@@ -451,6 +476,11 @@ function loop(now: number) {
     glowNow()
     if (etape === 'rassembler' && hair.tieIdx.every(j => j >= 0) && hair.tieT.every(t => t >= 1)) setEtape('elastique')
     ring.scale.setScalar(1 + Math.sin(now / 220) * 0.06)
+    if (cap) {
+      let on = 0
+      for (let g = 0; g < hair.G; g++) if (hair.tieIdx[g] >= 0) on += Math.min(1, Math.max(0, hair.tieT[g]))
+      cap.setTie(TIE, on / hair.G)
+    }
     if (band.visible) placeBand(dt)
     view.update()
     fpsEl.dataset.phys = (t1 - t0).toFixed(1)
