@@ -82,7 +82,7 @@ function tieScreen() {
 function tieGuide(g: number, delay: number) {
   const h = hair!, r = h.root(g)
   const dx = r[0] - TIE[0], dy = r[1] - TIE[1], l = Math.hypot(dx, dy) || 1
-  h.tie(g, [TIE[0] + dx / l * 0.07, TIE[1] + dy / l * 0.07, TIE[2]], delay)
+  h.tie(g, [TIE[0] + dx / l * 0.09, TIE[1] + dy / l * 0.09, TIE[2]], delay)
 }
 function fete() {
   const box = document.getElementById('fete')!
@@ -230,6 +230,7 @@ async function load() {
     get yaw() { return yaw },
     get etape() { return etape },
     setYaw(v: number) { yaw = v; vYaw = 0 },
+    queueFinie() { for (let g = 0; g < hair!.G; g++) tieGuide(g, (g % 20) * 0.01); setEtape('fini') },
     tieScreen,
     tied() { return Array.from(hair!.tieIdx).filter(j => j >= 0).length / hair!.G },
     brushed() { return brushed.reduce((a, b) => a + b, 0) / hair!.G },

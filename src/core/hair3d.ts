@@ -116,8 +116,14 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         float i = floor(t * (S - 1.0) + 0.5);
         vec3 p0, t0, p1, t1, p2, t2;
         at(iG.x, i, p0, t0); at(iG.y, i, p1, t1); at(iG.z, i, p2, t2);
-        vec3 p = p0 * iW.x + p1 * iW.y + p2 * iW.z;
-        vec3 T = normalize(t0 * iW.x + t1 * iW.y + t2 * iW.z + 1e-6);
+        // une mèche attachée : ses fils ne suivent qu'elle (ses voisines,
+        // attachées plus près ou plus loin, couperaient le fil en travers)
+        // (le canal porte la place de l'attache le long de la mèche, 0 sinon)
+        float tieAt = texelFetch(guides, ivec2(int(S), int(iG.x)), 0).w;
+        float tied = step(0.001, max(tieAt, max(texelFetch(guides, ivec2(int(S), int(iG.y)), 0).w, texelFetch(guides, ivec2(int(S), int(iG.z)), 0).w)));
+        vec3 bw = mix(iW, vec3(1.0, 0.0, 0.0), tied);
+        vec3 p = p0 * bw.x + p1 * bw.y + p2 * bw.z;
+        vec3 T = normalize(t0 * bw.x + t1 * bw.y + t2 * bw.z + 1e-6);
         // le repère de la mèche : vers l'extérieur de la tête, et de côté
         vec3 N = p - center; N = normalize(N - T * dot(N, T) + 1e-6);
         vec3 B = cross(T, N);
@@ -125,10 +131,16 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         float clump = mix(1.0, 0.35, smoothstep(0.35, 1.0, t));
         float spread = mix(2.2, 1.0, smoothstep(0.0, 0.25, t));
         // une légère ondulation propre à chaque fil
-        float tight = texelFetch(guides, ivec2(int(i + S), int(iG.x)), 0).w;
-        float wave = sin(t * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, t) * (1.0 - tight);
-        spread *= mix(1.0, 0.45, tight);
-        p += (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t) * mix(1.0, 0.3, tight)) * clump;
+        // une mèche attachée : sur le crâne, ses fils s'étalent à plat et
+        // couvrent sans trou (tirés, lisses) ; dans la queue, ils gardent du volume
+        float onSkull = tied * (1.0 - smoothstep(tieAt - 0.02, tieAt + 0.04, t));
+        float wave = sin(t * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, t) * (1.0 - tied);
+        spread *= mix(1.0, 1.35, onSkull);
+        // la queue : les fils se répartissent tout autour (un volume rond, pas un crayon)
+        float inTail = tied * smoothstep(tieAt, tieAt + 0.06, t);
+        float ang = iO.z * 6.2832, rad = length(iO.xy) * 2.6 * mix(1.0, 0.7, smoothstep(tieAt, 1.0, t));
+        vec3 lay = (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t) * mix(1.0, 0.15, onSkull)) * clump;
+        p += mix(lay, (B * cos(ang) + N * sin(ang)) * rad, inTail);
         // le ruban : couché sur la chevelure quand on la regarde de face (pas
         // de torsion quand le cheveu part vers la caméra), tourné vers la
         // caméra quand on la voit de profil
@@ -141,7 +153,7 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         float face = abs(dot(Nw, V));
         vec3 side = normalize(mix(cam, Bw, smoothstep(0.15, 0.55, face)));
         // la largeur est en rayons de tête : à l'échelle du monde
-        float w = width * iO.w * mix(1.0, 0.18, t * t) * length(modelMatrix[0].xyz);
+        float w = width * iO.w * mix(1.0, 0.18, t * t) * length(modelMatrix[0].xyz) * mix(1.0, 1.7, onSkull);
         vec4 wp = modelMatrix * vec4(p, 1.0);
         wp.xyz += side * position.y * w * 0.5;
         vT = normalize(mat3(modelMatrix) * T); vN = normalize(mat3(modelMatrix) * N);
@@ -208,7 +220,7 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         }
         data[o + 3] = glow[g]
         // une mèche attachée est tirée : ses fils se serrent (un aspect lisse)
-        data[ot + 3] = hair.tieIdx[g] >= 0 ? 1 : 0
+        data[ot + 3] = hair.tieIdx[g] >= 0 ? Math.max(0.01, hair.tieIdx[g] / (P - 1)) : 0
       }
     }
     uniforms.time.value = performance.now() / 1000

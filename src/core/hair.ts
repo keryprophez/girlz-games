@@ -249,7 +249,12 @@ export class Hair {
     const s = this.seg[g], base = g * P, k3 = g * 3
     const r = this.rootL, d = this.dirL
     const p1: V3 = [r[k3] + d[k3] * s, r[k3 + 1] + d[k3 + 1] * s, r[k3 + 2] + d[k3 + 2] * s]
-    const T = this.tiePath, lift = this.lift[g] * 0.5
+    // l'ordre des couches : les cheveux qui viennent de loin (le front)
+    // passent PAR-DESSUS ceux qui partent près de l'attache, comme sur une
+    // vraie queue de cheval (au hasard, on voyait le départ de chaque mèche :
+    // des écailles)
+    const far = Math.min(1, Math.hypot(target[0] - p1[0], target[1] - p1[1], target[2] - p1[2]) / 2.6)
+    const T = this.tiePath, lift = 0.008 + 0.05 * far
     // le chemin sur le crâne : la corde de la racine à l'attache, chaque point
     // ramené à la surface (+ sa couche), lissé ; puis sa VRAIE longueur. La
     // mèche y est TENDUE (aucun surplus qui se froisse près de l'attache) et
@@ -334,9 +339,8 @@ export class Hair {
       const base = g * P, m = shape[g], kin = this.tieIdx[g]
       if (kin >= 0 && this.tieT[g] < 1 + TAIL_S / TIE_S) {
         this.tieT[g] += h / TIE_S
-        // la queue a eu le temps de pendre : sa pose devient sa forme de repos
-        // (sans forme, une queue posée sur l'épaule glisserait sans fin)
-        if (this.tieT[g] >= 1 + TAIL_S / TIE_S) { this.keepPose([g]); this.shape[g] = 1 }
+        // (la queue pend librement : une pose gardée en plein balancement la
+        // figerait en boucle au-dessus de l'attache)
       }
       // racine et premier point : posés sur le crâne
       const k0 = base * 3, r = this.rootL, d = this.dirL, s = this.seg[g], k3 = g * 3
@@ -356,7 +360,7 @@ export class Hair {
           continue
         }
         // Verlet amorti (l'air freine davantage les pointes) + pesanteur
-        const damp = baking ? Math.max(0, 1 - this.damp * h) : Math.max(0, 1 - (AIR[0] + (AIR[1] - AIR[0]) * (i - 2) / (P - 3)) * h)
+        const damp = baking ? Math.max(0, 1 - this.damp * h) : Math.max(0, 1 - (AIR[0] + (AIR[1] - AIR[0]) * (i - 2) / (P - 3)) * (kin >= 0 ? 1.6 : 1) * h)
         const vx = (pos[k] - prev[k]) * damp, vy = (pos[k + 1] - prev[k + 1]) * damp, vz = (pos[k + 2] - prev[k + 2]) * damp
         prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2]
         // la forme de repos est DÉJÀ la pose tombée sous la pesanteur : la
@@ -376,6 +380,9 @@ export class Hair {
       for (let it = 0; it < ITER; it++) {
         // un peu de raideur : (i−2, i) ne se replie pas (pas contre la racine)
         for (let i = 4; i < P; i++) {
+          // à l'élastique, la mèche se plie net (une mèche de la nuque remonte
+          // jusqu'à l'attache et retombe dans la queue) : pas de raideur là
+          if (kin >= 0 && i - 2 <= kin) continue
           const b = base + i, c = b - 2
           link(pos, c, b, s * 2 * 0.985, pinned[c] || i - 2 <= kin ? 0 : 1, pinned[b] || i <= kin ? 0 : 1, BEND, true)
         }
@@ -424,7 +431,9 @@ export class Hair {
       }
       for (let i = 2; i < pin; i++) { const b = (base + i) * 3; fix[b] = fix[b + 1] = fix[b + 2] = 0 }
     }
-    // la correction d'un point est rendue à la vitesse de celui d'avant
+    // la correction d'un point est rendue à la vitesse de celui d'avant —
+    // pas dans une queue attachée : partie d'un point fixe tout près du crâne,
+    // cette énergie rendue la faisait tournoyer sans fin
     const fd = FTL_DAMP
     for (let i = 2; i < P - 1; i++) {
       const k = (base + i) * 3
