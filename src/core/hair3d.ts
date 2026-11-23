@@ -138,9 +138,12 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         spread *= mix(1.0, 1.35, onSkull);
         // la queue : les fils se répartissent tout autour (un volume rond, pas un crayon)
         float inTail = tied * smoothstep(tieAt, tieAt + 0.06, t);
-        float ang = iO.z * 6.2832, rad = length(iO.xy) * 2.6 * mix(1.0, 0.7, smoothstep(tieAt, 1.0, t));
+        // sous l'élastique, la queue s'ouvre peu à peu (serrée en haut, pleine plus bas)
+        float ang = iO.z * 6.2832, rad = length(iO.xy) * 2.6 * mix(0.35, 1.0, smoothstep(tieAt, tieAt + 0.3, t)) * mix(1.0, 0.7, smoothstep(tieAt, 1.0, t));
         vec3 lay = (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t) * mix(1.0, 0.15, onSkull)) * clump;
-        p += mix(lay, (B * cos(ang) + N * sin(ang)) * rad, inTail);
+        // à l'élastique, le faisceau est serré : les fils s'y rejoignent
+        float squeeze = 1.0 - 0.8 * tied * exp(-pow((t - tieAt - 0.01) / 0.06, 2.0));
+        p += mix(lay, (B * cos(ang) + N * sin(ang)) * rad, inTail) * squeeze;
         // le ruban : couché sur la chevelure quand on la regarde de face (pas
         // de torsion quand le cheveu part vers la caméra), tourné vers la
         // caméra quand on la voit de profil

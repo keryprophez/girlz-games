@@ -46,7 +46,7 @@ let brushed = new Uint8Array(0)
 const brushedNow = new Set<number>()
 const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.85, depthTest: false }))
 ring.renderOrder = 10
-const band = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.055, 14, 32), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
+const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 16, 40), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
 let bandPop = 0
 const isBack = (g: number) => hair!.rootL[g * 3 + 2] < 0.35
 function setEtape(e: Etape) {
@@ -58,6 +58,30 @@ function setEtape(e: Etape) {
   band.visible = e === 'fini'
   document.getElementById('plateau')!.hidden = e !== 'elastique'
   if (e === 'fini') { bandPop = 1; fete() }
+}
+/** L'élastique AUTOUR du faisceau : centré sur les attaches, dans l'axe de
+    la queue (il la suit quand elle se balance) ; il arrive en s'enroulant. */
+const bandAxis = new THREE.Vector3(0, 0, 1)
+function placeBand(dt: number) {
+  const h = hair!, c = new THREE.Vector3(), d = new THREE.Vector3()
+  let n = 0
+  for (let g = 0; g < h.G; g++) {
+    const j = h.tieIdx[g]
+    if (j < 0 || j + 1 >= h.P) continue
+    const a = h.point(g, j), b = h.point(g, j + 1)
+    c.x += a[0]; c.y += a[1]; c.z += a[2]
+    d.x += b[0] - a[0]; d.y += b[1] - a[1]; d.z += b[2] - a[2]
+    n++
+  }
+  if (!n) return
+  c.divideScalar(n); d.normalize()
+  band.position.copy(c).addScaledVector(d, 0.05)
+  band.quaternion.setFromUnitVectors(bandAxis, d)
+  if (bandPop > 0) {
+    bandPop = Math.max(0, bandPop - dt * 2.5)
+    band.scale.setScalar(1 + bandPop * 1.2)
+    band.rotateZ(bandPop * 6)
+  }
 }
 /** La lueur : les mèches à prendre maintenant. */
 function glowNow() {
@@ -82,7 +106,7 @@ function tieScreen() {
 function tieGuide(g: number, delay: number) {
   const h = hair!, r = h.root(g)
   const dx = r[0] - TIE[0], dy = r[1] - TIE[1], l = Math.hypot(dx, dy) || 1
-  h.tie(g, [TIE[0] + dx / l * 0.09, TIE[1] + dy / l * 0.09, TIE[2]], delay)
+  h.tie(g, [TIE[0] + dx / l * 0.045, TIE[1] + dy / l * 0.045, TIE[2]], delay)
 }
 function fete() {
   const box = document.getElementById('fete')!
@@ -225,11 +249,9 @@ async function load() {
   paintScalp(TEINTES[1])
   initial = { pos: hair.pos.slice(), rest: hair.rest.slice() }
   // la queue de cheval : haute, à l'arrière du crâne
-  TIE = [0, skull.r[1] * 0.2, -skull.r[2] * 1.02]
+  TIE = [0, skull.r[1] * 0.2, -skull.r[2] * 1.14]
   ring.position.set(TIE[0], TIE[1], TIE[2] - 0.16)
   hairGroup.add(ring)
-  band.position.set(TIE[0], TIE[1] - 0.06, TIE[2] - 0.1)
-  band.rotation.x = Math.PI / 2 - 0.35
   hairGroup.add(band)
   setEtape('brosser')
   // le cadrage : la tête et les épaules
@@ -429,7 +451,7 @@ function loop(now: number) {
     glowNow()
     if (etape === 'rassembler' && hair.tieIdx.every(j => j >= 0) && hair.tieT.every(t => t >= 1)) setEtape('elastique')
     ring.scale.setScalar(1 + Math.sin(now / 220) * 0.06)
-    if (bandPop > 0) { bandPop = Math.max(0, bandPop - dt * 2.5); band.scale.setScalar(1 + bandPop * 0.9); band.rotation.z += dt * 12 * bandPop }
+    if (band.visible) placeBand(dt)
     view.update()
     fpsEl.dataset.phys = (t1 - t0).toFixed(1)
   }
