@@ -5,7 +5,8 @@ import { VRMLoaderPlugin, VRMUtils, type VRM } from '@pixiv/three-vrm'
 import { Hair, faceGuard, scalp, type Ellipsoid, type V3 } from '../../src/core/hair'
 import { hairView } from '../../src/core/hair3d'
 
-const TETES: Record<string, string> = { base: 'Base_Female.vrm.wasm', princesse: 'princesse.vrm.wasm' }
+// le visage 1, choisi par le père (23/11)
+const TETES: Record<string, string> = { base: 'Base_Female.vrm.wasm' }
 const TEINTES = ['#C9A35E', '#6B4A2B', '#9A3F1C', '#3E2A1E', '#1E1816']
 const q = new URLSearchParams(location.search)
 const tete = TETES[q.get('tete') || ''] ? q.get('tete')! : 'base'
@@ -247,10 +248,6 @@ document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(b => b.oncli
 document.querySelectorAll<HTMLButtonElement>('[data-teinte]').forEach((b, i) => {
   b.style.background = TEINTES[i]
   b.onclick = () => { view?.setColor(TEINTES[i]); paintScalp(TEINTES[i]); document.querySelectorAll('[data-teinte]').forEach(x => x.classList.toggle('sel', x === b)) }
-})
-document.querySelectorAll<HTMLButtonElement>('[data-tete]').forEach(b => {
-  b.classList.toggle('sel', b.dataset.tete === tete)
-  b.onclick = () => { location.search = '?tete=' + b.dataset.tete }
 })
 
 /* ---- La boucle ---- */
