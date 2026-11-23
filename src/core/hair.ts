@@ -607,7 +607,9 @@ export function scalp(o: ScalpOpts): HairInit {
     // la pousse : s'éloigne de la raie, glisse vers l'arrière et le bas,
     // COUCHÉE sur le crâne (sinon le dessus de la tête se hérisse de touffes)
     const side = x - part
-    let dx = Math.sign(side || 1) * (Math.abs(side) < 0.3 && z > -0.3 ? 1 : 0.45)
+    // derrière, les cheveux tombent droit (pas de raie qui ouvre le crâne) ;
+    // devant et sur le dessus, ils partent de la raie
+    let dx = z > -0.2 ? Math.sign(side || 1) * (Math.abs(side) < 0.3 ? 1 : 0.45) : side * 0.25
     let dy = -0.55
     // le devant part vers l'arrière et les côtés : jamais sur le visage
     let dz = z > 0 ? -0.6 - z : -0.45

@@ -302,7 +302,14 @@ function move(e: PointerEvent) {
   const p = at(o, d, grab.t)
   if (grab.kind === 'brosse') {
     const m: V3 = [p[0] - grab.last![0], p[1] - grab.last![1], p[2] - grab.last![2]]
-    for (const g of hair.comb(o, d, 0.45, m, 0.45)) { brushed[g] = 1; brushedNow.add(g) }
+    // une brosse large : un coup couvre une bande de cheveux, et les mèches
+    // voisines du dessous comptent aussi (un enfant ne brosse pas mèche à mèche)
+    for (const g of hair.comb(o, d, 0.6, m, 0.6)) {
+      brushedNow.add(g)
+      const r = hair.root(g)
+      for (let k = 0; k < hair.G; k++) if (!brushed[k]) { const q = hair.root(k); if (Math.hypot(q[0] - r[0], q[1] - r[1], q[2] - r[2]) < 0.35) brushed[k] = 1 }
+      brushed[g] = 1
+    }
     grab.last = p
     return
   }
@@ -330,7 +337,7 @@ const up = (e: PointerEvent) => {
     hair.keepPose(brushedNow); brushedNow.clear()
     let n = 0, all = 0
     for (let g = 0; g < hair.G; g++) if (isBack(g)) { all++; n += brushed[g] }
-    if (n >= all * 0.7) { brushed.fill(1); setTimeout(() => setEtape('rassembler'), 500) }
+    if (n >= all * 0.6) { brushed.fill(1); setTimeout(() => setEtape('rassembler'), 500) }
   }
   if (g0.kind === 'main' && etape === 'rassembler') {
     const t = tieScreen()

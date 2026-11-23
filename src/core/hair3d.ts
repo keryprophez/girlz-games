@@ -172,8 +172,9 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         float sp = smoothstep(0.04, 0.2, vt) * vol;
         c += vec3(1.0, 0.96, 0.9) * s1 * 0.22 * sp + base * s2 * 0.45 * sp;
         // les mèches à prendre maintenant : une lueur dorée qui respire
-        float pulse = 0.55 + 0.45 * sin(time * 4.0);
-        c = mix(c, c * 1.25 + vec3(0.32, 0.22, 0.02) * pulse, vGlow * 0.85);
+        // (douce : la chevelure respire, elle ne change pas de couleur)
+        float pulse = 0.5 + 0.5 * sin(time * 3.5);
+        c += vec3(0.16, 0.11, 0.0) * pulse * vGlow;
         float a = 1.0 - smoothstep(0.45, 1.0, abs(vSide));
         a *= 1.0 - smoothstep(0.86, 1.0, vt);
         // la racine se fond dans le cuir chevelu : aucun départ de fil ne se voit
