@@ -118,7 +118,10 @@ addEventListener('resize', resize)
 async function load() {
   const loader = new GLTFLoader()
   loader.register(p => new VRMLoaderPlugin(p))
+  const T0 = performance.now(), tm: string[] = []
+  const mark = (n: string) => tm.push(`${n} ${(performance.now() - T0).toFixed(0)}`)
   const gltf = await loader.loadAsync(TETES[tete])
+  mark('modèle')
   const vrm = gltf.userData.vrm as VRM
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
   VRMUtils.rotateVRM0(vrm)
@@ -145,17 +148,35 @@ async function load() {
   const hb = vrm.humanoid.getNormalizedBoneNode('head')!, nb = vrm.humanoid.getNormalizedBoneNode('neck')!
   const H = hb.getWorldPosition(new THREE.Vector3()), Nk = nb.getWorldPosition(new THREE.Vector3())
   const bb = new THREE.Box3(), v = new THREE.Vector3()
-  const skin: THREE.Mesh[] = []
+  mark('préparation')
+  const skin: THREE.Mesh[] = [], headCopy: THREE.Mesh[] = []
   vrm.scene.traverse(o => {
     const m = o as THREE.SkinnedMesh
     if (!m.isMesh || !m.visible) return
     skin.push(m)
     const p = m.geometry.getAttribute('position')
+    const world = new Float32Array(p.count * 3)
     for (let i = 0; i < p.count; i++) {
       v.fromBufferAttribute(p, i)
       if (m.isSkinnedMesh) m.applyBoneTransform(i, v)
       v.applyMatrix4(m.matrixWorld)
+      world.set([v.x, v.y, v.z], i * 3)
       if (v.y > H.y - 0.02 && Math.hypot(v.x - H.x, v.z - H.z) < 0.14) bb.expandByPoint(v)
+    }
+    // une copie FIGÉE des seuls triangles de la tête, pour poser les racines :
+    // un rayon sur le modèle animé recalcule son squelette à chaque triangle
+    // (14 s de chargement pour 300 racines)
+    const idx = m.geometry.index, tri: number[] = []
+    const n = idx ? idx.count : p.count
+    for (let t = 0; t < n; t += 3) {
+      const a = idx ? idx.getX(t) : t, b2 = idx ? idx.getX(t + 1) : t + 1, c = idx ? idx.getX(t + 2) : t + 2
+      if (world[a * 3 + 1] < Nk.y || world[b2 * 3 + 1] < Nk.y || world[c * 3 + 1] < Nk.y) continue
+      for (const k of [a, b2, c]) tri.push(world[k * 3], world[k * 3 + 1], world[k * 3 + 2])
+    }
+    if (tri.length) {
+      const g = new THREE.BufferGeometry()
+      g.setAttribute('position', new THREE.Float32BufferAttribute(tri, 3))
+      headCopy.push(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })))
     }
   })
   const size = bb.getSize(new THREE.Vector3())
@@ -180,20 +201,24 @@ async function load() {
   const torso: Ellipsoid = { c: u(ch), r: [sw * 1.05, 1.25, 1.05] }
   torso.c[1] += 0.15
   // les racines posées sur le vrai crâne : un rayon de l'extérieur vers le centre
+  mark('crâne')
   const init = scalp({ skull, count: 300, length: 3.6, seed: 5 })
   const ray = new THREE.Raycaster()
   for (const r of init.roots) {
     const d = new THREE.Vector3(...r).normalize()
     ray.set(C.clone().addScaledVector(d, R * 3), d.clone().negate())
-    const hit = ray.intersectObjects(skin, false).find(h => h.point.distanceTo(C) < R * 1.6)
+    const hit = ray.intersectObjects(headCopy, false).find(h => h.point.distanceTo(C) < R * 1.6)
     if (hit) { const p = u(hit.point); r[0] = p[0]; r[1] = p[1]; r[2] = p[2] }
   }
+  mark('racines')
   hair = new Hair(init, 14)
   hair.headColliders = [skull, faceGuard(skull), neck, torso]
   hair.setHead(yaw, 0, true)
   hair.bake(5)
   brushed = new Uint8Array(hair.G)
+  mark('chute')
   view = hairView(THREE, hair, { width: 0.05, child: 12 })
+  ;(window as unknown as { __temps: string[] }).__temps = tm
   hairGroup.scale.setScalar(R)
   hairGroup.add(view.mesh)
   view.setColor(TEINTES[1])
