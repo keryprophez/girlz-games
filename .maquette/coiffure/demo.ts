@@ -229,6 +229,7 @@ async function load() {
     get G() { return hair!.G },
     get yaw() { return yaw },
     get etape() { return etape },
+    setYaw(v: number) { yaw = v; vYaw = 0 },
     tieScreen,
     tied() { return Array.from(hair!.tieIdx).filter(j => j >= 0).length / hair!.G },
     brushed() { return brushed.reduce((a, b) => a + b, 0) / hair!.G },
@@ -349,11 +350,15 @@ const up = (e: PointerEvent) => {
         if (hair.tieIdx[g] >= 0) continue
         const r = hair.root(g)
         const near = held.has(g) || [...held].some(h => { const q = hair!.root(h); return Math.hypot(q[0] - r[0], q[1] - r[1], q[2] - r[2]) < 0.6 })
-        if (near) tieGuide(g, (k++) * 0.012)
+        if (near) tieGuide(g, Math.min(0.35, (k++) * 0.006))
       }
       // presque tout est rassemblé : le reste suit tout seul
       const tied = Array.from(hair.tieIdx).filter(j => j >= 0).length
-      if (tied >= hair.G * 0.75) for (let g = 0, d = 0; g < hair.G; g++) if (hair.tieIdx[g] < 0) tieGuide(g, 0.3 + (d++) * 0.008)
+      if (tied >= hair.G * 0.75) {
+        const left: number[] = []
+        for (let g = 0; g < hair.G; g++) if (hair.tieIdx[g] < 0) left.push(g)
+        left.forEach((g, i) => tieGuide(g, 0.15 + i / left.length * 0.5))
+      }
     }
   }
 }
