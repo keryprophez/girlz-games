@@ -159,7 +159,7 @@ async function load() {
 }
 
 /* ---- Le doigt ---- */
-type Mode = 'main' | 'brosse'
+type Mode = 'main' | 'brosse' | 'tourner'
 let mode: Mode = 'main'
 const ray = new THREE.Raycaster()
 function simRay(e: { clientX: number; clientY: number }): [V3, V3] {
@@ -181,7 +181,8 @@ cv.addEventListener('pointerdown', e => {
   if (!hair || grab) return
   cv.setPointerCapture(e.pointerId)
   const [o, d] = simRay(e)
-  const hits = hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3)
+  // l'outil « Tourner » : n'importe quel glissé fait tourner la tête
+  const hits = mode === 'tourner' ? [] : hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3)
   if (!hits.length) { grab = { id: e.pointerId, kind: 'tourner', t: 0, held: [], x: e.clientX, y: e.clientY, last: null }; return }
   const tmin = Math.min(...hits.map(h => h.t))
   const p0 = at(o, d, tmin)

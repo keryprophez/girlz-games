@@ -59,22 +59,22 @@ export interface HairInit {
 /** Le pas de la physique (s). */
 export const STEP = 1 / 120
 /** Au-delà, une image trop longue (onglet caché, à-coup) ne rattrape pas tout. */
-const MAX_STEPS = 3
+const MAX_STEPS = 5
 /** Pesanteur, en rayons de tête par s² (une tête ≈ 9 cm). */
-export const GRAVITY = 70
+export const GRAVITY = 45
 /** La résistance de l'air (par s) : faible à la racine, forte aux pointes,
     qui flottent (le père, 23/11 : « trop rigide, comme lourds », « la
     retombée trop rapide »). */
 const DAMP = 4.2
-const AIR: [number, number] = [2.5, 9]
+const AIR: [number, number] = [6, 12]
 const ITER = 2
 const BEND = 0.12
 /** La part de la correction de longueur rendue à la vitesse (Müller : 0,9). */
-const FTL_DAMP = 0.9
+const FTL_DAMP = 0.45
 /** Le frottement au contact (part de la vitesse perdue par pas). */
 const FRICTION = 0.12
 /** Le retour vers la forme de repos, par pas (près de la racine → pointe). */
-const SHAPE: [number, number] = [0.035, 0.003]
+const SHAPE: [number, number] = [0.04, 0.006]
 /** Une mèche dont aucun point n'a bougé de plus que ça en `NAP` pas s'endort. */
 const SLEEP = 4e-3
 const NAP = 30
@@ -216,9 +216,22 @@ export class Hair {
 
   /** Tenir un point au doigt (null : le lâcher). Repère de la tête. */
   pin(idx: number, target: V3 | null) {
-    if (target) { this.pins.set(idx, target); this.pinned[idx] = 1 }
+    if (target) { this.pins.set(idx, this.outside(target, this.lift[Math.floor(idx / this.P)] * 1.5)); this.pinned[idx] = 1 }
     else { this.pins.delete(idx); this.pinned[idx] = 0 }
     this.wake(Math.floor(idx / this.P))
+  }
+
+  /** Un point ramené hors des obstacles (la tête, le visage, le cou). */
+  outside(p: V3, lift: number): V3 {
+    const q: V3 = [p[0], p[1], p[2]]
+    for (let pass = 0; pass < 3; pass++) for (const e of this.headColliders) {
+      const rx = e.r[0] + lift, ry = e.r[1] + lift, rz = e.r[2] + lift
+      const sx = (q[0] - e.c[0]) / rx, sy = (q[1] - e.c[1]) / ry, sz = (q[2] - e.c[2]) / rz
+      const l = Math.sqrt(sx * sx + sy * sy + sz * sz)
+      if (l >= 1 || l < 1e-9) continue
+      q[0] = e.c[0] + sx / l * rx; q[1] = e.c[1] + sy / l * ry; q[2] = e.c[2] + sz / l * rz
+    }
+    return q
   }
 
   /** Avance la simulation du temps réel écoulé, par pas fixes. */
@@ -258,6 +271,8 @@ export class Hair {
         prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2]
         let x = pos[k] + vx + gx, y = pos[k + 1] + vy + gy, z = pos[k + 2] + vz + gz
         // vers la forme de repos
+        // (le rebond — le père, 23/11 : « trop bouncy » — est tenu par la
+        // résistance de l'air, assez forte pour qu'il n'y ait pas d'aller-retour)
         if (m) {
           const f = (SHAPE[0] + (SHAPE[1] - SHAPE[0]) * (i - 2) / (P - 3)) * m
           x += (rest[k] - x) * f; y += (rest[k + 1] - y) * f; z += (rest[k + 2] - z) * f
@@ -308,6 +323,8 @@ export class Hair {
       for (let it = 0; it < 14; it++) {
         for (let i = 2; i <= pin; i++) link(pos, base + i - 1, base + i, s, i - 1 < 2 ? 0 : 1, i === pin ? 0 : 1, 1)
         for (let i = 3; i <= pin; i++) link(pos, base + i - 2, base + i, s * 2 * 0.985, i - 2 < 2 ? 0 : 1, i === pin ? 0 : 1, 0.5, true)
+        // et jamais à travers la tête ou le visage
+        for (let i = 2; i < pin; i++) this.collide((base + i) * 3, liftAt(lift, i), cols)
       }
       for (let i = 2; i < pin; i++) { const b = (base + i) * 3; fix[b] = fix[b + 1] = fix[b + 2] = 0 }
     }
@@ -323,8 +340,10 @@ export class Hair {
   /** Sort un point des obstacles ; au contact, un peu de frottement. */
   private collide(k: number, m: number, cols: Ellipsoid[]) {
     const pos = this.pos
-    let moved = false
-    for (let c = 0; c < cols.length; c++) {
+    let moved = false, touched = 0
+    // deux passes : dans le creux entre deux obstacles (le cou et l'épaule),
+    // une seule passe renvoie le point de l'un à l'autre et la mèche tourne en rond
+    for (let pass = 0; pass < 2; pass++) for (let c = 0; c < cols.length; c++) {
       const e = cols[c]
       const rx = e.r[0] + m, ry = e.r[1] + m, rz = e.r[2] + m
       const sx = (pos[k] - e.c[0]) / rx, sy = (pos[k + 1] - e.c[1]) / ry, sz = (pos[k + 2] - e.c[2]) / rz
@@ -333,10 +352,12 @@ export class Hair {
       const l = Math.sqrt(l2)
       pos[k] = e.c[0] + sx / l * rx; pos[k + 1] = e.c[1] + sy / l * ry; pos[k + 2] = e.c[2] + sz / l * rz
       moved = true
+      if (!pass) touched++
     }
     if (moved) {
-      const prev = this.prev
-      prev[k] += (pos[k] - prev[k]) * FRICTION; prev[k + 1] += (pos[k + 1] - prev[k + 1]) * FRICTION; prev[k + 2] += (pos[k + 2] - prev[k + 2]) * FRICTION
+      // le frottement ; coincé entre deux obstacles, le point s'arrête net
+      const prev = this.prev, f = touched > 1 ? 1 : FRICTION
+      prev[k] += (pos[k] - prev[k]) * f; prev[k + 1] += (pos[k + 1] - prev[k + 1]) * f; prev[k + 2] += (pos[k + 2] - prev[k + 2]) * f
     }
     return moved
   }
