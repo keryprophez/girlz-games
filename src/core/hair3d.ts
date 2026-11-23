@@ -46,14 +46,18 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
   tex.minFilter = tex.magFilter = T.NearestFilter
   tex.needsUpdate = true
 
-  /* ---- Les voisins de chaque guide (par la racine) ---- */
-  const roots: number[][] = []
-  for (let g = 0; g < G; g++) roots.push(Array.from(hair.rootL.slice(g * 3, g * 3 + 3)))
+  /* ---- Les voisins de chaque guide ----
+     Proches par la racine ET partis du même côté : un fil mélangé entre une
+     mèche partie à gauche de la raie et une partie à droite passerait au
+     milieu, devant le visage (le père, 23/11 : « des cheveux sur les yeux »). */
+  const roots: number[][] = [], dirs: number[][] = []
+  for (let g = 0; g < G; g++) { roots.push(Array.from(hair.rootL.slice(g * 3, g * 3 + 3))); dirs.push(Array.from(hair.dirL.slice(g * 3, g * 3 + 3))) }
   const near: [number, number][] = []
   for (let g = 0; g < G; g++) {
     const d = roots.map((r, k) => [k, Math.hypot(r[0] - roots[g][0], r[1] - roots[g][1], r[2] - roots[g][2])] as [number, number])
-      .filter(([k]) => k !== g).sort((a, b) => a[1] - b[1])
-    near.push([d[0][0], d[1][0]])
+      .filter(([k]) => k !== g && dirs[k][0] * dirs[g][0] + dirs[k][1] * dirs[g][1] + dirs[k][2] * dirs[g][2] > 0.75)
+      .sort((a, b) => a[1] - b[1])
+    near.push([d[0]?.[0] ?? g, d[1]?.[0] ?? g])
   }
 
   /* ---- Le maillage : un ruban de S points, instancié N fois ---- */

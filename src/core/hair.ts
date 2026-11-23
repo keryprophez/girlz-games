@@ -61,16 +61,20 @@ export const STEP = 1 / 120
 /** Au-delà, une image trop longue (onglet caché, à-coup) ne rattrape pas tout. */
 const MAX_STEPS = 3
 /** Pesanteur, en rayons de tête par s² (une tête ≈ 9 cm). */
-export const GRAVITY = 105
+export const GRAVITY = 70
+/** La résistance de l'air (par s) : faible à la racine, forte aux pointes,
+    qui flottent (le père, 23/11 : « trop rigide, comme lourds », « la
+    retombée trop rapide »). */
 const DAMP = 4.2
+const AIR: [number, number] = [2.5, 9]
 const ITER = 2
-const BEND = 0.25
+const BEND = 0.12
 /** La part de la correction de longueur rendue à la vitesse (Müller : 0,9). */
 const FTL_DAMP = 0.9
 /** Le frottement au contact (part de la vitesse perdue par pas). */
 const FRICTION = 0.12
 /** Le retour vers la forme de repos, par pas (près de la racine → pointe). */
-const SHAPE: [number, number] = [0.05, 0.012]
+const SHAPE: [number, number] = [0.035, 0.003]
 /** Une mèche dont aucun point n'a bougé de plus que ça en `NAP` pas s'endort. */
 const SLEEP = 4e-3
 const NAP = 30
@@ -229,7 +233,7 @@ export class Hair {
   step(h: number) {
     const { G, P, pos, prev, wind, asleep, pinned, rest, shape, rot: R } = this
     if (wind[0] || wind[1] || wind[2]) asleep.fill(0)
-    const damp = Math.max(0, 1 - this.damp * h), h2 = h * h
+    const baking = this.damp !== DAMP, h2 = h * h
     // la pesanteur et le vent, dans le repère de la tête (Rᵀ · a)
     const ax = wind[0], ay = wind[1] - GRAVITY, az = wind[2]
     const gx = (R[0] * ax + R[3] * ay + R[6] * az) * h2
@@ -248,7 +252,8 @@ export class Hair {
       for (let i = 2; i < P; i++) {
         const idx = base + i, k = idx * 3
         if (pinned[idx]) { const t = this.pins.get(idx)!; pos[k] = prev[k] = t[0]; pos[k + 1] = prev[k + 1] = t[1]; pos[k + 2] = prev[k + 2] = t[2]; continue }
-        // Verlet amorti + pesanteur
+        // Verlet amorti (l'air freine davantage les pointes) + pesanteur
+        const damp = baking ? Math.max(0, 1 - this.damp * h) : Math.max(0, 1 - (AIR[0] + (AIR[1] - AIR[0]) * (i - 2) / (P - 3)) * h)
         const vx = (pos[k] - prev[k]) * damp, vy = (pos[k + 1] - prev[k + 1]) * damp, vz = (pos[k + 2] - prev[k + 2]) * damp
         prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2]
         let x = pos[k] + vx + gx, y = pos[k + 1] + vy + gy, z = pos[k + 2] + vz + gz
