@@ -125,8 +125,10 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         float clump = mix(1.0, 0.35, smoothstep(0.35, 1.0, t));
         float spread = mix(2.2, 1.0, smoothstep(0.0, 0.25, t));
         // une légère ondulation propre à chaque fil
-        float wave = sin(t * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, t);
-        p += (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t)) * clump;
+        float tight = texelFetch(guides, ivec2(int(i + S), int(iG.x)), 0).w;
+        float wave = sin(t * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, t) * (1.0 - tight);
+        spread *= mix(1.0, 0.45, tight);
+        p += (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t) * mix(1.0, 0.3, tight)) * clump;
         // le ruban : couché sur la chevelure quand on la regarde de face (pas
         // de torsion quand le cheveu part vers la caméra), tourné vers la
         // caméra quand on la voit de profil
@@ -205,6 +207,8 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
           data[ot + x] = 0.5 * ((-p0 + p2) + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * f + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * f2)
         }
         data[o + 3] = glow[g]
+        // une mèche attachée est tirée : ses fils se serrent (un aspect lisse)
+        data[ot + 3] = hair.tieIdx[g] >= 0 ? 1 : 0
       }
     }
     uniforms.time.value = performance.now() / 1000

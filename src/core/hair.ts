@@ -80,6 +80,8 @@ const SLEEP = 4e-3
 const NAP = 30
 /** Le temps qu'une mèche met à glisser jusqu'à son attache (s). */
 const TIE_S = 0.35
+/** Le temps laissé à la queue pour pendre, avant de garder sa pose (s). */
+const TAIL_S = 1.2
 const smooth = (t: number) => t * t * (3 - 2 * t)
 
 /* Tout est calculé dans le REPÈRE DE LA TÊTE : les racines, la forme de
@@ -156,15 +158,18 @@ export class Hair {
 
   /** Laisse tomber les cheveux, très amortis et sans forme de repos, puis
       garde leur pose comme forme de repos. */
-  bake(seconds = 5) {
+  bake(seconds = 6) {
+    // la MÊME physique que pendant le jeu, jusqu’à l’arrêt :
+    // une forme de repos photographiée en pleine chute (une mèche encore
+    // repliée autour du cou) ne serait jamais atteinte, et la mèche
+    // glisserait sans fin pour essayer
     const keep = this.shape.slice()
     this.shape.fill(0)
-    this.damp = 14
-    for (let i = 0; i < Math.round(seconds / STEP); i++) { this.asleep.fill(0); this.step(STEP) }
-    this.damp = DAMP
-    this.asleep.fill(0)
+    this.wake()
+    for (let i = 0; i < Math.round(seconds / STEP); i++) this.step(STEP)
     this.shape.set(keep)
     this.keepPose()
+    this.wake()
   }
 
   /** La pose actuelle devient la forme de repos (une coiffure finie). */
@@ -244,30 +249,35 @@ export class Hair {
     const s = this.seg[g], base = g * P, k3 = g * 3
     const r = this.rootL, d = this.dirL
     const p1: V3 = [r[k3] + d[k3] * s, r[k3 + 1] + d[k3 + 1] * s, r[k3 + 2] + d[k3 + 2] * s]
-    const dist = Math.hypot(target[0] - p1[0], target[1] - p1[1], target[2] - p1[2])
-    const j = Math.min(P - 3, Math.max(3, Math.ceil(dist * 1.3 / s) + 1))
     const T = this.tiePath, lift = this.lift[g] * 0.5
-    // un chemin droit de la racine à l'attache, puis tendu sur le crâne
+    // le chemin sur le crâne : la corde de la racine à l'attache, chaque point
+    // ramené à la surface (+ sa couche), lissé ; puis sa VRAIE longueur. La
+    // mèche y est TENDUE (aucun surplus qui se froisse près de l'attache) et
+    // tout le reste de sa longueur va dans la queue.
+    const N = 48, curve: V3[] = []
+    for (let k = 0; k <= N; k++) {
+      const u = k / N
+      curve.push([p1[0] + (target[0] - p1[0]) * u, p1[1] + (target[1] - p1[1]) * u, p1[2] + (target[2] - p1[2]) * u])
+    }
+    for (let it = 0; it < 30; it++) {
+      for (let k = 1; k < N; k++) curve[k] = this.outside(curve[k], lift)
+      for (let k = 1; k < N; k++) for (let x = 0; x < 3; x++) curve[k][x] = (curve[k - 1][x] + 2 * curve[k][x] + curve[k + 1][x]) / 4
+    }
+    for (let k = 1; k < N; k++) curve[k] = this.outside(curve[k], lift)
+    const acc = [0]
+    for (let k = 1; k <= N; k++) acc.push(acc[k - 1] + Math.hypot(curve[k][0] - curve[k - 1][0], curve[k][1] - curve[k - 1][1], curve[k][2] - curve[k - 1][2]))
+    const len = acc[N]
+    const j = Math.min(P - 3, Math.max(2, Math.ceil(len / s) + 1))
+    const at = (d: number): V3 => {
+      let k = 1
+      while (k < N && acc[k] < d) k++
+      const u = Math.min(1, (d - acc[k - 1]) / ((acc[k] - acc[k - 1]) || 1))
+      return [curve[k - 1][0] + (curve[k][0] - curve[k - 1][0]) * u, curve[k - 1][1] + (curve[k][1] - curve[k - 1][1]) * u, curve[k - 1][2] + (curve[k][2] - curve[k - 1][2]) * u]
+    }
     T.set([r[k3], r[k3 + 1], r[k3 + 2]], base * 3)
-    for (let i = 1; i <= j; i++) {
-      const u = (i - 1) / (j - 1)
-      T.set([p1[0] + (target[0] - p1[0]) * u, p1[1] + (target[1] - p1[1]) * u, p1[2] + (target[2] - p1[2]) * u], (base + i) * 3)
-    }
-    for (let it = 0; it < 90; it++) {
-      for (let i = 2; i < j; i++) {
-        const k = (base + i) * 3
-        // serré contre le crâne
-        T[k] *= 0.985; T[k + 1] *= 0.985; T[k + 2] *= 0.985
-        const q = this.outside([T[k], T[k + 1], T[k + 2]], liftAt(lift, i))
-        T[k] = q[0]; T[k + 1] = q[1]; T[k + 2] = q[2]
-      }
-      for (let i = 2; i <= j; i++) link(T, base + i - 1, base + i, s, i - 1 < 2 ? 0 : 1, i === j ? 0 : 1, 1)
-    }
-    // et jamais dans le crâne : une dernière passe
-    for (let i = 2; i < j; i++) {
-      const k = (base + i) * 3, q = this.outside([T[k], T[k + 1], T[k + 2]], liftAt(lift, i))
-      T[k] = q[0]; T[k + 1] = q[1]; T[k + 2] = q[2]
-    }
+    T.set(p1, (base + 1) * 3)
+    // les points le long du chemin, régulièrement, le dernier sur l'attache
+    for (let i = 2; i <= j; i++) T.set(at(Math.min(len, (i - 1) / (j - 1) * len)), (base + i) * 3)
     // la queue : elle pend sous l'attache
     for (let i = j + 1; i < P; i++) {
       const a = (base + i - 1) * 3
@@ -322,7 +332,12 @@ export class Hair {
     for (let g = 0; g < G; g++) {
       if (asleep[g]) continue
       const base = g * P, m = shape[g], kin = this.tieIdx[g]
-      if (kin >= 0 && this.tieT[g] < 1) this.tieT[g] = Math.min(1, this.tieT[g] + h / TIE_S)
+      if (kin >= 0 && this.tieT[g] < 1 + TAIL_S / TIE_S) {
+        this.tieT[g] += h / TIE_S
+        // la queue a eu le temps de pendre : sa pose devient sa forme de repos
+        // (sans forme, une queue posée sur l'épaule glisserait sans fin)
+        if (this.tieT[g] >= 1 + TAIL_S / TIE_S) { this.keepPose([g]); this.shape[g] = 1 }
+      }
       // racine et premier point : posés sur le crâne
       const k0 = base * 3, r = this.rootL, d = this.dirL, s = this.seg[g], k3 = g * 3
       pos[k0] = prev[k0] = r[k3]; pos[k0 + 1] = prev[k0 + 1] = r[k3 + 1]; pos[k0 + 2] = prev[k0 + 2] = r[k3 + 2]
@@ -332,9 +347,11 @@ export class Hair {
       for (let i = 2; i < P; i++) {
         const idx = base + i, k = idx * 3
         if (pinned[idx]) { const t = this.pins.get(idx)!; pos[k] = prev[k] = t[0]; pos[k + 1] = prev[k + 1] = t[1]; pos[k + 2] = prev[k + 2] = t[2]; continue }
-        if (i <= kin) {
-          // attaché : sur son chemin (qui arrive en glissant)
-          const u = smooth(Math.max(0, this.tieT[g])), F = this.tieFrom, T = this.tiePath
+        if (i <= kin || (kin >= 0 && this.tieT[g] < 1)) {
+          // attaché : sur son chemin (qui arrive en glissant) ; la queue
+          // glisse avec lui (sinon elle reste où pendait la mèche, sur le
+          // côté du visage, et s'enroule autour du crâne)
+          const u = smooth(Math.min(1, Math.max(0, this.tieT[g]))), F = this.tieFrom, T = this.tiePath
           pos[k] = prev[k] = F[k] + (T[k] - F[k]) * u; pos[k + 1] = prev[k + 1] = F[k + 1] + (T[k + 1] - F[k + 1]) * u; pos[k + 2] = prev[k + 2] = F[k + 2] + (T[k + 2] - F[k + 2]) * u
           continue
         }
@@ -342,7 +359,11 @@ export class Hair {
         const damp = baking ? Math.max(0, 1 - this.damp * h) : Math.max(0, 1 - (AIR[0] + (AIR[1] - AIR[0]) * (i - 2) / (P - 3)) * h)
         const vx = (pos[k] - prev[k]) * damp, vy = (pos[k + 1] - prev[k + 1]) * damp, vz = (pos[k + 2] - prev[k + 2]) * damp
         prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2]
-        let x = pos[k] + vx + gx, y = pos[k + 1] + vy + gy, z = pos[k + 2] + vz + gz
+        // la forme de repos est DÉJÀ la pose tombée sous la pesanteur : la
+        // remettre par-dessus ferait glisser lentement les mèches posées sur
+        // l'épaule vers une pose plus basse ; il n'en reste qu'une part
+        const gw = 1 - 0.9 * m
+        let x = pos[k] + vx + gx * gw, y = pos[k + 1] + vy + gy * gw, z = pos[k + 2] + vz + gz * gw
         // vers la forme de repos
         // (le rebond — le père, 23/11 : « trop bouncy » — est tenu par la
         // résistance de l'air, assez forte pour qu'il n'y ait pas d'aller-retour)
@@ -404,10 +425,11 @@ export class Hair {
       for (let i = 2; i < pin; i++) { const b = (base + i) * 3; fix[b] = fix[b + 1] = fix[b + 2] = 0 }
     }
     // la correction d'un point est rendue à la vitesse de celui d'avant
+    const fd = FTL_DAMP
     for (let i = 2; i < P - 1; i++) {
       const k = (base + i) * 3
       if (pinned[base + i]) continue
-      prev[k] += fix[k + 3] * FTL_DAMP; prev[k + 1] += fix[k + 4] * FTL_DAMP; prev[k + 2] += fix[k + 5] * FTL_DAMP
+      prev[k] += fix[k + 3] * fd; prev[k + 1] += fix[k + 4] * fd; prev[k + 2] += fix[k + 5] * fd
     }
     fix.fill(0, base * 3, (base + P) * 3)
   }
@@ -447,7 +469,7 @@ export class Hair {
     const snap = this.snap
     for (let g = 0; g < G; g++) {
       if (asleep[g]) continue
-      let still = this.tieIdx[g] < 0 || this.tieT[g] >= 1
+      let still = this.tieIdx[g] < 0 || this.tieT[g] >= 1 + TAIL_S / TIE_S
       for (let i = 2; i < P && still; i++) {
         const idx = g * P + i, k = idx * 3
         if (pinned[idx]) still = false
@@ -490,7 +512,7 @@ export class Hair {
       const idx = hits[h], t = hits[h + 1], r2 = hits[h + 2]
       if (t > tmin + depth) continue
       touched.add(Math.floor(idx / P))
-      this.asleep[Math.floor(idx / P)] = 0
+      this.wake(Math.floor(idx / P))
       const f = (1 - r2 / (radius * radius)) * (1 - (t - tmin) / depth)
       const k = idx * 3
       pos[k] += move[0] * f; pos[k + 1] += move[1] * f; pos[k + 2] += move[2] * f

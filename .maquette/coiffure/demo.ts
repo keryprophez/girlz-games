@@ -46,7 +46,7 @@ let brushed = new Uint8Array(0)
 const brushedNow = new Set<number>()
 const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.85, depthTest: false }))
 ring.renderOrder = 10
-const band = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.05, 14, 32), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
+const band = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.055, 14, 32), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
 let bandPop = 0
 const isBack = (g: number) => hair!.rootL[g * 3 + 2] < 0.35
 function setEtape(e: Etape) {
@@ -203,7 +203,7 @@ async function load() {
   TIE = [0, skull.r[1] * 0.2, -skull.r[2] * 1.02]
   ring.position.set(TIE[0], TIE[1], TIE[2] - 0.16)
   hairGroup.add(ring)
-  band.position.set(TIE[0], TIE[1] - 0.02, TIE[2] - 0.04)
+  band.position.set(TIE[0], TIE[1] - 0.06, TIE[2] - 0.1)
   band.rotation.x = Math.PI / 2 - 0.35
   hairGroup.add(band)
   setEtape('brosser')
