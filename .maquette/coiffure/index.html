@@ -22,6 +22,8 @@ button{border:0;cursor:pointer;font:inherit;color:inherit}
 .pret #charge{display:none}
 #err{position:absolute;left:12px;top:12px;color:#B00020;font-weight:700}
 button:focus-visible{outline:3px solid #41C26A}
+.choix{position:absolute;left:max(84px,calc(env(safe-area-inset-left,0px) + 84px));top:calc(14px + env(safe-area-inset-top,0px));display:flex;gap:10px}
+.choix .rond svg{width:40px;height:40px}.choix .rond.sel{outline:4px solid var(--accent)}
 .haut{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px))}
 .bas{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:min(92vw,760px)}
 .consigne{background:rgba(69,54,42,.86);color:#FFF6E8;border-radius:16px;padding:9px 20px;font-size:clamp(16px,2.2vw,22px);font-weight:600;text-align:center;text-wrap:balance}
@@ -43,6 +45,7 @@ button:focus-visible{outline:3px solid #41C26A}
 <div id="err"></div>
 <div id="fps"></div>
 <button class="rond haut" id="recommencer" aria-label="Recommencer"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 1 2.5 5.4" fill="none" stroke="#45362A" stroke-width="3" stroke-linecap="round"/><path d="M3 15l2.6 3.6L9 16" fill="none" stroke="#45362A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<div class="choix"><button class="rond" data-coiffure="queue" aria-label="La queue de cheval"><svg viewBox="0 0 48 48"><circle cx="24" cy="20" r="12" fill="#6B4A2B"/><path d="M24 30c7 2 9 10 6 16-5-4-8-10-6-16z" fill="#6B4A2B"/><circle cx="24" cy="31" r="3.2" fill="#E8427C"/></svg></button><button class="rond" data-coiffure="couettes" aria-label="Les couettes"><svg viewBox="0 0 48 48"><circle cx="24" cy="21" r="12" fill="#6B4A2B"/><path d="M11 22c-6 3-6 13-3 19 4-5 6-12 3-19zM37 22c6 3 6 13 3 19-4-5-6-12-3-19z" fill="#6B4A2B"/><circle cx="12" cy="22" r="3" fill="#E8427C"/><circle cx="36" cy="22" r="3" fill="#3D9BF0"/><path d="M24 9v12" stroke="#E7B8A0" stroke-width="1.6"/></svg></button></div>
 <div class="bas"><div class="consigne" id="texte"></div><div class="etapes" id="etapes"></div></div>
 <div id="plateau" hidden><button class="rond gros" id="elastique" aria-label="L’élastique"><svg viewBox="0 0 48 48"><ellipse cx="24" cy="24" rx="15" ry="12" fill="none" stroke="#E8427C" stroke-width="7"/><path d="M12 19a13 9 0 0 1 22-3" fill="none" stroke="#FF9CBE" stroke-width="2.5" stroke-linecap="round"/></svg></button></div>
 <div id="vol" hidden><svg viewBox="0 0 48 48"><ellipse cx="24" cy="24" rx="15" ry="12" fill="none" stroke="#E8427C" stroke-width="7"/></svg></div>

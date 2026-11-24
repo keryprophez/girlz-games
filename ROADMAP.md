@@ -121,8 +121,17 @@ Joyce : « c'est quasiment toujours les mêmes mots ».
      dos) ; le corps ou le vide : le buste tourne. Aucun bouton ni zone
      pour tourner (« pas de clic supplémentaire »). Ligne de texte pour le
      père toujours affichée ; cinq teintes.
-   - **Phase 2, en cours** : queue de cheval (brosser → rassembler dans le
-     rond → l'élastique), puis couettes et tresse, en pas à pas.
+   - **Phase 2, en cours** : le pas à pas en RECETTES (étapes, attaches,
+     côté de chaque mèche). **Queue de cheval validée (« parfait ça ira »,
+     24/11)** : brosser → rassembler dans le rond → l'élastique. Les
+     décisions qui tiennent : sous les cheveux tirés, une CALOTTE lisse
+     posée sur le vrai cuir chevelu du modèle (des fils tirés faisaient des
+     « écailles ») ; l'élastique entoure un court faisceau qui SORT de la
+     tête, perpendiculaire au flux (couché, il « rentrait dans la tête ») ;
+     pendant le rassemblement, les cheveux glissent SUR le crâne et restent
+     des fils, la chevelure se lisse d'un seul fondu à la fin.
+     **Couettes jouables** (raie tracée au doigt, deux attaches, deux
+     élastiques) — à valider. Reste : la tresse.
    - Phase 3 : les autres coiffures, le salon libre, le miroir, la
      sauvegarde par fille, l'intégration dans l'app (vignette, affiche, bot).
    - À faire : la calotte du cuir chevelu trop sombre (un casque), les

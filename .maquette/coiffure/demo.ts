@@ -30,88 +30,189 @@ scene.add(fill)
 let model: VRM | null = null
 let cap: ReturnType<typeof hairCap> | null = null
 let looks = new Float32Array(0)
-let pulled = 0
 let skullDbg = ''
 
-/* ---- Le pas à pas : la queue de cheval ---- */
-type Etape = 'brosser' | 'rassembler' | 'elastique' | 'fini'
-const TEXTES: Record<Etape, string> = {
-  brosser: 'Brosse les cheveux vers l’arrière, du haut vers le bas',
-  rassembler: 'Attrape les mèches et rassemble-les dans le rond, derrière la tête',
-  elastique: 'Fais glisser l’élastique sur la queue de cheval',
-  fini: 'C’est fini ! Une jolie queue de cheval.'
-}
-const ORDRE: Etape[] = ['brosser', 'rassembler', 'elastique', 'fini']
-let etape: Etape = 'brosser'
-let initial: { pos: Float32Array; rest: Float32Array } | null = null
-let TIE: V3 = [0, 0.2, -1.05]
+/* ---- Le pas à pas : une RECETTE par coiffure ----
+   Ses étapes (chacune un geste sur les cheveux), ses attaches (où vont les
+   mèches) et le côté de chaque mèche (les couettes : gauche ou droite). */
+type Kind = 'brosser' | 'raie' | 'rassembler' | 'elastique' | 'fini'
+interface Step { k: Kind; a: number; txt: string }
+interface Recette { id: string; dirs: V3[]; side(r: V3): number; steps: Step[] }
+const RECETTES: Recette[] = [
+  {
+    id: 'queue', dirs: [[0, 0.2, -1]], side: () => 0,
+    steps: [
+      { k: 'brosser', a: -1, txt: 'Brosse les cheveux vers l’arrière, du haut vers le bas' },
+      { k: 'rassembler', a: 0, txt: 'Attrape les mèches et rassemble-les dans le rond, derrière la tête' },
+      { k: 'elastique', a: 0, txt: 'Fais glisser l’élastique sur la queue de cheval' },
+      { k: 'fini', a: -1, txt: 'C’est fini ! Une jolie queue de cheval.' }
+    ]
+  },
+  {
+    // deux couettes au-dessus des oreilles, un peu en arrière
+    id: 'couettes', dirs: [[0.85, 0.32, -0.45], [-0.85, 0.32, -0.45]], side: r => (r[0] >= 0 ? 0 : 1),
+    steps: [
+      { k: 'brosser', a: -1, txt: 'Brosse les cheveux, du haut vers le bas' },
+      { k: 'raie', a: -1, txt: 'Trace la raie au milieu de la tête, du front vers l’arrière' },
+      { k: 'rassembler', a: 0, txt: 'Rassemble les cheveux de ce côté dans le rond' },
+      { k: 'elastique', a: 0, txt: 'Fais glisser l’élastique sur la couette' },
+      { k: 'rassembler', a: 1, txt: 'L’autre côté : rassemble les cheveux dans le rond' },
+      { k: 'elastique', a: 1, txt: 'Fais glisser l’élastique sur la deuxième couette' },
+      { k: 'fini', a: -1, txt: 'C’est fini ! Deux jolies couettes.' }
+    ]
+  }
+]
+let recette = RECETTES.find(r => r.id === q.get('coiffure')) ?? RECETTES[0]
+let stepI = 0
+const step = () => recette.steps[stepI]
+let etape: Kind = 'brosser'
+let initial: { pos: Float32Array; rest: Float32Array; dir: Float32Array } | null = null
+/** Les attaches (repère de la tête), posées juste au-dessus de la calotte. */
+let TIES: V3[] = []
+let sides = new Int8Array(0)
 let brushed = new Uint8Array(0)
 const brushedNow = new Set<number>()
-const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.85, depthTest: false }))
-ring.renderOrder = 10
-const band = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.034, 16, 40), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
-let bandPop = 0
-const isBack = (g: number) => hair!.rootL[g * 3 + 2] < 0.35
-function setEtape(e: Etape) {
-  etape = e
-  mode = e === 'brosser' ? 'brosse' : 'main'
-  document.getElementById('texte')!.innerHTML = `<b>${e === 'fini' ? '✓' : ORDRE.indexOf(e) + 1}</b>${TEXTES[e]}`
-  document.getElementById('etapes')!.innerHTML = ORDRE.slice(0, 3).map((x, i) => `<i class="${i < ORDRE.indexOf(e) ? 'on' : i === ORDRE.indexOf(e) ? 'cur' : ''}"></i>`).join('')
-  ring.visible = e === 'rassembler'
-  band.visible = e === 'fini'
-  document.getElementById('plateau')!.hidden = e !== 'elastique'
-  if (e === 'fini') { bandPop = 1; fete() }
+const rings: THREE.Mesh[] = [], bands: THREE.Mesh[] = []
+for (let k = 0; k < 2; k++) {
+  const r = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.85, depthTest: false }))
+  r.renderOrder = 10
+  rings.push(r)
+  bands.push(new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.034, 16, 40), new THREE.MeshStandardMaterial({ color: k ? '#3D9BF0' : '#E8427C', roughness: 0.45 })))
 }
-/** L'élastique AUTOUR du faisceau : centré sur les attaches, dans l'axe de
-    la queue (il la suit quand elle se balance) ; il arrive en s'enroulant. */
+const bandPop = [0, 0], pulledA = [0, 0], tied = [false, false]
+let lastRaie = { span: 0, mid: 0, n: 0 }
+let partV = 0, partGoal = 0, yawGoal: number | null = null, camEl = 0
+const isBack = (g: number) => hair!.rootL[g * 3 + 2] < 0.35
+const outward = (a: number) => new THREE.Vector3(...TIES[a]).normalize()
+
+function setStep(i: number) {
+  stepI = i
+  const st = step()
+  etape = st.k
+  mode = st.k === 'brosser' ? 'brosse' : 'main'
+  const n = recette.steps.length - 1
+  document.getElementById('texte')!.innerHTML = `<b>${st.k === 'fini' ? '✓' : i + 1}</b>${st.txt}`
+  document.getElementById('etapes')!.innerHTML = Array.from({ length: n }, (_, k) => `<i class="${k < i ? 'on' : k === i ? 'cur' : ''}"></i>`).join('')
+  rings.forEach((r, k) => { r.visible = st.k === 'rassembler' && st.a === k })
+  document.getElementById('plateau')!.hidden = st.k !== 'elastique'
+  raieHint.visible = st.k === 'raie'
+  // la tête se tourne d'elle-même vers ce qu'il faut coiffer
+  if (st.k === 'brosser') yawGoal = Math.PI
+  else if (st.k === 'raie') yawGoal = 0
+  else if (st.a >= 0) { const d = TIES[st.a]; yawGoal = Math.atan2(-d[0], d[2]) }
+  if (st.k === 'fini') fete()
+}
+const next = () => setStep(Math.min(recette.steps.length - 1, stepI + 1))
+const setEtape = (k: Kind) => setStep(Math.max(0, recette.steps.findIndex(s => s.k === k)))
+
+/** L'élastique AUTOUR du faisceau : centré sur les attaches de son côté,
+    son anneau perpendiculaire au flux (il suit la queue qui se balance). */
 const bandAxis = new THREE.Vector3(0, 0, 1)
-function placeBand(dt: number) {
-  const h = hair!, c = new THREE.Vector3(), d = new THREE.Vector3()
+function placeBand(a: number, dt: number) {
+  const h = hair!, c = new THREE.Vector3(), d = new THREE.Vector3(), band = bands[a]
   let n = 0
   for (let g = 0; g < h.G; g++) {
-    // le faisceau : du pied (l'attache) au bout de la partie posée
     const j = h.tieIdx[g]
-    if (j < 1) continue
-    const a = h.point(g, j - 1), b = h.point(g, j)
-    c.x += a[0] + (b[0] - a[0]) * 0.35; c.y += a[1] + (b[1] - a[1]) * 0.35; c.z += a[2] + (b[2] - a[2]) * 0.35
-    d.x += b[0] - a[0]; d.y += b[1] - a[1]; d.z += b[2] - a[2]
+    if (j < 1 || sides[g] !== a) continue
+    const p0 = h.point(g, j - 1), p1 = h.point(g, j)
+    c.x += p0[0] + (p1[0] - p0[0]) * 0.35; c.y += p0[1] + (p1[1] - p0[1]) * 0.35; c.z += p0[2] + (p1[2] - p0[2]) * 0.35
+    d.x += p1[0] - p0[0]; d.y += p1[1] - p0[1]; d.z += p1[2] - p0[2]
     n++
   }
   if (!n) return
   c.divideScalar(n); d.normalize()
-  // sur le faisceau, près de la tête, son anneau perpendiculaire au flux des cheveux
   band.position.copy(c)
   band.quaternion.setFromUnitVectors(bandAxis, d)
-  if (bandPop > 0) {
-    bandPop = Math.max(0, bandPop - dt * 2.5)
-    band.scale.setScalar(1 + bandPop * 1.2)
-    band.rotateZ(bandPop * 6)
+  if (bandPop[a] > 0) {
+    bandPop[a] = Math.max(0, bandPop[a] - dt * 2.5)
+    band.scale.setScalar(1 + bandPop[a] * 1.2)
+    band.rotateZ(bandPop[a] * 6)
   }
 }
 /** La lueur : les mèches à prendre maintenant. */
 function glowNow() {
-  const h = hair!, gl = view!.glow
-  for (let g = 0; g < h.G; g++) gl[g] = etape === 'brosser' ? (isBack(g) && !brushed[g] ? 1 : 0) : etape === 'rassembler' ? (h.tieIdx[g] < 0 ? 1 : 0) : 0
+  const h = hair!, gl = view!.glow, st = step()
+  for (let g = 0; g < h.G; g++) gl[g] = st.k === 'brosser' ? (isBack(g) && !brushed[g] ? 1 : 0) : st.k === 'rassembler' ? (h.tieIdx[g] < 0 && sides[g] === st.a ? 1 : 0) : 0
+}
+/** La raie tracée : la chevelure s'écarte de chaque côté de la ligne du milieu. */
+function doPart() {
+  const h = hair!, moved: number[] = []
+  partGoal = 1
+  for (let g = 0; g < h.G; g++) {
+    const k = g * 3, x = h.rootL[k], y = h.rootL[k + 1], z = h.rootL[k + 2]
+    if (Math.abs(x) > 0.5 || y < -0.5) continue
+    const l = Math.hypot(x, y, z) || 1, n = [x / l, y / l, z / l]
+    let d = [Math.sign(x || 1), -0.35, -0.25]
+    const dn = d[0] * n[0] + d[1] * n[1] + d[2] * n[2]
+    d = [d[0] - n[0] * dn + n[0] * 0.1, d[1] - n[1] * dn + n[1] * 0.1, d[2] - n[2] * dn + n[2] * 0.1]
+    const dl = Math.hypot(d[0], d[1], d[2]) || 1
+    h.dirL[k] = d[0] / dl; h.dirL[k + 1] = d[1] / dl; h.dirL[k + 2] = d[2] / dl
+    h.shape[g] = 0.15; h.wake(g); moved.push(g)
+  }
+  setTimeout(() => { if (!hair) return; hair.keepPose(moved); for (const g of moved) hair.shape[g] = 1; next() }, 1300)
+}
+/** La ligne à tracer pour la raie : du front vers l'arrière, sur la calotte. */
+const raieHint = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.9, depthTest: true }))
+function buildRaieHint() {
+  const pts: THREE.Vector3[] = []
+  for (let k = 0; k <= 24; k++) {
+    const a = 0.7 - k / 24 * 2.1 // du front (devant, en haut) vers la nuque
+    const q = cap!.surface([0, Math.cos(a - 0.0) * 0.9 + 0.1, Math.sin(a)])
+    const l = Math.hypot(...q)
+    pts.push(new THREE.Vector3(q[0] / l * (l + 0.04), q[1] / l * (l + 0.04), q[2] / l * (l + 0.04)))
+  }
+  raieHint.geometry.dispose()
+  raieHint.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.022, 8, false)
 }
 function recommencer() {
   const h = hair!
   for (let g = 0; g < h.G; g++) { h.untie(g); h.shape[g] = 1 }
-  h.pos.set(initial!.pos); h.prev.set(initial!.pos); h.rest.set(initial!.rest)
+  h.pos.set(initial!.pos); h.prev.set(initial!.pos); h.rest.set(initial!.rest); h.dirL.set(initial!.dir)
   h.wake()
   brushed.fill(0)
-  setEtape('brosser')
+  partV = partGoal = 0
+  pulledA.fill(0); tied.fill(false)
+  bands.forEach(b => { b.visible = false })
+  setupRecette()
+  setStep(0)
 }
-/** Où est l'attache à l'écran. */
-function tieScreen() {
-  const w = hairGroup.localToWorld(new THREE.Vector3(TIE[0], TIE[1], TIE[2] - 0.1)).project(camera)
+/** Les attaches et les côtés de la recette. */
+function setupRecette() {
+  const h = hair!
+  TIES = recette.dirs.map(d => { const qq = cap!.surface(d), l = Math.hypot(...qq); return [qq[0] / l * (l + 0.06), qq[1] / l * (l + 0.06), qq[2] / l * (l + 0.06)] as V3 })
+  sides = new Int8Array(h.G)
+  for (let g = 0; g < h.G; g++) sides[g] = recette.side(h.root(g))
+  cap!.setTie(TIES[0], 1)
+  cap!.setTie2(TIES[1] ?? null)
+  cap!.setSides((x, y, z) => recette.side([x, y, z]))
+  TIES.forEach((t, a) => {
+    const n = outward(a)
+    rings[a].position.set(t[0], t[1], t[2]).addScaledVector(n, 0.16)
+    rings[a].quaternion.setFromUnitVectors(bandAxis, n)
+  })
+  document.querySelectorAll<HTMLElement>('[data-coiffure]').forEach(b => b.classList.toggle('sel', b.dataset.coiffure === recette.id))
+}
+/** Où est une attache à l'écran. */
+function tieScreen(a = Math.max(0, step().a)) {
+  const p = new THREE.Vector3(...TIES[a]).addScaledVector(outward(a), 0.1)
+  const w = hairGroup.localToWorld(p).project(camera)
   const r = renderer.domElement.getBoundingClientRect()
   return { x: r.left + (w.x + 1) / 2 * r.width, y: r.top + (1 - w.y) / 2 * r.height, front: w.z < 1 }
 }
-/** Attache une mèche dans le rond : un peu écartée du centre, pour une queue qui a du volume. */
+/** Attache une mèche : un peu écartée du centre de son attache (une queue qui a du volume). */
 function tieGuide(g: number, delay: number) {
-  const h = hair!, r = h.root(g)
-  const dx = r[0] - TIE[0], dy = r[1] - TIE[1], l = Math.hypot(dx, dy) || 1
-  h.tie(g, [TIE[0] + dx / l * 0.045, TIE[1] + dy / l * 0.045, TIE[2]], delay)
+  const h = hair!, a = sides[g], t = new THREE.Vector3(...TIES[a]), n = outward(a)
+  const off = new THREE.Vector3(...h.root(g)).sub(t)
+  off.addScaledVector(n, -off.dot(n))
+  if (off.lengthSq() < 1e-8) off.set(1, 0, 0)
+  off.setLength(0.045)
+  h.tie(g, [t.x + off.x, t.y + off.y, t.z + off.z], delay)
+}
+/** Toutes les mèches d'un côté ont rejoint leur attache. */
+function arrived(a: number) {
+  const h = hair!
+  for (let g = 0; g < h.G; g++) if (sides[g] === a && (h.tieIdx[g] < 0 || h.tieT[g] < 1)) return false
+  return true
 }
 function fete() {
   const box = document.getElementById('fete')!
@@ -263,25 +364,19 @@ async function load() {
     scalpTris[k] = (scalpWorld[k] - C.x) / R; scalpTris[k + 1] = (scalpWorld[k + 1] - C.y) / R; scalpTris[k + 2] = (scalpWorld[k + 2] - C.z) / R
   }
   cap = hairCap(THREE, skull, onScalp, scalpTris.length ? { tris: scalpTris, lift: 0.025 } : undefined)
-  // l'attache : juste au-dessus de la calotte (l'élastique se pose sur la chevelure)
-  {
-    const q = cap.surface([0, 0.2, -1]), l = Math.hypot(...q)
-    TIE = [q[0] / l * (l + 0.06), q[1] / l * (l + 0.06), q[2] / l * (l + 0.06)]
-  }
   hairGroup.add(cap.mesh)
   cap.setLight(-0.35, 0.8, 0.5)
   view.setColor(TEINTES[1])
   cap.setColor(TEINTES[1])
   paintScalp(TEINTES[1])
-  initial = { pos: hair.pos.slice(), rest: hair.rest.slice() }
-  // la queue de cheval : haute, à l'arrière du crâne
-  ring.position.set(TIE[0], TIE[1], TIE[2] - 0.16)
-  hairGroup.add(ring)
-  hairGroup.add(band)
-  setEtape('brosser')
-  // le cadrage : la tête et les épaules
-  camera.position.set(C.x, C.y - R * 0.3, C.z + R * 12)
-  camera.lookAt(C.x, C.y - R * 1.15, C.z)
+  initial = { pos: hair.pos.slice(), rest: hair.rest.slice(), dir: hair.dirL.slice() }
+  rings.forEach(r => hairGroup.add(r))
+  bands.forEach(b => { b.visible = false; hairGroup.add(b) })
+  buildRaieHint()
+  hairGroup.add(raieHint)
+  setupRecette()
+  setStep(0)
+  aimCamera()
   sun.position.set(C.x - 1, C.y + 2, C.z + 1.5)
   fill.position.set(C.x + 1.5, C.y + 0.3, C.z - 1)
   view.setLight(-0.35, 0.8, 0.5)
@@ -302,16 +397,38 @@ async function load() {
     get yaw() { return yaw },
     get etape() { return etape },
     setYaw(v: number) { yaw = v; vYaw = 0 },
+    get h() { return hair },
+    get recette() { return recette.id },
+    debugTail() {
+      const h = hair!, out: string[] = []
+      out.push('colliders ' + h.headColliders.map(e => `c=${e.c.map(v => v.toFixed(2))} r=${e.r.map(v => v.toFixed(2))}`).join(' | '))
+      for (const g of [0, 1].map(a => { for (let k = 0; k < h.G; k++) if (sides[k] === a && h.tieIdx[k] >= 0) return k; return -1 })) {
+        if (g < 0) continue
+        out.push(`g${g} side${sides[g]} j=${h.tieIdx[g]} asleep=${h.asleep[g]} shape=${h.shape[g]} pts ` + [h.tieIdx[g], h.tieIdx[g] + 2, h.P - 1].map(i => h.point(g, i).map(v => v.toFixed(2)).join(',')).join(' | '))
+      }
+      return out.join('\n')
+    },
+    get lastRaie() { return lastRaie },
+    get turning() { return yawGoal !== null || Math.abs(camEl - (etape === 'raie' ? 1 : 0)) > 0.02 },
+    raieScreen() {
+      const pr = (d: V3) => { const qq = cap!.surface(d); const w = hairGroup.localToWorld(new THREE.Vector3(...qq)).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (w.x + 1) / 2 * r.width, y: r.top + (1 - w.y) / 2 * r.height } }
+      return [pr([0, 0.55, 0.83]), pr([0, 0.95, 0.1]), pr([0, 0.7, -0.7])]
+    },
     poignee(g0: number) {
       setEtape('rassembler')
       const r0 = hair!.root(g0); let k = 0
       for (let g = 0; g < hair!.G; g++) { const r = hair!.root(g); if (Math.hypot(r[0] - r0[0], r[1] - r0[1], r[2] - r0[2]) < 0.6) tieGuide(g, Math.min(0.35, (k++) * 0.006)) }
     },
-    queueFinie() { for (let g = 0; g < hair!.G; g++) tieGuide(g, (g % 20) * 0.01); setEtape('fini') },
+    queueFinie() {
+      if (recette.steps.some(s => s.k === 'raie')) { partGoal = 1 }
+      for (let g = 0; g < hair!.G; g++) tieGuide(g, (g % 20) * 0.01)
+      bands.forEach((b, a) => { b.visible = a < TIES.length })
+      setEtape('fini')
+    },
     tieScreen,
     tied() { return Array.from(hair!.tieIdx).filter(j => j >= 0).length / hair!.G },
     brushed() { return brushed.reduce((a, b) => a + b, 0) / hair!.G },
-    untied() { const out: number[] = []; for (let g = 0; g < hair!.G; g++) if (hair!.tieIdx[g] < 0 && isBack(g)) out.push(g); return out }
+    untied() { const out: number[] = [], st = step(); for (let g = 0; g < hair!.G; g++) if (hair!.tieIdx[g] < 0 && (st.k === 'rassembler' ? sides[g] === st.a : isBack(g))) out.push(g); return out }
   }
   document.body.classList.add('pret')
 }
@@ -330,11 +447,21 @@ function simRay(e: { clientX: number; clientY: number }): [V3, V3] {
   const d = ray.ray.direction.clone().transformDirection(inv)
   return [[o.x, o.y, o.z], [d.x, d.y, d.z]]
 }
-interface Grab { id: number; kind: 'main' | 'brosse' | 'tourner'; t: number; held: { idx: number; g: number; off: V3 }[]; x: number; y: number; last: V3 | null }
+interface Grab { id: number; kind: 'main' | 'brosse' | 'tourner' | 'raie'; t: number; held: { idx: number; g: number; off: V3 }[]; x: number; y: number; last: V3 | null; path?: V3[] }
 let grab: Grab | null = null
 const at = (o: V3, d: V3, t: number): V3 => [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t]
 const cv = renderer.domElement
 cv.style.touchAction = 'none'
+/** Le point de la calotte sous le doigt (repère de la tête), ou rien. */
+const capCaster = new THREE.Raycaster()
+function capPoint(e: { clientX: number; clientY: number }): V3 | null {
+  const r = renderer.domElement.getBoundingClientRect()
+  capCaster.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera)
+  const hit = cap ? capCaster.intersectObject(cap.mesh, false)[0] : null
+  if (!hit) return null
+  const p = hairGroup.worldToLocal(hit.point.clone())
+  return [p.x, p.y, p.z]
+}
 /** La distance au corps sous le doigt (vêtements, peau), ou l'infini. */
 const bodyCaster = new THREE.Raycaster()
 function bodyRay(e: { clientX: number; clientY: number }) {
@@ -346,7 +473,13 @@ function bodyRay(e: { clientX: number; clientY: number }) {
 cv.addEventListener('pointerdown', e => {
   if (!hair || grab) return
   cv.setPointerCapture(e.pointerId)
+  yawGoal = null
   const [o, d] = simRay(e)
+  // la raie : un trait sur le dessus de la tête, n'importe où le doigt commence
+  if (etape === 'raie') {
+    const p = capPoint(e)
+    if (p) { grab = { id: e.pointerId, kind: 'raie', t: 0, held: [], x: e.clientX, y: e.clientY, last: null, path: [p] }; return }
+  }
   // le doigt prend ce qu'il touche VRAIMENT (le père, 23/11) : des cheveux
   // sous le doigt → on les attrape (même tout en bas du dos) ; le corps
   // devant les cheveux, ou le vide → le buste tourne
@@ -354,8 +487,9 @@ cv.addEventListener('pointerdown', e => {
   const hairT = under.length ? Math.min(...under.map(h => h.t)) * R : Infinity
   const body = bodyRay(e)
   const onHair = under.length > 0 && !(body < hairT - R * 0.05)
-  const hits = onHair ? hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3).filter(h => hair!.tieIdx[h.g] < 0) : []
-  if (!hits.length || etape === 'fini' || etape === 'elastique') { grab = { id: e.pointerId, kind: 'tourner', t: 0, held: [], x: e.clientX, y: e.clientY, last: null }; return }
+  // (pendant un rassemblement : seulement les mèches de ce côté-là)
+  const hits = onHair ? hair.pick(o, d, mode === 'main' ? 0.32 : 0.45, 0.7, 3).filter(h => hair!.tieIdx[h.g] < 0 && (etape !== 'rassembler' || sides[h.g] === step().a)) : []
+  if (!hits.length || etape === 'fini' || etape === 'elastique' || etape === 'raie') { grab = { id: e.pointerId, kind: 'tourner', t: 0, held: [], x: e.clientX, y: e.clientY, last: null }; return }
   const tmin = Math.min(...hits.map(h => h.t))
   const p0 = at(o, d, tmin)
   if (mode === 'brosse') { grab = { id: e.pointerId, kind: 'brosse', t: tmin, held: [], x: e.clientX, y: e.clientY, last: p0 }; return }
@@ -370,6 +504,11 @@ cv.addEventListener('pointerdown', e => {
 })
 function move(e: PointerEvent) {
   if (!grab || !hair || e.pointerId !== grab.id) return
+  if (grab.kind === 'raie') {
+    const p = capPoint(e)
+    if (p) grab.path!.push(p)
+    return
+  }
   if (grab.kind === 'tourner') {
     const dx = e.clientX - grab.x
     grab.x = e.clientX
@@ -416,25 +555,33 @@ const up = (e: PointerEvent) => {
     hair.keepPose(brushedNow); brushedNow.clear()
     let n = 0, all = 0
     for (let g = 0; g < hair.G; g++) if (isBack(g)) { all++; n += brushed[g] }
-    if (n >= all * 0.6) { brushed.fill(1); setTimeout(() => setEtape('rassembler'), 500) }
+    if (n >= all * 0.6) { brushed.fill(1); setTimeout(() => { if (etape === 'brosser') next() }, 500) }
+  }
+  if (g0.kind === 'raie') {
+    // un trait assez long, d'avant en arrière, près du milieu de la tête
+    const path = g0.path!
+    const zs = path.map(p => p[2]), mid = path.filter(p => Math.abs(p[0]) < 0.4 && p[1] > -0.2).length
+    lastRaie = { span: Math.max(...zs) - Math.min(...zs), mid: mid / path.length, n: path.length }
+    if (lastRaie.span > 0.8 && lastRaie.mid >= 0.6) doPart()
   }
   if (g0.kind === 'main' && etape === 'rassembler') {
-    const t = tieScreen()
+    const a = step().a, t = tieScreen(a)
     if (Math.hypot(e.clientX - t.x, e.clientY - t.y) < 120) {
-      // dans le rond : les mèches tenues, et leurs voisines, s'y attachent
+      // dans le rond : les mèches tenues, et leurs voisines (de ce côté), s'y attachent
       const held = new Set(g0.held.map(h => h.g))
       let k = 0
       for (let g = 0; g < hair.G; g++) {
-        if (hair.tieIdx[g] >= 0) continue
+        if (hair.tieIdx[g] >= 0 || sides[g] !== a) continue
         const r = hair.root(g)
         const near = held.has(g) || [...held].some(h => { const q = hair!.root(h); return Math.hypot(q[0] - r[0], q[1] - r[1], q[2] - r[2]) < 0.6 })
         if (near) tieGuide(g, Math.min(0.35, (k++) * 0.006))
       }
       // presque tout est rassemblé : le reste suit tout seul
-      const tied = Array.from(hair.tieIdx).filter(j => j >= 0).length
-      if (tied >= hair.G * 0.75) {
+      let mine = 0, done = 0
+      for (let g = 0; g < hair.G; g++) if (sides[g] === a) { mine++; if (hair.tieIdx[g] >= 0) done++ }
+      if (done >= mine * 0.75) {
         const left: number[] = []
-        for (let g = 0; g < hair.G; g++) if (hair.tieIdx[g] < 0) left.push(g)
+        for (let g = 0; g < hair.G; g++) if (hair.tieIdx[g] < 0 && sides[g] === a) left.push(g)
         left.forEach((g, i) => tieGuide(g, 0.15 + i / left.length * 0.5))
       }
     }
@@ -445,6 +592,10 @@ cv.addEventListener('pointercancel', up)
 
 /* ---- Les boutons ---- */
 document.getElementById('recommencer')!.onclick = () => recommencer()
+document.querySelectorAll<HTMLButtonElement>('[data-coiffure]').forEach(b => b.onclick = () => {
+  recette = RECETTES.find(r => r.id === b.dataset.coiffure) ?? RECETTES[0]
+  if (hair) recommencer()
+})
 {
   const tray = document.getElementById('elastique')!, fly = document.getElementById('vol')!
   let id = -1
@@ -454,8 +605,9 @@ document.getElementById('recommencer')!.onclick = () => recommencer()
   const drop = (e: PointerEvent) => {
     if (e.pointerId !== id) return
     id = -1; fly.hidden = true
-    const t = tieScreen()
-    if (etape === 'elastique' && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 130) setEtape('fini')
+    if (etape !== 'elastique') return
+    const a = step().a, t = tieScreen(a)
+    if (Math.hypot(e.clientX - t.x, e.clientY - t.y) < 130) { bands[a].visible = true; bandPop[a] = 1; next() }
   }
   tray.addEventListener('pointerup', drop); tray.addEventListener('pointercancel', drop)
 }
@@ -464,6 +616,12 @@ document.querySelectorAll<HTMLButtonElement>('[data-teinte]').forEach((b, i) => 
   b.onclick = () => { view?.setColor(TEINTES[i]); cap?.setColor(TEINTES[i]); paintScalp(TEINTES[i]); document.querySelectorAll('[data-teinte]').forEach(x => x.classList.toggle('sel', x === b)) }
 })
 
+/** Le cadrage : la tête et les épaules ; plus haut pour la raie (le dessus de la tête). */
+function aimCamera() {
+  const k = camEl * camEl * (3 - 2 * camEl), el = 0.85 * k, dist = R * 12
+  camera.position.set(C.x, C.y - R * 0.3 * (1 - k) + Math.sin(el) * dist, C.z + Math.cos(el) * dist)
+  camera.lookAt(C.x, C.y - R * 1.15 * (1 - k) + R * 0.2 * k, C.z)
+}
 /* ---- La boucle ---- */
 const fpsEl = document.getElementById('fps')!
 let last = performance.now(), frames = 0, acc = 0
@@ -471,6 +629,15 @@ function loop(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000)
   last = now
   if (!grab || grab.kind !== 'tourner') { yaw += vYaw * dt; vYaw *= Math.pow(0.04, dt) }
+  // la tête se tourne d'elle-même vers ce qu'il faut coiffer (un doigt l'arrête)
+  if (yawGoal !== null && !grab) {
+    const dYaw = Math.atan2(Math.sin(yawGoal - yaw), Math.cos(yawGoal - yaw))
+    yaw += dYaw * Math.min(1, dt * 3.5); vYaw = 0
+    if (Math.abs(dYaw) < 0.01) yawGoal = null
+  }
+  // pour la raie, on regarde le dessus de la tête
+  camEl += ((etape === 'raie' ? 1 : 0) - camEl) * Math.min(1, dt * 3)
+  aimCamera()
   pivot.rotation.y = yaw
   model?.update(dt)
   if (hair && view) {
@@ -479,22 +646,24 @@ function loop(now: number) {
     hair.advance(dt)
     const t1 = performance.now()
     glowNow()
-    if (etape === 'rassembler' && hair.tieIdx.every(j => j >= 0) && hair.tieT.every(t => t >= 1)) setEtape('elastique')
-    ring.scale.setScalar(1 + Math.sin(now / 220) * 0.06)
+    if (etape === 'rassembler' && arrived(step().a)) next()
+    rings.forEach(r => r.scale.setScalar(1 + Math.sin(now / 220) * 0.06))
+    raieHint.scale.setScalar(1)
+    ;(raieHint.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.35 * Math.sin(now / 220)
+    partV += (partGoal - partV) * Math.min(1, dt * 4)
+    cap?.setPart(partV)
     if (cap) {
       // pendant le rassemblement, les cheveux restent des fils (on les voit
       // tirés vers l'élastique) ; quand tout est rassemblé, la chevelure se
       // lisse d'un seul fondu (le 24/11 : une plaque lisse au milieu des
       // cheveux libres, ou des mèches qui disparaissaient d'un coup)
-      const arrived = hair.tieIdx.every(j => j >= 0) && hair.tieT.every(t => t >= 1)
-      pulled = arrived ? Math.min(1, pulled + dt / 0.7) : Math.max(0, pulled - dt / 0.3)
-      const k = pulled * pulled * (3 - 2 * pulled)
-      looks.fill(k)
+      // (chaque attache pour son côté)
+      for (let a = 0; a < TIES.length; a++) pulledA[a] = arrived(a) ? Math.min(1, pulledA[a] + dt / 0.7) : Math.max(0, pulledA[a] - dt / 0.3)
+      for (let g = 0; g < hair.G; g++) { const v = pulledA[sides[g]]; looks[g] = v * v * (3 - 2 * v) }
       view.look = looks
-      cap.setTie(TIE, 1)
       cap.setTieField(hair.rootL, looks)
     }
-    if (band.visible) placeBand(dt)
+    bands.forEach((b, a) => { if (b.visible) placeBand(a, dt) })
     view.update()
     fpsEl.dataset.phys = (t1 - t0).toFixed(1)
   }
