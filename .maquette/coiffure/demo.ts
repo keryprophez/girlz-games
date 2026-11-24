@@ -522,6 +522,8 @@ function move(e: PointerEvent) {
     const m: V3 = [p[0] - grab.last![0], p[1] - grab.last![1], p[2] - grab.last![2]]
     // une brosse large : un coup couvre une bande de cheveux, et les mèches
     // voisines du dessous comptent aussi (un enfant ne brosse pas mèche à mèche)
+    const ml = Math.hypot(m[0], m[1], m[2])
+    if (ml > 1e-4) brushDir.lerp(new THREE.Vector3(m[0] / ml, m[1] / ml, m[2] / ml), 0.35).normalize()
     for (const g of hair.comb(o, d, 0.6, m, 0.6)) {
       brushedNow.add(g)
       const r = hair.root(g)
@@ -616,6 +618,76 @@ document.querySelectorAll<HTMLButtonElement>('[data-teinte]').forEach((b, i) => 
   b.onclick = () => { view?.setColor(TEINTES[i]); cap?.setColor(TEINTES[i]); paintScalp(TEINTES[i]); document.querySelectorAll('[data-teinte]').forEach(x => x.classList.toggle('sel', x === b)) }
 })
 
+/* ---- La brosse (24/11 : « elle est où la brosse ? ») ----
+   Une vraie brosse en 3D : elle attend à côté de la tête pendant l'étape
+   « brosser », vient sous le doigt dès qu'on touche les cheveux, et glisse
+   sur la chevelure, les poils contre les cheveux, le manche qui suit le geste. */
+function makeBrush() {
+  const g = new THREE.Group()
+  const pink = new THREE.MeshStandardMaterial({ color: '#D23A6E', roughness: 0.35, metalness: 0.05 })
+  const cushion = new THREE.MeshStandardMaterial({ color: '#2E2A33', roughness: 0.8 })
+  const pin = new THREE.MeshStandardMaterial({ color: '#F4EDE6', roughness: 0.4 })
+  // le dos : une palette ovale (les poils vers −y, le manche vers +x)
+  const back = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.26, 8, 24), pink)
+  back.rotation.z = Math.PI / 2; back.scale.set(1, 1, 0.32); back.position.y = 0.05
+  const bed = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.24, 8, 24), cushion)
+  bed.rotation.z = Math.PI / 2; bed.scale.set(1, 1, 0.22); bed.position.y = 0.0
+  g.add(back, bed)
+  // les poils : de fines tiges à bout rond
+  const stem = new THREE.CylinderGeometry(0.008, 0.008, 0.08, 6), tip = new THREE.SphereGeometry(0.016, 8, 6)
+  const pts: [number, number][] = []
+  for (let x = -0.26; x <= 0.261; x += 0.065) for (let z = -0.1; z <= 0.101; z += 0.05) if ((x / 0.32) ** 2 + (z / 0.13) ** 2 < 1) pts.push([x, z])
+  const stems = new THREE.InstancedMesh(stem, pin, pts.length), tips = new THREE.InstancedMesh(tip, pin, pts.length)
+  const m4 = new THREE.Matrix4()
+  pts.forEach(([x, z], i) => { stems.setMatrixAt(i, m4.makeTranslation(x, -0.06, z)); tips.setMatrixAt(i, m4.makeTranslation(x, -0.1, z)) })
+  g.add(stems, tips)
+  // le manche
+  const handle = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.42, 8, 16), pink)
+  handle.rotation.z = Math.PI / 2 - 0.12; handle.position.set(0.58, 0.08, 0)
+  g.add(handle)
+  g.traverse(o => { (o as THREE.Mesh).castShadow = false })
+  return g
+}
+const brush = makeBrush()
+brush.visible = false
+scene.add(brush)
+const brushDir = new THREE.Vector3(0, 1, 0)
+let brushOn = 0
+/** La pose de la brosse à chaque image. */
+function placeBrush(dt: number, now: number) {
+  const show = etape === 'brosser'
+  brush.visible = show && R > 0
+  if (!brush.visible) return
+  brush.scale.setScalar(R * 1.05)
+  const pos = new THREE.Vector3(), quat = new THREE.Quaternion()
+  if (grab && grab.kind === 'brosse' && grab.last) {
+    // sous le doigt : posée sur la chevelure, les poils vers la tête
+    const p = new THREE.Vector3(...grab.last), n = p.clone().normalize()
+    pos.copy(p).addScaledVector(n, 0.19)
+    // le manche traîne derrière le geste
+    const h = brushDir.clone().negate()
+    h.addScaledVector(n, -h.dot(n))
+    if (h.lengthSq() < 1e-6) h.set(0, 1, 0).addScaledVector(n, -n.y)
+    h.normalize()
+    const basis = new THREE.Matrix4().makeBasis(h, n, new THREE.Vector3().crossVectors(h, n))
+    quat.setFromRotationMatrix(basis)
+    hairGroup.localToWorld(pos)
+    const gq = new THREE.Quaternion(); hairGroup.getWorldQuaternion(gq)
+    quat.premultiply(gq)
+    brushOn = Math.min(1, brushOn + dt * 8)
+  } else {
+    // elle attend à côté de la tête, et respire un peu pour qu'on la voie
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1)
+    pos.copy(C).addScaledVector(right, R * 2.15).addScaledVector(up, -R * 0.2 + Math.sin(now / 400) * R * 0.08)
+    quat.setFromEuler(new THREE.Euler(0.5, -0.3, 0.9 + Math.sin(now / 700) * 0.08))
+    const cq = new THREE.Quaternion(); camera.getWorldQuaternion(cq)
+    quat.premultiply(cq)
+    brushOn = Math.max(0, brushOn - dt * 4)
+  }
+  const k = Math.min(1, dt * 18)
+  brush.position.lerp(pos, k)
+  brush.quaternion.slerp(quat, k)
+}
 /** Le cadrage : la tête et les épaules ; plus haut pour la raie (le dessus de la tête). */
 function aimCamera() {
   const k = camEl * camEl * (3 - 2 * camEl), el = 0.85 * k, dist = R * 12
@@ -664,6 +736,7 @@ function loop(now: number) {
       cap.setTieField(hair.rootL, looks)
     }
     bands.forEach((b, a) => { if (b.visible) placeBand(a, dt) })
+    placeBrush(dt, now)
     view.update()
     fpsEl.dataset.phys = (t1 - t0).toFixed(1)
   }
