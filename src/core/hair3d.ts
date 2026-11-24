@@ -27,6 +27,9 @@ export interface HairView {
   mesh: import('three').Mesh
   /** La lueur de chaque mèche (0..1) : celles à prendre maintenant. */
   glow: Float32Array
+  /** À quel point chaque mèche est rendue « tirée » (0..1). Vide : selon
+      la physique (`hair.tiedLook`). */
+  look: Float32Array | null
   /** À appeler à chaque image, après la physique. */
   update(): void
   setColor(hex: string): void
@@ -120,8 +123,11 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         // attachées plus près ou plus loin, couperaient le fil en travers)
         // (le canal porte la place de l'attache le long de la mèche, 0 sinon)
         float tieAt = texelFetch(guides, ivec2(int(S), int(iG.x)), 0).w;
-        float tied = step(0.001, max(tieAt, max(texelFetch(guides, ivec2(int(S), int(iG.y)), 0).w, texelFetch(guides, ivec2(int(S), int(iG.z)), 0).w)));
-        vec3 bw = mix(iW, vec3(1.0, 0.0, 0.0), tied);
+        // (une mèche en route vers l'attache, ou attachée : ses fils ne suivent qu'elle)
+        float anyTied = step(0.001, max(tieAt, max(texelFetch(guides, ivec2(int(S), int(iG.y)), 0).w, texelFetch(guides, ivec2(int(S), int(iG.z)), 0).w)));
+        vec3 bw = mix(iW, vec3(1.0, 0.0, 0.0), anyTied);
+        // le rendu « tiré » arrive en fondu, quand la mèche est arrivée
+        float tied = texelFetch(guides, ivec2(int(S) + 1, int(iG.x)), 0).w;
         vec3 p = p0 * bw.x + p1 * bw.y + p2 * bw.z;
         vec3 T = normalize(t0 * bw.x + t1 * bw.y + t2 * bw.z + 1e-6);
         // le repère de la mèche : vers l'extérieur de la tête, et de côté
@@ -231,22 +237,25 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         }
         data[o + 3] = glow[g]
         // une mèche attachée est tirée : ses fils se serrent (un aspect lisse)
-        data[ot + 3] = hair.tieIdx[g] >= 0 ? Math.max(0.01, hair.tieIdx[g] / (P - 1)) : 0
+        // (le canal libre des tangentes : au point 0, la place de l'attache le
+        // long de la mèche ; au point 1, à quel point elle est rendue tirée)
+        data[ot + 3] = k === 0 ? (hair.tieIdx[g] >= 0 ? Math.max(0.01, hair.tieIdx[g] / (P - 1)) : 0) : k === 1 ? (view.look ? view.look[g] : hair.tiedLook(g)) : 0
       }
     }
     uniforms.time.value = performance.now() / 1000
     tex.needsUpdate = true
   }
-  update()
-
-  return {
+  const view: HairView = {
     mesh,
     glow,
+    look: null,
     update,
     setColor: hex => { uniforms.base.value.set(hex) },
     setLight: (x, y, z) => { uniforms.light.value.set(x, y, z).normalize() },
     dispose: () => { geo.dispose(); mat.dispose(); tex.dispose() }
   }
+  update()
+  return view
 }
 
 /* ---------- La calotte (23/11) ----------
@@ -268,6 +277,9 @@ export interface HairCap {
   setLight(x: number, y: number, z: number): void
   /** Le point de la calotte dans une direction (repère de la tête). */
   surface(dir: [number, number, number]): [number, number, number]
+  /** À quel point chaque mèche est tirée (0..1, par mèche) : la calotte se
+      tire là où elles sont, peu à peu. `roots` : leurs racines. */
+  setTieField(roots: Float32Array, look: ArrayLike<number>): void
   dispose(): void
 }
 
@@ -278,6 +290,7 @@ export interface HairCap {
 export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number, number, number] }, onScalp: (x: number, y: number, z: number) => boolean,
   surface?: { tris: Float32Array; lift: number }): HairCap {
   const geo = surface ? capFromSurface(T, surface.tris, skull.c, surface.lift) : capFromSphere(T, skull, onScalp)
+  let near: number[][] | null = null
   const ray = new T.Raycaster()
   const probe = new T.Mesh(geo, new T.MeshBasicMaterial({ side: T.DoubleSide }))
   const uniforms = {
@@ -292,21 +305,23 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
     uniforms,
     alphaToCoverage: true,
     vertexShader: /* glsl */`
-      attribute vec3 aDir; attribute float aMask;
+      attribute vec3 aDir; attribute float aMask; attribute float aTie;
       uniform vec3 tie; uniform float tieOn; uniform float bump; uniform vec3 center;
       varying vec3 vPos; varying vec3 vN; varying vec3 vT; varying float vMask; varying vec2 vS; varying float vNear;
       void main() {
+        // tirée seulement là où les cheveux sont déjà arrivés à l'attache
+        float on = aTie * tieOn;
         vec3 p = position;
         vec3 n = normalize(aDir);
         vec3 tn = normalize(tie - center);
         // le dôme des cheveux rassemblés, sous l'attache
         float ang = acos(clamp(dot(n, tn), -1.0, 1.0));
         float w = smoothstep(0.75, 0.0, ang);
-        p += n * tieOn * bump * pow(w, 1.4);
+        p += n * on * bump * pow(w, 1.4);
         // le sens des cheveux : lâchés, ils tombent ; tirés, ils vont vers l'attache
         vec3 loose = vec3(n.x * 0.35, -1.0, -0.35);
         vec3 pulled = tie - p;
-        vec3 f = mix(loose, pulled, tieOn);
+        vec3 f = mix(loose, pulled, on);
         f = normalize(f - n * dot(f, n) + 1e-5);
         // les stries : des lignes le long du sens des cheveux. Tirés : des
         // rayons autour de l'attache ; lâchés : des lignes verticales
@@ -314,8 +329,8 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
         vec3 e1 = normalize(cross(tn, ax)), e2 = cross(tn, e1);
         float phiT = atan(dot(n, e2), dot(n, e1));
         float phiL = atan(n.x, n.z);
-        vS = vec2(mix(phiL, phiT, tieOn), mix(n.y, ang, tieOn));
-        vNear = tieOn * smoothstep(0.35, 0.0, ang);
+        vS = vec2(mix(phiL, phiT, on), mix(n.y, ang, on));
+        vNear = on * smoothstep(0.35, 0.0, ang);
         vMask = aMask;
         vec4 wp = modelMatrix * vec4(p, 1.0);
         vPos = wp.xyz;
@@ -370,6 +385,37 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
       uniforms.tieOn.value = on
     },
     setLight: (x, y, z) => { uniforms.light.value.set(x, y, z).normalize() },
+    setTieField: (roots, look) => {
+      const aTie = geo.getAttribute('aTie') as import('three').BufferAttribute, dirs = geo.getAttribute('aDir')
+      if (!near) {
+        // une fois : pour chaque sommet, les racines proches et leur poids (une
+        // cloche sur l'angle) — la frontière entre la chevelure tirée et la
+        // libre est douce, pas une plaque au bord net
+        const G = roots.length / 3, ru: number[] = []
+        for (let g = 0; g < G; g++) { const x = roots[g * 3], y = roots[g * 3 + 1], z = roots[g * 3 + 2], l = Math.hypot(x, y, z) || 1; ru.push(x / l, y / l, z / l) }
+        near = []
+        for (let v = 0; v < dirs.count; v++) {
+          const dx = dirs.getX(v), dy = dirs.getY(v), dz = dirs.getZ(v), list: number[] = []
+          let best = -1, bg = 0
+          for (let g = 0; g < G; g++) {
+            const d = dx * ru[g * 3] + dy * ru[g * 3 + 1] + dz * ru[g * 3 + 2]
+            if (d > best) { best = d; bg = g }
+            const ang = Math.acos(Math.min(1, d))
+            if (ang < 0.5) list.push(g, Math.exp(-((ang / 0.22) ** 2)))
+          }
+          // loin de toute racine (la nuque) : la plus proche
+          near.push(list.length ? list : [bg, 1])
+        }
+      }
+      const arr = aTie.array as Float32Array
+      for (let v = 0; v < arr.length; v++) {
+        const list = near[v]
+        let sum = 0, w = 0
+        for (let k = 0; k < list.length; k += 2) { sum += look[list[k]] * list[k + 1]; w += list[k + 1] }
+        arr[v] = sum / w
+      }
+      aTie.needsUpdate = true
+    },
     surface: (dir: [number, number, number]) => {
       const d = new T.Vector3(...dir).normalize()
       const r = surfaceAt(d)
@@ -420,6 +466,7 @@ function capFromSphere(T: T3, skull: { c: [number, number, number]; r: [number, 
   }
   geo.setAttribute('position', new T.BufferAttribute(pos, 3))
   geo.setAttribute('aDir', new T.BufferAttribute(dir, 3))
+  geo.setAttribute('aTie', new T.BufferAttribute(new Float32Array(mask.length), 1))
   geo.setAttribute('aMask', new T.BufferAttribute(mask, 1))
   geo.setIndex(keep)
   src.dispose()
@@ -503,6 +550,7 @@ function capFromSurface(T: T3, tris: Float32Array, c: [number, number, number], 
   const geo = new T.BufferGeometry()
   geo.setAttribute('position', new T.BufferAttribute(pos, 3))
   geo.setAttribute('aDir', new T.BufferAttribute(dir, 3))
+  geo.setAttribute('aTie', new T.BufferAttribute(new Float32Array(mask.length), 1))
   geo.setAttribute('aMask', new T.BufferAttribute(mask, 1))
   geo.setIndex(index)
   return geo

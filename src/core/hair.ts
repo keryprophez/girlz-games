@@ -79,7 +79,7 @@ const SHAPE: [number, number] = [0.04, 0.006]
 const SLEEP = 4e-3
 const NAP = 30
 /** Le temps qu'une mèche met à glisser jusqu'à son attache (s). */
-const TIE_S = 0.35
+const TIE_S = 0.8
 /** Le temps laissé à la queue pour pendre, avant de garder sa pose (s). */
 const TAIL_S = 1.2
 const smooth = (t: number) => t * t * (3 - 2 * t)
@@ -303,6 +303,15 @@ export class Hair {
     this.wake(g)
   }
 
+  /** À quel point la mèche g est rendue « tirée » (0..1) : seulement à la
+      fin du trajet, quand elle est posée sur son chemin (le rendu bascule
+      alors des fils à la calotte, sans saut). */
+  tiedLook(g: number) {
+    if (this.tieIdx[g] < 0) return 0
+    const t = Math.min(1, Math.max(0, (this.tieT[g] - 0.65) / 0.35))
+    return t * t * (3 - 2 * t)
+  }
+
   /** Détache la mèche g (défaire). */
   untie(g: number) {
     this.tieIdx[g] = -1
@@ -363,8 +372,15 @@ export class Hair {
           // attaché : sur son chemin (qui arrive en glissant) ; la queue
           // glisse avec lui (sinon elle reste où pendait la mèche, sur le
           // côté du visage, et s'enroule autour du crâne)
-          const u = smooth(Math.min(1, Math.max(0, this.tieT[g]))), F = this.tieFrom, T = this.tiePath
-          pos[k] = prev[k] = F[k] + (T[k] - F[k]) * u; pos[k + 1] = prev[k + 1] = F[k + 1] + (T[k + 1] - F[k + 1]) * u; pos[k + 2] = prev[k + 2] = F[k + 2] + (T[k + 2] - F[k + 2]) * u
+          // le trajet : la racine part la première, la pointe suit avec un
+          // peu de retard (on tire les cheveux, ils suivent la main) ; chaque
+          // point GLISSE sur le crâne (jamais à travers : le 24/11, les mèches
+          // allaient en ligne droite vers l'attache, à travers la tête)
+          const f = Math.min(1, i / Math.max(1, kin)) * 0.35 + (i > kin ? 0.25 * (i - kin) / (P - 1 - kin) : 0)
+          const u = smooth(Math.min(1, Math.max(0, this.tieT[g] * (1 + f) - f))), F = this.tieFrom, T = this.tiePath
+          pos[k] = F[k] + (T[k] - F[k]) * u; pos[k + 1] = F[k + 1] + (T[k + 1] - F[k + 1]) * u; pos[k + 2] = F[k + 2] + (T[k + 2] - F[k + 2]) * u
+          if (u > 0 && u < 1) this.collide(k, liftAt(this.lift[g], i), cols)
+          prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2]
           continue
         }
         // Verlet amorti (l'air freine davantage les pointes) + pesanteur

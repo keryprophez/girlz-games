@@ -29,6 +29,8 @@ scene.add(fill)
 
 let model: VRM | null = null
 let cap: ReturnType<typeof hairCap> | null = null
+let looks = new Float32Array(0)
+let pulled = 0
 let skullDbg = ''
 
 /* ---- Le pas à pas : la queue de cheval ---- */
@@ -249,6 +251,7 @@ async function load() {
   hair.setHead(yaw, 0, true)
   hair.bake(5)
   brushed = new Uint8Array(hair.G)
+  looks = new Float32Array(hair.G)
   mark('chute')
   view = hairView(THREE, hair, { width: 0.05, child: 12 })
   ;(window as unknown as { __temps: string[] }).__temps = tm
@@ -299,6 +302,11 @@ async function load() {
     get yaw() { return yaw },
     get etape() { return etape },
     setYaw(v: number) { yaw = v; vYaw = 0 },
+    poignee(g0: number) {
+      setEtape('rassembler')
+      const r0 = hair!.root(g0); let k = 0
+      for (let g = 0; g < hair!.G; g++) { const r = hair!.root(g); if (Math.hypot(r[0] - r0[0], r[1] - r0[1], r[2] - r0[2]) < 0.6) tieGuide(g, Math.min(0.35, (k++) * 0.006)) }
+    },
     queueFinie() { for (let g = 0; g < hair!.G; g++) tieGuide(g, (g % 20) * 0.01); setEtape('fini') },
     tieScreen,
     tied() { return Array.from(hair!.tieIdx).filter(j => j >= 0).length / hair!.G },
@@ -474,9 +482,17 @@ function loop(now: number) {
     if (etape === 'rassembler' && hair.tieIdx.every(j => j >= 0) && hair.tieT.every(t => t >= 1)) setEtape('elastique')
     ring.scale.setScalar(1 + Math.sin(now / 220) * 0.06)
     if (cap) {
-      let on = 0
-      for (let g = 0; g < hair.G; g++) if (hair.tieIdx[g] >= 0) on += Math.min(1, Math.max(0, hair.tieT[g]))
-      cap.setTie(TIE, on / hair.G)
+      // pendant le rassemblement, les cheveux restent des fils (on les voit
+      // tirés vers l'élastique) ; quand tout est rassemblé, la chevelure se
+      // lisse d'un seul fondu (le 24/11 : une plaque lisse au milieu des
+      // cheveux libres, ou des mèches qui disparaissaient d'un coup)
+      const arrived = hair.tieIdx.every(j => j >= 0) && hair.tieT.every(t => t >= 1)
+      pulled = arrived ? Math.min(1, pulled + dt / 0.7) : Math.max(0, pulled - dt / 0.3)
+      const k = pulled * pulled * (3 - 2 * pulled)
+      looks.fill(k)
+      view.look = looks
+      cap.setTie(TIE, 1)
+      cap.setTieField(hair.rootL, looks)
     }
     if (band.visible) placeBand(dt)
     view.update()
