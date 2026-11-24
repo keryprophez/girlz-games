@@ -133,16 +133,19 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         // une légère ondulation propre à chaque fil
         // une mèche attachée : sur le crâne, ses fils s'étalent à plat et
         // couvrent sans trou (tirés, lisses) ; dans la queue, ils gardent du volume
-        float onSkull = tied * (1.0 - smoothstep(tieAt - 0.07, tieAt - 0.015, t));
+        // (tieAt : le bout du faisceau ; le faisceau est le segment d'avant)
+        float seg = 1.0 / ${hair.P - 1}.0;
+        float onSkull = tied * (1.0 - smoothstep(tieAt - 1.3 * seg, tieAt - 0.95 * seg, t));
         float wave = sin(t * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, t) * (1.0 - tied);
         spread *= mix(1.0, 1.35, onSkull);
         // la queue : les fils se répartissent tout autour (un volume rond, pas un crayon)
-        float inTail = tied * smoothstep(tieAt, tieAt + 0.06, t);
+        float inTail = tied * smoothstep(tieAt - 0.6 * seg, tieAt + 0.06, t);
         // sous l'élastique, la queue s'ouvre peu à peu (serrée en haut, pleine plus bas)
         float ang = iO.z * 6.2832, rad = length(iO.xy) * 2.6 * mix(0.35, 1.0, smoothstep(tieAt, tieAt + 0.3, t)) * mix(1.0, 0.7, smoothstep(tieAt, 1.0, t));
         vec3 lay = (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t) * mix(1.0, 0.15, onSkull)) * clump;
         // à l'élastique, le faisceau est serré : les fils s'y rejoignent
-        float squeeze = 1.0 - 0.85 * tied * exp(-pow((t - tieAt - 0.02) / 0.12, 2.0));
+        // serré dans le faisceau, il s'ouvre après
+        float squeeze = 1.0 - 0.85 * tied * exp(-pow((t - tieAt + 0.3 * seg) / (0.9 * seg), 2.0));
         p += mix(lay, (B * cos(ang) + N * sin(ang)) * rad, inTail) * squeeze;
         // le ruban : couché sur la chevelure quand on la regarde de face (pas
         // de torsion quand le cheveu part vers la caméra), tourné vers la
@@ -164,7 +167,8 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         vGlow = texelFetch(guides, ivec2(int(i), int(iG.x)), 0).w;
         // sur le crâne, une mèche attachée est dessinée par la calotte (pas de fils : pas d'écailles)
         // ... et jusque sous l'élastique (leurs départs y faisaient une couronne effilochée)
-        vHide = tied * (1.0 - smoothstep(tieAt + 0.02, tieAt + 0.07, t));
+        // (le faisceau, lui, se voit en entier : il relie la tête à l'élastique)
+        vHide = tied * (1.0 - smoothstep(tieAt - 1.05 * seg, tieAt - 0.9 * seg, t));
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */`

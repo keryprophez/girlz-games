@@ -272,7 +272,7 @@ export class Hair {
     const acc = [0]
     for (let k = 1; k <= N; k++) acc.push(acc[k - 1] + Math.hypot(curve[k][0] - curve[k - 1][0], curve[k][1] - curve[k - 1][1], curve[k][2] - curve[k - 1][2]))
     const len = acc[N]
-    const j = Math.min(P - 3, Math.max(2, Math.ceil(len / s) + 1))
+    const j = Math.min(P - 4, Math.max(2, Math.ceil(len / s) + 1))
     const at = (d: number): V3 => {
       let k = 1
       while (k < N && acc[k] < d) k++
@@ -283,13 +283,21 @@ export class Hair {
     T.set(p1, (base + 1) * 3)
     // les points le long du chemin, régulièrement, le dernier sur l'attache
     for (let i = 2; i <= j; i++) T.set(at(Math.min(len, (i - 1) / (j - 1) * len)), (base + i) * 3)
-    // la queue : elle pend sous l'attache
-    for (let i = j + 1; i < P; i++) {
+    // le FAISCEAU : la queue sort d'abord de la tête, vers l'arrière et un
+    // peu vers le bas, en un court faisceau serré où se pose l'élastique —
+    // perpendiculaire au flux des cheveux (le père, 24/11 : un élastique
+    // couché à l'horizontale « rentre dans la tête ») ; puis elle retombe
+    const out = [target[0], target[1] - 0.35 * Math.hypot(...target), target[2]]
+    const ol = Math.hypot(out[0], out[1], out[2]) || 1
+    const a0 = (base + j) * 3
+    T.set([T[a0] + out[0] / ol * s, T[a0 + 1] + out[1] / ol * s, T[a0 + 2] + out[2] / ol * s], (base + j + 1) * 3)
+    for (let i = j + 2; i < P; i++) {
       const a = (base + i - 1) * 3
       T.set([T[a], T[a + 1] - s, T[a + 2] - s * 0.15], (base + i) * 3)
     }
     this.tieFrom.set(pos.subarray(base * 3, (base + P) * 3), base * 3)
-    this.tieIdx[g] = j
+    // jusqu'au bout du faisceau, la mèche est posée (sans calcul)
+    this.tieIdx[g] = j + 1
     this.tieT[g] = -delay / TIE_S
     this.shape[g] = 0
     this.wake(g)

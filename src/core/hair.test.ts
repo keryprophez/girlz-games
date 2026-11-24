@@ -122,7 +122,11 @@ describe('la physique', () => {
     expect(finite(h)).toBe(true)
     expect(inside(h, SKULL)).toBe(0)
     for (let g = 0; g < h.G; g++) {
-      const j = h.tieIdx[g], p = h.point(g, j), tip = h.point(g, h.P - 1)
+      // (l'attache est au pied du faisceau, le point d'avant la fin de la partie posée)
+      const j = h.tieIdx[g] - 1, p = h.point(g, j), tip = h.point(g, h.P - 1)
+      const stub = h.point(g, j + 1)
+      // le faisceau sort de la tête (vers l'arrière), il ne rentre pas dedans
+      expect(Math.hypot(...stub)).toBeGreaterThan(Math.hypot(...p))
       // l'attache est au point d'attache, la pointe pend en dessous
       expect(Math.hypot(p[0] - tieAt[0], p[1] - tieAt[1], p[2] - tieAt[2])).toBeLessThan(0.05)
       expect(tip[1]).toBeLessThan(tieAt[1])

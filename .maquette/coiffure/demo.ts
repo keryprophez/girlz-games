@@ -47,7 +47,7 @@ let brushed = new Uint8Array(0)
 const brushedNow = new Set<number>()
 const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 12, 48), new THREE.MeshBasicMaterial({ color: '#FFC83D', transparent: true, opacity: 0.85, depthTest: false }))
 ring.renderOrder = 10
-const band = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.048, 16, 40), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
+const band = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.034, 16, 40), new THREE.MeshStandardMaterial({ color: '#E8427C', roughness: 0.45 }))
 let bandPop = 0
 const isBack = (g: number) => hair!.rootL[g * 3 + 2] < 0.35
 function setEtape(e: Etape) {
@@ -67,17 +67,18 @@ function placeBand(dt: number) {
   const h = hair!, c = new THREE.Vector3(), d = new THREE.Vector3()
   let n = 0
   for (let g = 0; g < h.G; g++) {
+    // le faisceau : du pied (l'attache) au bout de la partie posée
     const j = h.tieIdx[g]
-    if (j < 0 || j + 1 >= h.P) continue
-    const a = h.point(g, j), b = h.point(g, Math.min(h.P - 1, j + 2))
-    c.x += a[0]; c.y += a[1]; c.z += a[2]
+    if (j < 1) continue
+    const a = h.point(g, j - 1), b = h.point(g, j)
+    c.x += a[0] + (b[0] - a[0]) * 0.35; c.y += a[1] + (b[1] - a[1]) * 0.35; c.z += a[2] + (b[2] - a[2]) * 0.35
     d.x += b[0] - a[0]; d.y += b[1] - a[1]; d.z += b[2] - a[2]
     n++
   }
   if (!n) return
   c.divideScalar(n); d.normalize()
-  // sur le départ de la queue (elle sort de l'élastique)
-  band.position.copy(c).addScaledVector(d, 0.06)
+  // sur le faisceau, près de la tête, son anneau perpendiculaire au flux des cheveux
+  band.position.copy(c)
   band.quaternion.setFromUnitVectors(bandAxis, d)
   if (bandPop > 0) {
     bandPop = Math.max(0, bandPop - dt * 2.5)
