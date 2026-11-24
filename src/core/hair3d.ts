@@ -163,7 +163,8 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         vPos = wp.xyz; vt = t; vSide = position.y; vRnd = iO.z;
         vGlow = texelFetch(guides, ivec2(int(i), int(iG.x)), 0).w;
         // sur le crâne, une mèche attachée est dessinée par la calotte (pas de fils : pas d'écailles)
-        vHide = onSkull;
+        // ... et jusque sous l'élastique (leurs départs y faisaient une couronne effilochée)
+        vHide = tied * (1.0 - smoothstep(tieAt + 0.02, tieAt + 0.07, t));
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */`
@@ -261,48 +262,20 @@ export interface HairCap {
   /** L'attache (repère de la tête) et à quel point la chevelure y est tirée (0..1). */
   setTie(p: [number, number, number] | null, on: number): void
   setLight(x: number, y: number, z: number): void
+  /** Le point de la calotte dans une direction (repère de la tête). */
+  surface(dir: [number, number, number]): [number, number, number]
   dispose(): void
 }
 
-export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number, number, number] }, onScalp: (x: number, y: number, z: number) => boolean): HairCap {
-  const src = new T.SphereGeometry(1, 128, 96)
-  const P = src.getAttribute('position')
-  const n = P.count
-  // la lisière adoucie : la part d'échantillons voisins qui portent des cheveux
-  const mask = new Float32Array(n)
-  const jit: number[][] = []
-  for (let k = 0; k < 12; k++) { const a = k * 2.399963, r = 0.05 * Math.sqrt((k + 0.5) / 12); jit.push([Math.cos(a) * r, Math.sin(a) * r]) }
-  for (let i = 0; i < n; i++) {
-    const x = P.getX(i), y = P.getY(i), z = P.getZ(i)
-    let m = onScalp(x, y, z) ? 1 : 0
-    for (const [u, v] of jit) {
-      // un petit décalage sur la sphère
-      const qx = x + u, qy = y + v * 0.7, qz = z + (u - v) * 0.5, l = Math.hypot(qx, qy, qz)
-      m += onScalp(qx / l, qy / l, qz / l) ? 1 : 0
-    }
-    mask[i] = m / (jit.length + 1)
-  }
-  // ne garder que les triangles qui portent des cheveux
-  const idx = src.getIndex()!
-  const keep: number[] = []
-  for (let t = 0; t < idx.count; t += 3) {
-    const a = idx.getX(t), b = idx.getX(t + 1), c = idx.getX(t + 2)
-    if (mask[a] + mask[b] + mask[c] > 0) keep.push(a, b, c)
-  }
-  const geo = new T.BufferGeometry()
-  const pos = new Float32Array(n * 3), dir = new Float32Array(n * 3)
-  for (let i = 0; i < n; i++) {
-    const x = P.getX(i), y = P.getY(i), z = P.getZ(i)
-    dir.set([x, y, z], i * 3)
-    // juste au-dessus du crâne (sous les fils)
-    pos.set([skull.c[0] + x * (skull.r[0] + 0.03), skull.c[1] + y * (skull.r[1] + 0.03), skull.c[2] + z * (skull.r[2] + 0.03)], i * 3)
-  }
-  geo.setAttribute('position', new T.BufferAttribute(pos, 3))
-  geo.setAttribute('aDir', new T.BufferAttribute(dir, 3))
-  geo.setAttribute('aMask', new T.BufferAttribute(mask, 1))
-  geo.setIndex(keep)
-  src.dispose()
-
+/** La calotte. `surface` : le VRAI cuir chevelu du modèle (ses triangles,
+    repère de la tête) — la calotte l'épouse exactement, avec sa lisière
+    (le 24/11 : posée sur un ovale, elle flottait au-dessus du front et
+    laissait voir le cuir chevelu peint dessous). Sans lui : un ovale. */
+export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number, number, number] }, onScalp: (x: number, y: number, z: number) => boolean,
+  surface?: { tris: Float32Array; lift: number }): HairCap {
+  const geo = surface ? capFromSurface(T, surface.tris, skull.c, surface.lift) : capFromSphere(T, skull, onScalp)
+  const ray = new T.Raycaster()
+  const probe = new T.Mesh(geo, new T.MeshBasicMaterial({ side: T.DoubleSide }))
   const uniforms = {
     base: { value: new T.Color('#6B4A2B') },
     light: { value: new T.Vector3(-0.4, 0.8, -0.45).normalize() },
@@ -367,7 +340,9 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
         float shift = (st - 0.5) * 0.3;
         float s1 = strand(normalize(T + N * (0.1 + shift)), H, 70.0);
         float s2 = strand(normalize(T - N * (0.2 - shift)), H, 18.0);
-        c += (vec3(1.0, 0.96, 0.9) * s1 * 0.32 * (0.5 + st) * vol + base * s2 * 0.6 * vol) * calm;
+        // le reflet s'efface vers la lisière (il faisait une bande blanche au front)
+        float rim = smoothstep(0.3, 1.0, vMask);
+        c += (vec3(1.0, 0.96, 0.9) * s1 * 0.18 * (0.5 + st) * vol + base * s2 * 0.5 * vol) * calm * rim;
         // la lisière : adoucie, et un peu irrégulière (des mèches, pas un bord net)
         float a = smoothstep(0.15, 0.75, vMask + (st - 0.5) * 0.35);
         gl_FragColor = vec4(c, a);
@@ -385,13 +360,146 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
         uniforms.tie.value.set(p[0], p[1], p[2])
         // la hauteur du dôme : de la calotte jusqu'un peu sous l'attache
         const d = uniforms.tie.value.clone().sub(uniforms.center.value)
-        const u = d.clone().normalize()
-        const surf = 1 / Math.sqrt((u.x / (skull.r[0] + 0.03)) ** 2 + (u.y / (skull.r[1] + 0.03)) ** 2 + (u.z / (skull.r[2] + 0.03)) ** 2)
+        const surf = surfaceAt(d)
         uniforms.bump.value = Math.max(0, d.length() - surf - 0.03)
       }
       uniforms.tieOn.value = on
     },
     setLight: (x, y, z) => { uniforms.light.value.set(x, y, z).normalize() },
-    dispose: () => { geo.dispose(); mat.dispose() }
+    surface: (dir: [number, number, number]) => {
+      const d = new T.Vector3(...dir).normalize()
+      const r = surfaceAt(d)
+      return [uniforms.center.value.x + d.x * r, uniforms.center.value.y + d.y * r, uniforms.center.value.z + d.z * r]
+    },
+    dispose: () => { geo.dispose(); mat.dispose(); (probe.material as import('three').Material).dispose() }
   }
+
+  /** La distance du centre à la calotte dans une direction. */
+  function surfaceAt(dir: import('three').Vector3) {
+    const u = dir.clone().normalize(), c = uniforms.center.value
+    ray.set(c.clone().addScaledVector(u, 6), u.clone().negate())
+    const hit = ray.intersectObject(probe, false)[0]
+    if (hit) return hit.point.distanceTo(c)
+    return 1 / Math.sqrt((u.x / (skull.r[0] + 0.03)) ** 2 + (u.y / (skull.r[1] + 0.03)) ** 2 + (u.z / (skull.r[2] + 0.03)) ** 2)
+  }
+}
+
+/** Un ovale découpé par la lisière (le repli, sans modèle). */
+function capFromSphere(T: T3, skull: { c: [number, number, number]; r: [number, number, number] }, onScalp: (x: number, y: number, z: number) => boolean) {
+  const src = new T.SphereGeometry(1, 128, 96)
+  const P = src.getAttribute('position')
+  const n = P.count
+  const mask = new Float32Array(n)
+  const jit: number[][] = []
+  for (let k = 0; k < 12; k++) { const a = k * 2.399963, r = 0.05 * Math.sqrt((k + 0.5) / 12); jit.push([Math.cos(a) * r, Math.sin(a) * r]) }
+  for (let i = 0; i < n; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i)
+    let m = onScalp(x, y, z) ? 1 : 0
+    for (const [u, v] of jit) {
+      const qx = x + u, qy = y + v * 0.7, qz = z + (u - v) * 0.5, l = Math.hypot(qx, qy, qz)
+      m += onScalp(qx / l, qy / l, qz / l) ? 1 : 0
+    }
+    mask[i] = m / (jit.length + 1)
+  }
+  const idx = src.getIndex()!
+  const keep: number[] = []
+  for (let t = 0; t < idx.count; t += 3) {
+    const a = idx.getX(t), b = idx.getX(t + 1), c = idx.getX(t + 2)
+    if (mask[a] + mask[b] + mask[c] > 0) keep.push(a, b, c)
+  }
+  const geo = new T.BufferGeometry()
+  const pos = new Float32Array(n * 3), dir = new Float32Array(n * 3)
+  for (let i = 0; i < n; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i)
+    dir.set([x, y, z], i * 3)
+    pos.set([skull.c[0] + x * (skull.r[0] + 0.03), skull.c[1] + y * (skull.r[1] + 0.03), skull.c[2] + z * (skull.r[2] + 0.03)], i * 3)
+  }
+  geo.setAttribute('position', new T.BufferAttribute(pos, 3))
+  geo.setAttribute('aDir', new T.BufferAttribute(dir, 3))
+  geo.setAttribute('aMask', new T.BufferAttribute(mask, 1))
+  geo.setIndex(keep)
+  src.dispose()
+  return geo
+}
+
+/** La calotte sur le vrai cuir chevelu : ses triangles soudés, subdivisés
+    deux fois (assez fins pour le dôme de l'attache), décollés de `lift`
+    vers l'extérieur ; la lisière s'adoucit sur deux rangs de sommets. */
+function capFromSurface(T: T3, tris: Float32Array, c: [number, number, number], lift: number) {
+  // souder les sommets confondus (les coutures de la texture)
+  const verts: number[] = [], key = new Map<string, number>()
+  let index: number[] = []
+  for (let k = 0; k < tris.length; k += 3) {
+    const id = `${Math.round(tris[k] * 1e4)},${Math.round(tris[k + 1] * 1e4)},${Math.round(tris[k + 2] * 1e4)}`
+    let v = key.get(id)
+    if (v === undefined) { v = verts.length / 3; verts.push(tris[k], tris[k + 1], tris[k + 2]); key.set(id, v) }
+    index.push(v)
+  }
+  // deux subdivisions par le milieu des arêtes
+  for (let pass = 0; pass < 2; pass++) {
+    const mid = new Map<string, number>(), next: number[] = []
+    const m = (a: number, b: number) => {
+      const id = a < b ? `${a},${b}` : `${b},${a}`
+      let v = mid.get(id)
+      if (v === undefined) {
+        v = verts.length / 3
+        verts.push((verts[a * 3] + verts[b * 3]) / 2, (verts[a * 3 + 1] + verts[b * 3 + 1]) / 2, (verts[a * 3 + 2] + verts[b * 3 + 2]) / 2)
+        mid.set(id, v)
+      }
+      return v
+    }
+    for (let t = 0; t < index.length; t += 3) {
+      const a = index[t], b = index[t + 1], cc = index[t + 2], ab = m(a, b), bc = m(b, cc), ca = m(cc, a)
+      next.push(a, ab, ca, ab, b, bc, ca, bc, cc, ab, bc, ca)
+    }
+    index = next
+  }
+  const n = verts.length / 3
+  // la lisière : les arêtes qui ne bordent qu'un triangle ; puis la distance au bord
+  const edges = new Map<string, number>()
+  for (let t = 0; t < index.length; t += 3) for (let e = 0; e < 3; e++) {
+    const a = index[t + e], b = index[t + (e + 1) % 3], id = a < b ? `${a},${b}` : `${b},${a}`
+    edges.set(id, (edges.get(id) ?? 0) + 1)
+  }
+  const nb: number[][] = Array.from({ length: n }, () => [])
+  const dist = new Float32Array(n).fill(1e9)
+  const queue: number[] = []
+  for (const [id, count] of edges) {
+    const [a, b] = id.split(',').map(Number)
+    nb[a].push(b); nb[b].push(a)
+    if (count === 1) for (const v of [a, b]) if (dist[v]) { dist[v] = 0; queue.push(v) }
+  }
+  for (let q = 0; q < queue.length; q++) for (const w of nb[queue[q]]) if (dist[w] > dist[queue[q]] + 1) { dist[w] = dist[queue[q]] + 1; queue.push(w) }
+  // le contour arrondi : les milieux d'arêtes tombent sur des cordes plates
+  // (un crâne à facettes) — on lisse la distance au centre, pas la direction
+  const rad = new Float32Array(n)
+  for (let i = 0; i < n; i++) rad[i] = Math.hypot(verts[i * 3] - c[0], verts[i * 3 + 1] - c[1], verts[i * 3 + 2] - c[2])
+  for (let it = 0; it < 8; it++) {
+    const nr = rad.slice()
+    for (let i = 0; i < n; i++) {
+      if (!nb[i].length) continue
+      let sum = 0
+      for (const w of nb[i]) sum += rad[w]
+      // vers le plus grand des deux : le crâne est bombé, pas creusé
+      nr[i] = Math.max(rad[i], 0.5 * rad[i] + 0.5 * sum / nb[i].length)
+    }
+    rad.set(nr)
+  }
+  for (let i = 0; i < n; i++) {
+    const x = verts[i * 3] - c[0], y = verts[i * 3 + 1] - c[1], z = verts[i * 3 + 2] - c[2], l = Math.hypot(x, y, z) || 1
+    verts[i * 3] = c[0] + x / l * rad[i]; verts[i * 3 + 1] = c[1] + y / l * rad[i]; verts[i * 3 + 2] = c[2] + z / l * rad[i]
+  }
+  const pos = new Float32Array(n * 3), dir = new Float32Array(n * 3), mask = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    const x = verts[i * 3] - c[0], y = verts[i * 3 + 1] - c[1], z = verts[i * 3 + 2] - c[2], l = Math.hypot(x, y, z) || 1
+    dir.set([x / l, y / l, z / l], i * 3)
+    pos.set([verts[i * 3] + x / l * lift, verts[i * 3 + 1] + y / l * lift, verts[i * 3 + 2] + z / l * lift], i * 3)
+    mask[i] = Math.min(1, dist[i] / 3)
+  }
+  const geo = new T.BufferGeometry()
+  geo.setAttribute('position', new T.BufferAttribute(pos, 3))
+  geo.setAttribute('aDir', new T.BufferAttribute(dir, 3))
+  geo.setAttribute('aMask', new T.BufferAttribute(mask, 1))
+  geo.setIndex(index)
+  return geo
 }

@@ -76,7 +76,8 @@ function placeBand(dt: number) {
   }
   if (!n) return
   c.divideScalar(n); d.normalize()
-  band.position.copy(c).addScaledVector(d, 0.01)
+  // sur le départ de la queue (elle sort de l'élastique)
+  band.position.copy(c).addScaledVector(d, 0.06)
   band.quaternion.setFromUnitVectors(bandAxis, d)
   if (bandPop > 0) {
     bandPop = Math.max(0, bandPop - dt * 2.5)
@@ -174,7 +175,7 @@ async function load() {
   const H = hb.getWorldPosition(new THREE.Vector3()), Nk = nb.getWorldPosition(new THREE.Vector3())
   const bb = new THREE.Box3(), v = new THREE.Vector3()
   mark('préparation')
-  const skin: THREE.Mesh[] = [], headCopy: THREE.Mesh[] = []
+  const skin: THREE.Mesh[] = [], headCopy: THREE.Mesh[] = [], scalpWorld: number[] = []
   vrm.scene.traverse(o => {
     const m = o as THREE.SkinnedMesh
     if (!m.isMesh || !m.visible) return
@@ -197,6 +198,12 @@ async function load() {
       const a = idx ? idx.getX(t) : t, b2 = idx ? idx.getX(t + 1) : t + 1, c = idx ? idx.getX(t + 2) : t + 2
       if (world[a * 3 + 1] < Nk.y || world[b2 * 3 + 1] < Nk.y || world[c * 3 + 1] < Nk.y) continue
       for (const k of [a, b2, c]) tri.push(world[k * 3], world[k * 3 + 1], world[k * 3 + 2])
+    }
+    // le cuir chevelu peint du modèle : la calotte s'y posera exactement
+    if (scalpMats.some(x => (Array.isArray(m.material) ? m.material : [m.material]).includes(x as unknown as THREE.Material))) {
+      const all = idx ? idx.count : p.count
+      for (let t = 0; t < all; t++) { const k = idx ? idx.getX(t) : t; scalpWorld.push(world[k * 3], world[k * 3 + 1], world[k * 3 + 2]) }
+      m.visible = false
     }
     if (tri.length) {
       const g = new THREE.BufferGeometry()
@@ -246,27 +253,16 @@ async function load() {
   ;(window as unknown as { __temps: string[] }).__temps = tm
   hairGroup.scale.setScalar(R)
   hairGroup.add(view.mesh)
-  // la calotte juste AU-DESSUS du vrai crâne : l'ellipsoïde ajusté est plus
-  // petit que la tête (sinon la calotte reste dessous, invisible)
-  const ratios: number[] = []
-  for (const m of headCopy) {
-    const a = m.geometry.getAttribute('position')
-    for (let i = 0; i < a.count; i++) {
-      const x = (a.getX(i) - C.x) / R / skull.r[0], y = (a.getY(i) - C.y) / R / skull.r[1], z = (a.getZ(i) - C.z) / R / skull.r[2]
-      const l = Math.hypot(x, y, z)
-      if (l > 0.5 && l < 1.6 && onScalp(x / l, y / l, z / l)) ratios.push(l)
-    }
+  // la calotte sur le VRAI cuir chevelu du modèle (en unités de tête)
+  const scalpTris = new Float32Array(scalpWorld.length)
+  for (let k = 0; k < scalpWorld.length; k += 3) {
+    scalpTris[k] = (scalpWorld[k] - C.x) / R; scalpTris[k + 1] = (scalpWorld[k + 1] - C.y) / R; scalpTris[k + 2] = (scalpWorld[k + 2] - C.z) / R
   }
-  ratios.sort((a, b) => a - b)
-  const k = ratios.length ? ratios[Math.floor(ratios.length * 0.97)] : 1
-  const capR: V3 = [skull.r[0] * k + 0.03, skull.r[1] * k + 0.03, skull.r[2] * k + 0.03]
-  cap = hairCap(THREE, { c: skull.c, r: [skull.r[0] * k, skull.r[1] * k, skull.r[2] * k] }, onScalp)
-  // l'attache : JUSTE au-dessus de la calotte (l'élastique se pose sur la
-  // chevelure ; plus loin, un grand dôme avalait le haut de la queue)
+  cap = hairCap(THREE, skull, onScalp, scalpTris.length ? { tris: scalpTris, lift: 0.025 } : undefined)
+  // l'attache : juste au-dessus de la calotte (l'élastique se pose sur la chevelure)
   {
-    const u = new THREE.Vector3(0, 0.2, -1).normalize()
-    const rad = 1 / Math.hypot(u.x / capR[0], u.y / capR[1], u.z / capR[2])
-    TIE = [u.x * (rad + 0.06), u.y * (rad + 0.06), u.z * (rad + 0.06)]
+    const q = cap.surface([0, 0.2, -1]), l = Math.hypot(...q)
+    TIE = [q[0] / l * (l + 0.06), q[1] / l * (l + 0.06), q[2] / l * (l + 0.06)]
   }
   hairGroup.add(cap.mesh)
   cap.setLight(-0.35, 0.8, 0.5)
