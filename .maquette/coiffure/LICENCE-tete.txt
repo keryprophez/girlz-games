@@ -1,0 +1,10 @@
+Modèle : Base_Female (VRoid Studio, version alpha/bêta 0.14), format VRM 0.x
+Auteur : VRoid Project (pixiv) — « VRoidプロジェクト » dans les métadonnées
+Licence : CC0 1.0 (domaine public) — https://creativecommons.org/publicdomain/zero/1.0/
+Source du téléchargement (sans compte) : https://opengameart.org/sites/default/files/base_female.zip
+Page de preuve : https://opengameart.org/content/vroid-studio-cc0-models
+  (« These models come from the alpha versions of VRoid Studio and were explicitly released by VRoid under CC0 », License(s): CC0)
+Preuve d'origine (page officielle, protégée par Cloudflare, non lisible depuis la session) :
+  https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use-
+Métadonnées VRM embarquées : licenseName = "CC0", conditions VRoid Hub : modification=allow, redistribution=allow, credit=unnecessary.
+Téléchargé le 23/11/2026.
