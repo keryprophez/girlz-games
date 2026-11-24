@@ -1,3 +1,4 @@
+/* @version 2026-11-25 00:20 */
 import type { GameDef } from '../core/types'
 import { memory } from './memory'
 import { intrus } from './intrus'
@@ -32,6 +33,7 @@ import { cuisine } from './cuisine'
 import { poterie } from './poterie'
 import { chateau } from './chateau'
 import { aquarium } from './aquarium'
+import { coiffure } from './coiffure'
 import { tracteur } from './tracteur'
 import { geoplan } from './geoplan'
 import { soleil } from './soleil'
@@ -44,7 +46,7 @@ export const GAMES: GameDef[] = [
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments,
-  poterie, chateau, aquarium, tracteur, geoplan, echecs,
+  poterie, chateau, aquarium, coiffure, tracteur, geoplan, echecs,
   soleil, bille, differences
 ]
 
@@ -81,7 +83,7 @@ export const WORLDS: { id: string; label: string; icon: string; games: GameDef[]
     id: 'creer', label: 'Créer', icon: '🎨',
     games: [
       dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments,
-      poterie, chateau, aquarium
+      poterie, chateau, aquarium, coiffure
     ]
   }
 ]

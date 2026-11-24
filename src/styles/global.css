@@ -1,3 +1,4 @@
+/* @version 2026-11-25 00:20 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2323,3 +2324,53 @@ body.playing .po-card{max-width:880px;}
 /* Un toucher dans le vide : la vue tressaille */
 .df-arena canvas.df-no{animation:dfNo .32s ease-out;}
 @keyframes dfNo{20%{transform:translateX(-7px)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}
+
+/* ============================================================
+   LE SALON DE COIFFURE (games/coiffure.ts, 25/11)
+   ============================================================ */
+.cf-wrap{--mine-bg:linear-gradient(180deg,#FBE9DC 0%,#F3C9B4 100%);--mine-card:#F6E7DA;background:#F6E7DA;}
+.cf-wrap [hidden]{display:none !important;}
+.cf-me{right:18px;top:84px;}
+/* Les trois coiffures, en vraies images, sous la barre de jeu */
+.cf-coifs{position:absolute;left:16px;top:84px;z-index:6;display:flex;flex-direction:column;gap:10px;transition:opacity .3s;}
+.cf-coif{width:clamp(70px,7.4vw,104px);height:clamp(70px,7.4vw,104px);border-radius:50%;border:4px solid #fff;padding:0;overflow:hidden;
+  background:#F6E7DA;box-shadow:var(--e2);cursor:pointer;transition:transform .2s var(--spring);touch-action:manipulation;}
+.cf-coif img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;}
+.cf-coif:active{transform:scale(.92);}
+.cf-coif.sel{border-color:var(--mango);}
+.cf-wrap[data-phase="libre"] .cf-coif{animation:cfAppel 1.6s ease-in-out infinite;}
+.cf-wrap[data-phase="libre"] .tool-item:nth-child(2) .cf-coif{animation-delay:.2s;}
+.cf-wrap[data-phase="libre"] .tool-item:nth-child(3) .cf-coif{animation-delay:.4s;}
+@keyframes cfAppel{50%{transform:scale(1.06);}}
+.cf-teintes{position:absolute;right:18px;bottom:16px;z-index:6;display:flex;gap:8px;padding:8px 12px;border-radius:24px;
+  background:rgba(255,253,246,.72);backdrop-filter:blur(6px);}
+.cf-teinte{width:clamp(40px,4.2vw,54px);height:clamp(40px,4.2vw,54px);border-radius:50%;border:4px solid #fff;padding:0;background:var(--c);
+  box-shadow:var(--e1);cursor:pointer;touch-action:manipulation;}
+.cf-teinte.sel{border-color:var(--mango);}
+/* Ce qu'il faut faire : la ligne du père, et les pastilles des étapes */
+.cf-bas{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:8px;
+  pointer-events:none;width:min(46vw,620px);}
+.cf-texte{padding:7px 18px;border-radius:16px;background:rgba(69,54,42,.84);color:#FFF6E8;font-family:'Baloo 2';font-weight:600;
+  font-size:clamp(15px,1.7vw,20px);line-height:1.25;text-align:center;text-wrap:balance;}
+.cf-texte:empty,.cf-pas:empty{display:none;}
+.cf-texte b{color:#FFD34D;margin-right:9px;}
+.cf-pas{display:flex;gap:9px;padding:7px 13px;border-radius:99px;background:rgba(255,253,246,.9);}
+.cf-pas i{width:15px;height:15px;border-radius:50%;background:rgba(69,54,42,.15);border:2px solid rgba(69,54,42,.25);}
+.cf-pas i.on{background:var(--lagoon);border-color:var(--lagoon);}
+.cf-pas i.cur{border-color:#F0A03C;background:#fff;transform:scale(1.25);}
+/* L'élastique à faire glisser ; « Fini », à la même place, une fois coiffée */
+.cf-tray,.cf-fin{position:absolute;right:clamp(24px,4vw,64px);top:46%;z-index:6;}
+.cf-wrap:not([data-k="elastique"]) .cf-tray{display:none;}
+.cf-wrap:not([data-phase="finie"]) .cf-fin{display:none;}
+.cf-noeud{width:clamp(96px,10vw,140px);height:clamp(96px,10vw,140px);border-radius:50%;border:none;padding:12px;background:#FFFDF6;box-shadow:var(--e2);
+  cursor:grab;touch-action:none;animation:cfAppel 1.2s ease-in-out infinite;}
+.cf-noeud img,.cf-vol img{display:block;width:100%;height:100%;pointer-events:none;}
+.cf-noeud.pris{animation:none;}
+.cf-noeud.pris img{opacity:.25;}
+.cf-vol{position:absolute;z-index:7;width:clamp(96px,10vw,140px);height:clamp(96px,10vw,140px);transform:translate(-50%,-50%);pointer-events:none;}
+.cf-fin .sn-tool{width:clamp(84px,8.600vw,118px);height:clamp(84px,8.600vw,118px);background:#FFF4E0;animation:cfAppel 1.4s ease-in-out infinite;}
+.cf-fin .sn-tool svg{width:72%;height:72%;}
+.cf-fin .tool-cap{font-size:16px;padding:4px 14px;}
+.cf-wrap[data-who=""]>:not(.mine-who):not(canvas){display:none;}
+.cf-wrap[data-phase="fin"] .cf-coifs,.cf-wrap[data-phase="fin"] .cf-teintes,.cf-wrap[data-phase="fin"] .cf-me{opacity:0;pointer-events:none;}
+@media(prefers-reduced-motion:reduce){.cf-coif,.cf-noeud,.cf-fin .sn-tool{animation:none !important;}}

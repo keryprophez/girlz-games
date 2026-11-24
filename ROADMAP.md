@@ -122,20 +122,39 @@ Joyce : « c'est quasiment toujours les mêmes mots ».
      pour tourner (« pas de clic supplémentaire »). Ligne de texte pour le
      père toujours affichée ; cinq teintes.
    - **Phase 2, en cours** : le pas à pas en RECETTES (étapes, attaches,
-     côté de chaque mèche). **Queue de cheval validée (« parfait ça ira »,
-     24/11)** : brosser → rassembler dans le rond → l'élastique. Les
+     côté de chaque mèche). ✅ **La queue de cheval**, validée par le père,
+     refaite à la carte graphique : brosser → rassembler dans le rond → l'élastique. Les
      décisions qui tiennent : sous les cheveux tirés, une CALOTTE lisse
      posée sur le vrai cuir chevelu du modèle (des fils tirés faisaient des
      « écailles ») ; l'élastique entoure un court faisceau qui SORT de la
      tête, perpendiculaire au flux (couché, il « rentrait dans la tête ») ;
      pendant le rassemblement, les cheveux glissent SUR le crâne et restent
-     des fils, la chevelure se lisse d'un seul fondu à la fin.
-     **Couettes jouables** (raie tracée au doigt, deux attaches, deux
-     élastiques) — à valider. Reste : la tresse.
-   - Phase 3 : les autres coiffures, le salon libre, le miroir, la
-     sauvegarde par fille, l'intégration dans l'app (vignette, affiche, bot).
-   - À faire : la calotte du cuir chevelu trop sombre (un casque), les
-     vêtements d'origine du modèle, mesurer `?fps` sur la tablette.
+     des fils, la chevelure se lisse d'un seul fondu à la fin ; **on prend
+     une grosse poignée, elle seule bouge** (aucun rangement automatique,
+     un simple toucher ne prend rien, lâchée hors du rond elle retombe).
+     La brosse **laquée lilas à étoile** et l'élastique **à nœud de satin**,
+     choisis par le père (`core/salonobj3d.ts`).
+     🔧 **Les couettes** : brosser → la raie, qui s'ouvre sous le doigt et
+     s'achève seule (trop courte, elle se reprend ; à l'envers, elle
+     compte) → un côté, son nœud rose → l'autre côté, son nœud bleu. La
+     tête tourne d'elle-même, doucement, en emmenant les cheveux. Jugées
+     « pas mal » par le père, à confirmer au doigt sur la tablette.
+     🔧 **La tresse** (`core/braid3d.ts`), jouable, à valider : brosser →
+     rassembler à la nuque → trois mèches, on passe au doigt celle qui
+     s'éclaire par-dessus celle du milieu, une fois d'un côté, une fois de
+     l'autre, huit fois, rien d'automatique → l'élastique au bout. La
+     physique ne donne que la ligne ; les trois brins se calculent autour.
+   - **Phase 3, dans l'app** (`games/coiffure.ts`, Créer) : 🔧 les cartes
+     Jade / Joyce avec leur photo, les trois coiffures en images, les cinq
+     teintes, la main sur chaque geste, le sourire et la fête, la dernière
+     coiffure finie gardée par fille (`ferme:coiffure:<qui>`), l'affiche, le
+     bot. Moins de fils quand la tablette peine. À essayer au doigt.
+   - ⬜ Mesurer `?fps` sur la tablette (c'est un VRM : la règle du projet).
+   - ⬜ Après : les autres coiffures, le salon libre, le miroir, les vêtements
+     d'origine du modèle.
+   - Imperfections connues : le contour bosselé des cheveux lâchés vus du
+     dessus (la raie), une poignée posée repasse sous les cheveux encore
+     lâchés, l'ouverture en trois mèches est un fondu.
 
 ---
 

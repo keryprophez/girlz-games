@@ -1,3 +1,4 @@
+/* @version 2026-11-25 00:20 */
 /* Les bots à faire jouer : ceux des jeux TOUCHÉS, et eux seuls (2/10).
 
    Le père, le 2/10 : « on ne valide via bot que les jeux que l'on touche
@@ -58,6 +59,7 @@ const OWN = {
   'poterie': ['src/games/poterie.ts', 'src/core/pottery.ts', 'src/core/pottery3d.ts'],
   'chateau': ['src/games/chateau.ts', 'src/core/sand.ts', 'src/core/beach3d.ts'],
   'aquarium': ['src/games/aquarium.ts', 'src/core/fishtank.ts', 'src/core/aquarium3d.ts'],
+  'coiffure': ['src/games/coiffure.ts', 'src/core/salon.ts', 'src/core/salon3d.ts', 'src/core/salonobj3d.ts', 'src/core/bust3d.ts', 'src/core/hair.ts', 'src/core/hair3d.ts', 'src/core/braid3d.ts'],
   'tracteur': ['src/games/tracteur.ts', 'src/core/tracteur.ts'],
   'geoplan': ['src/games/geoplan.ts', 'src/core/geoplan.ts'],
   'echecs': ['src/games/echecs.ts', 'src/core/chess.ts', 'src/core/chess3d.ts'],

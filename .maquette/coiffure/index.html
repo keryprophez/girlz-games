@@ -1,3 +1,7 @@
+<!doctype html>
+<!-- @version 2026-11-25 00:20 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Salon de coiffure</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -43,9 +47,18 @@ button:focus-visible{outline:3px solid #41C26A}
 <div id="scene"></div>
 <div id="charge">Chargement de la tête…</div>
 <div id="err"></div>
+<script>
+// Un chargement qui échoue le DIT (une page muette sur « Chargement… » ne disait rien)
+(function () {
+  var dit = false, dire = function (m) { dit = true; if (!document.body.classList.contains('pret')) document.getElementById('charge').textContent = m }
+  addEventListener('error', function (e) { dire(e.target && e.target.tagName === 'SCRIPT' ? 'Le serveur de la démo est arrêté : relance « npm run coiffure », puis recharge la page.' : 'La démo n’a pas pu s’ouvrir : ' + (e.message || 'erreur inconnue')) }, true)
+  addEventListener('unhandledrejection', function (e) { dire('La démo n’a pas pu s’ouvrir : ' + (e.reason && e.reason.message || e.reason)) })
+  setTimeout(function () { if (!dit) dire('Toujours rien après 20 secondes : recharge la page.') }, 20000)
+})()
+</script>
 <div id="fps"></div>
 <button class="rond haut" id="recommencer" aria-label="Recommencer"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 1 2.5 5.4" fill="none" stroke="#45362A" stroke-width="3" stroke-linecap="round"/><path d="M3 15l2.6 3.6L9 16" fill="none" stroke="#45362A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-<div class="choix"><button class="rond" data-coiffure="queue" aria-label="La queue de cheval"><svg viewBox="0 0 48 48"><circle cx="24" cy="20" r="12" fill="#6B4A2B"/><path d="M24 30c7 2 9 10 6 16-5-4-8-10-6-16z" fill="#6B4A2B"/><circle cx="24" cy="31" r="3.2" fill="#E8427C"/></svg></button><button class="rond" data-coiffure="couettes" aria-label="Les couettes"><svg viewBox="0 0 48 48"><circle cx="24" cy="21" r="12" fill="#6B4A2B"/><path d="M11 22c-6 3-6 13-3 19 4-5 6-12 3-19zM37 22c6 3 6 13 3 19-4-5-6-12-3-19z" fill="#6B4A2B"/><circle cx="12" cy="22" r="3" fill="#E8427C"/><circle cx="36" cy="22" r="3" fill="#3D9BF0"/><path d="M24 9v12" stroke="#E7B8A0" stroke-width="1.6"/></svg></button></div>
+<div class="choix"><button class="rond" data-coiffure="queue" aria-label="La queue de cheval"><svg viewBox="0 0 48 48"><circle cx="24" cy="20" r="12" fill="#6B4A2B"/><path d="M24 30c7 2 9 10 6 16-5-4-8-10-6-16z" fill="#6B4A2B"/><circle cx="24" cy="31" r="3.2" fill="#E8427C"/></svg></button><button class="rond" data-coiffure="couettes" aria-label="Les couettes"><svg viewBox="0 0 48 48"><circle cx="24" cy="21" r="12" fill="#6B4A2B"/><path d="M11 22c-6 3-6 13-3 19 4-5 6-12 3-19zM37 22c6 3 6 13 3 19-4-5-6-12-3-19z" fill="#6B4A2B"/><circle cx="12" cy="22" r="3" fill="#E8427C"/><circle cx="36" cy="22" r="3" fill="#3D9BF0"/><path d="M24 9v12" stroke="#E7B8A0" stroke-width="1.6"/></svg></button><button class="rond" data-coiffure="tresse" aria-label="La tresse"><svg viewBox="0 0 48 48"><circle cx="24" cy="14" r="10" fill="#6B4A2B"/><path d="M24 22l7 4-7 5-7-5zM24 29l6 4-6 5-6-5zM24 36l5 3-5 4-5-4z" fill="#6B4A2B" stroke="#FFFDF6" stroke-width="1"/><circle cx="24" cy="43" r="2.6" fill="#E8427C"/></svg></button></div>
 <div class="bas"><div class="consigne" id="texte"></div><div class="etapes" id="etapes"></div></div>
 <div id="plateau" hidden><button class="rond gros" id="elastique" aria-label="L’élastique"><svg viewBox="0 0 48 48"><ellipse cx="24" cy="24" rx="15" ry="12" fill="none" stroke="#E8427C" stroke-width="7"/><path d="M12 19a13 9 0 0 1 22-3" fill="none" stroke="#FF9CBE" stroke-width="2.5" stroke-linecap="round"/></svg></button></div>
 <div id="vol" hidden><svg viewBox="0 0 48 48"><ellipse cx="24" cy="24" rx="15" ry="12" fill="none" stroke="#E8427C" stroke-width="7"/></svg></div>

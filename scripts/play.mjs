@@ -1,3 +1,4 @@
+/* @version 2026-11-25 00:20 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -2448,6 +2449,92 @@ await scenario('aquarium', async () => {
   await pret()
   const revu = await page.evaluate(() => ({ f: window.__aq.fish, d: window.__aq.saved.deco, d0: window.__aq.swim[0]?.d }))
   if (revu.f !== 1 || revu.d !== 2 || revu.d0 !== 1) throw new Error(`l'aquarium de Jade n'est pas gardé (${JSON.stringify(revu)})`)
+})
+
+/* 💇 Le Salon de coiffure (25/11) : Jade choisit la tresse et suit les gestes
+   que la main montre — brosser, une poignée lâchée à côté (elle retombe),
+   rassembler, une mauvaise mèche (rien ne se passe), huit passages,
+   l'élastique ; « Fini » ; rouvert : la photo de Jade, sa tresse là, Joyce a
+   les cheveux lâchés et sa teinte à elle. Puis les couettes, pour la raie. */
+await scenario('coiffure', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('ferme:coiffure')) localStorage.removeItem(k) })
+  await openGame('Le Salon de coiffure', '__cf')
+  const carte = async qui => {
+    await page.waitForFunction(() => window.__cf.cards, null, { timeout: 60000, polling: 300 })
+    await page.waitForTimeout(700)
+    await page.locator(`.cf-card[data-who="${qui}"]`).click({ force: true })
+    await page.waitForFunction(() => window.__cf.ready, null, { timeout: 120000, polling: 300 })
+    // (sous la 3D logicielle, tous les fils : neuf minutes)
+    await page.evaluate(() => window.__cf.leger())
+  }
+  const etat = () => page.evaluate(() => JSON.stringify({ ph: window.__cf.phase, c: window.__cf.coif, e: window.__cf.etape, i: window.__cf.i, t: window.__cf.dbg?.tied(), tr: window.__cf.etape === 'tresser' ? window.__cf.dbg.tresse : null, g: window.__cf.dbg?.geste }))
+  const geste = async () => {
+    for (let k = 0; k < 150; k++) {
+      const g = await page.evaluate(() => ({ g: window.__cf.geste, e: window.__cf.etape, ph: window.__cf.phase }))
+      if (g.ph !== 'fait') return null
+      if (g.g && (g.g.length > 1 || g.e === 'elastique')) return { ...g, g: g.g }
+      await page.waitForTimeout(200)
+    }
+    throw new Error(`la main n'a rien à montrer (${await etat()})`)
+  }
+  const tire = async (pts, steps = 10) => {
+    await page.mouse.move(pts[0].x, pts[0].y); await page.mouse.down()
+    for (const p of pts.slice(1)) await page.mouse.move(p.x, p.y, { steps })
+    await page.mouse.up()
+  }
+  /** Suit la main jusqu'à l'étape voulue (ou la fin). */
+  const jusqua = async fin => {
+    for (let n = 0; n < 70; n++) {
+      const g = await geste()
+      if (!g || g.e === fin) return
+      if (g.e === 'brosser') { const dx = [0, -70, 70, -110, 110][n % 5]; await tire([{ x: g.g[0].x + dx, y: g.g[0].y + 15 }, { x: g.g[1].x + dx, y: Math.min(600, g.g[1].y) }], 14); await page.waitForTimeout(700) }
+      else if (g.e === 'raie') { await tire(g.g, 3); await page.waitForTimeout(900) }
+      else if (g.e === 'elastique') { const z = await page.evaluate(() => window.__cf.noeud); await tire([z, g.g[0]]); await page.waitForTimeout(1200) }
+      else { await tire([g.g[0], g.g[1]], 12); await page.waitForTimeout(900) }
+    }
+    throw new Error(`l'étape « ${fin ?? 'finie'} » n'arrive pas (${await etat()})`)
+  }
+  await carte('jade')
+  await page.waitForTimeout(1200)
+  await page.locator('.cf-coif[data-coif="tresse"]').click({ force: true })
+  await jusqua('rassembler')
+  // une poignée lâchée à côté du rond : elle retombe, rien n'est attaché
+  let g = await geste()
+  await tire([g.g[0], { x: g.g[0].x + (g.g[0].x < 450 ? -110 : 110), y: g.g[0].y + 60 }])
+  await page.waitForTimeout(1200)
+  if (await page.evaluate(() => window.__cf.dbg.tied()) !== 0) throw new Error(`une poignée lâchée à côté reste attachée (${await etat()})`)
+  await jusqua('tresser')
+  // la mauvaise mèche : rien
+  await geste()
+  const faux = await page.evaluate(() => { const n = window.__cf.dbg.tresse.next.k, x = k => window.__cf.dbg.brin(k, 0.5); return [0, 1, 2].filter(k => k !== n).map(x).sort((a, b) => Math.abs(b.x - x(n).x) - Math.abs(a.x - x(n).x))[0] })
+  await tire([faux, { x: 450, y: faux.y }])
+  await page.waitForTimeout(800)
+  if (await page.evaluate(() => window.__cf.dbg.tresse.n) !== 0) throw new Error(`la mauvaise mèche s'est passée (${await etat()})`)
+  await jusqua(null)
+  await page.waitForFunction(() => window.__cf.phase === 'finie' && window.__cf.saved.c === 'tresse', null, { timeout: 30000, polling: 300 })
+    .catch(async () => { throw new Error(`la tresse n'est pas finie (${await etat()})`) })
+  await page.waitForTimeout(2500)
+  await page.locator('#cfFini').click({ force: true })
+  await finDe('Quelle belle coiffure', 60000).catch(async () => { throw new Error(`pas de fin (${await etat()})`) })
+  // Rouvert : la photo de Jade, sa tresse ; Joyce, les cheveux lâchés, sa teinte
+  await openGame('Le Salon de coiffure', '__cf')
+  await page.waitForFunction(() => window.__cf.cards && document.querySelector('.cf-card[data-who="jade"].last img'), null, { timeout: 60000, polling: 300 })
+    .catch(() => { throw new Error('la carte de Jade n\'a pas sa photo, ou n\'est pas bordée') })
+  await carte('joyce')
+  if (await page.evaluate(() => window.__cf.saved.c !== null || window.__cf.dbg.tied() > 0)) throw new Error(`Joyce a la coiffure de Jade (${await etat()})`)
+  await page.waitForTimeout(700)
+  await page.locator('.cf-teinte[data-t="2"]').click({ force: true })
+  await page.locator('#cfMe').click({ force: true })
+  await carte('jade')
+  const revu = await page.evaluate(() => ({ s: window.__cf.saved, t: window.__cf.dbg.tied(), c: window.__cf.coif }))
+  if (revu.s.c !== 'tresse' || revu.s.t !== 1 || revu.t !== 1 || revu.c !== 'tresse') throw new Error(`la tresse de Jade n'est pas là (${JSON.stringify(revu)})`)
+  // Les couettes : la raie tracée, l'étape suivante arrive
+  await page.waitForTimeout(700)
+  await page.locator('.cf-coif[data-coif="couettes"]').click({ force: true })
+  await page.waitForTimeout(800)
+  await page.evaluate(() => window.__cf.dbg.etapeA('raie'))
+  await jusqua('rassembler')
 })
 
 await scenario('cache-cache-jour', () => cacheCache('easy', 'Tout le monde est trouvé'))

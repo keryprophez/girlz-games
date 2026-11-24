@@ -41,6 +41,11 @@ une plante seule, sinon deux styles), avec ce texte de commande :
 > from the top left, all plants the same scale. No text, no labels, no
 > numbers, no shadows on the background.
 
+## Le Salon de coiffure
+
+- **Le buste** (`salon/buste.glb`) — *Base_Female*, VRoid Project (pixiv), CC0 1.0 — <https://opengameart.org/content/vroid-studio-cc0-models> (voir `salon/LICENCE-buste.txt`). Textures réduites ; sans la vignette ni les cheveux peints.
+- **Les images des coiffures et des nœuds** (`salon/*.webp`) : prises dans le jeu.
+
 ## Fruits du Ninja (`fruits/`)
 
 Les cinq fruits (pomme, orange, pastèque, fraise, kiwi), leurs moitiés et le

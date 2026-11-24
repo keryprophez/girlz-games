@@ -91,7 +91,7 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `sprites.ts` · `portraits.ts` · `pictures.ts` · `lineart.ts` · `diskcache.ts` | photos des imagiers ; personnages 3D rendus en images ; images du Puzzle ; pages à colorier ; cache sur le disque |
 | `critters.ts` · `doll3d.ts` + `character.ts` | les animaux de la ferme en formes rondes (`FARM`, `FARM_MORE`) ; la petite fille d'Habille-toi et son look |
 | `farm3d.ts` | la ferme en diorama (Cache-Cache, la Ferme à construire, les Différences, le Tracteur, Soleil) : cachettes, places, pièces, carte ×4, l'épouvantail |
-| `mine.ts` | **une création par fille** (Ferme à construire, Mon cartable, Monuments, Poterie, Château de sable, Aquarium) : les cartes Jade / Joyce, la photo, le coffre `ferme:<jeu>:<qui>`, « Changer », la poubelle à deux touchers (`twoTaps`), `calm` contre le double toucher — testé |
+| `mine.ts` | **une création par fille** (Ferme à construire, Mon cartable, Monuments, Poterie, Château de sable, Aquarium, Salon de coiffure) : les cartes Jade / Joyce, la photo, le coffre `ferme:<jeu>:<qui>`, « Changer », la poubelle à deux touchers (`twoTaps`), `calm` contre le double toucher — testé |
 | `touchcam.ts` | les doigts sur une scène 3D : `Fingers` (chaque doigt par son `pointerId`, le doigt qui reste après deux ne fait rien), `Spinner` (tourner avec élan) — testé |
 | `labyrinth.ts` | le générateur de labyrinthes, leur chemin et leurs distances (Labyrinthe, Labyrinthe à bille) |
 | `soleil.ts` · `differences.ts` · `bille.ts` | la course de 1, 2, 3… Soleil ! ; le tirage d'une manche des Différences ; le plateau et la physique de la bille (pas fixe) — testés |
@@ -111,6 +111,7 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `satchel3d.ts` | le cartable de Mon cartable (paillettes réversibles) |
 | `monuments3d.ts` | les huit monuments en pièces à poser |
 | `plush.ts` + `plush3d.ts` · `vivant.ts` | un dessin gonflé en peluche — testé ; ce que Claude dit de l'animal dessiné |
+| `salon.ts` + `salon3d.ts` · `hair.ts` + `hair3d.ts` · `braid3d.ts` · `bust3d.ts` · `salonobj3d.ts` | le Salon de coiffure : ses recettes et ce qu'on garde — testé ; la scène et les gestes ; la physique des mèches — testée — et leur rendu en fils ; la tresse — testée ; le buste (VRM) ; la brosse et les nœuds |
 | `drawguess.ts` | le devineur de Devine mon dessin (fiche imposée, revérifiée) — testé |
 | `atelierdb.ts` | l'IndexedDB de l'Atelier (dessins, coloriages) |
 | `fps.ts` | la sonde `?fps` pour la tablette |
@@ -230,7 +231,7 @@ choix de joueuse et la princesse sont sortis) : meilleure note par jeu, look
 de la petite fille, collier et pendentif des Bijoux, vitrine des créations,
 voix enregistrées, minuteur. Les créations « par fille » (la Ferme à
 construire, Mon cartable, les Monuments, la Poterie, le Château de sable,
-l'Aquarium : deux cartes Jade / Joyce à l'ouverture, avec la photo de leur
+l'Aquarium, le Salon de coiffure : deux cartes Jade / Joyce à l'ouverture, avec la photo de leur
 création) passent par `core/mine.ts`, sous les clés `ferme:<jeu>:<qui>` —
 **ne jamais changer ces clés**, ni `owner` (la clé de l'Atelier). Les
 images coûteuses à rendre (le pré de l'accueil, les portraits, les pièces,

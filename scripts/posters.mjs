@@ -1,3 +1,4 @@
+/* @version 2026-11-25 00:20 */
 /* Les AFFICHES de l'accueil (28/09) : une image de chaque jeu EN TRAIN DE SE
    JOUER, prise dans le vrai jeu (pas dessinée), sans la coquille (barre,
    score, cœurs, main qui montre où taper), cadrée en 4:3 et enregistrée en
@@ -152,6 +153,16 @@ const STAGE = {
       await p.evaluate(() => { window.__aq.demo(); document.querySelectorAll('.aq-tools,.aq-pal,.aq-me,.aq-reset').forEach(e => { e.style.display = 'none' }) })
     },
     after: 3500, zoom: 1.1, cx: 0.55, cy: 0.5
+  },
+  // Le Salon de coiffure : la tresse finie, de trois quarts
+  coiffure: {
+    ready: () => window.__cf && window.__cf.cards, wait: 800,
+    act: async p => {
+      await p.evaluate(() => { localStorage.removeItem('ferme:coiffure:jade'); document.querySelector('.cf-card[data-who="jade"]').click() })
+      await p.waitForFunction(() => window.__cf.ready, null, { timeout: 120000, polling: 500 })
+      await p.evaluate(() => { window.__cf.demo('tresse', Math.PI - 0.62, 1); document.querySelectorAll('.cf-coifs,.cf-teintes,.cf-me,.cf-bas,.cf-tray,.cf-fin').forEach(e => { e.style.display = 'none' }) })
+    },
+    after: 4000, zoom: 1.35, cx: 0.5, cy: 0.4
   },
   // La Ferme à construire : une ferme toute faite (celle de la maquette)
   farmbuild: {

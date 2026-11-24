@@ -1,3 +1,4 @@
+/* @version 2026-11-25 00:20 */
 /* Les vignettes des jeux — une illustration SVG par jeu, à la place des emoji.
 
    Pourquoi : l'emoji change de dessin selon la tablette, ne respecte aucune
@@ -167,6 +168,14 @@ export const BADGE: Record<string, string> = {
     <path d="M21 40v-6a3 3 0 0 1 6 0v6z" fill="${C.woodDark}"/>
     <path d="M24 18V6" stroke="${C.ink}" stroke-width="1.8" stroke-linecap="round"/>
     <path d="M24.6 6.2 33 9l-8.4 2.8z" fill="${C.coral}"/>`),
+  // Le Salon de coiffure : une tête de dos, la tresse et son nœud, la brosse lilas
+  coiffure: svg(`
+    <path d="M9 22C9 12 15 6 22 6s13 6 13 16c0 7-5 12-13 12S9 29 9 22z" fill="${C.wood}"/>
+    <path d="M9 22C9 12 15 6 22 6c-3 5-6 14-6 27-4.5-2-7-6-7-11z" fill="${C.woodDark}" opacity=".35"/>
+    <path d="M22 24l5 3.6-5 4-5-4zM22 30l4.6 3.6-4.6 4-4.6-4zM22 36l3.6 3-3.6 3.4-3.6-3.4z" fill="${C.woodDark}"/>
+    <path d="M22 40.5l-5.5-2.5v5zM22 40.5l5.5-2.5v5z" fill="${C.coral}"/><circle cx="22" cy="40.5" r="1.7" fill="${C.coralDark}"/>
+    <rect x="33" y="10" width="9" height="16" rx="4.5" fill="${C.lilac}"/><path d="M35.800 25h3.4l1 15a2.7 2.7 0 0 1-5.4 0z" fill="${C.lilac}"/>
+    <path d="M37.500 13.200l1.200 2.600 2.800.3-2.100 1.900.6 2.800-2.5-1.400-2.5 1.400.6-2.800-2.100-1.900 2.800-.3z" fill="${C.sun}"/>`),
   // L'Aquarium : le bac de verre, le sable, une algue, un poisson-peluche et ses bulles
   aquarium: svg(`
     <rect x="5" y="9" width="38" height="31" rx="4" fill="${C.ice}"/>

@@ -1,5 +1,6 @@
+/* @version 2026-11-25 00:20 */
 import type { T3 } from './three3d'
-import type { Hair } from './hair'
+import type { Hair, SkullMap } from './hair'
 
 /* Le rendu des cheveux du Salon de coiffure (23/11) : des milliers de fils.
 
@@ -19,9 +20,17 @@ import type { Hair } from './hair'
    Rien n'est une image étirée : net à toutes les tailles. La teinte est
    une couleur (`setColor`). */
 
+/* L'alpha d'un fil ne sert qu'à sa couverture (l'anticrénelage) : écrit dans
+   l'image, il la TROUAIT — le fond de la page perçait en pointillés clairs
+   tout le long des fils (24/11). */
+const opaque = (T: T3) => ({ blending: T.CustomBlending, blendSrc: T.OneFactor, blendDst: T.ZeroFactor, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor } as const)
+
+/** Le reflet blanc : plus fort sur des cheveux sombres (sans lui, le noir est un aplat). */
+const shineOf = (c: { r: number; g: number; b: number }) => 0.12 + 0.12 * Math.exp(-40 * (0.21 * c.r + 0.72 * c.g + 0.07 * c.b))
+
 export const CHILD = 10
 /** Points par fil, le long de la mèche. */
-export const S = 24
+export const S = 28
 
 export interface HairView {
   mesh: import('three').Mesh
@@ -30,6 +39,10 @@ export interface HairView {
   /** À quel point chaque mèche est rendue « tirée » (0..1). Vide : selon
       la physique (`hair.tiedLook`). */
   look: Float32Array | null
+  /** La part des fils dessinés (0..1), un peu plus larges quand il y en a moins. */
+  setDensity(k: number): void
+  /** La queue est dessinée ailleurs (la tresse) : 1, elle disparaît d'ici. */
+  setBraid(v: number): void
   /** À appeler à chaque image, après la physique. */
   update(): void
   setColor(hex: string): void
@@ -38,7 +51,7 @@ export interface HairView {
   dispose(): void
 }
 
-export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number; seed?: number } = {}): HairView {
+export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number; seed?: number; skull?: SkullMap } = {}): HairView {
   const { G, P } = hair
   const child = o.child ?? CHILD
   const N = G * child
@@ -74,85 +87,129 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
   for (let i = 0; i < S - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2) }
   geo.setIndex(idx)
   const iG = new Float32Array(N * 3), iW = new Float32Array(N * 3), iO = new Float32Array(N * 4)
-  for (let g = 0, n = 0; g < G; g++) for (let c = 0; c < child; c++, n++) {
+  // (un fil de chaque mèche, puis un autre de chaque… : en dessiner moins les éclaircit partout)
+  for (let c = 0, n = 0; c < child; c++) for (let g = 0; g < G; g++, n++) {
     iG.set([g, near[g][0], near[g][1]], n * 3)
     // le poids du guide principal domine ; les voisins remplissent les trous
-    let a = 0.55 + rnd() * 0.45, b = rnd() * (1 - a), w = 1 - a - b
+    let a = 0.5 + rnd() * 0.5, b = rnd() * (1 - a), w = 1 - a - b
     if (c === 0) { a = 1; b = 0; w = 0 }
     iW.set([a, b, w], n * 3)
     // décalage : dans le plan de la mèche (x) et vers l'extérieur (y ≥ 0), une variation de teinte, une épaisseur
-    const r = Math.sqrt(rnd()) * 0.07, th = rnd() * Math.PI
-    iO.set([Math.cos(th) * r, Math.abs(Math.sin(th)) * r * 0.6, rnd(), 0.75 + rnd() * 0.5], n * 4)
+    const r = Math.sqrt(rnd()) * 0.075, th = rnd() * Math.PI
+    iO.set([Math.cos(th) * r, Math.abs(Math.sin(th)) * r * 0.6, rnd(), 0.7 + rnd() * 0.6], n * 4)
   }
   geo.setAttribute('iG', new T.InstancedBufferAttribute(iG, 3))
   geo.setAttribute('iW', new T.InstancedBufferAttribute(iW, 3))
   geo.setAttribute('iO', new T.InstancedBufferAttribute(iO, 4))
   geo.instanceCount = N
 
+  /* ---- Le crâne, en petite image (longitude × latitude) : sans lui, les fils
+     d'une mèche tirée s'étalaient sur un plan, en tuiles — le contour de la
+     tête était dentelé (24/11) ---- */
+  const SW = 96, SH = 48, sk = new Uint16Array(SW * SH)
+  for (let j = 0; j < SH; j++) for (let i = 0; i < SW; i++) {
+    const a = ((i + 0.5) / SW - 0.5) * Math.PI * 2, b = (j + 0.5) / SH * Math.PI, r = Math.sin(b)
+    sk[j * SW + i] = T.DataUtils.toHalfFloat(o.skull ? o.skull.at(Math.sin(a) * r, Math.cos(b), Math.cos(a) * r) : 0)
+  }
+  const skTex = new T.DataTexture(sk, SW, SH, T.RedFormat, T.HalfFloatType)
+  skTex.minFilter = skTex.magFilter = T.LinearFilter
+  skTex.wrapS = T.RepeatWrapping
+  skTex.needsUpdate = true
+
   const uniforms = {
     guides: { value: tex },
+    skull: { value: skTex },
+    onMap: { value: o.skull ? 1 : 0 },
+    braid: { value: 0 },
     width: { value: o.width ?? 0.03 },
     base: { value: new T.Color('#6B4A2B') },
+    shine: { value: 0.12 },
     light: { value: new T.Vector3(-0.4, 0.8, -0.45).normalize() },
     center: { value: new T.Vector3() },
     time: { value: 0 }
   }
   const mat = new T.ShaderMaterial({
     uniforms,
+    ...opaque(T),
     alphaToCoverage: true,
     side: T.DoubleSide,
     vertexShader: /* glsl */`
       // (three.js compile en GLSL ES 3.00 sous WebGL 2 : texelFetch y est permis)
       precision highp sampler2D;
       uniform sampler2D guides;
+      uniform sampler2D skull;
+      uniform float onMap;
+      uniform float braid;
       uniform float width;
       uniform vec3 center;
       attribute vec3 iG; attribute vec3 iW; attribute vec4 iO;
-      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd; varying float vGlow; varying float vHide;
+      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd; varying float vGlow; varying float vHide; varying float vMat; varying vec2 vRoot;
       const float S = ${S}.0;
-      void at(float g, float i, out vec3 p, out vec3 t) {
-        p = texelFetch(guides, ivec2(int(i), int(g)), 0).xyz;
+      // (les canaux libres des tangentes : 0 la place de l'attache, 1 tirée, 2 tenue à part, 3 la lueur, 4 posée dans l'attache)
+      float chan(float g, int c) { return texelFetch(guides, ivec2(int(S) + c, int(g)), 0).w; }
+      void at(float g, float i, out vec4 p, out vec3 t) {
+        p = texelFetch(guides, ivec2(int(i), int(g)), 0);
         t = texelFetch(guides, ivec2(int(i + S), int(g)), 0).xyz;
       }
+      // (tirée et fondue dans la calotte, une mèche ne se voit plus sur le crâne :
+      // ses points glissent vers la queue, qui s'arrondit)
+      float warp(float x, float lv, float k) { float k0 = mix(k, 0.15, lv); return x < k0 ? x / k0 * k : k + (x - k0) / (1.0 - k0) * (1.0 - k); }
+      float skullR(vec3 d) { d = normalize(d); return textureLod(skull, vec2(atan(d.x, d.z) / 6.2831853 + 0.5, acos(clamp(d.y, -1.0, 1.0)) / 3.1415927), 0.0).r; }
       void main() {
         float t = position.x;
         float i = floor(t * (S - 1.0) + 0.5);
-        vec3 p0, t0, p1, t1, p2, t2;
+        vec4 p0, p1, p2; vec3 t0, t1, t2;
         at(iG.x, i, p0, t0); at(iG.y, i, p1, t1); at(iG.z, i, p2, t2);
-        // une mèche attachée : ses fils ne suivent qu'elle (ses voisines,
-        // attachées plus près ou plus loin, couperaient le fil en travers)
-        // (le canal porte la place de l'attache le long de la mèche, 0 sinon)
-        float tieAt = texelFetch(guides, ivec2(int(S), int(iG.x)), 0).w;
-        // (une mèche en route vers l'attache, ou attachée : ses fils ne suivent qu'elle)
-        float anyTied = step(0.001, max(tieAt, max(texelFetch(guides, ivec2(int(S), int(iG.y)), 0).w, texelFetch(guides, ivec2(int(S), int(iG.z)), 0).w)));
-        vec3 bw = mix(iW, vec3(1.0, 0.0, 0.0), anyTied);
-        // le rendu « tiré » arrive en fondu, quand la mèche est arrivée
-        float tied = texelFetch(guides, ivec2(int(S) + 1, int(iG.x)), 0).w;
-        vec3 p = p0 * bw.x + p1 * bw.y + p2 * bw.z;
+        // une mèche tenue ou attachée : ses fils ne suivent qu'elle (ses
+        // voisines les couperaient en travers). En fondu : rien ne saute à la prise.
+        float tieAt = chan(iG.x, 0), tied = chan(iG.x, 1), solo = chan(iG.x, 2), laid = chan(iG.x, 4), lv = chan(iG.x, 5);
+        if (lv > 0.0) t = warp(t, lv, tieAt - 1.2 / ${P - 1}.0);
+        float w1 = iW.y * (1.0 - solo) * (1.0 - chan(iG.y, 2)), w2 = iW.z * (1.0 - solo) * (1.0 - chan(iG.z, 2));
+        vec3 bw = vec3(1.0 - w1 - w2, w1, w2);
+        vec3 p = p0.xyz * bw.x + p1.xyz * bw.y + p2.xyz * bw.z;
         vec3 T = normalize(t0 * bw.x + t1 * bw.y + t2 * bw.z + 1e-6);
+        // la vraie place le long de la mèche (une mèche tenue est redécoupée)
+        float ta = p0.w;
         // le repère de la mèche : vers l'extérieur de la tête, et de côté
         vec3 N = p - center; N = normalize(N - T * dot(N, T) + 1e-6);
         vec3 B = cross(T, N);
         // les fils se resserrent vers la pointe : des mèches, pas un rideau
-        float clump = mix(1.0, 0.35, smoothstep(0.35, 1.0, t));
-        float spread = mix(2.2, 1.0, smoothstep(0.0, 0.25, t));
-        // une légère ondulation propre à chaque fil
-        // une mèche attachée : sur le crâne, ses fils s'étalent à plat et
-        // couvrent sans trou (tirés, lisses) ; dans la queue, ils gardent du volume
+        float clump = mix(1.0, 0.4, smoothstep(0.35, 1.0, ta));
+        // à la racine, ils s'écartent : ils couvrent sans trou entre les guides
+        float spread = mix(2.4, 1.0, smoothstep(0.0, 0.3, ta));
+        float seg = 1.0 / ${P - 1}.0;
+        // une mèche tirée : sur le crâne, ses fils s'étalent à plat ; dans la queue, ils gardent du volume
         // (tieAt : le bout du faisceau ; le faisceau est le segment d'avant)
-        float seg = 1.0 / ${hair.P - 1}.0;
         float onSkull = tied * (1.0 - smoothstep(tieAt - 1.3 * seg, tieAt - 0.95 * seg, t));
-        float wave = sin(t * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, t) * (1.0 - tied);
-        spread *= mix(1.0, 1.35, onSkull);
+        float flatS = max(onSkull, solo * (1.0 - smoothstep(tieAt - 2.5 * seg, tieAt - seg, t)));
+        // une légère ondulation propre à chaque fil
+        float wave = sin(ta * 4.5 + iO.z * 6.28) * 0.006 * smoothstep(0.1, 0.5, ta) * (1.0 - tied);
+        spread = mix(spread, min(spread, 1.5), flatS) * mix(1.0, 1.2, onSkull);
         // la queue : les fils se répartissent tout autour (un volume rond, pas un crayon)
-        float inTail = tied * smoothstep(tieAt - 0.6 * seg, tieAt + 0.06, t);
+        float inTail = laid * smoothstep(tieAt - 0.6 * seg, tieAt + 0.06, t);
         // sous l'élastique, la queue s'ouvre peu à peu (serrée en haut, pleine plus bas)
-        float ang = iO.z * 6.2832, rad = length(iO.xy) * 2.6 * mix(0.35, 1.0, smoothstep(tieAt, tieAt + 0.3, t)) * mix(1.0, 0.7, smoothstep(tieAt, 1.0, t));
-        vec3 lay = (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, t) * mix(1.0, 0.15, onSkull)) * clump;
+        float ang = iO.z * 6.2832, rad = length(iO.xy) * 3.4 * mix(0.35, 1.0, smoothstep(tieAt, tieAt + 0.3, t)) * mix(1.0, 0.7, smoothstep(tieAt, 1.0, t));
+        vec3 lay = (B * (iO.x * spread + wave) + N * iO.y * smoothstep(0.0, 0.1, ta) * mix(1.0, 0.15, flatS)) * clump;
         // à l'élastique, le faisceau est serré : les fils s'y rejoignent
-        // serré dans le faisceau, il s'ouvre après
-        float squeeze = 1.0 - 0.85 * tied * exp(-pow((t - tieAt + 0.3 * seg) / (0.9 * seg), 2.0));
+        float squeeze = 1.0 - 0.85 * laid * exp(-pow((t - tieAt + 0.3 * seg) / (0.9 * seg), 2.0));
+        // dans la main aussi
+        squeeze *= 1.0 - 0.55 * solo * (1.0 - laid) * exp(-pow((t - tieAt) / (1.4 * seg), 2.0));
         p += mix(lay, (B * cos(ang) + N * sin(ang)) * rad, inTail) * squeeze;
+        // là où la mèche tenue ou tirée touche le crâne, ses fils en épousent la
+        // courbe, presque à la même hauteur (un contour lisse, sans tuiles)
+        vec3 d0 = p0.xyz - center, dp = p - center;
+        float high = length(d0) - skullR(d0);
+        // (en main, elle passe plus haut, par-dessus les autres : elle suit la
+        // même courbe, à sa hauteur)
+        float hug = onMap * flatS * (1.0 - smoothstep(0.3, 0.6, high));
+        float hh = 0.012 + max(0.0, high) * mix(0.3, 1.0, smoothstep(0.04, 0.16, high)) + 0.004 * iO.z + 0.016 * solo * (1.0 - laid);
+        // (les racines partent au ras du cuir chevelu)
+        hh *= smoothstep(0.0, 0.16, ta);
+        dp = normalize(dp) * mix(length(dp), skullR(dp) + hh, hug);
+        p = center + dp;
+        N = normalize(mix(N, normalize(dp - T * dot(dp, T) + 1e-6), hug));
+        // en se fondant dans la calotte, les fils tirés s'y enfoncent (aucun halo autour de la tête)
+        p -= normalize(dp) * (0.07 * onSkull + (1.0 - onMap) * 0.02 * flatS * (1.0 - smoothstep(0.0, 0.2, ta)));
         // le ruban : couché sur la chevelure quand on la regarde de face (pas
         // de torsion quand le cheveu part vers la caméra), tourné vers la
         // caméra quand on la voit de profil
@@ -163,25 +220,35 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         cam = lc > 1e-4 ? cam / lc : Bw;
         if (dot(cam, Bw) < 0.0) cam = -cam;
         float face = abs(dot(Nw, V));
-        vec3 side = normalize(mix(cam, Bw, smoothstep(0.15, 0.55, face)));
+        // (tirés sur le crâne, ils sont couchés partout : un contour net, sans franges)
+        vec3 side = normalize(mix(cam, Bw, max(smoothstep(0.15, 0.55, face), flatS)));
         // la largeur est en rayons de tête : à l'échelle du monde
-        float w = width * iO.w * mix(1.0, 0.18, t * t) * length(modelMatrix[0].xyz) * mix(1.0, 1.7, onSkull);
+        float w = width * iO.w * mix(1.0, 0.25, ta * ta) * length(modelMatrix[0].xyz) * mix(1.0, 1.7, onSkull);
         vec4 wp = modelMatrix * vec4(p, 1.0);
         wp.xyz += side * position.y * w * 0.5;
         vT = normalize(mat3(modelMatrix) * T); vN = normalize(mat3(modelMatrix) * N);
-        vPos = wp.xyz; vt = t; vSide = position.y; vRnd = iO.z;
-        vGlow = texelFetch(guides, ivec2(int(i), int(iG.x)), 0).w;
+        vPos = wp.xyz; vt = ta; vSide = position.y; vRnd = iO.z;
+        // la racine : chaque fil naît un peu plus loin que son voisin, en
+        // fondu sur la calotte (aucune rangée de départs : pas d'écailles)
+        vRoot = vec2(fract(iO.z * 7.31) * 0.12, 0.14) * mix(1.0, 0.3, solo);
+        vGlow = chan(iG.x, 3);
+        // posée sur le crâne : presque mate (les reflets de chaque mèche s'y
+        // arrêtaient à des hauteurs différentes : des taches, en couronne)
+        vMat = laid * flatS;
         // sur le crâne, une mèche attachée est dessinée par la calotte (pas de fils : pas d'écailles)
         // ... et jusque sous l'élastique (leurs départs y faisaient une couronne effilochée)
         // (le faisceau, lui, se voit en entier : il relie la tête à l'élastique)
         vHide = tied * (1.0 - smoothstep(tieAt - 1.05 * seg, tieAt - 0.9 * seg, t));
+        // (une tresse : la queue est dessinée par elle)
+        vHide = max(vHide, tied * braid);
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 base;
       uniform vec3 light;
       uniform float time;
-      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd; varying float vGlow; varying float vHide;
+      uniform float shine;
+      varying vec3 vT; varying vec3 vN; varying vec3 vPos; varying float vt; varying float vSide; varying float vRnd; varying float vGlow; varying float vHide; varying float vMat; varying vec2 vRoot;
       float strand(vec3 T, vec3 H, float e) {
         float th = dot(T, H);
         return pow(max(0.0, sqrt(max(0.0, 1.0 - th * th))), e);
@@ -191,24 +258,22 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
         vec3 V = normalize(cameraPosition - vPos), L = normalize(light), H = normalize(L + V);
         // le volume : le dessus de la chevelure dans la lumière, le dessous dans l'ombre
         float vol = clamp(dot(N, L) * 0.5 + 0.5, 0.0, 1.0);
-        float diff = mix(0.32, 1.0, vol);
-        // la racine plus sombre, la pointe un peu plus claire (le soleil)
-        float ao = mix(0.62, 1.0, smoothstep(0.0, 0.2, vt));
-        vec3 c = base * (0.9 + 0.2 * vRnd) * diff * ao * mix(1.0, 1.12, vt);
+        float diff = mix(0.5, 1.0, vol);
+        // la pointe un peu plus claire (le soleil)
+        vec3 c = base * (0.86 + 0.28 * vRnd) * diff * mix(1.0, 1.12, vt);
         // deux reflets décalés le long du cheveu (Kajiya-Kay)
         float shift = (vRnd - 0.5) * 0.25;
         float s1 = strand(normalize(T + N * (0.12 + shift)), H, 90.0);
         float s2 = strand(normalize(T - N * (0.18 - shift)), H, 22.0);
-        float sp = smoothstep(0.04, 0.2, vt) * vol;
-        c += vec3(1.0, 0.96, 0.9) * s1 * 0.22 * sp + base * s2 * 0.45 * sp;
+        float sp = vol * mix(1.0, 0.25, vMat);
+        c += vec3(1.0, 0.96, 0.9) * s1 * shine * sp + base * s2 * 0.45 * sp;
         // les mèches à prendre maintenant : une lueur dorée qui respire
         // (douce : la chevelure respire, elle ne change pas de couleur)
         float pulse = 0.5 + 0.5 * sin(time * 3.5);
         c *= 1.0 + 0.22 * pulse * vGlow;
         float a = 1.0 - smoothstep(0.45, 1.0, abs(vSide));
         a *= 1.0 - smoothstep(0.86, 1.0, vt);
-        // la racine se fond dans le cuir chevelu : aucun départ de fil ne se voit
-        a *= smoothstep(0.0, 0.07, vt);
+        a *= smoothstep(vRoot.x, vRoot.x + vRoot.y, vt);
         a *= 1.0 - smoothstep(0.35, 0.8, vHide);
         gl_FragColor = vec4(c, a);
         #include <tonemapping_fragment>
@@ -219,40 +284,72 @@ export function hairView(T: T3, hair: Hair, o: { width?: number; child?: number;
   mesh.frustumCulled = false
   mesh.castShadow = false
 
-  /* ---- Chaque image : les guides lissés dans la texture ---- */
+  /* ---- Chaque image : les guides lissés dans la texture ----
+     Une mèche endormie n'est pas recalculée ; si rien n'a bougé, rien n'est renvoyé. */
   const p = hair.pos
-  const glow = new Float32Array(G)
+  const glow = new Float32Array(G), solo = new Float32Array(G), slept = new Uint8Array(G), seen = new Float32Array(G * 6).fill(-9)
+  // les coefficients de Catmull-Rom (position, tangente) de chaque point lissé
+  // (`lv` : à quel point les points ont glissé vers la queue, par seizièmes)
+  const coefs = (lv: number, knee: number) => {
+    const at = new Int32Array(S * 4), cp = new Float32Array(S * 4), ct = new Float32Array(S * 4), tt = new Float32Array(S)
+    // (le faisceau sous l'élastique, lui, garde ses points)
+    const kn = knee - 1.2 / (P - 1), k0 = kn + (0.15 - kn) * lv
+    for (let k = 0; k < S; k++) {
+      const x = k / (S - 1)
+      tt[k] = !lv ? x : x < k0 ? x / k0 * kn : kn + (x - k0) / (1 - k0) * (1 - kn)
+      const u = tt[k] * (P - 1), i = Math.min(P - 2, Math.floor(u)), f = u - i, f2 = f * f, f3 = f2 * f
+      at.set([Math.max(0, i - 1) * 3, i * 3, (i + 1) * 3, Math.min(P - 1, i + 2) * 3], k * 4)
+      cp.set([0.5 * (-f + 2 * f2 - f3), 0.5 * (2 - 5 * f2 + 3 * f3), 0.5 * (f + 4 * f2 - 3 * f3), 0.5 * (f3 - f2)], k * 4)
+      ct.set([0.5 * (-1 + 4 * f - 3 * f2), 0.5 * (-10 * f + 9 * f2), 0.5 * (1 + 8 * f - 9 * f2), 0.5 * (3 * f2 - 2 * f)], k * 4)
+    }
+    return { at, cp, ct, tt }
+  }
+  const tables = new Map<number, ReturnType<typeof coefs>>()
+  const table = (n: number, knee: number) => { let c = tables.get(n); if (!c) tables.set(n, c = coefs(n / 16, knee)); return c }
+  let lastT = performance.now()
   function update() {
+    const now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000)
+    lastT = now
+    let dirty = false
     for (let g = 0; g < G; g++) {
-      const base = g * P
+      const row = g * S * 8, held = hair.tieIdx[g] >= 0
+      solo[g] = held ? Math.min(1, solo[g] + dt / 0.2) : Math.max(0, solo[g] - dt / 0.35)
+      // (lâchée, elle garde un instant la place de sa main, le temps du fondu)
+      const look = view.look ? view.look[g] : hair.tiedLook(g), lv = held ? Math.round(look * 16) : 0
+      const want = [held ? hair.tieIdx[g] / (P - 1) : solo[g] > 0 ? seen[g * 6] : 0, look, solo[g], glow[g], hair.tiedLook(g), lv / 16], moved = seen[g * 6 + 5] !== lv / 16
+      for (let c = 0; c < 6; c++) if (seen[g * 6 + c] !== Math.fround(want[c])) { seen[g * 6 + c] = data[row + (S + c) * 4 + 3] = want[c]; dirty = true }
+      if (hair.asleep[g] && slept[g] && !moved) continue
+      slept[g] = hair.asleep[g]
+      dirty = true
+      const b0 = g * P * 3, knee = held ? hair.tieIdx[g] / (P - 1) : 1, arc = held ? hair.arc[g] : 1
+      const { at, cp, ct, tt } = table(lv, knee)
       for (let k = 0; k < S; k++) {
-        const u = k / (S - 1) * (P - 1), i = Math.min(P - 2, Math.floor(u)), f = u - i
-        const a = Math.max(0, i - 1), b = i, c = i + 1, d = Math.min(P - 1, i + 2)
-        const o = (g * S * 2 + k) * 4, ot = (g * S * 2 + S + k) * 4
-        for (let x = 0; x < 3; x++) {
-          const p0 = p[(base + a) * 3 + x], p1 = p[(base + b) * 3 + x], p2 = p[(base + c) * 3 + x], p3 = p[(base + d) * 3 + x]
-          const f2 = f * f, f3 = f2 * f
-          data[o + x] = 0.5 * (2 * p1 + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f2 + (-p0 + 3 * p1 - 3 * p2 + p3) * f3)
-          data[ot + x] = 0.5 * ((-p0 + p2) + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * f + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * f2)
-        }
-        data[o + 3] = glow[g]
-        // une mèche attachée est tirée : ses fils se serrent (un aspect lisse)
-        // (le canal libre des tangentes : au point 0, la place de l'attache le
-        // long de la mèche ; au point 1, à quel point elle est rendue tirée)
-        data[ot + 3] = k === 0 ? (hair.tieIdx[g] >= 0 ? Math.max(0.01, hair.tieIdx[g] / (P - 1)) : 0) : k === 1 ? (view.look ? view.look[g] : hair.tiedLook(g)) : 0
+        const k4 = k * 4, o = row + k4, ot = o + S * 4
+        const A = b0 + at[k4], B = b0 + at[k4 + 1], C = b0 + at[k4 + 2], D = b0 + at[k4 + 3]
+        const a0 = cp[k4], a1 = cp[k4 + 1], a2 = cp[k4 + 2], a3 = cp[k4 + 3], b1 = ct[k4], b2 = ct[k4 + 1], b3 = ct[k4 + 2], b4 = ct[k4 + 3]
+        data[o] = p[A] * a0 + p[B] * a1 + p[C] * a2 + p[D] * a3
+        data[o + 1] = p[A + 1] * a0 + p[B + 1] * a1 + p[C + 1] * a2 + p[D + 1] * a3
+        data[o + 2] = p[A + 2] * a0 + p[B + 2] * a1 + p[C + 2] * a2 + p[D + 2] * a3
+        data[ot] = p[A] * b1 + p[B] * b2 + p[C] * b3 + p[D] * b4
+        data[ot + 1] = p[A + 1] * b1 + p[B + 1] * b2 + p[C + 1] * b3 + p[D + 1] * b4
+        data[ot + 2] = p[A + 2] * b1 + p[B + 2] * b2 + p[C + 2] * b3 + p[D + 2] * b4
+        const t = tt[k]
+        data[o + 3] = t <= knee ? t / knee * arc : arc + (t - knee) / (1 - knee) * (1 - arc)
       }
     }
-    uniforms.time.value = performance.now() / 1000
-    tex.needsUpdate = true
+    uniforms.time.value = now / 1000
+    if (dirty) tex.needsUpdate = true
   }
   const view: HairView = {
     mesh,
     glow,
     look: null,
     update,
-    setColor: hex => { uniforms.base.value.set(hex) },
+    setDensity: k => { geo.instanceCount = G * Math.max(1, Math.round(child * k)); uniforms.width.value = (o.width ?? 0.03) / Math.sqrt(Math.max(0.2, k)) },
+    setBraid: v => { uniforms.braid.value = v },
+    setColor: hex => { uniforms.base.value.set(hex); uniforms.shine.value = shineOf(uniforms.base.value) },
     setLight: (x, y, z) => { uniforms.light.value.set(x, y, z).normalize() },
-    dispose: () => { geo.dispose(); mat.dispose(); tex.dispose() }
+    dispose: () => { geo.dispose(); mat.dispose(); tex.dispose(); skTex.dispose() }
   }
   update()
   return view
@@ -277,15 +374,18 @@ export interface HairCap {
   setLight(x: number, y: number, z: number): void
   /** Le point de la calotte dans une direction (repère de la tête). */
   surface(dir: [number, number, number]): [number, number, number]
-  /** À quel point chaque mèche est tirée (0..1, par mèche) : la calotte se
-      tire là où elles sont, peu à peu. `roots` : leurs racines. */
+  /** À quel point chaque mèche est tirée (0..1, par mèche) : les stries de la
+      calotte tournent là où elles sont, peu à peu. `roots` : leurs racines. */
   setTieField(roots: Float32Array, look: ArrayLike<number>): void
+  /** Le dôme sous chaque attache (0..1) : quand toute la chevelure y est. */
+  setDome(a: number, b: number): void
   /** Une seconde attache (les couettes), ou aucune. */
   setTie2(p: [number, number, number] | null): void
   /** Quelle attache tire chaque endroit du crâne (0 ou 1), selon sa direction. */
   setSides(side: (x: number, y: number, z: number) => number): void
-  /** La raie au milieu (0 : aucune, 1 : tracée) : la chevelure s'écarte de chaque côté. */
-  setPart(v: number): void
+  /** La raie au milieu (0 : aucune, 1 : tracée), ouverte de `lo` à `hi`
+      (angles dans le plan du milieu : 0 le sommet, + le front). */
+  setPart(v: number, lo?: number, hi?: number): void
   dispose(): void
 }
 
@@ -294,30 +394,34 @@ export interface HairCap {
     (le 24/11 : posée sur un ovale, elle flottait au-dessus du front et
     laissait voir le cuir chevelu peint dessous). Sans lui : un ovale. */
 export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number, number, number] }, onScalp: (x: number, y: number, z: number) => boolean,
-  surface?: { tris: Float32Array; lift: number }): HairCap {
-  const geo = surface ? capFromSurface(T, surface.tris, skull.c, surface.lift) : capFromSphere(T, skull, onScalp)
+  surface?: { tris: Float32Array; lift: number; map: SkullMap }): HairCap {
+  const geo = surface ? capFromSurface(T, surface.tris, skull.c, surface.lift, surface.map) : capFromSphere(T, skull, onScalp)
   let near: number[][] | null = null
   const ray = new T.Raycaster()
   const probe = new T.Mesh(geo, new T.MeshBasicMaterial({ side: T.DoubleSide }))
   const uniforms = {
     base: { value: new T.Color('#6B4A2B') },
+    shine: { value: 0.12 },
     light: { value: new T.Vector3(-0.4, 0.8, -0.45).normalize() },
     tie: { value: new T.Vector3(0, 0.2, -1.1) },
     tieOn: { value: 0 },
     bump: { value: 0 },
+    dome: { value: new T.Vector2() },
     tie2: { value: new T.Vector3(0, 0.2, -1.1) },
     bump2: { value: 0 },
     part: { value: 0 },
+    partR: { value: new T.Vector2(9, -9) },
     center: { value: new T.Vector3(...skull.c) }
   }
   const mat = new T.ShaderMaterial({
     uniforms,
+    ...opaque(T),
     alphaToCoverage: true,
     vertexShader: /* glsl */`
       attribute vec3 aDir; attribute float aMask; attribute float aTie; attribute float aSide;
       uniform vec3 tie; uniform float tieOn; uniform float bump; uniform vec3 center;
-      uniform vec3 tie2; uniform float bump2; uniform float part;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vT; varying float vMask; varying vec2 vS; varying float vNear; varying float vPart;
+      uniform vec3 tie2; uniform float bump2; uniform float part; uniform vec2 partR; uniform vec2 dome;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vT; varying vec3 vTp; varying float vMask; varying vec4 vS; varying float vNear; varying vec3 vD; varying float vOn;
       void main() {
         // tirée seulement là où les cheveux sont déjà arrivés à l'attache
         float on = aTie * tieOn;
@@ -330,58 +434,72 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
         // le dôme des cheveux rassemblés, sous l'attache
         float ang = acos(clamp(dot(n, tn), -1.0, 1.0));
         float w = smoothstep(0.75, 0.0, ang);
-        p += n * on * bmp * pow(w, 1.4);
+        p += n * mix(dome.x, dome.y, aSide) * bmp * pow(w, 1.4);
         // le sens des cheveux : lâchés, ils tombent ; tirés, ils vont vers l'attache
         // (avec la raie, ils partent de chaque côté de la ligne du milieu)
-        float sgn = n.x >= 0.0 ? 1.0 : -1.0;
-        vec3 loose = vec3(n.x * 0.35 + sgn * part * 1.6 * smoothstep(-0.4, 0.5, n.y), -1.0, -0.35);
+        float sgn = n.x >= 0.0 ? 1.0 : -1.0, th = atan(n.z, n.y);
+        float opened = part * smoothstep(partR.x - 0.15, partR.x + 0.05, th) * (1.0 - smoothstep(partR.y - 0.05, partR.y + 0.15, th));
+        vec3 loose = vec3(n.x * 0.35 + sgn * opened * 1.6 * smoothstep(-0.4, 0.5, n.y), -1.0, -0.35);
         vec3 pulled = tieP - p;
-        vec3 f = mix(loose, pulled, on);
-        f = normalize(f - n * dot(f, n) + 1e-5);
+        vec3 f = normalize(loose - n * dot(loose, n) + 1e-5), fp = normalize(pulled - n * dot(pulled, n) + 1e-5);
         // les stries : des lignes le long du sens des cheveux. Tirés : des
         // rayons autour de l'attache ; lâchés : des lignes verticales
         vec3 ax = abs(tn.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
         vec3 e1 = normalize(cross(tn, ax)), e2 = cross(tn, e1);
         float phiT = atan(dot(n, e2), dot(n, e1));
         float phiL = atan(n.x, n.z);
-        vS = vec2(mix(phiL, phiT, on), mix(n.y, ang, on));
-        vNear = on * smoothstep(0.35, 0.0, ang);
+        vS = vec4(phiL, n.y, phiT, ang);
+        vOn = on;
+        vNear = smoothstep(0.35, 0.0, ang);
         vMask = aMask;
-        // la raie : une fine ligne de peau au milieu
-        vPart = part * (1.0 - smoothstep(0.007, 0.022, abs(n.x)));
+        vD = n;
         vec4 wp = modelMatrix * vec4(p, 1.0);
         vPos = wp.xyz;
         vN = normalize(mat3(modelMatrix) * n);
-        vT = normalize(mat3(modelMatrix) * f);
+        vT = normalize(mat3(modelMatrix) * f); vTp = normalize(mat3(modelMatrix) * fp);
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */`
-      uniform vec3 base; uniform vec3 light;
-      varying vec3 vPos; varying vec3 vN; varying vec3 vT; varying float vMask; varying vec2 vS; varying float vNear; varying float vPart;
+      uniform vec3 base; uniform vec3 light; uniform float shine; uniform float part; uniform vec2 partR;
+      varying vec3 vPos; varying vec3 vN; varying vec3 vT; varying vec3 vTp; varying float vMask; varying vec4 vS; varying float vNear; varying vec3 vD; varying float vOn;
       float h1(float x) { return fract(sin(x * 127.1) * 43758.5453); }
       float n1(float x) { float i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h1(i), h1(i + 1.0), f); }
       float strand(vec3 T, vec3 H, float e) { float th = dot(T, H); return pow(max(0.0, sqrt(max(0.0, 1.0 - th * th))), e); }
-      void main() {
-        vec3 T = normalize(vT), N = normalize(vN);
-        vec3 V = normalize(cameraPosition - vPos), L = normalize(light), H = normalize(L + V);
+      // la chevelure dans un sens : ses stries, sa lumière (w : la strie)
+      vec4 hairs(vec3 T, vec2 s, float calm, float near, vec3 N, vec3 H, float vol) {
         // des mèches fines et des plus larges, qui varient doucement le long
-        float x = vS.x * 26.0;
-        // tout près de l'attache, les stries se fondent (leur point de rencontre faisait une tache)
-        float calm = smoothstep(0.05, 0.3, vS.y * step(0.5, vNear + 0.5) + (1.0 - step(0.001, vNear)));
-        float st = mix(0.5, 0.55 * n1(x * 9.0 + vS.y * 2.0) + 0.3 * n1(x * 3.1 - vS.y) + 0.15 * n1(x * 23.0), calm);
-        float vol = clamp(dot(N, L) * 0.5 + 0.5, 0.0, 1.0);
+        float x = s.x * 26.0;
+        float st = mix(0.5, 0.55 * n1(x * 9.0 + s.y * 2.0) + 0.3 * n1(x * 3.1 - s.y) + 0.15 * n1(x * 23.0), calm);
         vec3 c = base * mix(0.5, 1.08, vol) * (0.66 + 0.62 * st);
         // au pied de l'attache, la chevelure se resserre : un peu plus sombre
-        c *= 1.0 - 0.25 * vNear;
+        c *= 1.0 - 0.25 * near;
         float shift = (st - 0.5) * 0.3;
         float s1 = strand(normalize(T + N * (0.1 + shift)), H, 70.0);
         float s2 = strand(normalize(T - N * (0.2 - shift)), H, 18.0);
         // le reflet s'efface vers la lisière (il faisait une bande blanche au front)
         float rim = smoothstep(0.3, 1.0, vMask);
-        c += (vec3(1.0, 0.96, 0.9) * s1 * 0.18 * (0.5 + st) * vol + base * s2 * 0.5 * vol) * calm * rim;
+        c += (vec3(1.0, 0.96, 0.9) * s1 * shine * (0.5 + st) * vol + base * s2 * 0.5 * vol) * calm * rim;
+        return vec4(c, st);
+      }
+      void main() {
+        vec3 N = normalize(vN), V = normalize(cameraPosition - vPos), L = normalize(light), H = normalize(L + V);
+        float vol = clamp(dot(N, L) * 0.5 + 0.5, 0.0, 1.0);
+        // lâchée, tirée : en fondu de couleur (les stries qui tournent d'un sens à
+        // l'autre faisaient passer un grand reflet blanc). Tout près de l'attache,
+        // elles se fondent (leur point de rencontre faisait une tache)
+        vec4 l = hairs(normalize(vT), vS.xy, 1.0, 0.0, N, H, vol);
+        vec4 p = hairs(normalize(vTp), vS.zw, mix(1.0, smoothstep(0.05, 0.3, vS.w), smoothstep(0.0, 0.2, vNear)), vNear, N, H, vol);
+        vec4 m = mix(l, p, vOn);
+        vec3 c = m.rgb;
         // la lisière : adoucie, et un peu irrégulière (des mèches, pas un bord net)
-        float a = smoothstep(0.15, 0.75, vMask + (st - 0.5) * 0.35);
-        c = mix(c, vec3(0.74, 0.55, 0.45) * mix(0.6, 1.0, vol), vPart * 0.85);
+        float a = smoothstep(0.15, 0.75, vMask + (m.w - 0.5) * 0.35);
+        // la raie : une fine ligne de peau au milieu, un peu irrégulière, les
+        // racines plus sombres de chaque côté (au pixel : par sommet, c'était
+        // une bande floue, un serre-tête)
+        float th = atan(vD.z, vD.y), off = abs(vD.x) / length(vD) + 0.006 * (n1(th * 70.0) - 0.5);
+        float opened = part * smoothstep(partR.x - 0.04, partR.x + 0.04, th) * (1.0 - smoothstep(partR.y - 0.04, partR.y + 0.04, th));
+        c *= 1.0 - 0.35 * opened * (1.0 - smoothstep(0.008, 0.06, off));
+        c = mix(c, vec3(0.56, 0.29, 0.21) * mix(0.7, 1.0, vol), opened * 0.9 * (1.0 - smoothstep(0.006, 0.013, off)));
         gl_FragColor = vec4(c, a);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -391,7 +509,7 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
   mesh.frustumCulled = false
   return {
     mesh,
-    setColor: hex => { uniforms.base.value.set(hex) },
+    setColor: hex => { uniforms.base.value.set(hex); uniforms.shine.value = shineOf(uniforms.base.value) },
     setTie: (p, on) => {
       if (p) {
         uniforms.tie.value.set(p[0], p[1], p[2])
@@ -414,7 +532,8 @@ export function hairCap(T: T3, skull: { c: [number, number, number]; r: [number,
       for (let v = 0; v < a.count; v++) a.setX(v, side(dirs.getX(v), dirs.getY(v), dirs.getZ(v)))
       a.needsUpdate = true
     },
-    setPart: v => { uniforms.part.value = v },
+    setPart: (v, lo = -9, hi = 9) => { uniforms.part.value = v; uniforms.partR.value.set(lo, hi) },
+    setDome: (a, b) => { uniforms.dome.value.set(a * a * (3 - 2 * a), b * b * (3 - 2 * b)) },
     setTieField: (roots, look) => {
       const aTie = geo.getAttribute('aTie') as import('three').BufferAttribute, dirs = geo.getAttribute('aDir')
       if (!near) {
@@ -507,7 +626,7 @@ function capFromSphere(T: T3, skull: { c: [number, number, number]; r: [number, 
 /** La calotte sur le vrai cuir chevelu : ses triangles soudés, subdivisés
     deux fois (assez fins pour le dôme de l'attache), décollés de `lift`
     vers l'extérieur ; la lisière s'adoucit sur deux rangs de sommets. */
-function capFromSurface(T: T3, tris: Float32Array, c: [number, number, number], lift: number) {
+function capFromSurface(T: T3, tris: Float32Array, c: [number, number, number], lift: number, map: SkullMap) {
   // souder les sommets confondus (les coutures de la texture)
   const verts: number[] = [], key = new Map<string, number>()
   let index: number[] = []
@@ -553,30 +672,20 @@ function capFromSurface(T: T3, tris: Float32Array, c: [number, number, number], 
   }
   for (let q = 0; q < queue.length; q++) for (const w of nb[queue[q]]) if (dist[w] > dist[queue[q]] + 1) { dist[w] = dist[queue[q]] + 1; queue.push(w) }
   // le contour arrondi : les milieux d'arêtes tombent sur des cordes plates
-  // (un crâne à facettes) — on lisse la distance au centre, pas la direction
-  const rad = new Float32Array(n)
-  for (let i = 0; i < n; i++) rad[i] = Math.hypot(verts[i * 3] - c[0], verts[i * 3 + 1] - c[1], verts[i * 3 + 2] - c[2])
-  for (let it = 0; it < 8; it++) {
-    const nr = rad.slice()
-    for (let i = 0; i < n; i++) {
-      if (!nb[i].length) continue
-      let sum = 0
-      for (const w of nb[i]) sum += rad[w]
-      // vers le plus grand des deux : le crâne est bombé, pas creusé
-      nr[i] = Math.max(rad[i], 0.5 * rad[i] + 0.5 * sum / nb[i].length)
-    }
-    rad.set(nr)
-  }
+  // (un crâne à facettes) — chaque sommet se pose sur la carte du crâne, douce
   for (let i = 0; i < n; i++) {
-    const x = verts[i * 3] - c[0], y = verts[i * 3 + 1] - c[1], z = verts[i * 3 + 2] - c[2], l = Math.hypot(x, y, z) || 1
-    verts[i * 3] = c[0] + x / l * rad[i]; verts[i * 3 + 1] = c[1] + y / l * rad[i]; verts[i * 3 + 2] = c[2] + z / l * rad[i]
+    const x = verts[i * 3] - c[0], y = verts[i * 3 + 1] - c[1], z = verts[i * 3 + 2] - c[2], f = map.at(x, y, z) / (Math.hypot(x, y, z) || 1)
+    verts[i * 3] = c[0] + x * f; verts[i * 3 + 1] = c[1] + y * f; verts[i * 3 + 2] = c[2] + z * f
   }
   const pos = new Float32Array(n * 3), dir = new Float32Array(n * 3), mask = new Float32Array(n)
   for (let i = 0; i < n; i++) {
     const x = verts[i * 3] - c[0], y = verts[i * 3 + 1] - c[1], z = verts[i * 3 + 2] - c[2], l = Math.hypot(x, y, z) || 1
     dir.set([x / l, y / l, z / l], i * 3)
     pos.set([verts[i * 3] + x / l * lift, verts[i * 3 + 1] + y / l * lift, verts[i * 3 + 2] + z / l * lift], i * 3)
-    mask[i] = Math.min(1, dist[i] / 3)
+    // (sous la nuque, le cuir chevelu peint du modèle descendait jusqu'au col : un
+    // casque ; une lisière douce, plus basse au milieu, en pointe)
+    const nape = -0.93 + 0.3 * Math.abs(x / l)
+    mask[i] = Math.min(1, dist[i] / 3) * Math.min(1, Math.max(0, (y / l - nape) / 0.22))
   }
   const geo = new T.BufferGeometry()
   geo.setAttribute('position', new T.BufferAttribute(pos, 3))
