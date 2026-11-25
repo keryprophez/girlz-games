@@ -168,6 +168,8 @@ export const monJeu: GameDef = {
 }
 ```
 Puis **une ligne dans `src/games/index.ts`** (GAMES et un univers de WORLDS).
+Un jeu **archivé** (le Flipper, Soleil) garde tout son code : il n'a plus ses
+deux lignes là, et son scénario est dans `ARCHIVED` de `scripts/play.mjs`.
 
 **`ctx`** (fourni par `GameHost`) : `root`, `tier`, `byTier(e,m,x)`, `duo`,
 `ops`, `variant`, `finish()`, `toast()`, `say()`, et les **timers de partie**
@@ -189,7 +191,7 @@ fige sa boucle dessus tout seul.
   deux ») ;
 - `ops: true` (le Potager) : d'abord les étiquettes + − × ÷, plusieurs à la
   fois, le + par défaut, retenues (`ferme:ops:<id>`), `ctx.ops` ;
-- `duo: true` (Ninja, Flipper) : « seule / à deux », `ctx.duo` = deux sœurs EN
+- `duo: true` (Ninja) : « seule / à deux », `ctx.duo` = deux sœurs EN
   ÉQUIPE sur la même tablette, un seul score, jamais qui a fait quoi ;
 - `variants` (la Cuisine : pizza ou gâteau ; le Memory : son thème) : de
   grandes images à la place de la flèche, `ctx.variant`, la dernière retenue

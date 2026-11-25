@@ -1,4 +1,4 @@
-/* @version 2026-11-25 00:20 */
+/* @version 2026-11-25 18:45 */
 /* Les AFFICHES de l'accueil (28/09) : une image de chaque jeu EN TRAIN DE SE
    JOUER, prise dans le vrai jeu (pas dessinée), sans la coquille (barre,
    score, cœurs, main qui montre où taper), cadrée en 4:3 et enregistrée en
@@ -437,7 +437,7 @@ const HIDE = `.playbar,.titlecard,.hud,.tap-hint,.hand-layer,.pausewall,.toast,.
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord`); process.exit(1) }
 // vite lui-même, pas `npx vite` : tuer npx laissait vite orphelin, port gardé
-const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort', ...(process.env.DIST ? ['--outDir', process.env.DIST] : [])], { stdio: 'ignore' })
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort', ...(process.env.DIST ? ['--outDir', process.env.DIST] : [])], { stdio: 'ignore' })
 const kill = () => { try { server.kill() } catch { /* déjà mort */ } }
 process.on('exit', kill)
 for (let i = 0; ; i++) {

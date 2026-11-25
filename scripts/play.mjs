@@ -1,4 +1,4 @@
-/* @version 2026-11-25 00:20 */
+/* @version 2026-11-25 18:45 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -24,7 +24,7 @@ const URL = `http://localhost:${PORT}/`
 // Un serveur déjà là sur ce port servirait un AUTRE build : on s'arrête
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord, ou PORT=…`); process.exit(1) }
 
-const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], {
   stdio: 'ignore', detached: false
 })
 const kill = () => { try { server.kill() } catch { /* déjà mort */ } }
@@ -140,7 +140,10 @@ const openGame = async (name, hook, tier = 'easy', ops = null, variant = null) =
 const failures = []
 // BOTS=poste,ninja npm run test:play → seulement les scénarios dont le nom contient l'un des mots
 const only = process.env.BOTS ? process.env.BOTS.split(',') : null
+// Les jeux archivés (games/index.ts) n'ont plus de tuile : leurs scénarios sont gardés, pas joués
+const ARCHIVED = ['flipper-', 'soleil-']
 const scenario = async (name, fn) => {
+  if (ARCHIVED.some(k => name.startsWith(k))) return
   if (only && !only.some(k => name.includes(k))) return
   try {
     await fn()

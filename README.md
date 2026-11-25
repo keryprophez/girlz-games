@@ -17,8 +17,7 @@ trouver les animaux cachés (une queue qui dépasse de la meule, des oreilles
 au bord du puits), et la nuit, à la lampe torche — aux niveaux éclair et
 flamme, une ferme quatre fois plus grande (bois, lac, hameau, champs de maïs,
 de blé et de tournesols) qu'on parcourt comme une carte — glisser, pincer
-jusqu'au ras du sol, tourner, incliner — pour y fouiller les cachettes ; le Flipper de la grange, un pouce par batteur, la vache, le cochon et
-le mouton en bumpers qui crient, une rampe jusqu'au grenier et le multibille ;
+jusqu'au ras du sol, tourner, incliner — pour y fouiller les cachettes ;
 Ninja Verger, en 2D, où l'on tranche des fruits illustrés
 d'un trait de doigt, vague après vague, sans toucher le cactus ; le Labyrinthe
 en vraies haies 3D (classique, brouillard à la lanterne, glace), où le poussin
@@ -30,9 +29,7 @@ Puissance 4, avec les personnages 3D de la ferme (vache, poule, cochon,
 canard, mouton…) en pions ; les Perles Miroir (une plaque à picots en 3D :
 on pose les perles qui complètent le reflet d'un papillon, d'une fraise ou
 d'une tête de cochon, puis le fer les fait fondre et l'objet s'envole) ;
-1, 2, 3… Soleil ! (le doigt posé, le chat avance sur le chemin de la ferme ;
-l'épouvantail bat trois coups de tambour et se retourne : qui bouge recule,
-et le cochon et le mouton courent aussi) ; le Jeu des différences (deux
+le Jeu des différences (deux
 petites fermes en 3D qu'on fait tourner ensemble, des différences tirées au
 hasard, et à la flamme, cachées derrière la grange) ; le Labyrinthe à bille
 (un jouet en bois, des trous, une bille d'acier : on penche la tablette, ou
@@ -115,7 +112,7 @@ on tapote la vitre — sans Claude : rien ne quitte la tablette).
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se
 jouer), la difficulté choisie dans chaque jeu (fleur,
 éclair, flamme), une main fantôme qui montre le geste de chaque jeu (sans
-jamais donner la réponse), le Ninja et le Flipper à deux en équipe sur la même tablette,
+jamais donner la réponse), le Ninja à deux en équipe sur la même tablette,
 minuteur parental avec verrou « question de grand », voix de la famille
 enregistrées (« Bravo ! »), musique générative par univers qui s'enrichit
 quand le combo monte, vrais bruitages foley sur les chocs, mise à jour

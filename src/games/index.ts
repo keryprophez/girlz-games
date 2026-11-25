@@ -1,4 +1,4 @@
-/* @version 2026-11-25 00:20 */
+/* @version 2026-11-25 18:45 */
 import type { GameDef } from '../core/types'
 import { memory } from './memory'
 import { intrus } from './intrus'
@@ -23,7 +23,6 @@ import { icetower } from './icetower'
 import { sentences } from './sentences'
 import { bijoux } from './bijoux'
 import { hideseek } from './hideseek'
-import { pinball } from './pinball'
 import { parrot } from './parrot'
 import { farmbuild } from './farmbuild'
 import { drawguess } from './drawguess'
@@ -36,18 +35,17 @@ import { aquarium } from './aquarium'
 import { coiffure } from './coiffure'
 import { tracteur } from './tracteur'
 import { geoplan } from './geoplan'
-import { soleil } from './soleil'
 import { bille } from './bille'
 import { differences } from './differences'
 import { echecs } from './echecs'
 
 export const GAMES: GameDef[] = [
-  icetower, ninja, pinball, hideseek, drawguess, maze, taquin, memory, simonGame,
+  icetower, ninja, hideseek, drawguess, maze, taquin, memory, simonGame,
   connect4,
   clock, potager, market, intrus, geoGame, space, patterns, mirror, letters, sentences,
   dressup, bijoux, piano, fireworks, coloring, cuisine, parrot, farmbuild, cartable, monuments,
   poterie, chateau, aquarium, coiffure, tracteur, geoplan, echecs,
-  soleil, bille, differences
+  bille, differences
 ]
 
 /* L'accueil est découpé en trois univers. Chaque jeu vit dans
@@ -65,14 +63,20 @@ export const GAMES: GameDef[] = [
    2/09 : des pays inventés n'apprennent rien, on refera une géographie
    VRAIE ou rien. Le Chien de berger (11/10) est sorti le 19/10 (« les
    filles trouvent ça nul »). La Pizzeria et la Pâtisserie ne font plus qu'une
-   tuile depuis le 27/10 : la Cuisine (la pizza ou le gâteau). */
+   tuile depuis le 27/10 : la Cuisine (la pizza ou le gâteau).
+
+   ARCHIVÉS (« archive, ne supprime pas », 25/11 : les filles n'aiment pas) :
+   le Flipper (`pinball`) et 1, 2, 3… Soleil ! (`soleil`). Tout est gardé
+   (jeu, physique, tests, vignette, affiche, bot) et toujours compilé ; seuls
+   l'import et leurs deux lignes ici (GAMES et WORLDS) manquent. Pour en
+   ressortir un : les remettre, et l'ôter d'`ARCHIVED` dans scripts/play.mjs. */
 export const WORLDS: { id: string; label: string; icon: string; games: GameDef[] }[] = [
   {
     id: 'jouer', label: 'Jouer', icon: '⚡',
     games: [
-      icetower, ninja, pinball, hideseek, drawguess,
+      icetower, ninja, hideseek, drawguess,
       maze, taquin, memory, simonGame, connect4, mirror,
-      soleil, differences, bille
+      differences, bille
     ]
   },
   {

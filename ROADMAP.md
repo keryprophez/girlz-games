@@ -13,16 +13,19 @@ jeu par itération, livré, joué, capturé.
 
 ---
 
-## Le catalogue (21/11) — 39 jeux
+## Le catalogue — 38 jeux
 
 | Univers | Jeux |
 |---|---|
-| **Jouer** (14) — on s'amuse, on peut perdre | La Tour de Glace · Ninja Verger · Le Flipper · Cache-Cache · Devine mon dessin · Labyrinthe · Puzzle (et son mode Taquin) · Memory · Le Chœur · Puissance 4 · Perles Miroir · 1, 2, 3… Soleil ! · Le Jeu des différences · Le Labyrinthe à bille |
+| **Jouer** (12) — on s'amuse, on peut perdre | La Tour de Glace · Ninja Verger · Cache-Cache · Devine mon dessin · Labyrinthe · Puzzle (et son mode Taquin) · Memory · Le Chœur · Puissance 4 · Perles Miroir · Le Jeu des différences · Le Labyrinthe à bille |
 | **Apprendre** (12) — on travaille, jamais de sanction | Quelle heure ? · Le Potager (+ − × ÷) · Le Marché · L'Intrus · Le Tour du Monde · Voyage dans l'Espace · Suites Logiques · Chasse aux lettres · La Poste aux Phrases · Le Tracteur · Le Géoplan · Les Échecs |
-| **Créer** (13) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments · La Poterie · Le Château de sable · L'Aquarium |
+| **Créer** (14) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments · La Poterie · Le Château de sable · L'Aquarium · Le Salon de coiffure |
 
-Jeux en vraie 3D : la Tour, le Flipper, Cache-Cache, Labyrinthe, Puzzle,
-Memory, le Chœur, Perles Miroir, Soleil, les Différences, la Bille, l'Espace,
+**Archivés** (le code, l'affiche et le bot sont gardés, plus aucune tuile ;
+les filles n'aiment pas) : Le Flipper · 1, 2, 3… Soleil !
+
+Jeux en vraie 3D : la Tour, Cache-Cache, Labyrinthe, Puzzle,
+Memory, le Chœur, Perles Miroir, les Différences, la Bille, l'Espace,
 Suites Logiques, Tour du Monde, le Tracteur, le Géoplan, les Échecs, Habille-toi, les
 Bijoux, la Cuisine, l'Animal qui répète, la Ferme à construire, Mon cartable,
 les Monuments, la Poterie, le Château de sable, l'Aquarium.
@@ -71,7 +74,7 @@ les Monuments, la Poterie, le Château de sable, l'Aquarium.
 le gâteau a la musique de la cuisine ; à la fleur du Tour du Monde, une
 manche est moitié animaux, moitié pays (au lieu d'un pile ou face à chaque
 question) ; le Labyrinthe à bille a sa propre tuile (pas un 4ᵉ mode du
-Labyrinthe) ; l'épouvantail de Soleil.
+Labyrinthe).
 
 ## Le lot du 29/10 — l'imagier (plan validé : « parfait 500 mots, parfait memory »)
 
@@ -162,11 +165,11 @@ Joyce : « c'est quasiment toujours les mêmes mots ».
 
 Rien n'a encore été relevé sur la Tab A9+ : la Tour de Glace (une cinquantaine
 de modèles du paysage d'hiver), le Chœur, le petit train, le Puzzle à 48
-pièces, le Feu d'artifice pendant le bouquet, le Flipper, Cache-Cache la nuit
+pièces, le Feu d'artifice pendant le bouquet, Cache-Cache la nuit
 et sur la carte ×4, la Ferme à construire pleine (36 pièces, 20 animaux), la
 Cuisine (gâteau plein, la pizza), Mon cartable à paillettes, la Tour Eiffel
 des Monuments, les Bijoux (plaque pleine, douze pots), Perles Miroir (144
-perles), et les huit du 27/10 — surtout le Jeu des différences (deux fermes,
+perles), et les sept du 27/10 encore là — surtout le Jeu des différences (deux fermes,
 environ 450 appels de dessin pendant une rotation, une ombre en 2048 : sinon
 la ramener à 1024) et le Labyrinthe à bille (le sens du gyroscope en
 paysage, jamais essayé sur une vraie tablette ; 16° d'inclinaison donnent

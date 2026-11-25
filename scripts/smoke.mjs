@@ -1,3 +1,4 @@
+/* @version 2026-11-25 18:45 */
 /* Smoke test : ouvre chaque jeu de la ferme et vérifie qu'il se monte sans
    erreur JavaScript ET qu'il finit de charger (un jeu 3D bloqué sur son
    écran d'attente est un échec). Tablette en paysage, service worker bloqué
@@ -15,7 +16,7 @@ const URL = `http://localhost:${PORT}/`
 if (await fetch(URL).then(() => true, () => false)) { console.error(`Le port ${PORT} est déjà pris : arrête ce serveur d'abord, ou PORT=…`); process.exit(1) }
 
 // Serveur de preview sur le build de production
-const server = spawn('node_modules/.bin/vite', ['preview', '--port', String(PORT), '--strictPort'], {
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], {
   stdio: 'ignore', detached: false
 })
 const kill = () => { try { server.kill() } catch { /* déjà mort */ } }
