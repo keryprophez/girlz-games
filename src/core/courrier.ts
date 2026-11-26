@@ -1,4 +1,4 @@
-/* @version 2026-11-26 09:42 */
+/* @version 2026-11-26 16:58 */
 import type { Who } from './mine'
 import type { Son } from './vocal'
 import { sansEmojis, vide } from './saisie'
@@ -27,7 +27,8 @@ export interface Pose { x: number; y: number; s: number; r: number }
 export interface Texte extends Pose { k: 'texte'; t: string; couleur: string; police: string; taille: number }
 /** `src` : « emoji:😀 », « animal:cow », « photo:cat », « forme:coeur:#E8414F ». */
 export interface Gomme extends Pose { k: 'gomme'; src: string }
-export interface Vocal extends Pose, Son { k: 'voix' }
+/** `cle` : sa clé R2, posée par le coffre en ligne (une voix qui l'a n'est jamais renvoyée). */
+export interface Vocal extends Pose, Son { k: 'voix'; cle?: string }
 export type Objet = Texte | Gomme | Vocal
 
 /** `timbre` : '' tant qu'il n'est pas collé. */
@@ -46,6 +47,13 @@ export interface Lettre {
   peinture: Blob | null
   objets: Objet[]
   env: Enveloppe | null
+  /* Posés par le coffre en ligne seulement (core/courrierenligne.ts) ; le jeu ne les lit pas. */
+  /** Le compteur d'écritures : la plus grande gagne. */
+  version?: number
+  /** Arrivée sans ses fichiers : `Coffre.completer` les apporte. */
+  aCharger?: true
+  /** La clé R2 du dessin, gardée même quand il n'a pas pu venir. */
+  peintureCle?: string | null
 }
 /** Ce qu'on retient pour chaque fille : ses envois (le raccourci), sa dernière
     enveloppe, les gestes qu'elle a déjà réussis (la main ne revient plus). */

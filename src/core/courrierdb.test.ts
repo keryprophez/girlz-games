@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:15 */
+/* @version 2026-11-26 16:58 */
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./sfx', () => ({ sfx: () => {} }))
@@ -48,6 +48,14 @@ describe('le coffre (en mémoire)', () => {
     refuser = false
     expect((await c.lettres())[0].papier).toBe(l.papier)
     expect((await c.prefs('jade')).envois).toBe(0)
+  })
+  it('un coffre local : jamais hors ligne, ses lettres déjà complètes, « ici » sans effet', async () => {
+    const c = coffreMemoire()
+    const l = neuve('jade', 1)
+    expect(c.horsLigne()).toBe(false)
+    expect(await c.completer(l)).toBe(l)
+    expect(await c.garderLettre(l, { ici: true })).toBe(true)
+    expect(await c.lettres()).toHaveLength(1)
   })
   it('les réglages : par défaut, puis gardés pour chacune', async () => {
     const c = coffreMemoire()
