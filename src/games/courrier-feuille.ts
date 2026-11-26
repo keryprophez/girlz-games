@@ -1,4 +1,4 @@
-/* @version 2026-11-26 13:29 */
+/* @version 2026-11-26 15:16 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -53,7 +53,7 @@ export function gommeHTML(src: string): string {
   return `<img class="co-g-${k}" src="${imgSrc(src)}" alt="" draggable="false" loading="lazy">`
 }
 
-/** Les trois écritures : ronde, à la main, d'école (les deux dernières attendent leurs polices : `cursive` en attendant). */
+/** Les trois écritures : ronde, à la main, d'école (polices locales, `src/assets/fonts/fonts.css`). */
 export const POLICES = ['Fredoka', 'Gochi Hand', 'Playwrite FR Moderne']
 const POLICE_NOM: Record<string, string> = { 'Fredoka': 'Ronde', 'Gochi Hand': 'À la main', 'Playwrite FR Moderne': 'D’école' }
 export const pile = (police: string) => police === 'Fredoka' ? "'Fredoka',system-ui,sans-serif" : `'${police}',cursive`

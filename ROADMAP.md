@@ -174,9 +174,8 @@ le timbre), la boîte aux lettres de sa sœur, son drapeau. Conception et plan :
 2. 🔧 **La lettre** : faite, à essayer sur la tablette — `?fps` aux boîtes et
    pendant l'envoi, un envoi complet par Jade sans aide, la durée de la
    cérémonie à la troisième lettre, le micro et la voix qui lit.
-3. ⬜ Les polices « à la main » et « d'école » (Gochi Hand, Playwrite FR
-   Moderne, SIL OFL) : à télécharger avec l'accord du père ; en attendant,
-   l'écriture cursive de la tablette.
+3. ✅ Les écritures « à la main » et « d'école » : Gochi Hand et Playwrite FR
+   Moderne (SIL OFL), embarquées et créditées.
 4. ⬜ Garder les lettres d'un appareil à l'autre : à discuter avec le père
    (pour l'instant tout reste sur la tablette, règle 3).
 

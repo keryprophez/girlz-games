@@ -1,3 +1,4 @@
+/* @version 2026-11-26 15:16 */
 @font-face{
   font-family:'Baloo 2';
   font-style:normal;
@@ -11,4 +12,21 @@
   font-weight:400 700;
   font-display:swap;
   src:url('./Fredoka-400.woff2') format('woff2');
+}
+
+/* Les deux écritures du Courrier (« À la main », « D'école ») — SIL Open Font License 1.1,
+   voir public/assets/CREDITS.md. Le sous-ensemble latin de Google Fonts. */
+@font-face{
+  font-family:'Gochi Hand';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('./GochiHand.woff2') format('woff2');
+}
+@font-face{
+  font-family:'Playwrite FR Moderne';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('./PlaywriteFRModerne.woff2') format('woff2');
 }

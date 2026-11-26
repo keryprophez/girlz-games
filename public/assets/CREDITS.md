@@ -46,6 +46,16 @@ une plante seule, sinon deux styles), avec ce texte de commande :
 - **Le buste** (`salon/buste.glb`) — *Base_Female*, VRoid Project (pixiv), CC0 1.0 — <https://opengameart.org/content/vroid-studio-cc0-models> (voir `salon/LICENCE-buste.txt`). Textures réduites ; sans la vignette ni les cheveux peints.
 - **Les images des coiffures et des nœuds** (`salon/*.webp`) : prises dans le jeu.
 
+## Les écritures du Courrier (`src/assets/fonts/`)
+
+- **Gochi Hand** — Juan Pablo del Peral (Huerta Tipográfica), 2011.
+  SIL Open Font License 1.1. `GochiHand.woff2` (sous-ensemble latin de Google Fonts).
+- **Playwrite FR Moderne** — The Playwrite Project Authors (TypeTogether), 2023.
+  SIL Open Font License 1.1. `PlaywriteFRModerne.woff2` (fichier de Google Fonts).
+
+Licences relues sur `github.com/google/fonts` (`ofl/gochihand/OFL.txt`,
+`ofl/playwritefrmoderne/OFL.txt`).
+
 ## Fruits du Ninja (`fruits/`)
 
 Les cinq fruits (pomme, orange, pastèque, fraise, kiwi), leurs moitiés et le
