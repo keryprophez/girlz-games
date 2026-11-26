@@ -2,7 +2,8 @@
 // compte tld83, https://girlz-games.tld83.workers.dev). Tout passe d'abord
 // par ici (`run_worker_first`), sauf les médias de `/assets/` : rien de l'app
 // n'est servi avant le code d'accès. Deux routes à nous, qui montrent un
-// dessin à Claude : le devineur, et « Mon dessin prend vie » (18/10).
+// dessin à Claude : le devineur, et « Mon dessin prend vie » (18/10). Et les
+// lettres du Courrier, gardées dans D1 et R2 (26/11, worker/courrier.ts).
 import { accessPage, type PageState } from './access-page'
 import {
   allowed, isDevBypass, isUnlocked, readConfig, safeNext, sameCode, sessionCookie, sessionValue,
@@ -11,8 +12,9 @@ import {
 import { devine, type Ask, type DevineEnv } from './devine'
 import { vivant, type AskVivant } from './vivant'
 import { withSecurityHeaders } from './headers'
+import { courrier, type CourrierEnv } from './courrier'
 
-export type Env = AccessEnv & DevineEnv & { ASSETS: Fetcher }
+export type Env = AccessEnv & DevineEnv & CourrierEnv & { ASSETS: Fetcher }
 
 /**
  * Servi sans le code : ce qu'il faut pour installer l'app (le navigateur
@@ -98,6 +100,7 @@ async function route(request: Request, url: URL, env: Env, ask?: Ask, askV?: Ask
   }
   if (pathname === '/api/devine') return devine(request, env, ask)
   if (pathname === '/api/vivant') return vivant(request, env, askV)
+  if (pathname.startsWith('/api/courrier/')) return courrier(request, url, env)
   // Jamais la page de l'app pour un chemin d'API inconnu
   if (pathname.startsWith('/api/')) return new Response(null, { status: 404 })
   return env.ASSETS.fetch(request)

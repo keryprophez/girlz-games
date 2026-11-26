@@ -1,0 +1,12 @@
+{
+  // Les TESTS du Worker seulement (worker/courrier.test.ts) : une base D1 et un
+  // compartiment R2 locaux, en mémoire (getPlatformProxy de wrangler). Jamais
+  // déployé ; la vraie configuration est ../wrangler.jsonc.
+  "name": "girlz-games-banc",
+  "compatibility_date": "2026-09-21",
+  "main": "index.ts",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "banc", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "COURRIER", "bucket_name": "banc" }]
+}
