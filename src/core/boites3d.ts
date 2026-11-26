@@ -1,10 +1,12 @@
-/* @version 2026-11-26 13:29 */
+/* @version 2026-11-26 17:23 */
 /* LES DEUX BOÎTES AUX LETTRES du Courrier, dans la ferme (`buildFarm` vide et
    quelques pièces) : celle de Jade (verte), celle de Joyce (lilas), leur
    prénom peint sur la porte. Le drapeau rouge se lève quand une lettre fermée
    attend ; la porte s'ouvre en basculant vers l'avant (entrouverte : il n'y
    reste que des lettres déjà ouvertes). Le poussin, le chat et le canard
-   tiennent compagnie. Tout est en formes rondes, comme les animaux. */
+   tiennent compagnie. Tout est en formes rondes, comme les animaux. Sans
+   réseau (le coffre en ligne), un nuage barré flotte au-dessus de chaque
+   boîte, à la place du drapeau. */
 import { createStage, woodTex, type Stage, type T3 } from './three3d'
 import { buildFarm } from './farm3d'
 import { critterKit, type Critter } from './critters'
@@ -14,9 +16,28 @@ import { WHO, whoOf, type Who } from './mine'
 type Group = import('three').Group
 export type Vue = 'duo' | Who
 
-interface Boite { g: Group; porte: Group; drapeau: Group; lettre: import('three').Mesh; pOpen: number; pTo: number; fUp: number; fTo: number; jig: number }
+interface Boite { g: Group; porte: Group; drapeau: Group; lettre: import('three').Mesh; nuage: import('three').Sprite; pOpen: number; pTo: number; fUp: number; fTo: number; jig: number }
 const X: Record<Who, number> = { jade: -0.92, joyce: 0.92 }
 const Z = 1.55
+
+/** Le nuage barré (viewBox 48 × 48), le même sur la scène et dans les Souvenirs. */
+export const NUAGE_D = 'M14 36h22a8 8 0 0 0 1-16 11 11 0 0 0-21-3 9 9 0 0 0-2 19z'
+export const BARRE_D = 'M9 9l30 30'
+function nuageTex(T: T3) {
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = 256
+  const g = cv.getContext('2d')!
+  g.scale(256 / 48, 256 / 48)
+  g.lineCap = 'round'
+  g.fillStyle = '#fff'; g.strokeStyle = '#9FB3C8'; g.lineWidth = 2.5
+  const n = new Path2D(NUAGE_D), b = new Path2D(BARRE_D)
+  g.fill(n); g.stroke(n)
+  g.strokeStyle = '#fff'; g.lineWidth = 9; g.stroke(b)
+  g.strokeStyle = '#E8574C'; g.lineWidth = 5; g.stroke(b)
+  const tx = new T.CanvasTexture(cv)
+  tx.colorSpace = T.SRGBColorSpace
+  return tx
+}
 
 /** Une boîte : le corps arrondi, la porte devant, le drapeau rouge, le poteau de bois. */
 function faire(T: T3, stage: Stage, w: Who): Boite {
@@ -80,6 +101,14 @@ function faire(T: T3, stage: Stage, w: Who): Boite {
   drapeau.add(bras, pan, axe)
   drapeau.position.set((w === 'jade' ? 1 : -1) * (R + 0.05), 0.24, -0.16)
   g.add(drapeau)
+  // Le nuage barré : pas de réseau, la boîte ne s'ouvre pas
+  // Par-dessus tout, comme un badge : la boîte ne le cache jamais
+  const nuage = new T.Sprite(new T.SpriteMaterial({ map: stage.keep(nuageTex(T)), transparent: true, depthWrite: false, depthTest: false }))
+  nuage.renderOrder = 10
+  nuage.scale.set(0.36, 0.36, 1)
+  nuage.position.set((w === 'jade' ? 1 : -1) * (R + 0.05), 0.56, -0.16)
+  nuage.visible = false
+  g.add(nuage)
   // Le poteau
   const pot = mesh(new T.BoxGeometry(0.15, 0.92, 0.15), bois)
   pot.position.set(0, -0.48, -0.42)
@@ -89,7 +118,7 @@ function faire(T: T3, stage: Stage, w: Who): Boite {
   g.position.set(X[w], 0.94, Z)
   g.rotation.y = w === 'jade' ? 0.2 : -0.2
   stage.scene.add(g)
-  return { g, porte, drapeau, lettre, pOpen: 0, pTo: 0, fUp: 0, fTo: 0, jig: 0 }
+  return { g, porte, drapeau, lettre, nuage, pOpen: 0, pTo: 0, fUp: 0, fTo: 0, jig: 0 }
 }
 
 export interface Boites {
@@ -102,6 +131,8 @@ export interface Boites {
   porte(w: Who, k: 0 | 0.25 | 1): void
   /** L'enveloppe qui dépasse, porte ouverte. */
   lettre(w: Who, on: boolean): void
+  /** Le nuage barré au-dessus de la boîte (pas de réseau). */
+  nuage(w: Who, on: boolean): void
   secouer(w: Who): void
   etincelles(w: Who): void
   /** La fente de la boîte, à l'écran. */
@@ -173,6 +204,7 @@ export async function creerBoites(host: HTMLElement): Promise<Boites> {
     drapeau(w, leve, net = false) { B[w].fTo = leve ? 1 : 0; if (net) B[w].fUp = B[w].fTo },
     porte(w, k) { B[w].pTo = k },
     lettre(w, on) { B[w].lettre.visible = on },
+    nuage(w, on) { B[w].nuage.visible = on },
     secouer(w) { B[w].jig = 1 },
     etincelles(w) { const p = fente(w); fx.burst(p, { count: 40, color: [0xFFD34D, 0xFF8FB0, 0xFFFFFF], speed: 1.7, spread: 1, size: 0.14, life: 1, gravity: 2 }) },
     fente(w) { return toScreen(stage, fente(w)) },

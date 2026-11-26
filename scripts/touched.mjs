@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:23 */
+/* @version 2026-11-26 17:23 */
 /* Les bots à faire jouer : ceux des jeux TOUCHÉS, et eux seuls (2/10).
 
    Le père, le 2/10 : « on ne valide via bot que les jeux que l'on touche
@@ -66,7 +66,7 @@ const OWN = {
   'soleil': ['src/games/soleil.ts', 'src/core/soleil.ts'],
   'differences': ['src/games/differences.ts', 'src/core/differences.ts'],
   'bille': ['src/games/bille.ts', 'src/core/bille.ts', 'src/core/labyrinth.ts'],
-  'courrier': ['src/games/courrier.ts', 'src/games/courrier-feuille.ts', 'src/games/courrier-envoi.ts', 'src/core/boites3d.ts', 'src/core/courrier.ts', 'src/core/courrierdb.ts', 'src/core/saisie.ts', 'src/core/clavier.ts', 'src/core/vocal.ts'],
+  'courrier': ['src/games/courrier.ts', 'src/games/courrier-feuille.ts', 'src/games/courrier-envoi.ts', 'src/core/boites3d.ts', 'src/core/courrier.ts', 'src/core/courrierdb.ts', 'src/core/courrierfil.ts', 'src/core/courrierenligne.ts', 'src/core/saisie.ts', 'src/core/clavier.ts', 'src/core/vocal.ts'],
 }
 // Les jeux qui n'ont pas (encore) de bot : pas d'alerte pour eux
 const NO_BOT = new Set(['src/games/sentences.ts', 'src/games/index.ts'])

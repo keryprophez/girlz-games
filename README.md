@@ -111,8 +111,8 @@ Courrier (Joyce et Jade s'écrivent : une feuille où l'on dessine, écrit à
 notre clavier, colle des animaux, des émojis, des photos et sa voix ; on la
 plie, on la met sous enveloppe, on la cachette à la cire, on la timbre et on
 la glisse dans la boîte aux lettres de sa sœur, dont le drapeau se lève ;
-l'autre casse le cachet et la garde dans ses Souvenirs — tout reste sur la
-tablette).
+l'autre casse le cachet et la garde dans ses Souvenirs — les lettres sont
+gardées en ligne : la boîte suit les filles d'un appareil à l'autre).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se
@@ -178,6 +178,22 @@ Le workflow `deploy.yml` vérifie, construit et publie le Worker sur
 https://girlz-games.tld83.workers.dev à chaque push sur la branche par
 défaut. Sur la tablette : ouvrir l'adresse, taper le code de la famille
 (une fois), puis « Ajouter à l'écran d'accueil ».
+
+## ✉️ Lire le Courrier (pour le père)
+
+Les lettres du Courrier sont gardées sur le compte Cloudflare `tld83`, et
+nulle part ailleurs : le texte dans la base D1 `girlz-games-courrier`, les
+dessins et les voix dans le compartiment R2 du même nom (privé). Rien n'est
+jamais effacé par l'app : une lettre jetée par une des filles est seulement
+cachée pour elle (`jetee = 1`).
+
+- **Le texte** : tableau de bord → Storage & Databases → D1 →
+  `girlz-games-courrier` → Console, puis :
+  ```sql
+  SELECT de, a, etat, datetime(postee/1000,'unixepoch') AS quand, texte FROM lettres ORDER BY postee DESC
+  ```
+- **Un dessin ou une voix** : R2 → `girlz-games-courrier` → dossier
+  `lettres/<id de la lettre>/` (`peinture.png`, `voix-….webm`), « Download ».
 
 ## 🗺 Documents
 

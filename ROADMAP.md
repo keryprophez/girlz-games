@@ -176,8 +176,11 @@ le timbre), la boîte aux lettres de sa sœur, son drapeau. Conception et plan :
    cérémonie à la troisième lettre, le micro et la voix qui lit.
 3. ✅ Les écritures « à la main » et « d'école » : Gochi Hand et Playwrite FR
    Moderne (SIL OFL), embarquées et créditées.
-4. ⬜ Garder les lettres d'un appareil à l'autre : à discuter avec le père
-   (pour l'instant tout reste sur la tablette, règle 3).
+4. 🔧 **Garder les lettres d'un appareil à l'autre** : le coffre en ligne
+   (D1 et R2 sur Cloudflare, troisième exception de la règle 3 ; conception
+   et plan dans `docs/superpowers/`). Codé et testé ; restent le branchement
+   (la base et le compartiment créés par le père, le jeton élargi) et l'essai
+   sur deux appareils.
 
 ## À mesurer sur la tablette (`?fps`)
 

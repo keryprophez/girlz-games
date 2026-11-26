@@ -1,4 +1,4 @@
-/* @version 2026-11-26 13:29 */
+/* @version 2026-11-26 17:23 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
@@ -7,8 +7,9 @@ import { shutUp } from '../core/voice'
 import { setPaused } from '../core/session'
 import { visible, handNow, type HandMove } from '../core/hand'
 import { WHO, girl, whoOf, trashButton, twoTaps, calm, type Who } from '../core/mine'
-import { creerBoites, type Boites } from '../core/boites3d'
+import { BARRE_D, creerBoites, NUAGE_D, type Boites } from '../core/boites3d'
 import { coffreIDB, coffreMemoire, type Coffre } from '../core/courrierdb'
+import { coffreEnLigne } from '../core/courrierenligne'
 import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, garder, reposer, souvenirs, aLire, type Lettre, type Prefs } from '../core/courrier'
 import { chargerPortraits, ecrire, lire, aplatir, sauvegardes } from './courrier-feuille'
 import { taire } from '../core/vocal'
@@ -46,7 +47,8 @@ export const ICONE = {
   retour: I('<path d="M20 10L6 24l14 14" fill="none" stroke="#45362A" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 24h24c6 0 10 4 10 10" fill="none" stroke="#45362A" stroke-width="5.5" stroke-linecap="round"/>', 34),
   ecouter: I('<path d="M6 18v12h8l10 8V10l-10 8z" fill="#45362A"/><path d="M31 17a10 10 0 0 1 0 14M36 12a17 17 0 0 1 0 24" fill="none" stroke="#45362A" stroke-width="4" stroke-linecap="round"/>', 40),
   repondre: I('<path d="M20 8L5 22l15 14v-9c10 0 17 3 22 10-1-13-8-21-22-21z" fill="#fff"/>', 40),
-  garder: I('<path d="M6 20c0-8 4-12 10-12h16c6 0 10 4 10 12v3H6z" fill="#B97F3F"/><rect x="6" y="22" width="36" height="19" rx="3" fill="#8B5E3C"/><rect x="20" y="19" width="8" height="11" rx="2" fill="#FFC533"/>', 40)
+  garder: I('<path d="M6 20c0-8 4-12 10-12h16c6 0 10 4 10 12v3H6z" fill="#B97F3F"/><rect x="6" y="22" width="36" height="19" rx="3" fill="#8B5E3C"/><rect x="20" y="19" width="8" height="11" rx="2" fill="#FFC533"/>', 40),
+  nuage: I(`<path d="${NUAGE_D}" fill="#fff" stroke="#9FB3C8" stroke-width="2.5"/><path d="${BARRE_D}" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="${BARRE_D}" stroke="#E8574C" stroke-width="5" stroke-linecap="round"/>`)
 }
 
 interface Jeu {
@@ -63,6 +65,8 @@ interface Jeu {
   prefs: Partial<Record<Who, Prefs>>
   /** La main par fille : regarde si un geste nouveau pour elle attend (appelé souvent, et tout de suite après un changement). */
   guetter(): void
+  /** Les lettres gardées pendant la partie : une liste relue entre-temps est plus vieille qu'elles. */
+  ecritures: number
 }
 
 /** Un geste réussi par elle : la main ne le lui montrera plus d'elle-même. */
@@ -79,13 +83,15 @@ let jeu: Jeu | null = null
 const lireQui = (): Who | null => { try { const v = localStorage.getItem(QUI); return v === 'jade' || v === 'joyce' ? v : null } catch { return null } }
 const ecrireQui = (w: Who) => { try { localStorage.setItem(QUI, w) } catch { /* stockage refusé */ } }
 
-/** Les drapeaux et les enveloppes qui dépassent, d'après les lettres. */
+/** Les drapeaux et les enveloppes qui dépassent, d'après les lettres ; sans réseau, le nuage barré. */
 function peindreBoites(j: Jeu, net = false) {
   if (!j.boites) return
+  const hors = j.coffre.horsLigne()
   for (const w of WHO) {
-    const leve = drapeau(j.lettres, w.id), dedans = boite(j.lettres, w.id).length > 0
+    const leve = !hors && drapeau(j.lettres, w.id), dedans = !hors && boite(j.lettres, w.id).length > 0
     j.boites.drapeau(w.id, leve, net)
     j.boites.lettre(w.id, dedans)
+    j.boites.nuage(w.id, hors)
     if (!j.occupe) j.boites.porte(w.id, !leve && dedans ? 0.25 : 0)
   }
 }
@@ -118,6 +124,7 @@ function accueil(j: Jeu) {
 function chez(j: Jeu, w: Who) {
   j.qui = w
   ecrireQui(w)
+  void relire(j)
   if (!j.prefs[w]) void j.coffre.prefs(w).then(p => { if (!j.prefs[w]) j.prefs[w] = p; j.guetter() })
   else j.guetter()
   sfx('select', { vol: 0.5 })
@@ -141,11 +148,34 @@ function fermerEcran(j: Jeu) {
 }
 /** Une lettre gardée (brouillon, cachetée, postée…) : la liste suit. */
 function retenir(j: Jeu, l: Lettre) {
+  j.ecritures++
   const i = j.lettres.findIndex(x => x.id === l.id)
   if (i >= 0) j.lettres[i] = l
   else j.lettres.push(l)
   peindreBoites(j)
 }
+
+/** La liste relue (en entrant chez l'une ou l'autre, en touchant sa boîte : une lettre postée sur un
+    autre appareil) ; oubliée si une lettre a été gardée entre-temps (elle est plus récente). */
+async function relire(j: Jeu) {
+  await sauvegardes()
+  const n = j.ecritures
+  const ls = await j.coffre.lettres()
+  if (jeu !== j || !j.c.alive() || j.ecritures !== n) return
+  j.lettres = ls
+  peindreBoites(j)
+  j.guetter()
+}
+
+/** Une lettre prête à montrer, ses fichiers arrivés (le coffre en ligne les apporte à la demande).
+    null : un brouillon dont le dessin ou une voix n'est pas venu, ou le jeu refermé. */
+async function prete(j: Jeu, l: Lettre): Promise<Lettre | null> {
+  const x = await j.coffre.completer(l)
+  if (jeu !== j || !j.c.alive() || !x) return null
+  if (x !== l) retenir(j, x)
+  return x
+}
+const attendre = (j: Jeu, ms: number) => new Promise<void>(r => { j.c.after(ms, r) })
 
 /** « Écrire » : une enveloppe cachetée attend d'être postée ; sinon son brouillon, ou une feuille neuve.
     Les sauvegardes en vol (la feuille qu'on vient de quitter) passent d'abord. */
@@ -155,12 +185,15 @@ async function ecrireLettre(j: Jeu, depuis?: Lettre) {
   sfx('select', { vol: 0.5 })
   j.occupe = true
   await sauvegardes()
+  const attend = depuis ? null : aPoster(j.lettres, w)
+  const l = jeu === j && j.qui === w && !j.ecran ? await prete(j, attend ?? depuis ?? brouillon(j.lettres, w) ?? neuve(w, Date.now())) : null
+  if (jeu !== j) return
   j.occupe = false
-  if (jeu !== j || j.qui !== w || j.ecran) return
+  if (j.qui !== w || j.ecran) return
+  // Un brouillon dont le dessin n'a pas pu venir ne s'ouvre pas : la sauvegarde suivante l'effacerait
+  if (!l) { sfx('error', { vol: 0.4 }); return }
   geste(j, 'feuille')
-  const attend = aPoster(j.lettres, w)
-  if (attend && !depuis) { void lancerEnvoi(j, attend); return }
-  const l = depuis ?? brouillon(j.lettres, w) ?? neuve(w, Date.now())
+  if (attend) { void lancerEnvoi(j, l); return }
   ouvrirEcran(j, hote => ecrire(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
     garde: x => retenir(j, x),
     geste: n => geste(j, n),
@@ -189,28 +222,31 @@ async function lancerEnvoi(j: Jeu, l: Lettre) {
   }))
 }
 
-/** Sa boîte touchée : la porte s'ouvre ; la plus ancienne lettre fermée vient (la cérémonie), ou
-    la première ouverte (droit à la lecture). Vide : rien, la porte se referme. */
+/** Sa boîte touchée : la porte s'ouvre pendant que la liste est relue ; la plus ancienne lettre
+    fermée vient (la cérémonie), ou la première ouverte (droit à la lecture). Vide, ou sans réseau :
+    la boîte se secoue, la porte se referme. */
 function toucherBoite(j: Jeu, w: Who) {
   const b = j.boites
   if (!b || j.occupe) return
   j.occupe = true
   b.porte(w, 1)
   sfx('creak', { vol: 0.5 })
-  const l = boite(j.lettres, w)[0]
-  if (!l) {
-    b.secouer(w)
-    j.c.after(1100, () => {
-      if (jeu !== j) return
-      b.porte(w, 0)
-      sfx('metal', { vol: 0.4 })
-      j.occupe = false
-    })
-    return
-  }
-  geste(j, 'boite')
-  j.c.after(650, () => {
-    if (jeu !== j) return
+  void (async () => {
+    await Promise.all([relire(j), attendre(j, 650)])
+    const l0 = jeu === j && !j.coffre.horsLigne() ? boite(j.lettres, w)[0] : undefined
+    const l = l0 ? await prete(j, l0) : null
+    if (jeu !== j || !j.c.alive()) return
+    if (!l) {
+      b.secouer(w)
+      j.c.after(450, () => {
+        if (jeu !== j) return
+        b.porte(w, 0)
+        sfx('metal', { vol: 0.4 })
+        j.occupe = false
+      })
+      return
+    }
+    geste(j, 'boite')
     j.occupe = false
     if (l.etat === 'ouverte') { lecture(j, l); return }
     ouvrirEcran(j, hote => ouvrirEnveloppe(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
@@ -218,7 +254,7 @@ function toucherBoite(j: Jeu, w: Who) {
       garde: x => retenir(j, x),
       fini: x => lecture(j, x)
     }))
-  })
+  })()
 }
 
 /** Une lettre lue : Écouter, Répondre, Garder, la poubelle. Quittée autrement, une lettre
@@ -282,16 +318,21 @@ function souvenirsDe(j: Jeu) {
   sfx('select', { vol: 0.5 })
   const ls = souvenirs(j.lettres, w)
   ouvrirEcran(j, hote => {
-    hote.innerHTML = `<div class="co-sou">${ls.map((_, i) => `<button class="co-sou-l" data-i="${i}" style="--r:${(i * 37 % 7) - 3}deg" aria-label="Lettre"></button>`).join('')}${ls.length ? '' : `<div class="co-sou-v">${ICONE.souvenirs}</div>`}</div>`
+    // Vide et sans réseau : le nuage barré, pas un coffre vide
+    const vide = j.coffre.horsLigne() ? ICONE.nuage : ICONE.souvenirs
+    hote.innerHTML = `<div class="co-sou">${ls.map((_, i) => `<button class="co-sou-l" data-i="${i}" style="--r:${(i * 37 % 7) - 3}deg" aria-label="Lettre"></button>`).join('')}${ls.length ? '' : `<div class="co-sou-v">${vide}</div>`}</div>`
     const vues = new IntersectionObserver(es => {
       for (const e of es) {
         if (!e.isIntersecting) continue
         const b = e.target as HTMLElement
         vues.unobserve(b)
-        void aplatir(ls[+b.dataset.i!], 480).then(u => { b.style.backgroundImage = `url(${u})` })
+        void prete(j, ls[+b.dataset.i!]).then(x => (x ? aplatir(x, 480) : null)).then(u => { if (u) b.style.backgroundImage = `url(${u})` })
       }
     })
-    hote.querySelectorAll<HTMLElement>('.co-sou-l').forEach(b => { vues.observe(b); b.onclick = () => lecture(j, ls[+b.dataset.i!]) })
+    hote.querySelectorAll<HTMLElement>('.co-sou-l').forEach(b => {
+      vues.observe(b)
+      b.onclick = () => void prete(j, ls[+b.dataset.i!]).then(x => { if (x && j.ecran?.nom === 'souvenirs') lecture(j, x) })
+    })
     return { nom: 'souvenirs', fermer() { vues.disconnect(); hote.innerHTML = '' }, main: () => null }
   })
 }
@@ -312,11 +353,14 @@ export const courrier: GameDef = {
       <div class="co-3d"></div><div class="co-ecran"></div>
       <div class="co-bas"></div><span class="tool-item co-ret"></span></div>`
     const wrap = c.root.querySelector<HTMLElement>('#coWrap')!
-    // Sous les bots, `__co.echec = true` fait refuser les écritures (l'envoi ne doit rien annoncer)
+    // Les lettres sont en ligne (troisième exception de la règle 3) ; les bots jouent sur l'appareil,
+    // sans Worker (`__COFFRE_EN_LIGNE` : les vérifications à deux appareils). Sous les bots,
+    // `__co.echec = true` fait refuser les écritures (l'envoi ne doit rien annoncer)
+    const fen = window as unknown as { __BOT?: boolean; __COFFRE_EN_LIGNE?: boolean }
     const base = coffreIDB(), bot = { echec: false }
-    const coffre: Coffre = (window as unknown as { __BOT?: boolean }).__BOT
-      ? { ...base, garderLettre: l => (bot.echec ? Promise.resolve(false) : base.garderLettre(l)), garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p)) }
-      : base
+    const coffre: Coffre = fen.__BOT && !fen.__COFFRE_EN_LIGNE
+      ? { ...base, garderLettre: (l, o) => (bot.echec ? Promise.resolve(false) : base.garderLettre(l, o)), garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p)) }
+      : coffreEnLigne(base)
     // La main par fille : un geste qu'ELLE n'a jamais réussi, la main vient tout de suite (même si
     // sa sœur l'a déjà fait : la coquille ne retient qu'une première fois par jeu)
     let montre = ''
@@ -328,11 +372,13 @@ export const courrier: GameDef = {
       montre = cle
       c.after(120, handNow)
     }
-    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false, prefs: {}, guetter }
+    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false, prefs: {}, guetter, ecritures: 0 }
     c.every(400, guetter)
     jeu = j
     preloadSfx(['select', 'creak', 'metal', 'click', 'bong', 'whoosh', 'cloth', 'drop', 'pluck', 'chop', 'confirm', 'error', 'tick', 'switch', 'glass'])
-    const finLoader = loader(wrap, 'courrier')
+    // L'attente compte aussi la liste en ligne, et la première fois les lettres de la tablette qui y
+    // partent : 15 s ne suffiraient pas sur un réseau lent (« Chargement 3D bloqué », puis Oups)
+    const finLoader = loader(wrap, 'courrier', 60_000)
     void (async () => {
       const [ls, b] = await Promise.all([sauvegardes().then(() => j.coffre.lettres()), creerBoites(wrap.querySelector<HTMLElement>('.co-3d')!).catch(e => { console.error(e); return null }), chargerPortraits().catch(() => { /* les animaux viendront sans image */ })])
       finLoader()

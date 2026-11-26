@@ -33,15 +33,21 @@ L'histoire de chaque jeu est dans l'en-tête de son fichier et dans `git log`.
    encore le message de sa sœur). Corollaire : dans Apprendre, **aucune
    sanction** (ni vies, ni chrono, ni bonus de vitesse) ; dans Créer, **aucune
    note** sur une création.
-3. **Pas de collecte de données enfants.** Photos et voix restent locales.
-   Aucun analytique tiers. **Deux exceptions, choisies par le père : Devine
+3. **Pas de collecte de données enfants.** Photos et voix restent locales
+   (sauf les lettres du Courrier, plus bas). Aucun analytique tiers. **Deux
+   exceptions, choisies par le père : Devine
    mon dessin (8/10) et Mon dessin prend vie (18/10, la Ferme à construire)**
    envoient le DESSIN (réduit, sans prénom, sans voix ni photo) à Claude,
    l'IA d'Anthropic, qui l'efface sous 30 jours et ne s'en sert pas pour
    s'entraîner — par NOTRE Worker (`worker/devine.ts`, `worker/vivant.ts`),
    avec la clé API du père, un secret du Worker Cloudflare
    (`ANTHROPIC_API_KEY`) : jamais dans l'app, ni sur la tablette, ni dans le
-   dépôt. Rien d'autre ne part, nulle part.
+   dépôt. **Troisième exception, choisie par le père (26/11) : les lettres
+   du Courrier** — texte, dessins, voix, sans autre donnée — sont gardées sur
+   le compte Cloudflare `tld83` du père (D1 et R2 `girlz-games-courrier`),
+   accessibles seulement à travers notre Worker (`worker/courrier.ts`),
+   derrière le code d'accès de la famille ; il les lit dans le tableau de
+   bord (`README.md`). Rien d'autre ne part, nulle part.
 4. **Français uniquement** : textes, commentaires de code, messages de commit.
    Et on se tutoie.
 
@@ -67,7 +73,9 @@ src/games/      un fichier par jeu + index.ts (le catalogue et les trois univers
 worker/         le Worker Cloudflare qui sert l'app (wrangler.jsonc) : index.ts
                 (routes) · access.ts + access-page.ts (le code d'accès, cookie
                 signé) · devine.ts (l'appel à Claude, partagé) · vivant.ts ·
-                headers.ts · worker.test.ts
+                courrier.ts + migrations/ (les lettres du Courrier, D1 et R2) ·
+                headers.ts · worker.test.ts · courrier.test.ts (sur une vraie
+                D1 et un vrai R2 locaux : banc.jsonc, PIEGES.md)
 public/assets/  modèles Kenney, photos des imagiers, sons, affiches, CREDITS.md
 scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
                 · touched.mjs (quels bots lancer) · posters.mjs (les affiches)
@@ -120,7 +128,8 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `pinceaux.ts` | les dix pinceaux de l'Atelier (sortis de `coloring.ts` le 26/11, au pixel près), partagés avec le Courrier — testé |
 | `saisie.ts` · `clavier.ts` | le texte et son curseur en caractères VUS (un émoji composé s'efface d'un coup) — testé ; notre clavier AZERTY et sa grille d'émojis (jamais celui d'Android) — testé |
 | `vocal.ts` | la voix GARDÉE du Courrier (MediaRecorder, 30 s ; coupée par la pause, elle est gardée ; le micro toujours rendu) — au contraire de `mic.ts`, qui ne garde rien — testé |
-| `courrier.ts` + `courrierdb.ts` · `boites3d.ts` | le Courrier : une lettre et ses états (brouillon, cachetée, postée, ouverte, gardée), la file de la boîte, le raccourci, les doigts sur un objet — testé ; le coffre IndexedDB `ferme-courrier` (une fiche par lettre, une écriture refusée n'annonce rien) — testé ; les deux boîtes aux lettres dans la ferme |
+| `courrier.ts` + `courrierdb.ts` · `boites3d.ts` | le Courrier : une lettre et ses états (brouillon, cachetée, postée, ouverte, gardée), la file de la boîte, le raccourci, les doigts sur un objet — testé ; le contrat du coffre et le coffre IndexedDB `ferme-courrier` (une fiche par lettre, une écriture refusée n'annonce rien ; celui des bots) — testé ; les deux boîtes aux lettres dans la ferme, et leur nuage barré sans réseau |
+| `courrierfil.ts` · `courrierenligne.ts` | le Courrier en ligne (26/11) : la forme d'une lettre entre l'app et le Worker, lue des deux côtés (aucun import) — testé ; le coffre sur Cloudflare : le brouillon gardé aussi sur l'appareil, les fichiers d'abord puis la lettre, les fichiers à la demande (`completer`), une `version` qui avance, le nuage (`horsLigne`), la tablette versée en ligne une fois (`ferme:courrier:migre`) ; jamais de relecture régulière (le père) — testé |
 | `fps.ts` | la sonde `?fps` pour la tablette |
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : 324 sujets

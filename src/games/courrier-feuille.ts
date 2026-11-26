@@ -1,4 +1,4 @@
-/* @version 2026-11-26 15:16 */
+/* @version 2026-11-26 17:23 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -163,12 +163,13 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   /* --- Le brouillon --- */
   let garde = 0, enAttente = false
   const plusTard = () => { enAttente = true; c.cancel(garde); garde = c.after(500, () => void garder()) }
-  const garder = () => suivre((async () => {
+  // À chaque geste, gardé sur l'appareil seulement ; à la sortie et à « Envoyer » (`sortie`), en ligne aussi
+  const garder = (sortie = false) => suivre((async () => {
     c.cancel(garde)
     if (!enAttente) return
     enAttente = false
     l.peinture = peint ? await versBlob(cv) : charge ? null : l0.peinture
-    if (await x.coffre.garderLettre(l)) o.garde({ ...l })
+    if (await x.coffre.garderLettre(l, sortie ? {} : { ici: true })) o.garde({ ...l })
   })())
 
   /* --- Dessiner --- */
@@ -504,7 +505,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     if (prise) await finirPrise()
     if (vierge(l, peint)) { sfx('error', { vol: 0.4 }); q('#coGo').classList.add('non'); c.after(500, () => q('#coGo').classList.remove('non')); return }
     enAttente = true
-    await garder()
+    await garder(true)
     if (!vivant) return
     if (parti) return
     parti = true
@@ -521,7 +522,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     if (sel && vide(sel.t)) { const i = l.objets.indexOf(sel); if (i >= 0) l.objets.splice(i, 1) }
     sel = null
     // Ce qui a été dit est gardé (ajouter() sait qu'on est parti), puis le brouillon : suivis jusqu'au bout
-    void suivre((async () => { await finirPrise(); enAttente = true; await garder() })())
+    void suivre((async () => { await finirPrise(); enAttente = true; await garder(true) })())
     effacer.disarm()
     kb.detruire()
     taire()
