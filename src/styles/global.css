@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:23 */
+/* @version 2026-11-26 11:29 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2421,3 +2421,64 @@ body.playing .po-card{max-width:880px;}
 .co-ret{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:84px;z-index:7;}
 .co-ret:empty{display:none;}
 .co-ret .sn-tool{width:60px;height:60px;}
+
+/* La feuille du Courrier (games/courrier-feuille.ts) : 1500 × 1000, les objets
+   posés en pourcentages, leur taille en largeur de feuille (cqw) */
+.co-ed{position:absolute;inset:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr) auto;
+  gap:8px 14px;padding:62px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));
+  background:radial-gradient(120% 90% at 50% 20%,#FFF3DC,#F6DDBB);}
+.co-ed-g,.co-ed-d{display:flex;flex-direction:column;gap:10px;justify-content:center;z-index:3;}
+.co-ed-g{padding-top:60px;}
+.co-ed-d .mine-trash{position:static;}
+.co-ed-desk{container-type:size;display:grid;place-items:center;position:relative;min-width:0;}
+.co-feuille{position:relative;container-type:size;width:min(100cqw,150cqh);aspect-ratio:3/2;border-radius:6px;box-shadow:var(--e2);overflow:hidden;touch-action:none;}
+.co-feuille canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.co-objs{position:absolute;inset:0;}
+.co-obj{position:absolute;touch-action:none;cursor:grab;}
+.co-ed[data-mode="dessin"] .co-obj{pointer-events:none;}
+.co-obj.pris{z-index:3;filter:drop-shadow(0 8px 10px rgba(69,54,42,.35));}
+.co-obj.pop{animation:coPop .42s var(--spring);}
+@keyframes coPop{0%{scale:.2;opacity:0}100%{scale:1;opacity:1}}
+.co-obj .co-g-emo{display:block;font-size:11.3cqw;line-height:1.1;font-family:system-ui,sans-serif;}
+.co-obj .co-g-animal{display:block;width:16cqw;height:16cqw;pointer-events:none;}
+.co-obj .co-g-photo{display:block;width:15cqw;height:15cqw;border-radius:2.2cqw;border:.8cqw solid #fff;box-shadow:0 2px 8px rgba(69,54,42,.25);pointer-events:none;object-fit:cover;}
+.co-obj .co-g-forme{display:block;width:13.5cqw;height:13.5cqw;overflow:visible;filter:drop-shadow(0 2px 2px rgba(69,54,42,.2));}
+.co-bin{position:absolute;right:10px;bottom:10px;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.95);display:grid;place-items:center;box-shadow:var(--e2);z-index:5;transition:transform .2s var(--spring);}
+.co-bin[hidden]{display:none;}
+.co-bin svg{width:52px;height:52px;}
+.co-bin.on{transform:scale(1.25);background:#FFD9D4;}
+.co-papiers{position:absolute;right:110px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:1fr 1fr;gap:10px;background:rgba(255,253,246,.97);padding:14px;border-radius:22px;box-shadow:var(--e2);z-index:7;}
+.co-papiers[hidden]{display:none;}
+.co-papiers button{width:64px;height:46px;border:none;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(69,54,42,.15);cursor:pointer;}
+.co-tray{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;background:rgba(255,253,246,.88);border-radius:24px;padding:9px 14px;box-shadow:var(--e1);min-width:0;min-height:168px;}
+.co-rang{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:100%;}
+.co-tray .tool-cap{font-size:11px;padding:2px 7px;}
+.co-mini{width:50px;height:50px;}
+.co-mini svg,.co-mini img{width:32px;height:32px;}
+.co-mini .co-g-emo{font-size:26px;}
+.co-ed .sn-tool.sel{box-shadow:0 0 0 4px var(--mango),var(--e2);}
+.co-ed .sn-tool.non{animation:coNon .45s;}
+@keyframes coNon{25%{transform:translateX(-8px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+.co-pal{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;}
+.co-pal button{width:40px;height:40px;border-radius:50%;border:4px solid #fff;box-shadow:0 1px 4px rgba(69,54,42,.3);cursor:pointer;}
+.co-pal button.sel{box-shadow:0 0 0 4px var(--mango);}
+.co-tailles{display:flex;gap:6px;}
+.co-tailles button{width:46px;height:46px;border:none;border-radius:14px;background:#fff;display:grid;place-items:center;box-shadow:0 1px 4px rgba(69,54,42,.2);cursor:pointer;}
+.co-tailles button.sel{box-shadow:0 0 0 4px var(--mango);}
+.co-tailles b{border-radius:50%;background:var(--ink);}
+.co-themes{display:flex;gap:6px;flex-wrap:wrap;}
+.co-themes button{border:none;border-radius:99px;padding:6px 12px;background:#fff;font:700 13px 'Baloo 2',sans-serif;color:var(--ink-soft);box-shadow:0 1px 4px rgba(69,54,42,.2);cursor:pointer;}
+.co-themes button.sel{background:var(--mango);color:#fff;}
+.co-bande{display:flex;gap:10px;overflow-x:auto;max-width:100%;padding:4px 6px 8px;touch-action:pan-x;}
+.co-collant{flex:none;width:78px;height:78px;border:none;border-radius:18px;background:#fff;display:grid;place-items:center;box-shadow:0 1px 5px rgba(69,54,42,.18);touch-action:pan-x;cursor:pointer;}
+.co-collant:active{transform:scale(.93);}
+.co-collant.non{animation:coNon .45s;}
+.co-collant .co-g-emo{font-size:46px;line-height:1;font-family:system-ui,sans-serif;}
+.co-collant img{width:66px;height:66px;pointer-events:none;object-fit:cover;}
+.co-collant .co-g-photo{border-radius:12px;}
+.co-collant .co-g-forme{width:54px;height:54px;}
+.co-fantome{position:fixed;z-index:40;pointer-events:none;transform:translate(-50%,-60%) rotate(-5deg);filter:drop-shadow(0 10px 12px rgba(69,54,42,.35));}
+.co-fantome .co-g-emo{font-size:84px;font-family:system-ui,sans-serif;}
+.co-fantome img{width:120px;height:120px;}
+.co-fantome .co-g-photo{border-radius:18px;border:6px solid #fff;}
+.co-fantome .co-g-forme{width:100px;height:100px;}

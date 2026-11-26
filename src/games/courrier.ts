@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:23 */
+/* @version 2026-11-26 11:29 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
@@ -6,7 +6,8 @@ import { visible, type HandMove } from '../core/hand'
 import { WHO, girl, whoOf, type Who } from '../core/mine'
 import { creerBoites, type Boites } from '../core/boites3d'
 import { coffreIDB, type Coffre } from '../core/courrierdb'
-import { drapeau, boite, type Lettre } from '../core/courrier'
+import { drapeau, boite, brouillon, neuve, type Lettre } from '../core/courrier'
+import { chargerPortraits, ecrire } from './courrier-feuille'
 
 /* ✉️ LE COURRIER (Créer, conception du 25/11, `docs/superpowers/specs/`) —
    Joyce et Jade s'écrivent pour de vrai, chacune son tour, sur la tablette.
@@ -93,6 +94,40 @@ function chez(j: Jeu, w: Who) {
   peindreBas(j)
 }
 
+/** Un écran plein par-dessus la ferme figée. */
+function ouvrirEcran(j: Jeu, fabrique: (hote: HTMLElement) => Ecran) {
+  j.ecran?.fermer()
+  j.boites?.figer(true)
+  j.ecran = fabrique(j.wrap.querySelector<HTMLElement>('.co-ecran')!)
+  peindreBas(j)
+}
+function fermerEcran(j: Jeu) {
+  j.ecran?.fermer()
+  j.ecran = null
+  j.boites?.figer(false)
+  peindreBas(j)
+}
+/** Une lettre gardée (brouillon, cachetée, postée…) : la liste suit. */
+function retenir(j: Jeu, l: Lettre) {
+  const i = j.lettres.findIndex(x => x.id === l.id)
+  if (i >= 0) j.lettres[i] = l
+  else j.lettres.push(l)
+  peindreBoites(j)
+}
+
+/** « Écrire » : son brouillon, ou une feuille neuve. */
+function ecrireLettre(j: Jeu) {
+  const w = j.qui
+  if (!w || j.occupe) return
+  sfx('select', { vol: 0.5 })
+  const l = brouillon(j.lettres, w) ?? neuve(w, Date.now())
+  ouvrirEcran(j, hote => ecrire(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
+    garde: x => retenir(j, x),
+    geste: () => { /* la main par fille : tâche 13 */ },
+    envoyer: () => { /* l'envoi : tâche 11 */ }
+  }))
+}
+
 /** Sa boîte touchée. Vide : la porte s'ouvre, rien, elle se referme. */
 function toucherBoite(j: Jeu, w: Who) {
   const b = j.boites
@@ -130,7 +165,7 @@ export const courrier: GameDef = {
     preloadSfx(['select', 'creak', 'metal', 'click', 'bong', 'whoosh', 'cloth', 'drop', 'pluck', 'chop', 'confirm', 'error', 'tick', 'switch', 'glass'])
     const finLoader = loader(wrap, 'courrier')
     void (async () => {
-      const [ls, b] = await Promise.all([j.coffre.lettres(), creerBoites(wrap.querySelector<HTMLElement>('.co-3d')!).catch(e => { console.error(e); return null })])
+      const [ls, b] = await Promise.all([j.coffre.lettres(), creerBoites(wrap.querySelector<HTMLElement>('.co-3d')!).catch(e => { console.error(e); return null }), chargerPortraits().catch(() => { /* les animaux viendront sans image */ })])
       finLoader()
       if (jeu !== j || !c.alive()) { b?.dispose(); return }
       if (!b) { c.toast('La 3D n\'est pas disponible ici'); return }
@@ -156,9 +191,11 @@ export const courrier: GameDef = {
       if (plaque && !j.ecran) { chez(j, plaque.dataset.who as Who); return }
       if (t.closest('#coRet')) {
         sfx('click', { vol: 0.5 })
-        if (j.ecran) { j.ecran.fermer(); j.ecran = null; j.boites?.figer(false); peindreBas(j); return }
+        if (j.ecran) { fermerEcran(j); return }
         accueil(j)
+        return
       }
+      if (t.closest('#coEcrire')) ecrireLettre(j)
     }
     wrap.addEventListener('pointerdown', bas)
     wrap.addEventListener('pointerup', haut)
@@ -170,6 +207,7 @@ export const courrier: GameDef = {
         get ready() { return !!j.boites },
         get qui() { return j.qui },
         get ecran() { return j.ecran?.nom ?? null },
+        get feuille() { const e = j.ecran as { etat?: () => unknown } | null; return e?.etat?.() ?? null },
         get lettres() { return j.lettres.map(l => ({ de: l.de, a: l.a, etat: l.etat, objets: l.objets.length })) },
         drapeau: (w: Who) => drapeau(j.lettres, w),
         /** La boîte de `w`, à l'écran. */

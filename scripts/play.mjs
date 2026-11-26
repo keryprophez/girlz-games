@@ -1,4 +1,4 @@
-/* @version 2026-11-25 18:45 */
+/* @version 2026-11-26 11:29 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -2646,6 +2646,71 @@ await scenario('bille-trois-plateaux', async () => {
   if (!(await page.evaluate(() => document.body.innerText.includes('Trois plateaux')))) throw new Error(`la bille n'a pas fini les trois plateaux (${await etat()})`)
 })
 
+
+/* ✉️ Le Courrier (26/11) : Jade écrit une lettre — un trait, deux autocollants
+   (touché, tiré du plateau), un déplacé, un jeté puis rendu par « Annuler »,
+   un tourné et agrandi à deux doigts ; elle sort par la maison, revient : la
+   même feuille. */
+await scenario('courrier-lettre', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.evaluate(() => new Promise(r => { const q = indexedDB.deleteDatabase('ferme-courrier'); q.onsuccess = q.onerror = q.onblocked = r }))
+  const entrer = async () => {
+    await openGame('Le Courrier', '__co')
+    await page.waitForFunction(() => window.__co.ready, null, { timeout: 120000, polling: 300 })
+    await page.locator('.co-plaque[data-who="jade"]').click()
+    await page.locator('#coEcrire').click()
+    await page.waitForFunction(() => window.__co.ecran === 'feuille', null, { timeout: 10000 })
+  }
+  await entrer()
+  const etat = () => page.evaluate(() => window.__co.feuille)
+  const f = await page.locator('.co-ed-f').boundingBox()
+  const P = (x, y) => [f.x + f.width * x, f.y + f.height * y]
+  await page.mouse.move(...P(0.2, 0.3)); await page.mouse.down()
+  for (let i = 1; i <= 10; i++) await page.mouse.move(...P(0.2 + i * 0.03, 0.3 + i * 0.01))
+  await page.mouse.up()
+  if (!(await etat()).peint) throw new Error(`le trait ne peint pas (${JSON.stringify(await etat())})`)
+  await page.locator('#coM-colle').click()
+  await page.locator('.co-collant').first().click()
+  const c = await page.locator('.co-collant').nth(2).boundingBox()
+  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2); await page.mouse.down()
+  await page.mouse.move(...P(0.75, 0.6), { steps: 10 }); await page.mouse.up()
+  if ((await etat()).objets !== 2) throw new Error(`deux autocollants attendus (${JSON.stringify(await etat())})`)
+  // Déplacer le premier
+  const o = page.locator('.co-obj').first()
+  const left0 = await o.evaluate(el => el.style.left)
+  const b = await o.boundingBox()
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down()
+  await page.mouse.move(...P(0.45, 0.45), { steps: 8 }); await page.mouse.up()
+  if ((await o.evaluate(el => el.style.left)) === left0) throw new Error('l’autocollant ne se déplace pas')
+  // Jeter le second sur la poubelle, puis « Annuler » le rend
+  const d = await page.locator('.co-ed-desk').boundingBox()
+  const b2 = await page.locator('.co-obj').nth(1).boundingBox()
+  await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2); await page.mouse.down()
+  await page.mouse.move(d.x + d.width - 52, d.y + d.height - 52, { steps: 12 }); await page.mouse.up()
+  if ((await etat()).objets !== 1) throw new Error(`la poubelle ne jette pas (${JSON.stringify(await etat())})`)
+  await page.locator('#coUndo').click()
+  if ((await etat()).objets !== 2) throw new Error(`« Annuler » ne rend pas l’autocollant (${JSON.stringify(await etat())})`)
+  // Deux doigts : il tourne et grandit
+  // L'objet saisi passe dessus (le dernier du DOM) : on le marque pour le retrouver
+  await page.locator('.co-obj').first().evaluate(el => { el.dataset.bot = 'pince' })
+  const g = page.locator('.co-obj[data-bot="pince"]')
+  const t0 = await g.evaluate(el => el.style.transform)
+  const b3 = await g.boundingBox()
+  const cx = b3.x + b3.width / 2, cy = b3.y + b3.height / 2
+  const cdp = await page.context().newCDPSession(page)
+  const touche = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], i) => ({ x, y, id: i + 1 })) })
+  await touche('touchStart', [[cx - 10, cy], [cx + 30, cy]])
+  for (let i = 1; i <= 8; i++) await touche('touchMove', [[cx - 10, cy], [cx + 30 + i * 12, cy + i * 9]])
+  await touche('touchEnd', [])
+  const t1 = await g.evaluate(el => el.style.transform)
+  if (t1 === t0 || !/scale\((1\.[1-9]|[2-5])/.test(t1)) throw new Error(`deux doigts ne tournent ni n’agrandissent (${t0} → ${t1})`)
+  // Sortir, revenir : la même feuille
+  await page.waitForTimeout(700)
+  await page.locator('.pbtn[aria-label="Menu"]').click()
+  await entrer()
+  await page.waitForFunction(() => window.__co.feuille && window.__co.feuille.objets === 2 && window.__co.feuille.peint, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`le brouillon n’est pas retrouvé (${JSON.stringify(await etat())})`) })
+})
 
 await browser.close()
 if (failures.length) {
