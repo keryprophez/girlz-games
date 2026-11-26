@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:38 */
+/* @version 2026-11-26 13:29 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -7,6 +7,7 @@ import { IMAGIER, type Theme } from '../core/imagier'
 import { TRASH_ICON, trashButton, twoTaps, whoOf } from '../core/mine'
 import { useFerme } from '../core/store'
 import { isSoundOn } from '../core/audio'
+import { isPaused } from '../core/session'
 import { BRUSHES, BRUSH_ICON, BRUSH_NAME, ERASER_ICON, PALETTE, SIZES, heartD, starD, svgI, dab, segment, endStroke, newStroke, type Brush, type Stroke, type Trait } from '../core/pinceaux'
 import { FW, FH, MAX_OBJETS, MAX_VOIX, borner, pincer, vierge, type Gomme, type Lettre, type Objet, type Texte, type Vocal, type XY } from '../core/courrier'
 import { Saisie, sansEmojis, vide, vus } from '../core/saisie'
@@ -99,18 +100,12 @@ export function ecouter(el: HTMLElement, s: Son) {
   }, { musique: 'meadow' })
 }
 
-async function peindre(cv: HTMLCanvasElement, p: Blob | null) {
-  if (!p) return
-  try { const b = await createImageBitmap(p); cv.getContext('2d')!.drawImage(b, 0, 0, cv.width, cv.height); b.close() } catch { /* dessin illisible : la feuille sans lui */ }
+/** Pose le dessin gardé sur le canvas ; rend vrai s'il a pu être décodé. */
+async function peindre(cv: HTMLCanvasElement, p: Blob | null): Promise<boolean> {
+  if (!p) return false
+  try { const b = await createImageBitmap(p); cv.getContext('2d')!.drawImage(b, 0, 0, cv.width, cv.height); b.close(); return true } catch { return false /* dessin illisible : la feuille sans lui */ }
 }
 const versBlob = (cv: HTMLCanvasElement) => new Promise<Blob | null>(r => cv.toBlob(r, 'image/png'))
-function blanc(cv: HTMLCanvasElement) {
-  const c = document.createElement('canvas')
-  c.width = 60; c.height = 40
-  const g = c.getContext('2d')!
-  g.drawImage(cv, 0, 0, 60, 40)
-  return !g.getImageData(0, 0, 60, 40).data.some((v, i) => i % 4 === 3 && v > 8)
-}
 
 /* ---------- La feuille qu'on écrit ---------- */
 
@@ -130,11 +125,17 @@ const ICON = {
 }
 const outil = (id: string, icon: string, cap: string, cls = '') => `<span class="tool-item"><button class="sn-tool ${cls}" id="${id}" aria-label="${cap}">${icon}</button><i class="tool-cap">${cap}</i></span>`
 
+/** Les sauvegardes en cours (un brouillon qui s'encode en sortant) : le jeu les attend avant de
+    relire le coffre — « Rejouer » remontait le jeu et relisait l'ancien brouillon, puis l'écrasait. */
+const enVol = new Set<Promise<unknown>>()
+const suivre = <T>(p: Promise<T>): Promise<T> => { enVol.add(p); void p.finally(() => enVol.delete(p)); return p }
+export const sauvegardes = () => Promise.all([...enVol]).then(() => undefined)
+
 export interface Feuille extends Ecran { etat(): { mode: string; objets: number; peint: boolean; papier: string; annuler: number } }
 
 export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(l: Lettre): void; geste(nom: string): void; garde(l: Lettre): void }): Feuille {
   const { c } = x
-  const l: Lettre = { ...l0, objets: l0.objets.map(ob => ({ ...ob })) }
+  const l: Lettre = { ...l0, objets: l0.objets.filter(ob => ob.k !== 'texte' || !vide(ob.t)).map(ob => ({ ...ob })) }
   hote.innerHTML = `<div class="co-ed" data-mode="dessin">
     <div class="co-ed-g">${(Object.keys(MODE_NAME) as Mode[]).map(m => outil('coM-' + m, MODE_ICON[m], MODE_NAME[m])).join('')}</div>
     <div class="co-ed-desk"><div class="co-feuille co-ed-f"><canvas width="${FW}" height="${FH}"></canvas><div class="co-objs"></div></div><div class="co-bin" hidden>${TRASH_ICON}</div></div>
@@ -156,18 +157,19 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   const pousser = (f: () => void) => { annuler.push(f); if (annuler.length > UNDO) annuler.shift() }
 
   sheet.style.background = l.papier
-  void peindre(cv, l.peinture).then(() => { if (vivant && l.peinture) peint = !blanc(cv) })
+  let charge = !l.peinture
+  void peindre(cv, l.peinture).then(lu => { if (lu) peint = true; charge = true })
 
   /* --- Le brouillon --- */
   let garde = 0, enAttente = false
   const plusTard = () => { enAttente = true; c.cancel(garde); garde = c.after(500, () => void garder()) }
-  const garder = async () => {
+  const garder = () => suivre((async () => {
     c.cancel(garde)
     if (!enAttente) return
     enAttente = false
-    l.peinture = peint ? await versBlob(cv) : null
+    l.peinture = peint ? await versBlob(cv) : charge ? null : l0.peinture
     if (await x.coffre.garderLettre(l)) o.garde({ ...l })
-  }
+  })())
 
   /* --- Dessiner --- */
   const traits = new Map<number, Stroke>()
@@ -225,7 +227,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     el.addEventListener('pointerdown', e => { if (mode !== 'dessin') prendre(e, ob, el) })
   }
   function ajouter(ob: Objet): boolean {
-    if (!vivant) { l.objets.push(ob); enAttente = true; void garder(); return true } // une voix arrivée après la sortie
+    if (!vivant) { l.objets.push(ob); return true } // une voix arrivée en sortant : la sortie la garde
     if (l.objets.length >= MAX_OBJETS) return false
     l.objets.push(ob)
     monter(ob, true)
@@ -239,6 +241,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     l.objets.splice(i, 1)
     els.get(ob)?.remove()
     els.delete(ob)
+    if (ob === sel) { sel = null; saisie = null }
     if (annulable) pousser(() => { l.objets.splice(i, 0, ob); monter(ob) })
     plusTard()
   }
@@ -287,7 +290,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     if (jeter) { sfx('drop'); retirer(ob); return }
     if (tenu.bouge >= 10) { pousser(() => { Object.assign(ob, avant); const e2 = els.get(ob); if (e2) poser(e2, ob) }); plusTard(); return }
     // Un toucher : un texte se rouvre (le curseur sur la lettre touchée), une voix joue
-    if (ob.k === 'texte') { if (mode !== 'texte') { mode = 'texte'; plateau() } choisir(ob, tenu.lettre >= 0 ? tenu.lettre : undefined) }
+    if (ob.k === 'texte') { if (mode !== 'texte') changer('texte'); choisir(ob, tenu.lettre >= 0 ? tenu.lettre : undefined) }
     if (ob.k === 'voix') ecouter(el, ob)
   }
 
@@ -363,7 +366,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
           if (chrono) chrono.textContent = `${Math.min(MAX_S, Math.floor(t))} s`
         },
         fini: son => { prise = null; coller(son) }
-      }, { musique: 'meadow', encore: () => vivant })
+      }, { musique: 'meadow', encore: () => vivant && mode === 'voix' && !isPaused() })
       if (prise) sfx('select', { vol: 0.5 })
     } catch { micBarre = true }
     attente = false
@@ -486,6 +489,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     peint = false
     for (const ob of avant) { els.get(ob)?.remove(); els.delete(ob) }
     l.objets.length = 0
+    sel = null; saisie = null
     // les deux gestes (feuille, objets) s'annulent d'un coup
     const b = annuler.pop()!, a = annuler.pop()!
     pousser(() => { b(); a() })
@@ -514,11 +518,10 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   const fermer = () => {
     if (!vivant) return
     vivant = false
-    if (sel && vide(sel.t)) l.objets.splice(l.objets.indexOf(sel), 1)
+    if (sel && vide(sel.t)) { const i = l.objets.indexOf(sel); if (i >= 0) l.objets.splice(i, 1) }
     sel = null
-    void finirPrise() // ce qui a été dit est gardé (ajouter() sait qu'on est parti)
-    enAttente = true
-    void garder()
+    // Ce qui a été dit est gardé (ajouter() sait qu'on est parti), puis le brouillon : suivis jusqu'au bout
+    void suivre((async () => { await finirPrise(); enAttente = true; await garder() })())
     effacer.disarm()
     kb.detruire()
     taire()

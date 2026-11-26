@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:23 */
+/* @version 2026-11-26 13:29 */
 /* LES DEUX BOÎTES AUX LETTRES du Courrier, dans la ferme (`buildFarm` vide et
    quelques pièces) : celle de Jade (verte), celle de Joyce (lilas), leur
    prénom peint sur la porte. Le drapeau rouge se lève quand une lettre fermée
@@ -94,6 +94,8 @@ function faire(T: T3, stage: Stage, w: Who): Boite {
 
 export interface Boites {
   stage: Stage
+  /** La vue où va la caméra. */
+  readonly courante: Vue
   vue(v: Vue): void
   drapeau(w: Who, leve: boolean, net?: boolean): void
   /** 0 fermée, 0.25 entrouverte, 1 grande ouverte. */
@@ -137,6 +139,7 @@ export async function creerBoites(host: HTMLElement): Promise<Boites> {
     jade: { c: [-0.62, 1.5, 4.35], t: [-0.84, 0.82, 1.4] },
     joyce: { c: [0.62, 1.5, 4.35], t: [0.84, 0.82, 1.4] }
   }
+  let courante: Vue = 'duo'
   const pos = new T.Vector3(...VUES.duo.c), tgt = new T.Vector3(...VUES.duo.t), pTo = pos.clone(), tTo = tgt.clone()
   stage.start((dt, now) => {
     const t = now / 1000, k = 1 - Math.exp(-dt * 4.2)
@@ -165,7 +168,8 @@ export async function creerBoites(host: HTMLElement): Promise<Boites> {
   const fente = (w: Who) => { B[w].g.updateWorldMatrix(true, false); return B[w].g.localToWorld(new T.Vector3(0, 0.22, 0.1)) }
   return {
     stage,
-    vue(v: Vue) { pTo.set(...VUES[v].c); tTo.set(...VUES[v].t) },
+    get courante() { return courante },
+    vue(v: Vue) { courante = v; pTo.set(...VUES[v].c); tTo.set(...VUES[v].t) },
     drapeau(w, leve, net = false) { B[w].fTo = leve ? 1 : 0; if (net) B[w].fUp = B[w].fTo },
     porte(w, k) { B[w].pTo = k },
     lettre(w, on) { B[w].lettre.visible = on },

@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:38 */
+/* @version 2026-11-26 13:29 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
@@ -6,11 +6,11 @@ import { isSoundOn } from '../core/audio'
 import { shutUp } from '../core/voice'
 import { setPaused } from '../core/session'
 import { visible, handNow, type HandMove } from '../core/hand'
-import { WHO, girl, whoOf, trashButton, twoTaps, type Who } from '../core/mine'
+import { WHO, girl, whoOf, trashButton, twoTaps, calm, type Who } from '../core/mine'
 import { creerBoites, type Boites } from '../core/boites3d'
 import { coffreIDB, coffreMemoire, type Coffre } from '../core/courrierdb'
 import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, garder, reposer, souvenirs, aLire, type Lettre, type Prefs } from '../core/courrier'
-import { chargerPortraits, ecrire, lire, aplatir } from './courrier-feuille'
+import { chargerPortraits, ecrire, lire, aplatir, sauvegardes } from './courrier-feuille'
 import { taire } from '../core/vocal'
 import { envoyer, ouvrirEnveloppe, type Envoi } from './courrier-envoi'
 
@@ -61,6 +61,8 @@ interface Jeu {
   occupe: boolean
   /** Ce qu'on retient de chacune : ses envois (le raccourci), sa dernière enveloppe, ses gestes réussis. */
   prefs: Partial<Record<Who, Prefs>>
+  /** La main par fille : regarde si un geste nouveau pour elle attend (appelé souvent, et tout de suite après un changement). */
+  guetter(): void
 }
 
 /** Un geste réussi par elle : la main ne le lui montrera plus d'elle-même. */
@@ -116,7 +118,8 @@ function accueil(j: Jeu) {
 function chez(j: Jeu, w: Who) {
   j.qui = w
   ecrireQui(w)
-  if (!j.prefs[w]) void j.coffre.prefs(w).then(p => { if (!j.prefs[w]) j.prefs[w] = p })
+  if (!j.prefs[w]) void j.coffre.prefs(w).then(p => { if (!j.prefs[w]) j.prefs[w] = p; j.guetter() })
+  else j.guetter()
   sfx('select', { vol: 0.5 })
   j.boites?.vue(w)
   peindreBas(j)
@@ -128,6 +131,7 @@ function ouvrirEcran(j: Jeu, fabrique: (hote: HTMLElement) => Ecran) {
   j.boites?.figer(true)
   j.ecran = fabrique(j.wrap.querySelector<HTMLElement>('.co-ecran')!)
   peindreBas(j)
+  j.guetter()
 }
 function fermerEcran(j: Jeu) {
   j.ecran?.fermer()
@@ -143,11 +147,16 @@ function retenir(j: Jeu, l: Lettre) {
   peindreBoites(j)
 }
 
-/** « Écrire » : une enveloppe cachetée attend d'être postée ; sinon son brouillon, ou une feuille neuve. */
-function ecrireLettre(j: Jeu, depuis?: Lettre) {
+/** « Écrire » : une enveloppe cachetée attend d'être postée ; sinon son brouillon, ou une feuille neuve.
+    Les sauvegardes en vol (la feuille qu'on vient de quitter) passent d'abord. */
+async function ecrireLettre(j: Jeu, depuis?: Lettre) {
   const w = j.qui
   if (!w || j.occupe) return
   sfx('select', { vol: 0.5 })
+  j.occupe = true
+  await sauvegardes()
+  j.occupe = false
+  if (jeu !== j || j.qui !== w || j.ecran) return
   geste(j, 'feuille')
   const attend = aPoster(j.lettres, w)
   if (attend && !depuis) { void lancerEnvoi(j, attend); return }
@@ -227,8 +236,12 @@ function lecture(j: Jeu, l0: Lettre) {
     const q = <E extends HTMLElement = HTMLElement>(s: string) => hote.querySelector<E>(s)
     lire(q('.co-lec-f')!, l, { dire: t => j.c.say(t) })
     const texte = aLire(l)
-    const ecoute = q('#coEcoute')!
-    const peindreEcoute = () => ecoute.classList.toggle('eteint', !texte || !isSoundOn())
+    const ecoute = q('#coEcoute')!, lec = q('.co-lec')!
+    const peindreEcoute = () => {
+      ecoute.classList.toggle('eteint', !texte)
+      ecoute.classList.toggle('barre', !isSoundOn())
+      lec.classList.toggle('muet', !isSoundOn())
+    }
     peindreEcoute()
     const minuteur = j.c.every(500, peindreEcoute)
     ecoute.onclick = () => { if (!texte || !isSoundOn()) return; taire(); j.c.say(texte) }
@@ -243,7 +256,7 @@ function lecture(j: Jeu, l0: Lettre) {
       }
     }
     const repondre = q('#coRepond')!
-    repondre.onclick = async () => { sfx('select', { vol: 0.5 }); await ranger(true); fermerEcran(j); ecrireLettre(j) }
+    repondre.onclick = async () => { sfx('select', { vol: 0.5 }); await ranger(true); fermerEcran(j); void ecrireLettre(j) }
     const g = q('#coGarde')
     if (g) g.onclick = async () => { sfx('drop', { vol: 0.5 }); await ranger(true); fermerEcran(j) }
     const jeter = twoTaps(q('#coJette')!, j.c, async () => {
@@ -304,23 +317,24 @@ export const courrier: GameDef = {
     const coffre: Coffre = (window as unknown as { __BOT?: boolean }).__BOT
       ? { ...base, garderLettre: l => (bot.echec ? Promise.resolve(false) : base.garderLettre(l)), garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p)) }
       : base
-    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false, prefs: {} }
     // La main par fille : un geste qu'ELLE n'a jamais réussi, la main vient tout de suite (même si
     // sa sœur l'a déjà fait : la coquille ne retient qu'une première fois par jeu)
     let montre = ''
-    c.every(500, () => {
+    const guetter = () => {
       const w = j.qui, p = w && j.prefs[w], nom = etapeDe(j)
       if (!w || !p || !nom || p.faits.includes(nom) || j.occupe) return
       const cle = `${w}:${nom}:${j.ecran?.nom ?? ''}`
       if (cle === montre) return
       montre = cle
-      c.after(300, handNow)
-    })
+      c.after(120, handNow)
+    }
+    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false, prefs: {}, guetter }
+    c.every(400, guetter)
     jeu = j
     preloadSfx(['select', 'creak', 'metal', 'click', 'bong', 'whoosh', 'cloth', 'drop', 'pluck', 'chop', 'confirm', 'error', 'tick', 'switch', 'glass'])
     const finLoader = loader(wrap, 'courrier')
     void (async () => {
-      const [ls, b] = await Promise.all([j.coffre.lettres(), creerBoites(wrap.querySelector<HTMLElement>('.co-3d')!).catch(e => { console.error(e); return null }), chargerPortraits().catch(() => { /* les animaux viendront sans image */ })])
+      const [ls, b] = await Promise.all([sauvegardes().then(() => j.coffre.lettres()), creerBoites(wrap.querySelector<HTMLElement>('.co-3d')!).catch(e => { console.error(e); return null }), chargerPortraits().catch(() => { /* les animaux viendront sans image */ })])
       finLoader()
       if (jeu !== j || !c.alive()) { b?.dispose(); return }
       if (!b) { c.toast('La 3D n\'est pas disponible ici'); return }
@@ -340,24 +354,29 @@ export const courrier: GameDef = {
       if (!j.qui) chez(j, w)
       else if (w === j.qui) toucherBoite(j, w)
     }
+    const calme = calm()
     const clic = (e: MouseEvent) => {
+      if (j.occupe) return
       const t = e.target as HTMLElement
       const plaque = t.closest<HTMLElement>('.co-plaque')
       if (plaque && !j.ecran) { chez(j, plaque.dataset.who as Who); return }
       if (t.closest('#coRet')) {
+        if (calme.quiet()) return
+        calme.mark()
         sfx('click', { vol: 0.5 })
         if (j.ecran) {
           // Avant la cire, la lettre revient sur sa feuille ; après, elle attend cachetée (« Écrire » reprend)
           const e = j.ecran as Partial<Envoi>
           const l = e.avantCachet?.() ? brouillon(j.lettres, j.qui!) : null
           fermerEcran(j)
-          if (l) ecrireLettre(j, l)
+          if (l) void ecrireLettre(j, l)
+          else if (j.qui) { chez(j, j.qui); peindreBoites(j) }
           return
         }
         accueil(j)
         return
       }
-      if (t.closest('#coEcrire')) ecrireLettre(j)
+      if (t.closest('#coEcrire')) void ecrireLettre(j)
       if (t.closest('#coSouv')) souvenirsDe(j)
     }
     wrap.addEventListener('pointerdown', bas)
@@ -370,6 +389,7 @@ export const courrier: GameDef = {
         get ready() { return !!j.boites },
         get qui() { return j.qui },
         get ecran() { return j.ecran?.nom ?? null },
+        get vue() { return j.boites?.courante ?? null },
         get echec() { return bot.echec },
         set echec(v: boolean) { bot.echec = v },
         pause: (v: boolean) => setPaused(v),

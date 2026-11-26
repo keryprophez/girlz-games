@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:28 */
+/* @version 2026-11-26 13:29 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2627,3 +2627,7 @@ body.playing .po-card{max-width:880px;}
 .co-sou-l:active{scale:.96;}
 .co-sou-v{align-self:center;margin-top:22vh;opacity:.6;}
 .co-sou-v svg{width:150px;height:150px;}
+
+/* « Écouter » quand le son est coupé : barré */
+.co-lec .sn-tool.barre{opacity:.5;position:relative;}
+.co-lec .sn-tool.barre::after{content:"";position:absolute;left:16%;top:47%;width:68%;height:7px;border-radius:9px;background:#45362A;transform:rotate(-40deg);}

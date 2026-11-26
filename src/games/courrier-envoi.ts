@@ -1,7 +1,7 @@
-/* @version 2026-11-26 12:38 */
+/* @version 2026-11-26 13:29 */
 import { sfx } from '../core/sfx'
 import { buzz } from '../core/audio'
-import { onPause } from '../core/session'
+import { isPaused, onPause } from '../core/session'
 import { girl, whoOf } from '../core/mine'
 import { cacheter, timbrer, poster, ouvrir, type Enveloppe, type Lettre } from '../core/courrier'
 import type { Boites } from '../core/boites3d'
@@ -58,6 +58,7 @@ function scene(hote: HTMLElement, x: Contexte) {
   const menage = new Set<() => void>()
   let vivant = true
   const ecouter = <K extends keyof WindowEventMap>(cible: Window | HTMLElement, t: K, f: (e: WindowEventMap[K]) => void) => {
+    if (!vivant) return () => {}
     cible.addEventListener(t, f as EventListener)
     const off = () => cible.removeEventListener(t, f as EventListener)
     menage.add(off)
@@ -65,7 +66,10 @@ function scene(hote: HTMLElement, x: Contexte) {
   }
   return {
     get vivant() { return vivant },
-    attendre: (ms: number) => new Promise<void>(r => x.c.after(ms, r)),
+    /** Une pause du déroulé ; fermée, la cérémonie ne reprend plus (la promesse ne se résout jamais). */
+    attendre: (ms: number) => new Promise<void>(r => x.c.after(ms, () => { if (vivant) r() })),
+    /** Un abonnement rendu au ménage. */
+    garder(off: () => void) { if (!vivant) { off(); return } menage.add(off) },
     ecouter,
     /** Suit un glissé (le premier doigt seulement) ; `p` de 0 à 1 ; rend la main quand c'est fait. */
     glisse(el: HTMLElement, axe: 'x' | 'y', sens: 1 | -1, dist: () => number, f: (p: number, tire: boolean) => void): Promise<void> {
@@ -183,6 +187,7 @@ export function envoyer(hote: HTMLElement, x: Contexte, l0: Lettre, o: { boites:
           S.ecouter(window, 'pointercancel', ev => { if (ev.pointerId === id) lacher() })
         ]
         const offPause = onPause(p => { if (p) lacher() })
+        S.garder(offPause)
       })
       if (!S.vivant) return
       if (await ecrireLettre(cacheter(l, env))) break
@@ -251,11 +256,17 @@ export function envoyer(hote: HTMLElement, x: Contexte, l0: Lettre, o: { boites:
           p.style.transform = `translate(calc(-50% + ${dx}px),${dy}px) scale(${Math.max(0.34, Math.min(1, loin / 330))})`
           return loin
         }
+        const revenir = () => { id = -1; dx = dy = 0; p.classList.add('retour'); p.style.transform = '' }
+        const offPause = onPause(pa => { if (pa && id >= 0) revenir() })
+        S.garder(offPause)
         const offs = [
-          S.ecouter(p, 'pointerdown', e => { if (id >= 0) return; id = e.pointerId; x0 = e.clientX - dx; y0 = e.clientY - dy; p.classList.remove('retour') }),
+          offPause,
+          S.ecouter(p, 'pointerdown', e => { if (id >= 0 || isPaused()) return; id = e.pointerId; x0 = e.clientX - dx; y0 = e.clientY - dy; p.classList.remove('retour') }),
           S.ecouter(window, 'pointermove', e => { if (e.pointerId !== id) return; dx = e.clientX - x0; dy = e.clientY - y0; poser() }),
+          S.ecouter(window, 'pointercancel', e => { if (e.pointerId === id) revenir() }),
           S.ecouter(window, 'pointerup', e => {
             if (e.pointerId !== id) return
+            if (isPaused()) { revenir(); return }
             id = -1
             if (poser() < 120) {
               const r = p.getBoundingClientRect(), f = b.fente(a)

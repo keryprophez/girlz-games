@@ -178,7 +178,7 @@ le timbre), la boîte aux lettres de sa sœur, son drapeau. Conception et plan :
    Moderne, SIL OFL) : à télécharger avec l'accord du père ; en attendant,
    l'écriture cursive de la tablette.
 4. ⬜ Garder les lettres d'un appareil à l'autre : à discuter avec le père
-   (aujourd'hui tout reste sur la tablette, règle 3).
+   (pour l'instant tout reste sur la tablette, règle 3).
 
 ## À mesurer sur la tablette (`?fps`)
 
