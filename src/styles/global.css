@@ -1,4 +1,4 @@
-/* @version 2026-11-26 09:36 */
+/* @version 2026-11-26 11:16 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -875,6 +875,9 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .hand-tap{width:70px;height:70px;margin:-35px 0 0 -35px;border:5px solid #fff;
   box-shadow:0 0 0 3px rgba(255,190,60,.6),0 0 22px rgba(255,255,255,.9);}
 .hand-ring{border:4px solid #FFD34D;box-shadow:0 0 18px rgba(255,211,77,.95),inset 0 0 14px rgba(255,211,77,.6);}
+/* Le geste à deux doigts (pinch) : deux bouts de doigts qui s'écartent en tournant */
+.hand-pinch{position:absolute;left:0;top:0;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;opacity:0;
+  background:rgba(255,255,255,.88);border:4px solid #FFD34D;box-shadow:0 0 16px rgba(255,211,77,.9),0 4px 8px rgba(40,25,15,.3);}
 .hand-trail{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
 .hand-trail path{fill:none;stroke:#fff;stroke-linecap:round;opacity:0;filter:drop-shadow(0 2px 3px rgba(40,25,15,.4));}
 .hand-trail path.drag{stroke-width:9;}

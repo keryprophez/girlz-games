@@ -1,3 +1,4 @@
+/* @version 2026-11-26 11:16 */
 import { onPause } from './session'
 import type { GameContext } from './types'
 
@@ -22,6 +23,9 @@ import type { GameContext } from './types'
      { hold: cible }           garder le doigt posé (1, 2, 3… Soleil ! : son
                                animal court tant que le doigt reste), puis
                                le lever
+     { pinch: cible }          deux doigts posés qui s'écartent en tournant
+                               d'un quart de tour : agrandir et tourner un
+                               objet (les autocollants du Courrier)
      { tilt: cible, dx, dy }   pencher la tablette (le Labyrinthe à bille) :
                                une petite tablette se penche vers (dx, dy)
    Une cible est un élément du DOM, un point de l'écran `{ x, y }` (ce que
@@ -43,6 +47,7 @@ export type HandMove =
   | { choose: Spot[] }
   | { hold: Spot }
   | { tilt: Spot; dx: number; dy: number }
+  | { pinch: Spot }
 export type HandSpec = (root: HTMLElement) => HandMove | null
 
 /** Délai de la toute première démonstration d'un jeu (après le carton titre). */
@@ -317,6 +322,26 @@ export function coachHand(ctx: GameContext, gameId: string, spec: HandSpec, idle
             { transform: at({ x: p.x + 14, y: p.y - 16 }), opacity: 0 }
           ], { duration: 420, easing: 'ease-out' }).finished
         }
+      } else if ('pinch' in mv) {
+        // Deux bouts de doigts posés sur l'objet : ils s'écartent en tournant d'un quart de tour
+        const p = where(mv.pinch)
+        if (!p) return
+        const dots = [0, 1].map(() => { const d = document.createElement('i'); d.className = 'hand-pinch'; layer.appendChild(d); return d })
+        const pos = (k: number, i: number, r: number) => {
+          const a = (i ? Math.PI : 0) - Math.PI / 4 + k * Math.PI / 2
+          return `translate(${p.x + Math.cos(a) * r}px, ${p.y + Math.sin(a) * r}px)`
+        }
+        try {
+          for (let rep = 0; rep < 2 && showing; rep++) {
+            await Promise.all(dots.map((d, i) => anim(d, [
+              { transform: pos(0, i, 22) + ' scale(1.3)', opacity: 0 },
+              { transform: pos(0, i, 22), opacity: 1, offset: 0.15 },
+              { transform: pos(0.5, i, 50), opacity: 1, offset: 0.48 },
+              { transform: pos(1, i, 78), opacity: 1, offset: 0.82 },
+              { transform: pos(1, i, 78), opacity: 0 }
+            ], { duration: 1600, easing: 'ease-in-out' }).finished))
+          }
+        } finally { dots.forEach(d => d.remove()) }
       } else if ('tilt' in mv) {
         // Une petite tablette qui se penche, et sa bille qui roule du côté penché
         const p = where(mv.tilt)

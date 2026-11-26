@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:15 */
+/* @version 2026-11-26 11:16 */
 // LE BANC des outils du Courrier (livraison 1) : les vrais modules de l'app, hors du jeu, pour les essayer
 // dans un navigateur. npx vite .maquette/courrier → http://localhost:5302/banc.html
 import '../../src/assets/fonts/fonts.css'
@@ -9,6 +9,8 @@ import { enregistrer, jouer, taire } from '../../src/core/vocal'
 import { setPaused } from '../../src/core/session'
 import { coffreIDB } from '../../src/core/courrierdb'
 import { neuve, cacheter } from '../../src/core/courrier'
+import { coachHand, handNow } from '../../src/core/hand'
+import { Session } from '../../src/core/session'
 
 const $ = (id: string) => document.getElementById(id)!
 const s = new Saisie()
@@ -21,3 +23,9 @@ const kb = clavier({ char(c) { s.poser(c); montrer() }, effacer() { s.effacer();
 $('hote').append(kb.el)
 montrer()
 ;(window as unknown as { __banc: unknown }).__banc = { s, kb, enregistrer, jouer, taire, setPaused, coffreIDB, neuve, cacheter }
+// La main à deux doigts, sur le texte : un faux ctx (les minuteurs d'une Session)
+{
+  const ses = new Session()
+  const ctx = { root: document.body, after: (ms: number, f: () => void) => ses.after(ms, f), every: (ms: number, f: () => void) => ses.every(ms, f), cancel: (id: number) => ses.cancel(id), alive: () => true }
+  ;(window as unknown as { __main: unknown }).__main = () => { coachHand(ctx as never, 'banc-pinch', () => ({ pinch: $('ecrit') }), 60000); setTimeout(handNow, 50) }
+}
