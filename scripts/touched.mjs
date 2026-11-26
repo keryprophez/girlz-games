@@ -1,4 +1,4 @@
-/* @version 2026-11-25 00:20 */
+/* @version 2026-11-26 09:32 */
 /* Les bots à faire jouer : ceux des jeux TOUCHÉS, et eux seuls (2/10).
 
    Le père, le 2/10 : « on ne valide via bot que les jeux que l'on touche
@@ -45,7 +45,7 @@ const OWN = {
   'marche': ['src/games/market.ts', 'src/core/money3d.ts', 'src/core/facts.ts'],
   'espace': ['src/games/space.ts', 'src/core/cosmos.ts', 'src/core/rocket3d.ts'],
   'piano': ['src/games/piano.ts'],
-  'atelier': ['src/games/coloring.ts', 'src/core/lineart.ts'],
+  'atelier': ['src/games/coloring.ts', 'src/core/lineart.ts', 'src/core/pinceaux.ts'],
   'feu-': ['src/games/fireworks.ts'],
   'bijoux': ['src/games/bijoux.ts', 'src/core/bijoux3d.ts', 'src/core/hama3d.ts', 'src/core/perles.ts'],
   'habille-toi': ['src/games/dressup.ts', 'src/games/doll.ts', 'src/core/doll3d.ts', 'src/core/character.ts'],

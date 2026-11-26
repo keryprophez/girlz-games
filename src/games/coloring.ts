@@ -1,3 +1,4 @@
+/* @version 2026-11-26 09:32 */
 import type { GameContext, GameDef } from '../core/types'
 import { familyDoll, useFerme } from '../core/store'
 import { sfx, preloadSfx } from '../core/sfx'
@@ -7,6 +8,10 @@ import { critterPortraits, dollPortraits } from '../core/portraits'
 import { FARM } from '../core/critters'
 import { drawings, idbDel, idbGet, idbPut, princessPages, type Drawing } from '../core/atelierdb'
 import { SHEETS, sheetById, sheetLines, sheetMinis } from '../core/lineart'
+import {
+  BRUSHES, BRUSH_ICON, PALETTE, SIZES, svgI, symMats, dab, segment, endStroke, newStroke,
+  type Brush, type Stroke, type Sym, type Trait
+} from '../core/pinceaux'
 
 /* L'Atelier — remplace le Coloriage (23/09), enrichi le 27/09 (« elles
    adorent l'Atelier : complexifie-le, rends-le encore plus stylé »).
@@ -34,16 +39,12 @@ import { SHEETS, sheetById, sheetLines, sheetMinis } from '../core/lineart'
 
 const W = 1500
 const H = 1000
-const SIZES = [16, 34, 66]
 const STAMP_SIZES = [150, 230, 330]
 const UNDO_MAX = 10
 /** Le film : une image par geste, au plus 90 (on en garde une sur deux au-delà). */
 const FRAMES_MAX = 90
 const FRAME_W = 450
 const FRAME_H = 300
-
-const PALETTE = ['#E8414F', '#FF6B81', '#F58FB8', '#FFA94D', '#FFD43B', '#94D82D',
-  '#2F9E44', '#4FB8E7', '#1C64C8', '#9C6ADE', '#8B5E3C', '#3A2E25']
 
 /** Les papiers : blanc, crème, rose, ciel, kraft, nuit. */
 const PAPERS = ['#FFFDF8', '#FFF1D6', '#FFE0EC', '#DDF0FF', '#E6D3AE', '#1F1B2E']
@@ -125,49 +126,6 @@ const lineSvg = (p: Page, sw: number, color = '#3A2E25') =>
     .creg,.cdeco{fill:none;stroke:${color};stroke-width:${sw};stroke-linejoin:round;stroke-linecap:round}</style>${p.svg}</svg>`
 
 /* ---- Icônes (dessinées ici : elles prennent la couleur choisie) ---- */
-const svgI = (body: string) => `<svg viewBox="0 0 48 48" width="40" height="40">${body}</svg>`
-const star4 = (x: number, y: number, r: number, fill: string) =>
-  `<path d="M${x} ${y - r}L${x + r * 0.28} ${y - r * 0.28}L${x + r} ${y}L${x + r * 0.28} ${y + r * 0.28}L${x} ${y + r}L${x - r * 0.28} ${y + r * 0.28}L${x - r} ${y}L${x - r * 0.28} ${y - r * 0.28}Z" fill="${fill}"/>`
-const heartD = (x: number, y: number, s: number) =>
-  `M${x} ${y + s * 0.35}C${x - s * 0.9} ${y - s * 0.25} ${x - s * 0.45} ${y - s * 0.95} ${x} ${y - s * 0.45}C${x + s * 0.45} ${y - s * 0.95} ${x + s * 0.9} ${y - s * 0.25} ${x} ${y + s * 0.35}Z`
-const starD = (x: number, y: number, r: number) => {
-  let d = ''
-  for (let k = 0; k < 10; k++) {
-    const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r
-    d += `${k ? 'L' : 'M'}${(x + Math.cos(a) * rr).toFixed(1)} ${(y + Math.sin(a) * rr).toFixed(1)}`
-  }
-  return d + 'Z'
-}
-
-type Brush = 'feutre' | 'crayon' | 'aquarelle' | 'craie' | 'spray' | 'paillettes' | 'neon' | 'arcenciel' | 'coeurs' | 'etoiles'
-const BRUSHES: Brush[] = ['feutre', 'crayon', 'aquarelle', 'craie', 'spray', 'paillettes', 'neon', 'arcenciel', 'coeurs', 'etoiles']
-/** Les pinceaux « à grain » : des empreintes posées le long du trait. */
-const TEXTURED: Brush[] = ['crayon', 'craie', 'spray', 'paillettes', 'coeurs', 'etoiles']
-
-const BRUSH_ICON: Record<Brush, (c: string) => string> = {
-  feutre: c => svgI(`<path d="M31 5l12 12-15 15-12-12z" fill="#C99457"/><path d="M31 5l12 12-5 5-12-12z" fill="#E8B676"/>
-    <path d="M16 20l12 12-4 3c-2 6-8 9-17 9 2-7 1-13 6-17z" fill="${c}"/><path d="M16 20l12 12-3 2-11-11z" fill="#9AA3AD"/>`),
-  crayon: c => svgI(`<path d="M9 39l4-12 20-20 8 8-20 20z" fill="${c}"/><path d="M9 39l4-12 8 8z" fill="#F2D1A0"/>
-    <path d="M9 39l2-6 4 4z" fill="#45362A"/><path d="M33 7l8 8 2-2a3 3 0 0 0 0-4l-4-4a3 3 0 0 0-4 0z" fill="#FF9CB1"/>`),
-  aquarelle: c => svgI(`<circle cx="18" cy="30" r="12" fill="${c}" opacity=".32"/><circle cx="27" cy="27" r="10" fill="${c}" opacity=".32"/>
-    <path d="M34 5c4 6 7 10 7 14a7 7 0 0 1-14 0c0-4 3-8 7-14z" fill="${c}" opacity=".9"/>`),
-  craie: c => svgI(`<path d="M6 36c8-4 14 2 22-2s10-6 14-4" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round" stroke-dasharray="3 3"/>
-    <rect x="22" y="7" width="20" height="10" rx="3" transform="rotate(-30 32 12)" fill="#F4EFE6" stroke="#C8BCAE" stroke-width="2"/>`),
-  spray: c => svgI(`<rect x="7" y="18" width="16" height="25" rx="4" fill="#8A96A3"/><rect x="10" y="12" width="10" height="7" rx="2" fill="#5E6873"/>
-    ${[[31, 12], [38, 18], [33, 22], [40, 9], [29, 18], [42, 25], [35, 29], [30, 26]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.3" fill="${c}"/>`).join('')}`),
-  paillettes: c => svgI(`${star4(17, 17, 11, c)}${star4(33, 30, 9, '#FFC533')}${star4(15, 36, 6, c)}${star4(37, 12, 5, '#FFC533')}`),
-  neon: c => svgI(`<path d="M7 36C15 20 29 40 41 13" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" opacity=".28"/>
-    <path d="M7 36C15 20 29 40 41 13" fill="none" stroke="${c}" stroke-width="6" stroke-linecap="round"/>
-    <path d="M7 36C15 20 29 40 41 13" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`),
-  arcenciel: () => svgI(`<path d="M5 36a19 19 0 0 1 38 0" fill="none" stroke="#E8414F" stroke-width="5"/>
-    <path d="M10 36a14 14 0 0 1 28 0" fill="none" stroke="#FFD43B" stroke-width="5"/>
-    <path d="M15 36a9 9 0 0 1 18 0" fill="none" stroke="#2F9E44" stroke-width="5"/>
-    <path d="M20 36a4 4 0 0 1 8 0" fill="none" stroke="#1C64C8" stroke-width="5"/>`),
-  coeurs: c => svgI(`<path d="${heartD(17, 20, 16)}" fill="${c}"/><path d="${heartD(33, 34, 12)}" fill="${c}" opacity=".75"/>`),
-  etoiles: c => svgI(`<path d="${starD(18, 19, 13)}" fill="${c}"/><path d="${starD(34, 33, 10)}" fill="${c}" opacity=".75"/>`)
-}
-
-type Sym = 1 | 2 | 4 | 8
 const SYMS: Sym[] = [1, 2, 4, 8]
 /** L'icône du miroir : autant de pétales que de reflets. */
 const symIcon = (n: Sym) => svgI(Array.from({ length: n }, (_, k) =>
@@ -208,7 +166,6 @@ const TOOL_ICON = {
 type Tool = 'brush' | 'bucket' | 'eraser' | 'stamp'
 
 interface Pour { fill: HTMLCanvasElement; x: number; y: number; r: number; rMax: number }
-interface Stroke { x: number; y: number; mx: number; my: number; run: number; acc: number }
 
 
 interface State {
@@ -504,23 +461,9 @@ function undo(me: State) {
 }
 
 /* ---- Le miroir : chaque geste est redessiné par ses reflets ---- */
-type Mat = [number, number, number, number, number, number]
-function symMats(sym: Sym): Mat[] {
-  const id: Mat = [1, 0, 0, 1, 0, 0]
-  if (sym === 1) return [id]
-  const fx: Mat = [-1, 0, 0, 1, W, 0], fy: Mat = [1, 0, 0, -1, 0, H], fxy: Mat = [-1, 0, 0, -1, W, H]
-  if (sym === 2) return [id, fx]
-  if (sym === 4) return [id, fx, fy, fxy]
-  // La rosace : huit rotations de 45° autour du centre de la feuille
-  const cx = W / 2, cy = H / 2
-  return Array.from({ length: 8 }, (_, k) => {
-    const a = k * Math.PI / 4, c = Math.cos(a), s = Math.sin(a)
-    return [c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy] as Mat
-  })
-}
 function mirrored(me: State, draw: () => void) {
   const g = me.paint
-  for (const m of symMats(me.sym)) { g.setTransform(...m); draw() }
+  for (const m of symMats(me.sym, W, H)) { g.setTransform(...m); draw() }
   g.setTransform(1, 0, 0, 1, 0, 0)
 }
 
@@ -547,150 +490,10 @@ function hexRgb(h: string): [number, number, number] {
   const n = parseInt(h.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
-/** Une teinte plus claire de la couleur (reflet des paillettes). */
-function lighter(hex: string, k = 0.55): string {
-  const [r, g, b] = hexRgb(hex)
-  return `rgb(${Math.round(r + (255 - r) * k)},${Math.round(g + (255 - g) * k)},${Math.round(b + (255 - b) * k)})`
-}
-
-const rainbow = (me: State, run: number) => `hsl(${(me.hue + run * 0.35) % 360}, 88%, 56%)`
-
-/** Le style d'un trait continu (feutre, néon, aquarelle, arc-en-ciel, gomme). */
-function strokeStyle(me: State, run: number) {
-  const g = me.paint, size = SIZES[me.size]
-  g.globalCompositeOperation = me.tool === 'eraser' ? 'destination-out' : 'source-over'
-  g.globalAlpha = 1
-  g.shadowBlur = 0
-  g.shadowColor = 'transparent'
-  g.lineCap = 'round'
-  g.lineJoin = 'round'
-  if (me.tool === 'eraser') { g.lineWidth = size * 1.6; g.strokeStyle = g.fillStyle = '#000'; return }
-  const c = me.brush === 'arcenciel' ? rainbow(me, run) : me.color
-  g.strokeStyle = g.fillStyle = c
-  g.lineWidth = size
-  if (me.brush === 'neon') { g.lineWidth = size * 0.55; g.shadowBlur = size * 0.9; g.shadowColor = c }
-  if (me.brush === 'aquarelle') { g.lineWidth = size * 1.5; g.globalAlpha = 0.14; g.shadowBlur = size * 0.5; g.shadowColor = c }
-}
-function resetStyle(me: State) {
-  const g = me.paint
-  g.globalCompositeOperation = 'source-over'
-  g.globalAlpha = 1
-  g.shadowBlur = 0
-  g.shadowColor = 'transparent'
-}
-const textured = (me: State) => me.tool === 'brush' && TEXTURED.includes(me.brush)
-
-/** Une empreinte d'un pinceau à grain, au point (x, y). */
-function grain(me: State, x: number, y: number) {
-  const g = me.paint, size = SIZES[me.size], c = me.color
-  const R = Math.random
-  resetStyle(me)
-  mirrored(me, () => {
-    switch (me.brush) {
-      case 'crayon':
-        g.fillStyle = c
-        for (let k = 0; k < 4; k++) {
-          const a = R() * 6.3, r = R() * size * 0.34
-          g.globalAlpha = 0.35 + R() * 0.4
-          g.fillRect(x + Math.cos(a) * r, y + Math.sin(a) * r, 2.4, 2.4)
-        }
-        break
-      case 'craie':
-        g.fillStyle = c
-        for (let k = 0; k < 12; k++) {
-          const a = R() * 6.3, r = R() * size * 0.5
-          g.globalAlpha = 0.45 + R() * 0.45
-          g.fillRect(x + Math.cos(a) * r, y + Math.sin(a) * r, 3.4, 3.4)
-        }
-        break
-      case 'spray':
-        g.fillStyle = c
-        for (let k = 0; k < 18; k++) {
-          const a = R() * 6.3, r = Math.sqrt(R()) * size * 1.1
-          g.globalAlpha = 0.8
-          g.beginPath(); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, 1.4, 0, 6.3); g.fill()
-        }
-        break
-      case 'paillettes': {
-        const cols = [c, lighter(c), lighter(c, 0.85), '#FFE08A']
-        for (let k = 0; k < 8; k++) {
-          const a = R() * 6.3, r = R() * size * 0.6
-          g.globalAlpha = 0.9
-          g.fillStyle = cols[(R() * cols.length) | 0]
-          g.beginPath(); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, 1.2 + R() * 1.6, 0, 6.3); g.fill()
-        }
-        if (R() < 0.22) {
-          const s = size * (0.25 + R() * 0.25), sx = x + (R() - 0.5) * size, sy = y + (R() - 0.5) * size
-          g.globalAlpha = 1
-          g.fillStyle = R() < 0.5 ? '#FFFFFF' : '#FFE08A'
-          g.fill(new Path2D(`M${sx} ${sy - s}L${sx + s * 0.28} ${sy - s * 0.28}L${sx + s} ${sy}L${sx + s * 0.28} ${sy + s * 0.28}L${sx} ${sy + s}L${sx - s * 0.28} ${sy + s * 0.28}L${sx - s} ${sy}L${sx - s * 0.28} ${sy - s * 0.28}Z`))
-        }
-        break
-      }
-      case 'coeurs':
-      case 'etoiles': {
-        const s = size * (0.9 + R() * 0.35)
-        g.save()
-        g.translate(x, y)
-        g.rotate((R() - 0.5) * 0.7)
-        g.fillStyle = c
-        g.globalAlpha = 1
-        g.fill(new Path2D(me.brush === 'coeurs' ? heartD(0, 0, s) : starD(0, 0, s * 0.62)))
-        g.restore()
-        break
-      }
-    }
-  })
-  resetStyle(me)
-}
-
-/** La touche au moment où le doigt se pose. */
-function dab(me: State, x: number, y: number) {
-  if (textured(me)) { grain(me, x, y); return }
-  const g = me.paint
-  strokeStyle(me, 0)
-  mirrored(me, () => { g.beginPath(); g.arc(x, y, g.lineWidth / 2, 0, Math.PI * 2); g.fill() })
-  resetStyle(me)
-}
-
-function segment(me: State, s: Stroke, x: number, y: number) {
-  const g = me.paint
-  const len = Math.hypot(x - s.x, y - s.y)
-  if (textured(me)) {
-    // Des empreintes à intervalle régulier le long du trait
-    const size = SIZES[me.size]
-    const step = me.brush === 'crayon' ? 2 : me.brush === 'craie' ? size * 0.22 : me.brush === 'spray' ? size * 0.3
-      : me.brush === 'paillettes' ? size * 0.28 : size * 1.3
-    let d = step - s.acc
-    while (d <= len) {
-      const t = d / len
-      grain(me, s.x + (x - s.x) * t, s.y + (y - s.y) * t)
-      d += step
-    }
-    s.acc = len - (d - step)
-  } else {
-    const mx = (s.x + x) / 2, my = (s.y + y) / 2
-    strokeStyle(me, s.run)
-    // Courbe lissée : du milieu précédent au milieu courant, en passant par le point
-    mirrored(me, () => { g.beginPath(); g.moveTo(s.mx, s.my); g.quadraticCurveTo(s.x, s.y, mx, my); g.stroke() })
-    if (me.tool === 'brush' && me.brush === 'neon') {
-      // Le cœur blanc du néon
-      g.shadowBlur = 0
-      g.lineWidth = SIZES[me.size] * 0.2
-      g.strokeStyle = 'rgba(255,255,255,.9)'
-      mirrored(me, () => { g.beginPath(); g.moveTo(s.mx, s.my); g.quadraticCurveTo(s.x, s.y, mx, my); g.stroke() })
-    }
-    resetStyle(me)
-    s.mx = mx; s.my = my
-  }
-  // Un petit frottement de feutre tous les 140 px de trait
-  if (Math.floor((s.run + len) / 140) > Math.floor(s.run / 140)) {
-    const soft = me.tool === 'eraser' ? 0.18 : me.brush === 'spray' ? 0.2 : 0.12
-    sfx('cloth', { vol: soft, rate: me.tool === 'eraser' ? 0.8 : me.brush === 'spray' ? 2.2 : 1.5, spread: 0.2 })
-  }
-  s.run += len
-  s.x = x; s.y = y
-}
+/** Le trait du moment : le pinceau (ou la gomme), sa couleur, son épaisseur, le miroir. */
+const trait = (me: State): Trait => ({
+  g: me.paint, brush: me.brush, color: me.color, px: SIZES[me.size], eraser: me.tool === 'eraser', hue: me.hue, mats: symMats(me.sym, W, H)
+})
 
 /* ---- Pot de peinture : remplissage par balayage, puis déversé en rond ---- */
 function flood(me: State, sx: number, sy: number): { mask: Uint8Array; x0: number; y0: number; x1: number; y1: number } | null {
@@ -1428,8 +1231,8 @@ export const coloring: GameDef = {
       if (!me.strokes.size) snapshot(me)
       paintCv.setPointerCapture?.(e.pointerId)
       if (me.brush === 'arcenciel') me.hue = (me.hue + 47) % 360
-      me.strokes.set(e.pointerId, { x: p.x, y: p.y, mx: p.x, my: p.y, run: 0, acc: 0 })
-      dab(me, p.x, p.y)
+      me.strokes.set(e.pointerId, newStroke(p.x, p.y))
+      dab(trait(me), p.x, p.y)
       me.marks++
     }
     const move = (e: PointerEvent) => {
@@ -1438,19 +1241,14 @@ export const coloring: GameDef = {
       const evs = e.getCoalescedEvents?.() || []
       for (const ev of evs.length ? evs : [e]) {
         const p = toPaper(ev, paintCv)
-        if (Math.hypot(p.x - s.x, p.y - s.y) > 1.5) segment(me, s, p.x, p.y)
+        if (Math.hypot(p.x - s.x, p.y - s.y) > 1.5) segment(trait(me), s, p.x, p.y)
       }
     }
     const up = (e: PointerEvent) => {
       const s = me.strokes.get(e.pointerId)
       if (!s) return
-      if (!textured(me)) {
-        // La fin du trait lissé, jusqu'au dernier point
-        const g = me.paint
-        strokeStyle(me, s.run)
-        mirrored(me, () => { g.beginPath(); g.moveTo(s.mx, s.my); g.lineTo(s.x, s.y); g.stroke() })
-        resetStyle(me)
-      }
+      // La fin du trait lissé, jusqu'au dernier point
+      endStroke(trait(me), s)
       me.strokes.delete(e.pointerId)
       scheduleSave(me)
       scheduleFrame(me)
