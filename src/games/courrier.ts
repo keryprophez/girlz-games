@@ -1,13 +1,15 @@
-/* @version 2026-11-26 11:29 */
+/* @version 2026-11-26 12:22 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
+import { setPaused } from '../core/session'
 import { visible, type HandMove } from '../core/hand'
 import { WHO, girl, whoOf, type Who } from '../core/mine'
 import { creerBoites, type Boites } from '../core/boites3d'
 import { coffreIDB, type Coffre } from '../core/courrierdb'
-import { drapeau, boite, brouillon, neuve, type Lettre } from '../core/courrier'
+import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, type Lettre } from '../core/courrier'
 import { chargerPortraits, ecrire } from './courrier-feuille'
+import { envoyer, type Envoi } from './courrier-envoi'
 
 /* ✉️ LE COURRIER (Créer, conception du 25/11, `docs/superpowers/specs/`) —
    Joyce et Jade s'écrivent pour de vrai, chacune son tour, sur la tablette.
@@ -115,16 +117,37 @@ function retenir(j: Jeu, l: Lettre) {
   peindreBoites(j)
 }
 
-/** « Écrire » : son brouillon, ou une feuille neuve. */
-function ecrireLettre(j: Jeu) {
+/** « Écrire » : une enveloppe cachetée attend d'être postée ; sinon son brouillon, ou une feuille neuve. */
+function ecrireLettre(j: Jeu, depuis?: Lettre) {
   const w = j.qui
   if (!w || j.occupe) return
   sfx('select', { vol: 0.5 })
-  const l = brouillon(j.lettres, w) ?? neuve(w, Date.now())
+  const attend = aPoster(j.lettres, w)
+  if (attend && !depuis) { void lancerEnvoi(j, attend); return }
+  const l = depuis ?? brouillon(j.lettres, w) ?? neuve(w, Date.now())
   ouvrirEcran(j, hote => ecrire(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
     garde: x => retenir(j, x),
     geste: () => { /* la main par fille : tâche 13 */ },
-    envoyer: () => { /* l'envoi : tâche 11 */ }
+    envoyer: x => void lancerEnvoi(j, x)
+  }))
+}
+
+/** La cérémonie, du pli (ou de là où elle s'était arrêtée) à la boîte de sa sœur. */
+async function lancerEnvoi(j: Jeu, l: Lettre) {
+  const w = j.qui, b = j.boites
+  if (!w || !b) return
+  const prefs = await j.coffre.prefs(w)
+  if (jeu !== j || j.qui !== w) return
+  ouvrirEcran(j, hote => envoyer(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
+    boites: b,
+    raccourci: raccourci(prefs),
+    geste: () => { /* la main par fille : tâche 13 */ },
+    garde: x => retenir(j, x),
+    fini: x => {
+      void j.coffre.garderPrefs(w, apresEnvoi(prefs, x.env!))
+      fermerEcran(j)
+      chez(j, w)
+    }
   }))
 }
 
@@ -160,7 +183,12 @@ export const courrier: GameDef = {
       <div class="co-3d"></div><div class="co-ecran"></div>
       <div class="co-bas"></div><span class="tool-item co-ret"></span></div>`
     const wrap = c.root.querySelector<HTMLElement>('#coWrap')!
-    const j: Jeu = { c, wrap, coffre: coffreIDB(), boites: null, lettres: [], qui: null, ecran: null, occupe: false }
+    // Sous les bots, `__co.echec = true` fait refuser les écritures (l'envoi ne doit rien annoncer)
+    const base = coffreIDB(), bot = { echec: false }
+    const coffre: Coffre = (window as unknown as { __BOT?: boolean }).__BOT
+      ? { ...base, garderLettre: l => (bot.echec ? Promise.resolve(false) : base.garderLettre(l)), garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p)) }
+      : base
+    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false }
     jeu = j
     preloadSfx(['select', 'creak', 'metal', 'click', 'bong', 'whoosh', 'cloth', 'drop', 'pluck', 'chop', 'confirm', 'error', 'tick', 'switch', 'glass'])
     const finLoader = loader(wrap, 'courrier')
@@ -191,7 +219,14 @@ export const courrier: GameDef = {
       if (plaque && !j.ecran) { chez(j, plaque.dataset.who as Who); return }
       if (t.closest('#coRet')) {
         sfx('click', { vol: 0.5 })
-        if (j.ecran) { fermerEcran(j); return }
+        if (j.ecran) {
+          // Avant la cire, la lettre revient sur sa feuille ; après, elle attend cachetée (« Écrire » reprend)
+          const e = j.ecran as Partial<Envoi>
+          const l = e.avantCachet?.() ? brouillon(j.lettres, j.qui!) : null
+          fermerEcran(j)
+          if (l) ecrireLettre(j, l)
+          return
+        }
         accueil(j)
         return
       }
@@ -207,6 +242,9 @@ export const courrier: GameDef = {
         get ready() { return !!j.boites },
         get qui() { return j.qui },
         get ecran() { return j.ecran?.nom ?? null },
+        get echec() { return bot.echec },
+        set echec(v: boolean) { bot.echec = v },
+        pause: (v: boolean) => setPaused(v),
         get feuille() { const e = j.ecran as { etat?: () => unknown } | null; return e?.etat?.() ?? null },
         get lettres() { return j.lettres.map(l => ({ de: l.de, a: l.a, etat: l.etat, objets: l.objets.length })) },
         drapeau: (w: Who) => drapeau(j.lettres, w),

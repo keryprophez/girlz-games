@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:03 */
+/* @version 2026-11-26 12:22 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -487,13 +487,17 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     plusTard()
   })
   q('#coWipe').onclick = () => effacer.tap()
+  let parti = false // deux doigts, un double toucher : un seul envoi
   q('#coGo').onclick = async () => {
+    if (parti) return
     choisir(null)
     if (prise) await finirPrise()
     if (vierge(l, peint)) { sfx('error', { vol: 0.4 }); q('#coGo').classList.add('non'); c.after(500, () => q('#coGo').classList.remove('non')); return }
     enAttente = true
     await garder()
     if (!vivant) return
+    if (parti) return
+    parti = true
     sfx('confirm', { vol: 0.5 })
     o.envoyer({ ...l })
   }

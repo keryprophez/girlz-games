@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:03 */
+/* @version 2026-11-26 12:22 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -2740,6 +2740,36 @@ await scenario('courrier-lettre', async () => {
   await entrer()
   await page.waitForFunction(() => window.__co.feuille && window.__co.feuille.objets === 5 && window.__co.feuille.peint, null, { timeout: 10000 })
     .catch(async () => { throw new Error(`le brouillon n’est pas retrouvé (${JSON.stringify(await etat())})`) })
+  // Envoyer : plier deux fois, l'enveloppe, la cire tenue, le timbre, la boîte de Joyce
+  const glisser = async (de, vers, steps = 12) => { await page.mouse.move(...de); await page.mouse.down(); await page.mouse.move(...vers, { steps }); await page.mouse.up() }
+  const cer = async () => { const r = await page.locator('.co-cer').boundingBox(); return (x, y) => [r.x + r.width * x, r.y + r.height * y] }
+  await page.locator('#coGo').click()
+  await page.waitForSelector('.co-pli', { timeout: 15000 })
+  let C = await cer()
+  await glisser(C(0.5, 0.75), C(0.5, 0.3))
+  await page.waitForSelector('.co-pli2', { timeout: 5000 })
+  await glisser(C(0.3, 0.52), C(0.75, 0.52))
+  await page.waitForSelector('.co-env.ouverte .co-carte', { timeout: 5000 })
+  await page.locator('.co-choix [data-c="#6FC3EA"]').click()
+  await glisser(C(0.5, 0.25), C(0.5, 0.65))
+  await page.waitForSelector('.co-choix .co-ca', { timeout: 6000 })
+  await page.locator('.co-choix [data-s="etoile"]').click()
+  const env = await page.locator('.co-env').boundingBox()
+  await page.mouse.move(env.x + env.width / 2, env.y + env.height * 0.62); await page.mouse.down()
+  await page.waitForTimeout(1500); await page.mouse.up()
+  await page.waitForFunction(() => window.__co.lettres.some(l => l.de === 'jade' && l.etat === 'cachetee'), null, { timeout: 8000 })
+    .catch(async () => { throw new Error(`la cire ne cachette pas (${JSON.stringify(await page.evaluate(() => window.__co.lettres))})`) })
+  await page.waitForSelector('.co-choix .co-ti', { timeout: 8000 })
+  await page.locator('.co-choix .co-ti').nth(2).click()
+  await page.waitForSelector('.co-poste', { timeout: 8000 })
+  await page.waitForTimeout(900)
+  const poste = await page.locator('.co-poste').boundingBox()
+  const fente = await page.evaluate(() => window.__co.boite('joyce'))
+  await glisser([poste.x + poste.width / 2, poste.y + poste.height / 2], [fente.x, fente.y], 16)
+  await page.waitForFunction(() => window.__co.ecran === null && window.__co.drapeau('joyce'), null, { timeout: 15000 })
+    .catch(async () => { throw new Error(`la lettre n’arrive pas chez Joyce (${JSON.stringify(await page.evaluate(() => ({ e: window.__co.ecran, l: window.__co.lettres })))})`) })
+  const ls = await page.evaluate(() => window.__co.lettres)
+  if (ls.length !== 1 || ls[0].etat !== 'postee' || ls[0].a !== 'joyce') throw new Error(`une seule lettre postée attendue (${JSON.stringify(ls)})`)
 })
 
 await browser.close()
