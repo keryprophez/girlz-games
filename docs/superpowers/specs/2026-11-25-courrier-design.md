@@ -14,14 +14,14 @@ validé avec ce document.
 
 Joyce (8 ans) demande un jeu de communication avec sa sœur : dessins, messages
 vocaux, messages écrits, émojis, qu'on envoie et que l'autre trouve chez elle.
-Le père a retenu ses deux idées, la lettre et le téléphone, dans une seule
-tuile.
+Elle avait deux idées, la lettre et le téléphone. Les deux ont été maquettées ;
+**le père garde la lettre et retire le téléphone** [décidé : « en vrai vire le
+telephone, la lettre c'est parfait »].
 
 - **Ce que c'est** : un jeu de Créer, sans note. Joyce et Jade s'écrivent pour
   de vrai, chacune son tour, sur **une seule tablette** [décidé].
 - **La lettre est le cadeau** : on la fabrique longtemps, on la met sous
-  enveloppe, l'autre l'ouvre. **Le téléphone est la conversation** : court,
-  rapide.
+  enveloppe, l'autre l'ouvre.
 - **Réussi si** : Jade (6 ans, ne lit pas couramment) envoie et reçoit une
   lettre sans aide ; elles y reviennent d'elles-mêmes, sans que rien ne les
   rappelle.
@@ -30,16 +30,14 @@ tuile.
 1. Écrire une lettre : dessiner, taper, coller, parler.
 2. L'envoyer par une suite de gestes qui ont du goût, et la recevoir par une
    ouverture qui en a autant.
-3. S'envoyer de petits messages sur un grand téléphone.
-4. Ne jamais perdre une lettre, un brouillon, une voix.
+3. Ne jamais perdre une lettre, un brouillon, une voix.
 
 ### Hors périmètre
-- Deux téléphones côte à côte, réponse en direct [décidé : « Non, chacune son
-  tour »].
+- Le téléphone et les petits messages [décidé].
 - Deux tablettes, envoi par Internet, grands-parents, parents comme
   destinataires.
 - Photos prises avec la tablette. Transcription de la voix. Traduction.
-- Effacer un message envoyé au téléphone ; reprendre une lettre postée.
+- Reprendre une lettre postée.
 - Correction d'orthographe, suggestions de mots.
 
 ### Ce qui en ferait un échec
@@ -53,8 +51,8 @@ tuile.
 ## 2. Les contraintes
 
 - **Règle 1** : ni notification, ni « vu », ni compteur, ni série de jours. Le
-  drapeau de la boîte et le point du téléphone ne se voient **que dans le jeu**,
-  jamais sur l'accueil ni sur la tuile. Aucun nombre.
+  drapeau de la boîte ne se voit **que dans le jeu**, jamais sur l'accueil ni sur
+  la tuile. Aucun nombre.
 - **Règle 2** : aucune consigne à lire. La main (`core/hand.ts`) montre chaque
   geste, y compris celui à deux doigts, à lui ajouter. Elle retient une première
   fois **par jeu** : si Joyce ouvre d'abord, Jade n'aurait plus rien. Le Courrier
@@ -71,7 +69,7 @@ tuile.
      (la règle : « seulement le contenu pédagogique »). Sans ça, Jade ne peut
      pas recevoir un message écrit. Jamais une consigne, jamais toute seule.
 - **Tablette** : Galaxy Tab A9+, 1280 × 800 px CSS en paysage, GPU moyen.
-- **Maquette validée ≠ jeu validé** (`PIEGES.md`) : les trois livraisons se
+- **Maquette validée ≠ jeu validé** (`PIEGES.md`) : les deux livraisons se
   jouent sur la tablette avant de passer à la suivante.
 
 ---
@@ -80,11 +78,9 @@ tuile.
 
 | Approche | Pour | Contre |
 |---|---|---|
-| La lettre seule | un jeu fini, adapté à Jade | pas d'échange rapide |
+| **La lettre seule** — **choisie par le père, après essai de la maquette** | un jeu fini, adapté à Jade, un seul à soigner | pas d'échange rapide |
 | Le téléphone seul | court à faire, plaît à Joyce | une tablette : personne ne répond en direct ; trop centré sur le texte pour Jade |
-| **Les deux, une tuile, outils communs** — **choisi par le père** | tout ce que Joyce a demandé | le plus gros ; deux jeux à finir → trois livraisons (§ 9) |
-
-Au téléphone, « deux téléphones côte à côte » a été proposé et refusé.
+| Les deux, une tuile, outils communs (choisi d'abord, maquetté, retiré) | tout ce que Joyce a demandé | deux jeux à finir ; on ne comprend pas, sur une seule tablette, à qui est le téléphone ni comment on sait qu'un message attend |
 
 ---
 
@@ -96,10 +92,10 @@ Au téléphone, « deux téléphones côte à côte » a été proposé et refus
             └───────────────┬───────────────┘
           toucher sa boîte, ou son prénom
                             ▼
-      sa boîte  ·  Écrire  ·  Téléphone  ·  Souvenirs
-         │           │            │             │
-      recevoir    la feuille   le fil      lettres gardées
-         │           │
+      sa boîte    ·    Écrire    ·    Souvenirs
+         │               │                │
+      recevoir       la feuille     lettres gardées
+         │               │
    cachet, sortie,  plier ► enveloppe ► cachet ► timbre ► poster
    dépliage, lire                                  │
          │                                         ▼
@@ -188,25 +184,7 @@ Les lettres gardées, posées sur la table, la plus récente d'abord. Les touche
 les rouvre en lecture. Une poubelle à deux touchers jette celle qu'on lit. Pas
 de limite de nombre ; les vignettes ne se calculent qu'en arrivant à l'écran.
 
-### 4.6 Le téléphone
-Un grand téléphone, un fil commun aux deux (le même vu des deux côtés, les
-bulles de chacune à sa couleur) :
-
-- texte, émojis, voix (30 s), petit dessin (quatre pinceaux, huit couleurs) ;
-- un message d'émojis seuls (quatre au plus) s'affiche en grand et fait une
-  **pluie** dans l'écran, à l'envoi et à chaque toucher ;
-- un haut-parleur sur chaque texte le lit ;
-- les messages pas encore vus **arrivent un par un** à l'ouverture ;
-- ni heure, ni « vu », ni « en train d'écrire », ni statut ;
-- **tout est gardé** ; le fil montre les cent derniers, remonter en charge
-  d'autres ;
-- un message commencé (texte, dessin, voix pas encore envoyée) est gardé par
-  fille et retrouvé.
-
-Dans sa pièce, le bouton Téléphone porte un point rouge sans nombre quand un
-message l'attend [proposé].
-
-### 4.7 La fin
+### 4.6 La fin
 Pas d'écran de fin, comme la Ferme à construire et l'Animal qui répète : on
 sort par la maison. `ctx.finish` n'est jamais appelé. `noTier: true`.
 
@@ -217,8 +195,7 @@ sort par la maison. `ctx.finish` n'est jamais appelé. `noTier: true`.
 - **La voix** : `MediaRecorder`, 30 s, dans un module à part — `core/mic.ts`
   promet de ne rien garder, on ne l'élargit pas. Le micro s'ouvre au toucher, se
   coupe à l'arrêt, en pause, au minuteur parental, en quittant. **Coupé en
-  route, ce qui est dit est gardé** (collé sur la feuille, ou prêt à envoyer au
-  téléphone) — au contraire de l'Animal qui répète, qui jette sa phrase. Seule
+  route, ce qui est dit est gardé** (collé sur la feuille) — au contraire de l'Animal qui répète, qui jette sa phrase. Seule
   une page tuée en plein enregistrement le perd. La musique **s'arrête** pendant
   l'enregistrement et l'écoute, puis reprend (`duckMusic` ne fait que la
   baisser). Micro absent ou refusé : le bouton se barre, tout le reste marche (pas de cri de
@@ -231,13 +208,12 @@ sort par la maison. `ctx.finish` n'est jamais appelé. `noTier: true`.
   colonnes, rangée d'accents ou de chiffres, majuscule pour une lettre, effacer
   qui se répète, réponse dès que le doigt se pose, plusieurs doigts à la fois.
   Un émoji compte pour un caractère (`Intl.Segmenter`).
-- **Le stockage** : IndexedDB `ferme-courrier` (lettres, brouillons, messages,
-  voix et dessins en `Blob`), localStorage étant trop petit. Les lettres et les
-  messages sont rangés un par un, jamais en une seule liste réécrite. Aucune clé
-  existante n'est touchée.
+- **Le stockage** : IndexedDB `ferme-courrier` (lettres et brouillons, voix et
+  dessins en `Blob`), localStorage étant trop petit. Les lettres sont rangées une
+  par une, jamais en une seule liste réécrite. Aucune clé existante n'est
+  touchée.
 - **Rien ne se perd** : une lettre est « postée » quand son écriture a réussi ;
-  sinon l'enveloppe revient dans la main et le brouillon reste. Même règle pour
-  un message : la bulle ne reste que si elle est gardée.
+  sinon l'enveloppe revient devant la boîte et l'attend, cachetée.
 - **Stockage persistant** : pas fait. Il a été proposé le 27/10 et pas retenu
   (ROADMAP). Conséquence à connaître : si Android ou le navigateur vide les
   données du site, les lettres et les voix partent avec.
@@ -249,9 +225,9 @@ sort par la maison. `ctx.finish` n'est jamais appelé. `noTier: true`.
 ## 6. L'allure
 
 Celle de la maquette : la ferme 3D (`buildFarm` vide + pièces), deux boîtes en
-formes rondes, le poussin, le chat et le canard ; la feuille, l'enveloppe, le
-téléphone en 2D par-dessus ; table de bois pour la lettre, fond crème pour la
-feuille et le téléphone. Pas d'illustration dessinée à la main en SVG au-delà
+formes rondes, le poussin, le chat et le canard ; la feuille et l'enveloppe en
+2D par-dessus ; table de bois pour la lettre, fond crème pour la feuille qu'on
+écrit. Pas d'illustration dessinée à la main en SVG au-delà
 des icônes et du cachet.
 
 - Chaque outil porte son petit nom (`.tool-item` / `.tool-cap`).
@@ -274,7 +250,7 @@ des icônes et du cachet.
 
 | Où | Quoi |
 |---|---|
-| `src/games/courrier*.ts` | le jeu : l'ouverture, la feuille, la cérémonie, le téléphone |
+| `src/games/courrier*.ts` | le jeu : l'ouverture, la feuille, la cérémonie |
 | `src/core/` | nouveaux modules : pinceaux, clavier, message vocal, la logique du courrier (pure, testée) et son stockage, les boîtes 3D |
 | `src/games/coloring.ts` | ses pinceaux **sortent** dans le module commun ; l'Atelier ne change pas d'un pixel pour les filles |
 | `src/core/hand.ts` | un geste de plus : deux doigts qui tournent et agrandissent |
@@ -292,13 +268,11 @@ d'exemple et son cri de remplacement n'entrent pas dans l'app.
 ## 8. Vérifier
 
 - **Tests (vitest)** : l'état d'une lettre (brouillon, cachetée, postée, ouverte, gardée),
-  l'ordre de la boîte, le drapeau, « pas encore vu », le texte (curseur, émojis composés,
+  l'ordre de la boîte, le drapeau, le texte (curseur, émojis composés,
   retour à la ligne), l'échec d'écriture (rien n'est annoncé posté), la taille
   d'un objet bornée, le raccourci de la troisième lettre.
-- **Bots** : `courrier-lettre` (Jade écrit, dessine, colle, parle avec la fausse
-  voix, poste ; Joyce ouvre, lit, garde, sort et revient) et
-  `courrier-telephone` (texte, émojis, dessin, voix ; l'autre les voit arriver).
-  Les bots de l'Atelier repassent à la livraison 1.
+- **Bot** : `courrier-lettre` (Jade écrit, dessine, colle, parle avec la fausse
+  voix, poste ; Joyce ouvre, lit, garde, sort et revient). Les bots de l'Atelier repassent à la livraison 1.
 - **Le smoke** ouvre tous les jeux.
 - **Sur la tablette**, par le père : `?fps` sur les boîtes et pendant l'envoi,
   la taille des touches au doigt, la qualité du micro et de la voix qui lit, un
@@ -312,8 +286,7 @@ d'exemple et son cri de remplacement n'entrent pas dans l'app.
    stockage et logique, avec leurs tests. Rien de visible pour les filles ;
    l'Atelier identique.
 2. **La lettre** : les boîtes, la feuille, l'envoi, la réception, les Souvenirs.
-   La tuile arrive sur l'accueil, sans bouton Téléphone.
-3. **Le téléphone.**
+   La tuile arrive sur l'accueil.
 
 Chaque livraison passe par le smoke et ses bots, puis `main`, puis la tablette.
 
