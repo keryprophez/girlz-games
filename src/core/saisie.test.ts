@@ -1,4 +1,4 @@
-/* @version 2026-11-26 09:40 */
+/* @version 2026-11-26 09:36 */
 import { describe, expect, it } from 'vitest'
 import { Saisie, sansEmojis, vide, vus } from './saisie'
 

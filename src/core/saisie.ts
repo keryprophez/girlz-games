@@ -1,4 +1,4 @@
-/* @version 2026-11-26 09:40 */
+/* @version 2026-11-26 09:36 */
 /* LA SAISIE d'un texte tapé au clavier du Courrier : le texte, et son curseur
    compté en caractères VUS (un émoji composé, une teinte de peau ou un
    drapeau font un seul caractère : il s'efface d'un coup). Logique pure. */
