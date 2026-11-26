@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:29 */
+/* @version 2026-11-26 12:03 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2482,3 +2482,45 @@ body.playing .po-card{max-width:880px;}
 .co-fantome img{width:120px;height:120px;}
 .co-fantome .co-g-photo{border-radius:18px;border:6px solid #fff;}
 .co-fantome .co-g-forme{width:100px;height:100px;}
+
+/* Les textes et les voix sur la feuille du Courrier */
+.co-obj-texte{white-space:pre;line-height:1.25;text-align:center;padding:.12em .3em;border-radius:.25em;width:max-content;}
+.co-obj-texte.edit{outline:3px dashed rgba(79,184,231,.75);outline-offset:2px;background:rgba(255,255,255,.35);}
+.co-caret{display:inline-block;width:.07em;min-width:3px;height:1em;background:currentColor;margin:0 -.035em;vertical-align:-.14em;animation:coCaret 1s steps(1) infinite;}
+@keyframes coCaret{50%{opacity:0}}
+.co-feuille .voix-b{display:flex;align-items:center;gap:.9cqw;background:#fff;border-radius:99cqw;padding:.8cqw 1.6cqw .8cqw .8cqw;box-shadow:0 3px 10px rgba(69,54,42,.22);cursor:pointer;}
+.co-feuille .voix-play{position:relative;display:block;width:6.2cqw;height:6.2cqw;border-radius:50%;background:var(--v);flex:none;}
+.co-feuille .voix-play::after{content:"";position:absolute;left:38%;top:27%;border-left:2.2cqw solid #fff;border-top:1.45cqw solid transparent;border-bottom:1.45cqw solid transparent;}
+.co-feuille .voix-b.on .voix-play::after{left:30%;top:30%;width:40%;height:40%;border:0;background:#fff;border-radius:.4cqw;}
+.co-feuille .voix-barres{display:flex;align-items:center;gap:.28cqw;height:5cqw;}
+.co-feuille .voix-barres b{display:block;width:.5cqw;min-width:2px;border-radius:9px;background:var(--v);opacity:.42;}
+.co-feuille .voix-barres b.lu{opacity:1;}
+/* Le son coupé : les voix se barrent */
+.muet .co-feuille .voix-b{opacity:.5;}
+.muet .co-feuille .voix-play::before{content:"";position:absolute;left:-12%;top:46%;width:124%;height:10%;background:#45362A;transform:rotate(-40deg);border-radius:9px;z-index:1;}
+.co-lue .co-obj{cursor:default;}
+.co-lue .co-obj-voix,.co-lue .co-obj-texte{cursor:pointer;}
+/* Le clavier ouvert : la feuille rétrécit au-dessus, les outils se serrent */
+.co-ed.tape{padding-top:56px;gap:4px 14px;}
+.co-ed.tape .co-tray{padding:6px 12px;gap:5px;min-height:0;}
+.co-ed.tape .co-pal button{width:34px;height:34px;}
+.co-ed.tape .co-tailles button{width:40px;height:38px;}
+.co-ed.tape .co-ed-g .sn-tool,.co-ed.tape .co-ed-d .sn-tool{width:50px;height:50px;}
+.co-ed.tape .co-ed-g,.co-ed.tape .co-ed-d{gap:4px;}
+.co-ed.tape .co-ed-g{padding-top:52px;}
+.co-ed.tape .co-ed-g svg,.co-ed.tape .co-ed-d svg{width:30px;height:30px;}
+.co-polices span{font-size:22px;}
+.co-tray .clav{max-width:900px;}
+/* Le micro */
+.co-micro{display:flex;align-items:center;gap:22px;width:min(760px,100%);min-height:104px;}
+.co-mic{width:96px;height:96px;color:#E8414F;flex:none;}
+.co-mic svg{width:54px;height:54px;}
+.co-mic.on{background:#E8414F;animation:coBat 1s ease-in-out infinite;}
+.co-mic.on rect{fill:#fff;}.co-mic.on path{stroke:#fff;}
+.co-mic.barre{opacity:.45;}
+.co-mic.barre::after{content:"";position:absolute;left:14%;top:47%;width:72%;height:7px;border-radius:9px;background:#45362A;transform:rotate(-40deg);}
+@keyframes coBat{50%{box-shadow:0 0 0 14px rgba(232,65,79,.22);}}
+.co-onde{flex:1;height:76px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;border-radius:18px;background:rgba(69,54,42,.07);padding:0 12px;min-width:0;}
+.co-onde b{flex:none;width:5px;border-radius:9px;background:#E8414F;}
+.co-chrono{font:800 24px 'Baloo 2',sans-serif;min-width:62px;font-variant-numeric:tabular-nums;}
+@media(prefers-reduced-motion:reduce){.co-caret,.co-mic.on{animation:none;}}

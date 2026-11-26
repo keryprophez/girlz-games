@@ -1,14 +1,17 @@
-/* @version 2026-11-26 11:29 */
+/* @version 2026-11-26 12:03 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
 import { photoUrl } from '../core/sprites'
 import { IMAGIER, type Theme } from '../core/imagier'
-import { TRASH_ICON, trashButton, twoTaps } from '../core/mine'
+import { TRASH_ICON, trashButton, twoTaps, whoOf } from '../core/mine'
+import { useFerme } from '../core/store'
 import { BRUSHES, BRUSH_ICON, BRUSH_NAME, ERASER_ICON, PALETTE, SIZES, heartD, starD, svgI, dab, segment, endStroke, newStroke, type Brush, type Stroke, type Trait } from '../core/pinceaux'
-import { FW, FH, MAX_OBJETS, borner, pincer, vierge, type Gomme, type Lettre, type Objet, type XY } from '../core/courrier'
+import { FW, FH, MAX_OBJETS, MAX_VOIX, borner, pincer, vierge, type Gomme, type Lettre, type Objet, type Texte, type Vocal, type XY } from '../core/courrier'
+import { Saisie, sansEmojis, vide, vus } from '../core/saisie'
+import { enregistrer, jouer, taire, barresHTML, MAX_S, type Prise, type Son } from '../core/vocal'
 import type { HandMove } from '../core/hand'
-import { EMOJIS as EMOJIS_COLLE } from '../core/clavier'
+import { clavier, EMOJIS as EMOJIS_COLLE } from '../core/clavier'
 import type { Contexte, Ecran } from './courrier'
 
 /* LA FEUILLE du Courrier : celle qu'on écrit (`ecrire`) et celle qu'on lit
@@ -16,8 +19,14 @@ import type { Contexte, Ecran } from './courrier'
    soit la taille de l'écran.
    - Dessiner : les pinceaux de l'Atelier (`core/pinceaux.ts`), sans pot ni
      miroir ; plusieurs doigts, un trait chacun.
+   - Écrire : notre clavier (`core/clavier.ts`) ; toucher la feuille pose un
+     texte là, toucher une lettre d'un texte y met le curseur ; trois tailles,
+     douze couleurs, trois écritures. Un texte laissé vide disparaît.
    - Coller : les animaux de la ferme, des émojis, des gommettes, les photos de
      l'imagier. Toucher pose ; tirer depuis le plateau pose sous le doigt.
+   - Parler : toucher le micro, parler (30 s au plus), toucher encore : la voix
+     se colle sur la feuille. Coupée en route (pause, autre mode, sortie), elle
+     est gardée. Micro refusé : le bouton se barre, le reste marche.
    - Hors du dessin, un doigt déplace un objet, un second le tourne et
      l'agrandit (`pincer`) ; tiré sur la poubelle, il s'en va.
    - Annuler (douze gestes), Papier, Effacer (deux touchers), Envoyer.
@@ -42,17 +51,46 @@ export function gommeHTML(src: string): string {
   return `<img class="co-g-${k}" src="${imgSrc(src)}" alt="" draggable="false" loading="lazy">`
 }
 
+/** Les trois écritures : ronde, à la main, d'école (les deux dernières attendent leurs polices : `cursive` en attendant). */
+export const POLICES = ['Fredoka', 'Gochi Hand', 'Playwrite FR Moderne']
+const POLICE_NOM: Record<string, string> = { 'Fredoka': 'Ronde', 'Gochi Hand': 'À la main', 'Playwrite FR Moderne': 'D’école' }
+export const pile = (police: string) => police === 'Fredoka' ? "'Fredoka',system-ui,sans-serif" : `'${police}',cursive`
+export const TAILLES = [60, 92, 140]
+const esc = (c: string) => c.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+/** Le texte en lettres (chacune sa place, pour le curseur) ; `curseur` : la barre qui clignote. */
+function lettresHTML(t: string, curseur: number | null) {
+  const g = vus(t), barre = '<i class="co-caret"></i>'
+  return g.map((c, i) => (curseur === i ? barre : '') + `<span data-i="${i}">${c === '\n' ? '\n' : esc(c)}</span>`).join('') + (curseur !== null && curseur >= g.length ? barre : '')
+}
+
 /** Pose un objet à sa place sur la feuille. */
 export function poser(el: HTMLElement, o: Objet) {
   el.style.left = o.x / FW * 100 + '%'
   el.style.top = o.y / FH * 100 + '%'
   el.style.transform = `translate(-50%,-50%) rotate(${o.r}rad) scale(${o.s})`
 }
-/** Habille un objet (sauf les textes et les voix, que la tâche suivante dessine). */
-export function habiller(el: HTMLElement, o: Objet) {
+/** Habille un objet. `curseur` : le texte qu'on écrit ; `couleur` : celle des voix (la fille qui écrit). */
+export function habiller(el: HTMLElement, o: Objet, couleur: string, curseur: number | null = null) {
   el.className = 'co-obj co-obj-' + o.k
   if (o.k === 'gomme') el.innerHTML = gommeHTML(o.src)
+  else if (o.k === 'texte') {
+    el.style.color = o.couleur
+    el.style.fontFamily = pile(o.police)
+    el.style.fontSize = o.taille / FW * 100 + 'cqw'
+    el.innerHTML = lettresHTML(o.t, curseur)
+  } else el.innerHTML = barresHTML(o, couleur)
   poser(el, o)
+}
+/** Une voix touchée : elle joue (ou se tait), ses barres s'allument. */
+export function ecouter(el: HTMLElement, s: Son) {
+  const b = el.querySelector<HTMLElement>('.voix-b')
+  if (!b) return
+  if (b.classList.contains('on')) { taire(); return }
+  const barres = el.querySelectorAll<HTMLElement>('.voix-barres b')
+  jouer(s, p => {
+    b.classList.toggle('on', p >= 0)
+    barres.forEach((x, i) => x.classList.toggle('lu', p >= 0 && i / barres.length <= p))
+  }, { musique: 'meadow' })
 }
 
 async function peindre(cv: HTMLCanvasElement, p: Blob | null) {
@@ -70,12 +108,15 @@ function blanc(cv: HTMLCanvasElement) {
 
 /* ---------- La feuille qu'on écrit ---------- */
 
-type Mode = 'dessin' | 'colle'
+type Mode = 'dessin' | 'texte' | 'colle' | 'voix'
+const MIC = svgI('<rect x="17" y="4" width="14" height="24" rx="7" fill="#E8414F"/><path d="M10 22a14 14 0 0 0 28 0M24 36v7m-8 0h16" fill="none" stroke="#45362A" stroke-width="4" stroke-linecap="round"/>')
 const MODE_ICON: Record<Mode, string> = {
   dessin: BRUSH_ICON.feutre('#FF6B81'),
-  colle: svgI(`<path d="${starD(19, 20, 17)}" fill="#FFC533"/><path d="${heartD(34, 36, 18)}" fill="#FF6B81"/>`)
+  texte: svgI('<rect x="4" y="12" width="40" height="26" rx="6" fill="#4FB8E7"/><g fill="#fff"><rect x="9" y="17" width="5" height="5" rx="1.4"/><rect x="17" y="17" width="5" height="5" rx="1.4"/><rect x="25" y="17" width="5" height="5" rx="1.4"/><rect x="33" y="17" width="5" height="5" rx="1.4"/><rect x="9" y="25" width="5" height="5" rx="1.4"/><rect x="34" y="25" width="5" height="5" rx="1.4"/><rect x="17" y="26" width="14" height="5" rx="2"/></g>'),
+  colle: svgI(`<path d="${starD(19, 20, 17)}" fill="#FFC533"/><path d="${heartD(34, 36, 18)}" fill="#FF6B81"/>`),
+  voix: MIC
 }
-const MODE_NAME: Record<Mode, string> = { dessin: 'Dessiner', colle: 'Coller' }
+const MODE_NAME: Record<Mode, string> = { dessin: 'Dessiner', texte: 'Écrire', colle: 'Coller', voix: 'Parler' }
 const ICON = {
   undo: svgI('<path d="M18 12 7 21l11 9" fill="none" stroke="#45362A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 21h19c8 0 13 5 13 11s-5 10-12 10h-6" fill="none" stroke="#45362A" stroke-width="5" stroke-linecap="round"/>'),
   paper: svgI('<rect x="12" y="6" width="26" height="34" rx="3" fill="#FFE0EC" stroke="#E0A8BC" stroke-width="2" transform="rotate(10 25 23)"/><rect x="9" y="8" width="26" height="34" rx="3" fill="#DDF0FF" stroke="#A8C8E0" stroke-width="2" transform="rotate(-6 22 25)"/><rect x="10" y="9" width="26" height="34" rx="3" fill="#FFFDF8" stroke="#B9AEA2" stroke-width="2"/>'),
@@ -97,7 +138,13 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   const q = <E extends HTMLElement = HTMLElement>(s: string) => hote.querySelector<E>(s)!
   const ed = q('.co-ed'), sheet = q('.co-ed-f'), cv = q<HTMLCanvasElement>('canvas'), g = cv.getContext('2d')!, objs = q('.co-objs'), tray = q('.co-tray'), bin = q('.co-bin')
   let mode: Mode = 'dessin', vivant = true, peint = false
-  const st = { brush: 'feutre' as Brush, color: PALETTE[8], size: 1, eraser: false, hue: Math.random() * 360 }
+  const st = { brush: 'feutre' as Brush, color: PALETTE[8], size: 1, eraser: false, hue: Math.random() * 360, tc: '#1C64C8', police: POLICES[0], taille: TAILLES[1] }
+  const couleurVoix = whoOf(x.qui).color
+  let sel: Texte | null = null, saisie: Saisie | null = null
+  let prise: Prise | null = null, attente = false, micBarre = false
+  const muet = () => ed.classList.toggle('muet', !useFerme.getState().sound)
+  const offSon = useFerme.subscribe(muet)
+  muet()
   const els = new Map<Objet, HTMLElement>()
   const annuler: (() => void)[] = []
   const pousser = (f: () => void) => { annuler.push(f); if (annuler.length > UNDO) annuler.shift() }
@@ -128,6 +175,13 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     pousser(() => { g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, FW, FH); g.drawImage(b, 0, 0); peint = avant })
   }
   sheet.addEventListener('pointerdown', e => {
+    if (mode === 'texte' && !(e.target as HTMLElement).closest('.co-obj')) {
+      // Un texte neuf là où le doigt touche (pas trop près des bords : il pousse vers la droite)
+      const p = surFeuille(e)
+      const ob = texteNeuf({ x: Math.min(FW * 0.75, Math.max(FW * 0.25, p.x)), y: p.y })
+      if (ajouter(ob)) choisir(ob)
+      return
+    }
     if (mode !== 'dessin' || (e.target as HTMLElement).closest('.co-obj')) return
     e.preventDefault()
     if (!traits.size) instantane()
@@ -159,12 +213,13 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   function monter(ob: Objet, pop = false) {
     const el = document.createElement('div')
     els.set(ob, el)
-    habiller(el, ob)
+    habiller(el, ob, couleurVoix, sel === ob ? saisie?.curseur ?? null : null)
     objs.append(el)
     if (pop) { el.classList.add('pop'); c.after(420, () => el.classList.remove('pop')) }
     el.addEventListener('pointerdown', e => { if (mode !== 'dessin') prendre(e, ob, el) })
   }
   function ajouter(ob: Objet): boolean {
+    if (!vivant) { l.objets.push(ob); enAttente = true; void garder(); return true } // une voix arrivée après la sortie
     if (l.objets.length >= MAX_OBJETS) return false
     l.objets.push(ob)
     monter(ob, true)
@@ -181,11 +236,13 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     if (annulable) pousser(() => { l.objets.splice(i, 0, ob); monter(ob) })
     plusTard()
   }
-  const tenu = { ob: null as Objet | null, el: null as HTMLElement | null, pts: new Map<number, XY>(), bouge: 0, avant: null as Objet | null }
+  const tenu = { ob: null as Objet | null, el: null as HTMLElement | null, pts: new Map<number, XY>(), bouge: 0, avant: null as Objet | null, lettre: -1 }
   function prendre(e: PointerEvent, ob: Objet, el: HTMLElement) {
     if (tenu.ob) return
     e.preventDefault()
     tenu.ob = ob; tenu.el = el; tenu.bouge = 0; tenu.avant = { ...ob }
+    const sp = (e.target as HTMLElement).closest<HTMLElement>('[data-i]')
+    tenu.lettre = sp ? +sp.dataset.i! + 1 : -1
     tenu.pts.clear()
     tenu.pts.set(e.pointerId, surFeuille(e))
     el.classList.add('pris')
@@ -222,7 +279,89 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     const jeter = !bin.hidden && surBin(e)
     bin.hidden = true; bin.classList.remove('on')
     if (jeter) { sfx('drop'); retirer(ob); return }
-    if (tenu.bouge >= 10) { pousser(() => { Object.assign(ob, avant); const e2 = els.get(ob); if (e2) poser(e2, ob) }); plusTard() }
+    if (tenu.bouge >= 10) { pousser(() => { Object.assign(ob, avant); const e2 = els.get(ob); if (e2) poser(e2, ob) }); plusTard(); return }
+    // Un toucher : un texte se rouvre (le curseur sur la lettre touchée), une voix joue
+    if (ob.k === 'texte') { if (mode !== 'texte') { mode = 'texte'; plateau() } choisir(ob, tenu.lettre >= 0 ? tenu.lettre : undefined) }
+    if (ob.k === 'voix') ecouter(el, ob)
+  }
+
+  /* --- Écrire --- */
+  const texteNeuf = (p: XY): Texte => ({ k: 'texte', t: '', x: p.x, y: p.y, s: 1, r: 0, couleur: st.tc, police: st.police, taille: st.taille })
+  function repeindre(ob: Texte) {
+    const el = els.get(ob)
+    if (!el) return
+    habiller(el, ob, couleurVoix, sel === ob && saisie ? saisie.curseur : null)
+    el.classList.toggle('edit', sel === ob)
+  }
+  /** Le texte qu'on écrit (null : aucun) ; l'ancien, laissé vide, disparaît. */
+  function choisir(ob: Texte | null, a?: number) {
+    const avant = sel
+    sel = ob
+    if (avant && avant !== ob && els.has(avant)) { if (vide(avant.t)) retirer(avant, false); else repeindre(avant) }
+    saisie = ob ? new Saisie(ob.t) : null
+    if (ob && saisie && a !== undefined) saisie.placer(a)
+    if (ob) repeindre(ob)
+  }
+  const actif = (): Texte | null => {
+    if (sel) return sel
+    const ob = texteNeuf({ x: FW / 2, y: FH * 0.35 })
+    if (!ajouter(ob)) return null
+    choisir(ob)
+    return ob
+  }
+  /** Une ligne qui déborde de la feuille passe à la ligne, à son dernier espace. */
+  const couper = (ob: Texte) => {
+    const el = els.get(ob)
+    if (!el || !saisie || el.offsetWidth * ob.s <= sheet.clientWidth * 0.92 || saisie.curseur < vus(ob.t).length) return
+    saisie.couper()
+    ob.t = saisie.texte
+    repeindre(ob)
+  }
+  const frappe = (f: (s: Saisie) => void) => {
+    const ob = actif()
+    if (!ob || !saisie) return
+    f(saisie)
+    ob.t = saisie.texte
+    repeindre(ob)
+    couper(ob)
+    plusTard()
+    o.geste('ecrire')
+  }
+  const kb = clavier({
+    char: c => frappe(s => s.poser(c)),
+    effacer: () => { if (sel && saisie) frappe(s => s.effacer()) },
+    entrer: () => frappe(s => s.poser('\n'))
+  })
+
+  /* --- Parler --- */
+  const nVoix = () => l.objets.filter(ob => ob.k === 'voix').length
+  const coller = (son: Son | null) => {
+    if (!son) return
+    const n = nVoix()
+    const ob: Vocal = borner({ k: 'voix', ...son, x: FW * (0.3 + (n % 3) * 0.2), y: FH * (0.84 - (n % 2) * 0.14), s: 1, r: (Math.random() - 0.5) * 0.08 })
+    if (ajouter(ob)) { sfx('pluck', { vol: 0.6 }); o.geste('parler') }
+    if (vivant && mode === 'voix') plateau()
+  }
+  /** Arrête la prise en cours et colle ce qui a été dit. */
+  const finirPrise = async () => { const p = prise; prise = null; if (p) coller(await p.arreter()) }
+  async function micro() {
+    if (attente) return
+    if (prise) { await finirPrise(); return }
+    if (micBarre || nVoix() >= MAX_VOIX) { sfx('error', { vol: 0.3 }); q('#coMic')?.classList.add('non'); c.after(450, () => hote.querySelector('#coMic')?.classList.remove('non')); return }
+    attente = true
+    try {
+      prise = await enregistrer({
+        niveau: (v, t) => {
+          const onde = hote.querySelector('.co-onde'), chrono = hote.querySelector('.co-chrono')
+          if (onde) { const b = document.createElement('b'); b.style.height = 8 + v * 92 + '%'; onde.append(b); while (onde.children.length > 90) onde.firstChild!.remove() }
+          if (chrono) chrono.textContent = `${Math.min(MAX_S, Math.floor(t))} s`
+        },
+        fini: son => { prise = null; coller(son) }
+      }, { musique: 'meadow', encore: () => vivant })
+      if (prise) sfx('select', { vol: 0.5 })
+    } catch { micBarre = true }
+    attente = false
+    if (vivant && mode === 'voix') plateau()
   }
   window.addEventListener('pointerdown', bas)
   window.addEventListener('pointermove', bouge)
@@ -236,6 +375,20 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     tray.className = 'co-tray t-' + mode
     ed.dataset.mode = mode
     ;(Object.keys(MODE_NAME) as Mode[]).forEach(m => q('#coM-' + m).classList.toggle('sel', m === mode))
+    ed.classList.toggle('tape', mode === 'texte')
+    if (mode === 'texte') {
+      const cur = sel ?? { couleur: st.tc, taille: st.taille, police: st.police }
+      tray.innerHTML = `<div class="co-rang">${pal(cur.couleur).replace(/data-c=/g, 'data-tc=')}
+        <div class="co-tailles">${TAILLES.map((t, i) => `<button data-t="${t}" class="${cur.taille === t ? 'sel' : ''}" aria-label="Taille"><span style="font-size:${14 + i * 8}px">A</span></button>`).join('')}</div>
+        <div class="co-tailles co-polices">${POLICES.map(f => `<button data-f="${f}" class="${cur.police === f ? 'sel' : ''}" aria-label="${POLICE_NOM[f]}"><span style="font-family:${pile(f).replace(/'/g, '&#39;')}">ab</span></button>`).join('')}</div></div>`
+      tray.append(kb.el)
+      return
+    }
+    if (mode === 'voix') {
+      const plein = nVoix() >= MAX_VOIX
+      tray.innerHTML = `<div class="co-micro"><button class="sn-tool co-mic${prise ? ' on' : ''}${micBarre || plein ? ' barre' : ''}" id="coMic" aria-label="Parler">${MIC}</button><div class="co-onde"></div><span class="co-chrono"></span></div>`
+      return
+    }
     if (mode === 'dessin') {
       tray.innerHTML = `<div class="co-rang">${BRUSHES.map(b => `<span class="tool-item"><button class="sn-tool co-mini ${!st.eraser && st.brush === b ? 'sel' : ''}" data-b="${b}" aria-label="${BRUSH_NAME[b]}">${BRUSH_ICON[b](st.color)}</button><i class="tool-cap">${BRUSH_NAME[b]}</i></span>`).join('')}
         <span class="tool-item"><button class="sn-tool co-mini ${st.eraser ? 'sel' : ''}" data-b="gomme" aria-label="Gomme">${ERASER_ICON}</button><i class="tool-cap">Gomme</i></span></div>
@@ -252,12 +405,19 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   }
   tray.addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('button')
-    if (!b || b.classList.contains('co-collant')) return
+    if (!b || b.classList.contains('co-collant') || b.closest('.clav')) return
+    if (b.id === 'coMic') { void micro(); return }
     const d = b.dataset
     sfx('click', { vol: 0.4 })
     if (d.b) { if (d.b === 'gomme') st.eraser = true; else { st.eraser = false; st.brush = d.b as Brush } }
     if (d.s) st.size = +d.s
     if (d.c) { st.color = d.c; st.eraser = false }
+    if (d.tc || d.t || d.f) {
+      if (d.tc) st.tc = d.tc
+      if (d.t) st.taille = +d.t
+      if (d.f) st.police = d.f
+      if (sel) { sel.couleur = st.tc; sel.taille = st.taille; sel.police = st.police; repeindre(sel); plusTard() }
+    }
     if (d.tab) onglet = d.tab as typeof onglet
     if (d.th) theme = d.th as Theme
     plateau()
@@ -291,7 +451,13 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   })
 
   /* --- Les boutons de droite et de gauche --- */
-  ;(Object.keys(MODE_NAME) as Mode[]).forEach(m => { q('#coM-' + m).onclick = () => { sfx('click', { vol: 0.5 }); mode = m; plateau() } })
+  const changer = (m: Mode) => {
+    if (prise && m !== 'voix') void finirPrise()
+    if (m !== 'texte') choisir(null)
+    mode = m
+    plateau()
+  }
+  ;(Object.keys(MODE_NAME) as Mode[]).forEach(m => { q('#coM-' + m).onclick = () => { sfx('click', { vol: 0.5 }); changer(m) } })
   q('#coUndo').onclick = () => { const f = annuler.pop(); if (f) { sfx('switch', { vol: 0.5 }); f(); plusTard() } else sfx('error', { vol: 0.3 }) }
   const papiers = q('.co-papiers')
   q('#coPaper').onclick = () => { papiers.hidden = !papiers.hidden; sfx('click', { vol: 0.4 }) }
@@ -322,6 +488,8 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   })
   q('#coWipe').onclick = () => effacer.tap()
   q('#coGo').onclick = async () => {
+    choisir(null)
+    if (prise) await finirPrise()
     if (vierge(l, peint)) { sfx('error', { vol: 0.4 }); q('#coGo').classList.add('non'); c.after(500, () => q('#coGo').classList.remove('non')); return }
     enAttente = true
     await garder()
@@ -336,8 +504,15 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   const fermer = () => {
     if (!vivant) return
     vivant = false
+    if (sel && vide(sel.t)) l.objets.splice(l.objets.indexOf(sel), 1)
+    sel = null
+    void finirPrise() // ce qui a été dit est gardé (ajouter() sait qu'on est parti)
+    enAttente = true
     void garder()
     effacer.disarm()
+    kb.detruire()
+    taire()
+    offSon()
     window.removeEventListener('pointerdown', bas)
     window.removeEventListener('pointermove', bouge)
     window.removeEventListener('pointerup', haut)
@@ -348,6 +523,8 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     nom: 'feuille',
     fermer,
     main(): HandMove | null {
+      if (mode === 'voix') return prise ? null : { tap: q('#coMic') }
+      if (mode === 'texte') { const r = sheet.getBoundingClientRect(); return sel ? null : { tap: { x: r.left + r.width / 2, y: r.top + r.height * 0.35 } } }
       if (mode === 'dessin' && !peint && !l.objets.length) { const r = sheet.getBoundingClientRect(); return { trace: [0.3, 0.45, 0.55, 0.7].map((f, i) => ({ x: r.left + r.width * f, y: r.top + r.height * (0.45 + (i % 2) * 0.12) })) } }
       if (l.objets.length && mode !== 'dessin') { const el = els.get(l.objets[l.objets.length - 1]); return el ? { pinch: el } : null }
       return { tap: q('#coGo') }
@@ -358,11 +535,18 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
 
 /* ---------- La feuille lue ---------- */
 
-export function lire(hote: HTMLElement, l: Lettre) {
-  hote.innerHTML = `<div class="co-feuille" style="background:${l.papier}"><canvas width="${FW}" height="${FH}"></canvas><div class="co-objs"></div></div>`
+/** La feuille en lecture : toucher une voix la joue, toucher un texte le fait lire (`dire`). */
+export function lire(hote: HTMLElement, l: Lettre, o: { dire?(t: string): void } = {}) {
+  hote.innerHTML = `<div class="co-feuille co-lue" style="background:${l.papier}"><canvas width="${FW}" height="${FH}"></canvas><div class="co-objs"></div></div>`
   void peindre(hote.querySelector('canvas')!, l.peinture)
   const objs = hote.querySelector<HTMLElement>('.co-objs')!
-  for (const ob of l.objets) { const el = document.createElement('div'); habiller(el, ob); objs.append(el) }
+  for (const ob of l.objets) {
+    const el = document.createElement('div')
+    habiller(el, ob, whoOf(l.de).color)
+    if (ob.k === 'voix') el.onclick = () => ecouter(el, ob)
+    if (ob.k === 'texte' && o.dire) el.onclick = () => { const t = sansEmojis(ob.t); if (!vide(t)) { taire(); o.dire!(t) } }
+    objs.append(el)
+  }
 }
 
 /* ---------- La feuille mise à plat (le pliage, les souvenirs) ---------- */
@@ -380,7 +564,18 @@ export async function aplatir(l: Lettre, largeur = 1080): Promise<string> {
     g.save()
     g.translate(ob.x, ob.y); g.rotate(ob.r); g.scale(ob.s, ob.s)
     g.textAlign = 'center'; g.textBaseline = 'middle'
-    if (ob.k === 'gomme') {
+    if (ob.k === 'texte') {
+      g.fillStyle = ob.couleur
+      g.font = `${ob.taille}px ${pile(ob.police)}`
+      const lignes = ob.t.split('\n'), h = ob.taille * 1.25
+      lignes.forEach((t, i) => g.fillText(t, 0, (i - (lignes.length - 1) / 2) * h))
+    } else if (ob.k === 'voix') {
+      g.shadowColor = 'rgba(69,54,42,.3)'; g.shadowBlur = 14 * k; g.shadowOffsetY = 4 * k
+      g.fillStyle = '#fff'; g.beginPath(); g.roundRect(-210, -62, 420, 124, 62); g.fill()
+      g.shadowColor = 'transparent'
+      g.fillStyle = whoOf(l.de).color; g.beginPath(); g.arc(-148, 0, 46, 0, 6.3); g.fill()
+      ob.pics.forEach((p, i) => { const hh = p * 74; g.beginPath(); g.roundRect(-84 + i * 250 / ob.pics.length, -hh / 2, 6, hh, 3); g.fill() })
+    } else if (ob.k === 'gomme') {
       const [kind, v, col] = ob.src.split(':')
       if (kind === 'emoji') { g.font = '170px system-ui,sans-serif'; g.fillText(v, 0, 10) }
       else if (kind === 'forme') { g.scale(4.2, 4.2); g.translate(-24, -25); g.fillStyle = col; g.fill(new Path2D(v === 'coeur' ? heartD(24, 26, 24) : starD(24, 25, 22))) }

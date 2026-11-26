@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:29 */
+/* @version 2026-11-26 12:03 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -2649,8 +2649,9 @@ await scenario('bille-trois-plateaux', async () => {
 
 /* ✉️ Le Courrier (26/11) : Jade écrit une lettre — un trait, deux autocollants
    (touché, tiré du plateau), un déplacé, un jeté puis rendu par « Annuler »,
-   un tourné et agrandi à deux doigts ; elle sort par la maison, revient : la
-   même feuille. */
+   un tourné et agrandi à deux doigts, un texte avec un émoji (un texte
+   d'espaces seuls ne reste pas), une voix, une voix coupée par la pause ;
+   elle sort par la maison, revient : la même feuille. */
 await scenario('courrier-lettre', async () => {
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.evaluate(() => new Promise(r => { const q = indexedDB.deleteDatabase('ferme-courrier'); q.onsuccess = q.onerror = q.onblocked = r }))
@@ -2704,11 +2705,40 @@ await scenario('courrier-lettre', async () => {
   await touche('touchEnd', [])
   const t1 = await g.evaluate(el => el.style.transform)
   if (t1 === t0 || !/scale\((1\.[1-9]|[2-5])/.test(t1)) throw new Error(`deux doigts ne tournent ni n’agrandissent (${t0} → ${t1})`)
+  // Écrire : « Coucou Joyce ! » et un émoji ; un texte d'espaces seuls ne reste pas
+  const frappe = async k => page.locator(`.clav-t[data-k="${k}"]:visible`).first().dispatchEvent('pointerdown', { pointerId: 9 })
+  await page.locator('#coM-texte').click()
+  await frappe('maj'); await frappe('C')
+  for (const k of 'oucou ') await frappe(k)
+  await frappe('maj'); await frappe('J')
+  for (const k of 'oyce !') await frappe(k)
+  await frappe('emoji'); await page.locator('.clav-e').nth(44).click(); await frappe('abc')
+  const textes = () => page.evaluate(() => [...document.querySelectorAll('.co-obj-texte')].map(e => e.textContent))
+  if (!(await textes()).some(t => t.startsWith('Coucou Joyce !'))) throw new Error(`le texte tapé n’y est pas (${await textes()})`)
+  await page.mouse.click(...P(0.5, 0.85))
+  await frappe(' '); await frappe(' '); await frappe(' ')
+  await page.locator('#coM-voix').click()
+  if ((await etat()).objets !== 3) throw new Error(`un texte d’espaces seuls est resté (${JSON.stringify(await etat())})`)
+  // Parler : deux secondes de fausse voix, puis une prise coupée par la pause (elle est gardée)
+  await ctx.grantPermissions(['microphone'])
+  await page.locator('#coMic').click()
+  await page.waitForSelector('#coMic.on', { timeout: 10000 })
+  await page.waitForTimeout(2000)
+  await page.locator('#coMic').click()
+  await page.waitForFunction(() => window.__co.feuille.objets === 4, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la voix ne se colle pas (${JSON.stringify(await etat())})`) })
+  await page.locator('#coMic').click()
+  await page.waitForSelector('#coMic.on', { timeout: 10000 })
+  await page.waitForTimeout(1200)
+  await page.locator('.pbtn[aria-label="Pause"]').click()
+  await page.waitForFunction(() => window.__co.feuille.objets === 5, null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la voix coupée par la pause est perdue (${JSON.stringify(await etat())})`) })
+  await page.locator('.pausewall').click({ force: true }).catch(() => {})
   // Sortir, revenir : la même feuille
   await page.waitForTimeout(700)
   await page.locator('.pbtn[aria-label="Menu"]').click()
   await entrer()
-  await page.waitForFunction(() => window.__co.feuille && window.__co.feuille.objets === 2 && window.__co.feuille.peint, null, { timeout: 10000 })
+  await page.waitForFunction(() => window.__co.feuille && window.__co.feuille.objets === 5 && window.__co.feuille.peint, null, { timeout: 10000 })
     .catch(async () => { throw new Error(`le brouillon n’est pas retrouvé (${JSON.stringify(await etat())})`) })
 })
 
