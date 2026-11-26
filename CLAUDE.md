@@ -28,8 +28,11 @@ L'histoire de chaque jeu est dans l'en-tête de son fichier et dans `git log`.
 2. **Aucune lecture requise.** 6 ans = ne lit pas couramment. Icônes, sons
    distincts, démonstration visuelle. `core/voice.ts` ne lit que le **contenu
    pédagogique** (multiplications, heures, noms de lieux), **jamais les
-   consignes**. Corollaire : dans Apprendre, **aucune sanction** (ni vies, ni
-   chrono, ni bonus de vitesse) ; dans Créer, **aucune note** sur une création.
+   consignes**. Une exception, choisie par le père (25/11) : dans le Courrier,
+   elle lit, sur un toucher, le texte qu'une des filles a tapé (Jade ne lit pas
+   encore le message de sa sœur). Corollaire : dans Apprendre, **aucune
+   sanction** (ni vies, ni chrono, ni bonus de vitesse) ; dans Créer, **aucune
+   note** sur une création.
 3. **Pas de collecte de données enfants.** Photos et voix restent locales.
    Aucun analytique tiers. **Deux exceptions, choisies par le père : Devine
    mon dessin (8/10) et Mon dessin prend vie (18/10, la Ferme à construire)**
@@ -114,6 +117,10 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `salon.ts` + `salon3d.ts` · `hair.ts` + `hair3d.ts` · `braid3d.ts` · `bust3d.ts` · `salonobj3d.ts` | le Salon de coiffure : ses recettes et ce qu'on garde — testé ; la scène et les gestes ; la physique des mèches — testée — et leur rendu en fils ; la tresse — testée ; le buste (VRM) ; la brosse et les nœuds |
 | `drawguess.ts` | le devineur de Devine mon dessin (fiche imposée, revérifiée) — testé |
 | `atelierdb.ts` | l'IndexedDB de l'Atelier (dessins, coloriages) |
+| `pinceaux.ts` | les dix pinceaux de l'Atelier (sortis de `coloring.ts` le 26/11, au pixel près), partagés avec le Courrier — testé |
+| `saisie.ts` · `clavier.ts` | le texte et son curseur en caractères VUS (un émoji composé s'efface d'un coup) — testé ; notre clavier AZERTY et sa grille d'émojis (jamais celui d'Android) — testé |
+| `vocal.ts` | la voix GARDÉE du Courrier (MediaRecorder, 30 s ; coupée par la pause, elle est gardée ; le micro toujours rendu) — au contraire de `mic.ts`, qui ne garde rien — testé |
+| `courrier.ts` + `courrierdb.ts` · `boites3d.ts` | le Courrier : une lettre et ses états (brouillon, cachetée, postée, ouverte, gardée), la file de la boîte, le raccourci, les doigts sur un objet — testé ; le coffre IndexedDB `ferme-courrier` (une fiche par lettre, une écriture refusée n'annonce rien) — testé ; les deux boîtes aux lettres dans la ferme |
 | `fps.ts` | la sonde `?fps` pour la tablette |
 
 **Les imagiers sont en PHOTOS, et rien qu'en photos** (12/09) : 324 sujets
@@ -135,7 +142,8 @@ petite fille d'Habille-toi suit la même règle (`dollPortraits` sur l'accueil,
 l'écran de fin, les tampons de l'Atelier). Plus aucune planche 2D : Kenney
 reste la source des modèles 3D (kits food, holiday, space, nature) et des
 bruitages (`import-assets.mjs`, fichiers triés commités). Pas d'emoji dans
-les jeux.
+les jeux — sauf ceux que les filles écrivent et collent dans le Courrier
+(choix du père, 25/11).
 
 **Une illustration se commande, elle ne se dessine pas** (23/09) : refus nets
 des modèles Kenney vus de près et des dessins SVG faits main. Ce qui marche :
@@ -223,7 +231,8 @@ formes pleines : carton titre, chargement), **son affiche**
 quand le jeu n'attend rien. Ses cibles : un élément (`visible(root, sel)`), un
 point d'écran (`toScreen` en 3D) ou une fraction de l'arène ; gestes `tap`,
 `drag`, `slice`, `trace`, `taps`, `hold` (garder le doigt posé), `tilt`
-(pencher la tablette) et `choose` (« l'un de ceux-là », sans
+(pencher la tablette), `pinch` (deux doigts qui tournent et agrandissent) et
+`choose` (« l'un de ceux-là », sans
 appuyer : **jamais la réponse dans Apprendre**). Elle vient à la première
 partie, puis après 7 s sans toucher (15 s dans Créer) ; un toucher la chasse ;
 `handNow()` la fait venir tout de suite quand le jeu attend un geste NOUVEAU.

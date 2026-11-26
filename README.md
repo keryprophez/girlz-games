@@ -106,7 +106,13 @@ creuse au doigt, la peinture en bandes, le four qui la ressort émaillée,
 l'étagère), le Château de sable (la pelle, les moules, les douves que le
 seau d'eau remplit, puis la marée qui monte au coucher du soleil) et
 l'Aquarium (son poisson dessiné devient une peluche qui nage, vient quand
-on tapote la vitre — sans Claude : rien ne quitte la tablette).
+on tapote la vitre — sans Claude : rien ne quitte la tablette), et le
+Courrier (Joyce et Jade s'écrivent : une feuille où l'on dessine, écrit à
+notre clavier, colle des animaux, des émojis, des photos et sa voix ; on la
+plie, on la met sous enveloppe, on la cachette à la cire, on la timbre et on
+la glisse dans la boîte aux lettres de sa sœur, dont le drapeau se lève ;
+l'autre casse le cachet et la garde dans ses Souvenirs — tout reste sur la
+tablette).
 
 **Autour** — un accueil en trois univers (Jouer, Apprendre, Créer) au-dessus
 d'un pré en 3D, chaque jeu montré en affiche (une image du jeu en train de se

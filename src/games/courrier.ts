@@ -1,15 +1,15 @@
-/* @version 2026-11-26 12:28 */
+/* @version 2026-11-26 12:38 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
 import { isSoundOn } from '../core/audio'
 import { shutUp } from '../core/voice'
 import { setPaused } from '../core/session'
-import { visible, type HandMove } from '../core/hand'
+import { visible, handNow, type HandMove } from '../core/hand'
 import { WHO, girl, whoOf, trashButton, twoTaps, type Who } from '../core/mine'
 import { creerBoites, type Boites } from '../core/boites3d'
-import { coffreIDB, type Coffre } from '../core/courrierdb'
-import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, garder, reposer, souvenirs, aLire, type Lettre } from '../core/courrier'
+import { coffreIDB, coffreMemoire, type Coffre } from '../core/courrierdb'
+import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, garder, reposer, souvenirs, aLire, type Lettre, type Prefs } from '../core/courrier'
 import { chargerPortraits, ecrire, lire, aplatir } from './courrier-feuille'
 import { taire } from '../core/vocal'
 import { envoyer, ouvrirEnveloppe, type Envoi } from './courrier-envoi'
@@ -28,7 +28,13 @@ import { envoyer, ouvrirEnveloppe, type Envoi } from './courrier-envoi'
    Tout reste sur la tablette (`core/courrierdb.ts`). */
 
 /** Un écran plein (la feuille, l'envoi, la lecture, les souvenirs). */
-export interface Ecran { nom: string; fermer(): void; main?(): HandMove | null }
+export interface Ecran {
+  nom: string
+  fermer(): void
+  main?(): HandMove | null
+  /** Le geste attendu maintenant (le nom que `geste` retiendra une fois réussi). */
+  etape?(): string | null
+}
 /** Ce que chaque écran reçoit. */
 export interface Contexte { c: GameContext; coffre: Coffre; qui: Who }
 
@@ -53,7 +59,19 @@ interface Jeu {
   ecran: Ecran | null
   /** Une animation de la boîte en cours : les touchers attendent. */
   occupe: boolean
+  /** Ce qu'on retient de chacune : ses envois (le raccourci), sa dernière enveloppe, ses gestes réussis. */
+  prefs: Partial<Record<Who, Prefs>>
 }
+
+/** Un geste réussi par elle : la main ne le lui montrera plus d'elle-même. */
+function geste(j: Jeu, nom: string) {
+  const w = j.qui, p = w && j.prefs[w]
+  if (!w || !p || p.faits.includes(nom)) return
+  p.faits.push(nom)
+  void j.coffre.garderPrefs(w, p)
+}
+/** Le geste attendu là où elle est (chez elle : sa boîte, ou « Écrire »). */
+const etapeDe = (j: Jeu): string | null => j.ecran ? j.ecran.etape?.() ?? null : j.qui ? (drapeau(j.lettres, j.qui) ? 'boite' : 'feuille') : null
 let jeu: Jeu | null = null
 
 const lireQui = (): Who | null => { try { const v = localStorage.getItem(QUI); return v === 'jade' || v === 'joyce' ? v : null } catch { return null } }
@@ -98,6 +116,7 @@ function accueil(j: Jeu) {
 function chez(j: Jeu, w: Who) {
   j.qui = w
   ecrireQui(w)
+  if (!j.prefs[w]) void j.coffre.prefs(w).then(p => { if (!j.prefs[w]) j.prefs[w] = p })
   sfx('select', { vol: 0.5 })
   j.boites?.vue(w)
   peindreBas(j)
@@ -129,12 +148,13 @@ function ecrireLettre(j: Jeu, depuis?: Lettre) {
   const w = j.qui
   if (!w || j.occupe) return
   sfx('select', { vol: 0.5 })
+  geste(j, 'feuille')
   const attend = aPoster(j.lettres, w)
   if (attend && !depuis) { void lancerEnvoi(j, attend); return }
   const l = depuis ?? brouillon(j.lettres, w) ?? neuve(w, Date.now())
   ouvrirEcran(j, hote => ecrire(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
     garde: x => retenir(j, x),
-    geste: () => { /* la main par fille : tâche 13 */ },
+    geste: n => geste(j, n),
     envoyer: x => void lancerEnvoi(j, x)
   }))
 }
@@ -143,15 +163,17 @@ function ecrireLettre(j: Jeu, depuis?: Lettre) {
 async function lancerEnvoi(j: Jeu, l: Lettre) {
   const w = j.qui, b = j.boites
   if (!w || !b) return
-  const prefs = await j.coffre.prefs(w)
+  const prefs = j.prefs[w] ?? (j.prefs[w] = await j.coffre.prefs(w))
   if (jeu !== j || j.qui !== w) return
   ouvrirEcran(j, hote => envoyer(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
     boites: b,
     raccourci: raccourci(prefs),
-    geste: () => { /* la main par fille : tâche 13 */ },
+    geste: n => geste(j, n),
     garde: x => retenir(j, x),
     fini: x => {
-      void j.coffre.garderPrefs(w, apresEnvoi(prefs, x.env!))
+      const p = apresEnvoi(j.prefs[w] ?? prefs, x.env!)
+      j.prefs[w] = p
+      void j.coffre.garderPrefs(w, p)
       fermerEcran(j)
       chez(j, w)
     }
@@ -177,12 +199,13 @@ function toucherBoite(j: Jeu, w: Who) {
     })
     return
   }
+  geste(j, 'boite')
   j.c.after(650, () => {
     if (jeu !== j) return
     j.occupe = false
     if (l.etat === 'ouverte') { lecture(j, l); return }
     ouvrirEcran(j, hote => ouvrirEnveloppe(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
-      geste: () => { /* la main par fille : tâche 13 */ },
+      geste: n => geste(j, n),
       garde: x => retenir(j, x),
       fini: x => lecture(j, x)
     }))
@@ -281,7 +304,18 @@ export const courrier: GameDef = {
     const coffre: Coffre = (window as unknown as { __BOT?: boolean }).__BOT
       ? { ...base, garderLettre: l => (bot.echec ? Promise.resolve(false) : base.garderLettre(l)), garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p)) }
       : base
-    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false }
+    const j: Jeu = { c, wrap, coffre, boites: null, lettres: [], qui: null, ecran: null, occupe: false, prefs: {} }
+    // La main par fille : un geste qu'ELLE n'a jamais réussi, la main vient tout de suite (même si
+    // sa sœur l'a déjà fait : la coquille ne retient qu'une première fois par jeu)
+    let montre = ''
+    c.every(500, () => {
+      const w = j.qui, p = w && j.prefs[w], nom = etapeDe(j)
+      if (!w || !p || !nom || p.faits.includes(nom) || j.occupe) return
+      const cle = `${w}:${nom}:${j.ecran?.nom ?? ''}`
+      if (cle === montre) return
+      montre = cle
+      c.after(300, handNow)
+    })
     jeu = j
     preloadSfx(['select', 'creak', 'metal', 'click', 'bong', 'whoosh', 'cloth', 'drop', 'pluck', 'chop', 'confirm', 'error', 'tick', 'switch', 'glass'])
     const finLoader = loader(wrap, 'courrier')
@@ -339,6 +373,15 @@ export const courrier: GameDef = {
         get echec() { return bot.echec },
         set echec(v: boolean) { bot.echec = v },
         pause: (v: boolean) => setPaused(v),
+        /** L'affiche : l'enveloppe de Jade devant la boîte ouverte de Joyce (rien n'est gardé). */
+        demo() {
+          j.qui = 'jade'
+          const l: Lettre = { ...neuve('jade', Date.now()), etat: 'cachetee', env: { couleur: '#F58FB8', cachet: 'coeur', timbre: 'animal:duck' } }
+          ouvrirEcran(j, hote => envoyer(hote, { c, coffre: coffreMemoire(), qui: 'jade' }, l, { boites: j.boites!, raccourci: null, geste() {}, garde() {}, fini() {} }))
+          wrap.querySelector<HTMLElement>('.co-ret')!.style.visibility = 'hidden'
+        },
+        /** Le geste que la main montrerait maintenant, et ce qu'elle sait de chacune. */
+        main: () => ({ etape: etapeDe(j), faits: j.qui ? j.prefs[j.qui]?.faits ?? null : null, mv: JSON.stringify(courrier.hand?.(c.root) ?? null).slice(0, 120) }),
         get feuille() { const e = j.ecran as { etat?: () => unknown } | null; return e?.etat?.() ?? null },
         get lettres() { return j.lettres.map(l => ({ de: l.de, a: l.a, etat: l.etat, objets: l.objets.length })) },
         drapeau: (w: Who) => drapeau(j.lettres, w),

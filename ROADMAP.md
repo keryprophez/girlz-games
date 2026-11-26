@@ -13,13 +13,13 @@ jeu par itération, livré, joué, capturé.
 
 ---
 
-## Le catalogue — 38 jeux
+## Le catalogue — 39 jeux
 
 | Univers | Jeux |
 |---|---|
 | **Jouer** (12) — on s'amuse, on peut perdre | La Tour de Glace · Ninja Verger · Cache-Cache · Devine mon dessin · Labyrinthe · Puzzle (et son mode Taquin) · Memory · Le Chœur · Puissance 4 · Perles Miroir · Le Jeu des différences · Le Labyrinthe à bille |
 | **Apprendre** (12) — on travaille, jamais de sanction | Quelle heure ? · Le Potager (+ − × ÷) · Le Marché · L'Intrus · Le Tour du Monde · Voyage dans l'Espace · Suites Logiques · Chasse aux lettres · La Poste aux Phrases · Le Tracteur · Le Géoplan · Les Échecs |
-| **Créer** (14) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments · La Poterie · Le Château de sable · L'Aquarium · Le Salon de coiffure |
+| **Créer** (15) — pas de note | Habille-toi · Les Bijoux · Petit Piano · Feu d'Artifice · L'Atelier · La Cuisine (pizza ou gâteau) · L'Animal qui répète · La Ferme à construire · Mon cartable · Les Monuments · La Poterie · Le Château de sable · L'Aquarium · Le Salon de coiffure · Le Courrier |
 
 **Archivés** (le code, l'affiche et le bot sont gardés, plus aucune tuile ;
 les filles n'aiment pas) : Le Flipper · 1, 2, 3… Soleil !
@@ -161,6 +161,25 @@ Joyce : « c'est quasiment toujours les mêmes mots ».
 
 ---
 
+## Le Courrier (Créer) — plan validé
+
+Joyce et Jade s'écrivent pour de vrai, chacune son tour, sur la tablette :
+la feuille (dessiner, écrire, coller, parler), l'enveloppe (plier, la cire,
+le timbre), la boîte aux lettres de sa sœur, son drapeau. Conception et plan :
+`docs/superpowers/specs/` et `docs/superpowers/plans/`.
+
+1. ✅ **Les outils communs** : les pinceaux sortis de l'Atelier (identique au
+   pixel près), le texte et le clavier, la voix gardée, le coffre, la main à
+   deux doigts.
+2. 🔧 **La lettre** : faite, à essayer sur la tablette — `?fps` aux boîtes et
+   pendant l'envoi, un envoi complet par Jade sans aide, la durée de la
+   cérémonie à la troisième lettre, le micro et la voix qui lit.
+3. ⬜ Les polices « à la main » et « d'école » (Gochi Hand, Playwrite FR
+   Moderne, SIL OFL) : à télécharger avec l'accord du père ; en attendant,
+   l'écriture cursive de la tablette.
+4. ⬜ Garder les lettres d'un appareil à l'autre : à discuter avec le père
+   (aujourd'hui tout reste sur la tablette, règle 3).
+
 ## À mesurer sur la tablette (`?fps`)
 
 Rien n'a encore été relevé sur la Tab A9+ : la Tour de Glace (une cinquantaine
@@ -233,6 +252,7 @@ dessin prend vie (puis régler les consignes sur de vrais dessins).
 | Le Chien de berger | 19/10 | « les filles trouvent ça nul » |
 | Les bougies animées, le souffle au micro, la chanson de la Pâtisserie | 19/10 | « vire toute l'animation des bougies » |
 | Le choix de joueuse, la Pizzeria et la Pâtisserie séparées | 27/10 | coupes proposées et validées |
+| Le téléphone du Courrier (petits messages, deux téléphones côte à côte) | à la maquette du Courrier | « en vrai vire le telephone, la lettre c'est parfait » |
 
 **Allers-retours** : la Chenille et Poussin Volant en 2D illustrée (25/09),
 retirés le soir même (« mille fois moins bien que la version isométrique ») ;

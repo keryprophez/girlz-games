@@ -1,3 +1,4 @@
+/* @version 2026-11-26 12:38 */
 export type Tier = 'easy' | 'med' | 'exp'
 
 /** Les quatre opérations (le Potager, 27/09) : `add` +, `sub` −, `mul` ×, `div` ÷. */
@@ -38,7 +39,8 @@ export interface GameContext {
   /** Lit un texte à voix haute. UNIQUEMENT du contenu pédagogique (une
       heure, un résultat, un nom de lieu) — jamais une consigne : la règle
       du projet est « aucune lecture requise », et le moteur de voix est
-      gardé pour la suite. */
+      gardé pour la suite. Exception choisie par le père (25/11) : le
+      Courrier lit, sur un toucher, le texte qu'une des filles a tapé. */
   say(text: string): void
   /** Timers DE PARTIE : annulés au démontage, suspendus en pause. À utiliser
       à la place de setTimeout/setInterval pour tout ce qui pilote le jeu. */

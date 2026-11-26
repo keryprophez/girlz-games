@@ -1,4 +1,4 @@
-/* @version 2026-11-25 18:45 */
+/* @version 2026-11-26 12:38 */
 /* Les AFFICHES de l'accueil (28/09) : une image de chaque jeu EN TRAIN DE SE
    JOUER, prise dans le vrai jeu (pas dessinée), sans la coquille (barre,
    score, cœurs, main qui montre où taper), cadrée en 4:3 et enregistrée en
@@ -153,6 +153,12 @@ const STAGE = {
       await p.evaluate(() => { window.__aq.demo(); document.querySelectorAll('.aq-tools,.aq-pal,.aq-me,.aq-reset').forEach(e => { e.style.display = 'none' }) })
     },
     after: 3500, zoom: 1.1, cx: 0.55, cy: 0.5
+  },
+  // Le Courrier : l'enveloppe de Jade, timbrée, devant la boîte ouverte de Joyce
+  courrier: {
+    ready: () => window.__co && window.__co.ready, wait: 800,
+    act: async p => { await p.evaluate(() => window.__co.demo()) },
+    after: 3800, zoom: 1.05, cy: 0.52
   },
   // Le Salon de coiffure : la tresse finie, de trois quarts
   coiffure: {

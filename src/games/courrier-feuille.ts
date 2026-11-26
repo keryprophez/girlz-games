@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:28 */
+/* @version 2026-11-26 12:38 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -532,6 +532,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
   return {
     nom: 'feuille',
     fermer,
+    etape: () => ({ dessin: 'dessiner', texte: 'ecrire', colle: 'coller', voix: 'parler' } as const)[mode],
     main(): HandMove | null {
       if (mode === 'voix') return prise ? null : { tap: q('#coMic') }
       if (mode === 'texte') { const r = sheet.getBoundingClientRect(); return sel ? null : { tap: { x: r.left + r.width / 2, y: r.top + r.height * 0.35 } } }

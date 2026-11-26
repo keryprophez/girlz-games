@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:22 */
+/* @version 2026-11-26 12:38 */
 import { sfx } from '../core/sfx'
 import { buzz } from '../core/audio'
 import { onPause } from '../core/session'
@@ -299,6 +299,7 @@ export function envoyer(hote: HTMLElement, x: Contexte, l0: Lettre, o: { boites:
   return {
     nom: 'envoi',
     fermer: () => S.fermer(),
+    etape: () => (etape === 'fini' ? null : etape),
     avantCachet: () => etape === 'plier' || etape === 'plier2' || etape === 'enveloppe' || (etape === 'cire' && l.etat === 'brouillon'),
     main(): HandMove | null {
       const cer = q('.co-cer')
@@ -381,6 +382,7 @@ export function ouvrirEnveloppe(hote: HTMLElement, x: Contexte, l0: Lettre, o: {
   return {
     nom: 'arrivee',
     fermer: () => S.fermer(),
+    etape: () => (etape === 'fini' ? null : etape),
     main(): HandMove | null {
       if (etape === 'retourner') { const e = q('.co-env'); return e ? { tap: e } : null }
       if (etape === 'casser') { const c = q('.co-env-cire'); return c ? { taps: [c, c, c] } : null }

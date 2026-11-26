@@ -1,8 +1,11 @@
+/* @version 2026-11-26 12:38 */
 import { isSoundOn } from './audio'
 import { duckMusic } from './music'
 
 /* Synthèse vocale française — uniquement pour lire du CONTENU pédagogique
    (multiplications, additions, heures, noms de lieux), jamais des consignes.
+   Exception choisie par le père (25/11) : dans le Courrier, le texte qu'une
+   des filles a tapé, lu sur un toucher (Jade ne lit pas encore celui de sa sœur).
 
    Deux pièges d'Android, payés le 12/09 sur la tablette :
 
