@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- @version 2026-11-26 09:36 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banc du Courrier</title>
+<style>
+  body{overflow:auto!important;padding:16px;background:#FFF3DC}
+  .banc{display:flex;flex-direction:column;gap:14px;align-items:center}
+  .ecrit{min-height:90px;width:900px;max-width:100%;background:#fff;border-radius:14px;padding:12px 18px;font:400 34px 'Fredoka',sans-serif;white-space:pre-wrap;color:#1C64C8}
+  .ecrit i{display:inline-block;width:3px;height:1em;background:currentColor;vertical-align:-.12em;animation:cl 1s steps(1) infinite}
+  @keyframes cl{50%{opacity:0}}
+  .hote{width:900px;max-width:100%;background:rgba(255,253,246,.9);border-radius:22px;padding:10px}
+  #etat{font:600 14px sans-serif;color:#8A7A6B}
+</style>
+<div class="banc">
+  <div class="ecrit" id="ecrit"></div>
+  <div class="hote" id="hote"></div>
+  <div id="etat"></div>
+</div>
+<script type="module" src="./banc.ts"></script>

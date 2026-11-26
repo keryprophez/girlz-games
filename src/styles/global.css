@@ -1,4 +1,4 @@
-/* @version 2026-11-25 00:20 */
+/* @version 2026-11-26 09:36 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2374,3 +2374,25 @@ body.playing .po-card{max-width:880px;}
 .cf-wrap[data-who=""]>:not(.mine-who):not(canvas){display:none;}
 .cf-wrap[data-phase="fin"] .cf-coifs,.cf-wrap[data-phase="fin"] .cf-teintes,.cf-wrap[data-phase="fin"] .cf-me{opacity:0;pointer-events:none;}
 @media(prefers-reduced-motion:reduce){.cf-coif,.cf-noeud,.cf-fin .sn-tool{animation:none !important;}}
+
+/* ============================================================
+   LE CLAVIER (core/clavier.ts, le Courrier) : un AZERTY de dix
+   colonnes en vingt demi-colonnes ; la touche enfoncée s'allume
+   ============================================================ */
+.clav{width:100%;--clav-h:48px;}
+.clav [hidden]{display:none !important;}
+.clav-abc{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:5px;}
+.clav-t{height:var(--clav-h);border:none;border-radius:11px;background:#fff;box-shadow:0 2px 0 rgba(69,54,42,.22);
+  font:600 25px/1 'Fredoka',system-ui,sans-serif;color:var(--ink);display:grid;place-items:center;touch-action:none;cursor:pointer;}
+.clav-t.bas{background:var(--mango);color:#fff;transform:translateY(2px);box-shadow:none;}
+.clav-t.spe{background:#EADFCB;}
+.clav-t.spe.sel{background:var(--mango);color:#fff;}
+.clav-pt{font-size:18px;}
+.clav-em,.clav-e{font-family:system-ui,sans-serif;}
+.clav-em{font-size:24px;}
+.clav-emo{display:flex;flex-direction:column;gap:6px;height:calc(var(--clav-h) * 5 + 20px);}
+.clav-grille{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:2px;touch-action:pan-y;}
+.clav-e{border:none;background:none;font-size:36px;line-height:1;padding:8px 0;border-radius:12px;touch-action:pan-y;cursor:pointer;}
+.clav-e:active{background:#FFE9C4;transform:scale(1.2);}
+.clav-bas{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;}
+.clav-bas .clav-t{grid-column:span 4;}
