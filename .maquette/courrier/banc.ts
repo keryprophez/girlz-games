@@ -1,10 +1,12 @@
-/* @version 2026-11-26 09:36 */
+/* @version 2026-11-26 09:40 */
 // LE BANC des outils du Courrier (livraison 1) : les vrais modules de l'app, hors du jeu, pour les essayer
 // dans un navigateur. npx vite .maquette/courrier → http://localhost:5302/banc.html
 import '../../src/assets/fonts/fonts.css'
 import '../../src/styles/global.css'
 import { clavier } from '../../src/core/clavier'
 import { Saisie, vus } from '../../src/core/saisie'
+import { enregistrer, jouer, taire } from '../../src/core/vocal'
+import { setPaused } from '../../src/core/session'
 
 const $ = (id: string) => document.getElementById(id)!
 const s = new Saisie()
@@ -16,4 +18,4 @@ const montrer = () => {
 const kb = clavier({ char(c) { s.poser(c); montrer() }, effacer() { s.effacer(); montrer() }, entrer() { s.poser('\n'); montrer() } })
 $('hote').append(kb.el)
 montrer()
-;(window as unknown as { __banc: unknown }).__banc = { s, kb }
+;(window as unknown as { __banc: unknown }).__banc = { s, kb, enregistrer, jouer, taire, setPaused }
