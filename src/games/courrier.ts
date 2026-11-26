@@ -1,15 +1,18 @@
-/* @version 2026-11-26 12:22 */
+/* @version 2026-11-26 12:28 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
+import { isSoundOn } from '../core/audio'
+import { shutUp } from '../core/voice'
 import { setPaused } from '../core/session'
 import { visible, type HandMove } from '../core/hand'
-import { WHO, girl, whoOf, type Who } from '../core/mine'
+import { WHO, girl, whoOf, trashButton, twoTaps, type Who } from '../core/mine'
 import { creerBoites, type Boites } from '../core/boites3d'
 import { coffreIDB, type Coffre } from '../core/courrierdb'
-import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, type Lettre } from '../core/courrier'
-import { chargerPortraits, ecrire } from './courrier-feuille'
-import { envoyer, type Envoi } from './courrier-envoi'
+import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, garder, reposer, souvenirs, aLire, type Lettre } from '../core/courrier'
+import { chargerPortraits, ecrire, lire, aplatir } from './courrier-feuille'
+import { taire } from '../core/vocal'
+import { envoyer, ouvrirEnveloppe, type Envoi } from './courrier-envoi'
 
 /* ✉️ LE COURRIER (Créer, conception du 25/11, `docs/superpowers/specs/`) —
    Joyce et Jade s'écrivent pour de vrai, chacune son tour, sur la tablette.
@@ -34,7 +37,10 @@ const I = (b: string, s = 60) => `<svg viewBox="0 0 48 48" width="${s}" height="
 export const ICONE = {
   ecrire: I('<rect x="8" y="6" width="28" height="36" rx="3" fill="#FFFDF8" stroke="#D9C9AE" stroke-width="2"/><path d="M14 16h16M14 23h16M14 30h9" stroke="#4FB8E7" stroke-width="3" stroke-linecap="round"/><path d="M27 35l3-8 11-11 5 5-11 11z" fill="#FF7B6B"/><path d="M27 35l3-8 5 5z" fill="#F2D1A0"/>'),
   souvenirs: I('<path d="M6 20c0-8 4-12 10-12h16c6 0 10 4 10 12v3H6z" fill="#B97F3F"/><rect x="6" y="22" width="36" height="19" rx="3" fill="#8B5E3C"/><rect x="6" y="21" width="36" height="4" fill="#6E4526"/><rect x="20" y="19" width="8" height="11" rx="2" fill="#FFC533"/><circle cx="24" cy="24" r="2" fill="#6E4526"/>'),
-  retour: I('<path d="M20 10L6 24l14 14" fill="none" stroke="#45362A" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 24h24c6 0 10 4 10 10" fill="none" stroke="#45362A" stroke-width="5.5" stroke-linecap="round"/>', 34)
+  retour: I('<path d="M20 10L6 24l14 14" fill="none" stroke="#45362A" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 24h24c6 0 10 4 10 10" fill="none" stroke="#45362A" stroke-width="5.5" stroke-linecap="round"/>', 34),
+  ecouter: I('<path d="M6 18v12h8l10 8V10l-10 8z" fill="#45362A"/><path d="M31 17a10 10 0 0 1 0 14M36 12a17 17 0 0 1 0 24" fill="none" stroke="#45362A" stroke-width="4" stroke-linecap="round"/>', 40),
+  repondre: I('<path d="M20 8L5 22l15 14v-9c10 0 17 3 22 10-1-13-8-21-22-21z" fill="#fff"/>', 40),
+  garder: I('<path d="M6 20c0-8 4-12 10-12h16c6 0 10 4 10 12v3H6z" fill="#B97F3F"/><rect x="6" y="22" width="36" height="19" rx="3" fill="#8B5E3C"/><rect x="20" y="19" width="8" height="11" rx="2" fill="#FFC533"/>', 40)
 }
 
 interface Jeu {
@@ -57,8 +63,10 @@ const ecrireQui = (w: Who) => { try { localStorage.setItem(QUI, w) } catch { /* 
 function peindreBoites(j: Jeu, net = false) {
   if (!j.boites) return
   for (const w of WHO) {
-    j.boites.drapeau(w.id, drapeau(j.lettres, w.id), net)
-    j.boites.lettre(w.id, boite(j.lettres, w.id).length > 0)
+    const leve = drapeau(j.lettres, w.id), dedans = boite(j.lettres, w.id).length > 0
+    j.boites.drapeau(w.id, leve, net)
+    j.boites.lettre(w.id, dedans)
+    if (!j.occupe) j.boites.porte(w.id, !leve && dedans ? 0.25 : 0)
   }
 }
 
@@ -83,7 +91,6 @@ function peindreBas(j: Jeu) {
 function accueil(j: Jeu) {
   j.qui = null
   j.boites?.vue('duo')
-  for (const w of WHO) j.boites?.porte(w.id, 0)
   peindreBoites(j)
   peindreBas(j)
 }
@@ -151,19 +158,105 @@ async function lancerEnvoi(j: Jeu, l: Lettre) {
   }))
 }
 
-/** Sa boîte touchée. Vide : la porte s'ouvre, rien, elle se referme. */
+/** Sa boîte touchée : la porte s'ouvre ; la plus ancienne lettre fermée vient (la cérémonie), ou
+    la première ouverte (droit à la lecture). Vide : rien, la porte se referme. */
 function toucherBoite(j: Jeu, w: Who) {
   const b = j.boites
   if (!b || j.occupe) return
   j.occupe = true
   b.porte(w, 1)
   sfx('creak', { vol: 0.5 })
-  b.secouer(w)
-  j.c.after(1100, () => {
+  const l = boite(j.lettres, w)[0]
+  if (!l) {
+    b.secouer(w)
+    j.c.after(1100, () => {
+      if (jeu !== j) return
+      b.porte(w, 0)
+      sfx('metal', { vol: 0.4 })
+      j.occupe = false
+    })
+    return
+  }
+  j.c.after(650, () => {
     if (jeu !== j) return
-    b.porte(w, 0)
-    sfx('metal', { vol: 0.4 })
     j.occupe = false
+    if (l.etat === 'ouverte') { lecture(j, l); return }
+    ouvrirEcran(j, hote => ouvrirEnveloppe(hote, { c: j.c, coffre: j.coffre, qui: w }, l, {
+      geste: () => { /* la main par fille : tâche 13 */ },
+      garde: x => retenir(j, x),
+      fini: x => lecture(j, x)
+    }))
+  })
+}
+
+/** Une lettre lue : Écouter, Répondre, Garder, la poubelle. Quittée autrement, une lettre
+    ouverte retourne au fond de la boîte (porte entrouverte). Des Souvenirs : pas de « Garder ». */
+function lecture(j: Jeu, l0: Lettre) {
+  const w = j.qui
+  if (!w) return
+  let l = l0
+  ouvrirEcran(j, hote => {
+    hote.innerHTML = `<div class="co-lec"><div class="co-lec-f"></div><div class="co-lec-d">
+      <span class="tool-item"><button class="sn-tool co-gros" id="coEcoute" aria-label="Écouter">${ICONE.ecouter}</button><i class="tool-cap">Écouter</i></span>
+      <span class="tool-item"><button class="sn-tool co-gros go" id="coRepond" aria-label="Répondre">${ICONE.repondre}</button><i class="tool-cap">Répondre</i></span>
+      ${l.etat === 'ouverte' ? `<span class="tool-item"><button class="sn-tool co-gros" id="coGarde" aria-label="Garder">${ICONE.garder}</button><i class="tool-cap">Garder</i></span>` : ''}
+      ${trashButton('coJette', 'co-jette', 'Jeter')}</div></div>`
+    const q = <E extends HTMLElement = HTMLElement>(s: string) => hote.querySelector<E>(s)
+    lire(q('.co-lec-f')!, l, { dire: t => j.c.say(t) })
+    const texte = aLire(l)
+    const ecoute = q('#coEcoute')!
+    const peindreEcoute = () => ecoute.classList.toggle('eteint', !texte || !isSoundOn())
+    peindreEcoute()
+    const minuteur = j.c.every(500, peindreEcoute)
+    ecoute.onclick = () => { if (!texte || !isSoundOn()) return; taire(); j.c.say(texte) }
+    let fini = false
+    const ranger = async (versSouvenirs: boolean) => {
+      if (fini) return
+      fini = true
+      taire(); shutUp()
+      if (l.etat === 'ouverte') {
+        const x = versSouvenirs ? garder(l) : reposer(l, Date.now())
+        if (await j.coffre.garderLettre(x)) { l = x; retenir(j, x) }
+      }
+    }
+    const repondre = q('#coRepond')!
+    repondre.onclick = async () => { sfx('select', { vol: 0.5 }); await ranger(true); fermerEcran(j); ecrireLettre(j) }
+    const g = q('#coGarde')
+    if (g) g.onclick = async () => { sfx('drop', { vol: 0.5 }); await ranger(true); fermerEcran(j) }
+    const jeter = twoTaps(q('#coJette')!, j.c, async () => {
+      fini = true
+      taire(); shutUp()
+      sfx('whoosh', { vol: 0.6, rate: 0.7 })
+      if (await j.coffre.jeterLettre(l.id)) { j.lettres = j.lettres.filter(x => x.id !== l.id); peindreBoites(j) }
+      fermerEcran(j)
+    })
+    q('#coJette')!.onclick = () => jeter.tap()
+    return {
+      nom: 'lecture',
+      fermer() { j.c.cancel(minuteur); jeter.disarm(); void ranger(false); hote.innerHTML = '' },
+      main: () => ({ choose: [...hote.querySelectorAll<HTMLElement>('.co-obj-voix, #coGarde, #coRepond')].slice(0, 3) })
+    }
+  })
+}
+
+/** Les Souvenirs : ses lettres gardées, la plus récente d'abord ; les vignettes viennent en arrivant à l'écran. */
+function souvenirsDe(j: Jeu) {
+  const w = j.qui
+  if (!w) return
+  sfx('select', { vol: 0.5 })
+  const ls = souvenirs(j.lettres, w)
+  ouvrirEcran(j, hote => {
+    hote.innerHTML = `<div class="co-sou">${ls.map((_, i) => `<button class="co-sou-l" data-i="${i}" style="--r:${(i * 37 % 7) - 3}deg" aria-label="Lettre"></button>`).join('')}${ls.length ? '' : `<div class="co-sou-v">${ICONE.souvenirs}</div>`}</div>`
+    const vues = new IntersectionObserver(es => {
+      for (const e of es) {
+        if (!e.isIntersecting) continue
+        const b = e.target as HTMLElement
+        vues.unobserve(b)
+        void aplatir(ls[+b.dataset.i!], 480).then(u => { b.style.backgroundImage = `url(${u})` })
+      }
+    })
+    hote.querySelectorAll<HTMLElement>('.co-sou-l').forEach(b => { vues.observe(b); b.onclick = () => lecture(j, ls[+b.dataset.i!]) })
+    return { nom: 'souvenirs', fermer() { vues.disconnect(); hote.innerHTML = '' }, main: () => null }
   })
 }
 
@@ -231,6 +324,7 @@ export const courrier: GameDef = {
         return
       }
       if (t.closest('#coEcrire')) ecrireLettre(j)
+      if (t.closest('#coSouv')) souvenirsDe(j)
     }
     wrap.addEventListener('pointerdown', bas)
     wrap.addEventListener('pointerup', haut)

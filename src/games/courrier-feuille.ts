@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:22 */
+/* @version 2026-11-26 12:28 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -6,6 +6,7 @@ import { photoUrl } from '../core/sprites'
 import { IMAGIER, type Theme } from '../core/imagier'
 import { TRASH_ICON, trashButton, twoTaps, whoOf } from '../core/mine'
 import { useFerme } from '../core/store'
+import { isSoundOn } from '../core/audio'
 import { BRUSHES, BRUSH_ICON, BRUSH_NAME, ERASER_ICON, PALETTE, SIZES, heartD, starD, svgI, dab, segment, endStroke, newStroke, type Brush, type Stroke, type Trait } from '../core/pinceaux'
 import { FW, FH, MAX_OBJETS, MAX_VOIX, borner, pincer, vierge, type Gomme, type Lettre, type Objet, type Texte, type Vocal, type XY } from '../core/courrier'
 import { Saisie, sansEmojis, vide, vus } from '../core/saisie'
@@ -87,7 +88,12 @@ export function ecouter(el: HTMLElement, s: Son) {
   if (!b) return
   if (b.classList.contains('on')) { taire(); return }
   const barres = el.querySelectorAll<HTMLElement>('.voix-barres b')
+  let joue = false
+  const son = isSoundOn()
   jouer(s, p => {
+    if (p >= 0) joue = true
+    // Une voix illisible (le son allumé, et rien n'a joué) : la bulle se barre
+    if (p < 0 && !joue && son) b.classList.add('casse')
     b.classList.toggle('on', p >= 0)
     barres.forEach((x, i) => x.classList.toggle('lu', p >= 0 && i / barres.length <= p))
   }, { musique: 'meadow' })

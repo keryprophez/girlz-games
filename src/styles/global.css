@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:22 */
+/* @version 2026-11-26 12:28 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2611,3 +2611,19 @@ body.playing .po-card{max-width:880px;}
 .co-poste.non .co-env{animation:coNon .45s;}
 .co-poste.dedans{transition:transform .28s ease-in,opacity .1s .2s;opacity:0;}
 @media(prefers-reduced-motion:reduce){.co-timbre-pret{animation:none;}}
+
+/* Lire une lettre, les Souvenirs */
+.co-lec{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;padding:62px max(20px,env(safe-area-inset-right,0px)) 20px max(92px,env(safe-area-inset-left,0px));
+  background:repeating-linear-gradient(90deg,rgba(96,58,28,.10) 0 2px,transparent 2px 9px),repeating-linear-gradient(0deg,rgba(70,40,18,.28) 0 3px,transparent 3px 150px),linear-gradient(100deg,#B98552,#C9965F 30%,#B57F4B 62%,#C4905A);}
+.co-lec-f{container-type:size;display:grid;place-items:center;min-width:0;}
+.co-lec-d{display:flex;flex-direction:column;gap:14px;justify-content:center;}
+.co-lec-d .mine-trash{position:static;}
+.co-lec .sn-tool.eteint{opacity:.35;}
+.co-feuille .voix-b.casse{opacity:.45;}
+.co-feuille .voix-b.casse .voix-play::before{content:"";position:absolute;left:-12%;top:46%;width:124%;height:10%;background:#45362A;transform:rotate(-40deg);border-radius:9px;z-index:1;}
+.co-sou{position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:30px;align-content:flex-start;justify-content:center;padding:84px max(92px,env(safe-area-inset-left,0px)) 30px;overflow-y:auto;touch-action:pan-y;
+  background:repeating-linear-gradient(90deg,rgba(96,58,28,.10) 0 2px,transparent 2px 9px),linear-gradient(100deg,#B98552,#C9965F 30%,#B57F4B 62%,#C4905A);}
+.co-sou-l{width:min(300px,40vw);aspect-ratio:3/2;border:none;background:#FFFDF6 center/cover;border-radius:6px;box-shadow:var(--e2);transform:rotate(var(--r));cursor:pointer;}
+.co-sou-l:active{scale:.96;}
+.co-sou-v{align-self:center;margin-top:22vh;opacity:.6;}
+.co-sou-v svg{width:150px;height:150px;}

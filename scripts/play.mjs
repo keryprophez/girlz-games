@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:22 */
+/* @version 2026-11-26 12:28 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -2770,6 +2770,33 @@ await scenario('courrier-lettre', async () => {
     .catch(async () => { throw new Error(`la lettre n’arrive pas chez Joyce (${JSON.stringify(await page.evaluate(() => ({ e: window.__co.ecran, l: window.__co.lettres })))})`) })
   const ls = await page.evaluate(() => window.__co.lettres)
   if (ls.length !== 1 || ls[0].etat !== 'postee' || ls[0].a !== 'joyce') throw new Error(`une seule lettre postée attendue (${JSON.stringify(ls)})`)
+  // Joyce : sa boîte, la cérémonie d'ouverture, une voix entendue, « Garder », les Souvenirs
+  await page.locator('#coRet').click()
+  await page.locator('.co-plaque[data-who="joyce"]').click()
+  await page.waitForTimeout(1500)
+  const bj = await page.evaluate(() => window.__co.boite('joyce'))
+  await page.mouse.click(bj.x, bj.y)
+  await page.waitForFunction(() => window.__co.ecran === 'arrivee', null, { timeout: 8000 })
+    .catch(async () => { throw new Error(`la boîte de Joyce ne s’ouvre pas (${await page.evaluate(() => window.__co.ecran)})`) })
+  await page.waitForTimeout(800)
+  await page.locator('.co-env').click({ force: true })
+  await page.waitForTimeout(900)
+  const ci = await page.locator('.co-env-cire').boundingBox()
+  for (let k = 0; k < 3; k++) { await page.mouse.click(ci.x + ci.width / 2, ci.y + ci.height / 2); await page.waitForTimeout(250) }
+  await page.waitForTimeout(1500)
+  const ce = await page.locator('.co-cer').boundingBox()
+  await glisser([ce.x + ce.width / 2, ce.y + ce.height * 0.62], [ce.x + ce.width / 2, ce.y + ce.height * 0.25])
+  await page.waitForFunction(() => window.__co.ecran === 'lecture', null, { timeout: 10000 })
+    .catch(async () => { throw new Error(`la lettre ne se lit pas (${await page.evaluate(() => window.__co.ecran)})`) })
+  if ((await page.evaluate(() => window.__co.lettres[0].etat)) !== 'ouverte') throw new Error('la lettre n’est pas ouverte')
+  await page.locator('.co-lec .co-obj-voix').first().click()
+  await page.waitForSelector('.co-lec .voix-b.on', { timeout: 5000 }).catch(() => { throw new Error('la voix ne joue pas') })
+  await page.locator('#coGarde').click()
+  await page.waitForFunction(() => window.__co.ecran === null && window.__co.lettres[0].etat === 'gardee', null, { timeout: 8000 })
+    .catch(async () => { throw new Error(`« Garder » ne range pas (${JSON.stringify(await page.evaluate(() => window.__co.lettres))})`) })
+  await page.locator('#coSouv').click()
+  await page.waitForFunction(() => window.__co.ecran === 'souvenirs' && document.querySelectorAll('.co-sou-l').length === 1, null, { timeout: 8000 })
+    .catch(() => { throw new Error('la lettre gardée n’est pas dans les Souvenirs') })
 })
 
 await browser.close()
