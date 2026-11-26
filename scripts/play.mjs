@@ -1,4 +1,4 @@
-/* @version 2026-11-26 12:28 */
+/* @version 2026-11-26 17:47 */
 /* Bots de jeu : là où le smoke test vérifie que les jeux SE MONTENT, ces bots
    vérifient qu'on peut Y JOUER — trancher des fruits au Ninja, empiler la
    Tour de Glace, et que la sauce de la pizza tombe SOUS le doigt
@@ -2743,8 +2743,14 @@ await scenario('courrier-lettre', async () => {
   // Envoyer : plier deux fois, l'enveloppe, la cire tenue, le timbre, la boîte de Joyce
   const glisser = async (de, vers, steps = 12) => { await page.mouse.move(...de); await page.mouse.down(); await page.mouse.move(...vers, { steps }); await page.mouse.up() }
   const cer = async () => { const r = await page.locator('.co-cer').boundingBox(); return (x, y) => [r.x + r.width * x, r.y + r.height * y] }
+  // « Envoyer » garde la feuille UNE fois (pas une deuxième en la fermant), sans réencoder un dessin inchangé
+  const avantEnvoi = await page.evaluate(() => ({ s: window.__co.sorties, e: window.__co.encodages }))
   await page.locator('#coGo').click()
   await page.waitForSelector('.co-pli', { timeout: 15000 })
+  await page.waitForTimeout(800)
+  const apresEnvoi = await page.evaluate(() => ({ s: window.__co.sorties, e: window.__co.encodages }))
+  if (apresEnvoi.s - avantEnvoi.s !== 1 || apresEnvoi.e !== avantEnvoi.e)
+    throw new Error(`« Envoyer » : ${apresEnvoi.s - avantEnvoi.s} sauvegarde(s), ${apresEnvoi.e - avantEnvoi.e} dessin(s) réencodé(s) — attendu 1 et 0`)
   let C = await cer()
   await glisser(C(0.5, 0.75), C(0.5, 0.3))
   await page.waitForSelector('.co-pli2', { timeout: 5000 })

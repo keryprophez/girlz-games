@@ -1,4 +1,4 @@
-/* @version 2026-11-26 17:23 */
+/* @version 2026-11-26 17:47 */
 import type { GameContext, GameDef } from '../core/types'
 import { loader } from '../core/three3d'
 import { sfx, preloadSfx } from '../core/sfx'
@@ -11,7 +11,7 @@ import { BARRE_D, creerBoites, NUAGE_D, type Boites } from '../core/boites3d'
 import { coffreIDB, coffreMemoire, type Coffre } from '../core/courrierdb'
 import { coffreEnLigne } from '../core/courrierenligne'
 import { drapeau, boite, brouillon, neuve, aPoster, raccourci, apresEnvoi, garder, reposer, souvenirs, aLire, type Lettre, type Prefs } from '../core/courrier'
-import { chargerPortraits, ecrire, lire, aplatir, sauvegardes } from './courrier-feuille'
+import { chargerPortraits, ecrire, encodages, lire, aplatir, sauvegardes } from './courrier-feuille'
 import { taire } from '../core/vocal'
 import { envoyer, ouvrirEnveloppe, type Envoi } from './courrier-envoi'
 
@@ -357,9 +357,17 @@ export const courrier: GameDef = {
     // sans Worker (`__COFFRE_EN_LIGNE` : les vérifications à deux appareils). Sous les bots,
     // `__co.echec = true` fait refuser les écritures (l'envoi ne doit rien annoncer)
     const fen = window as unknown as { __BOT?: boolean; __COFFRE_EN_LIGNE?: boolean }
-    const base = coffreIDB(), bot = { echec: false }
+    const base = coffreIDB(), bot = { echec: false, sorties: 0 }
     const coffre: Coffre = fen.__BOT && !fen.__COFFRE_EN_LIGNE
-      ? { ...base, garderLettre: (l, o) => (bot.echec ? Promise.resolve(false) : base.garderLettre(l, o)), garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p)) }
+      ? {
+          ...base,
+          garderLettre: (l, o) => {
+            // Les brouillons gardés « en sortant » (ceux qui partiraient en ligne)
+            if (l.etat === 'brouillon' && !o?.ici) bot.sorties++
+            return bot.echec ? Promise.resolve(false) : base.garderLettre(l, o)
+          },
+          garderPrefs: (w, p) => (bot.echec ? Promise.resolve(false) : base.garderPrefs(w, p))
+        }
       : coffreEnLigne(base)
     // La main par fille : un geste qu'ELLE n'a jamais réussi, la main vient tout de suite (même si
     // sa sœur l'a déjà fait : la coquille ne retient qu'une première fois par jeu)
@@ -437,6 +445,8 @@ export const courrier: GameDef = {
         get ecran() { return j.ecran?.nom ?? null },
         get vue() { return j.boites?.courante ?? null },
         get echec() { return bot.echec },
+        get sorties() { return bot.sorties },
+        get encodages() { return encodages },
         set echec(v: boolean) { bot.echec = v },
         pause: (v: boolean) => setPaused(v),
         /** L'affiche : l'enveloppe de Jade devant la boîte ouverte de Joyce (rien n'est gardé). */

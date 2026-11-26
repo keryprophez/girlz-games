@@ -1,4 +1,5 @@
 {
+  // @version 2026-11-26 17:47
   // Les TESTS du Worker seulement (worker/courrier.test.ts) : une base D1 et un
   // compartiment R2 locaux, en mémoire (getPlatformProxy de wrangler). Jamais
   // déployé ; la vraie configuration est ../wrangler.jsonc.

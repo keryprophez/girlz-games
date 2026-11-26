@@ -1,4 +1,4 @@
-/* @version 2026-11-26 16:58 */
+/* @version 2026-11-26 17:47 */
 import { describe, expect, it, vi } from 'vitest'
 import type { Coffre } from './courrierdb'
 import type { Lettre, Vocal } from './courrier'
@@ -26,6 +26,8 @@ function fauxServeur() {
     echecFichier: new Set<string>(),
     /** Un appel qui tombe (500), une fois ou plus. */
     casse: (_appel: string) => false,
+    /** Un appel traité, mais dont la réponse se perd en route. */
+    perdre: (_appel: string) => false,
     async fetch(chemin: string, init: RequestInit = {}): Promise<Response> {
       const m = init.method ?? 'GET', reste = chemin.slice('/api/courrier/'.length), appel = `${m} ${reste}`
       appels.push(appel)
@@ -33,6 +35,12 @@ function fauxServeur() {
       if (s.panne === '401') return new Response('Accès réservé', { status: 401 })
       if (s.panne === 'muet') return new Promise<Response>(() => {})
       if (s.casse(appel)) return new Response(null, { status: 500 })
+      const r = await traiter(m, reste, init)
+      if (s.perdre(appel)) throw new TypeError('réponse perdue')
+      return r
+    }
+  }
+  async function traiter(m: string, reste: string, init: RequestInit): Promise<Response> {
       const p = reste.split('/')
       if (p[0] === 'lettres' && p.length === 1) return json({ lettres: [...lettres.values()].filter(l => !l.jetee).map(({ jetee: _, ...l }) => l) })
       if (p[0] === 'lettres' && p.length === 2 && m === 'PUT') {
@@ -41,6 +49,7 @@ function fauxServeur() {
         const avant = lettres.get(l.id)
         if (avant?.jetee) return json({ refus: 'jetee' }, 409)
         if (avant && (avant.de !== l.de || l.version <= avant.version || rang(l.etat) < rang(avant.etat))) return json({ refus: 'version' }, 409)
+        if (avant && avant.etat !== 'brouillon' && JSON.stringify([avant.objets, avant.papier, avant.peinture]) !== JSON.stringify([l.objets, l.papier, l.peinture])) return json({ refus: 'fige' }, 409)
         if (!fichiersDe(l).every(k => fichiers.has(k))) return json({ refus: 'fichier' }, 422)
         lettres.set(l.id, l)
         return json({ version: l.version })
@@ -71,7 +80,6 @@ function fauxServeur() {
         return json({ ok: true })
       }
       return new Response(null, { status: 404 })
-    }
   }
   return s
 }
@@ -146,6 +154,27 @@ describe('le coffre en ligne : garder', () => {
     s.casse = () => false
     expect(await c.garderLettre(cacheter(l, ENV))).toBe(true)
     expect(await local.lettres()).toHaveLength(0)
+  })
+  it('une réponse perdue après l’écriture : le nouvel essai passe', async () => {
+    const { s, c } = monter()
+    const k = cacheter(neuve('jade', 1), ENV)
+    s.perdre = a => a.startsWith('PUT lettres/')
+    expect(await c.garderLettre(k)).toBe(false)
+    expect(s.lettres.get(k.id)?.etat).toBe('cachetee')
+    s.perdre = () => false
+    expect(await c.garderLettre(timbrer(k, 'animal:duck'))).toBe(true)
+    expect(s.lettres.get(k.id)?.env?.timbre).toBe('animal:duck')
+  })
+  it('un dessin effacé dans un brouillon repris ne revient pas à la cire', async () => {
+    const { s, c } = monter()
+    const l = plein()
+    await c.garderLettre(l)
+    const x = (await c.lettres()).find(y => y.id === l.id)!
+    const repris = (await c.completer(x))!
+    const efface = { ...repris, peinture: null }
+    expect(await c.garderLettre(efface)).toBe(true)
+    expect(await c.garderLettre(cacheter(efface, ENV))).toBe(true)
+    expect(s.lettres.get(l.id)!.peinture).toBeNull()
   })
   it('garder un brouillon encore à charger : false, rien d’écrit', async () => {
     const { s, local, c } = monter()
@@ -253,6 +282,16 @@ describe('le coffre en ligne : compléter', () => {
     const f = s.lettres.get('c-2')!
     expect(f.peinture).toBe(p)
     expect(f.objets[0]).toMatchObject({ cle: v })
+  })
+  it('un brouillon poussé puis relu se complète sans rien retélécharger', async () => {
+    const { s, c } = monter()
+    const l = plein()
+    await c.garderLettre(l)
+    const [x] = await c.lettres()
+    expect(x.aCharger).toBe(true)
+    s.appels.length = 0
+    expect(await c.completer(x)).not.toBeNull()
+    expect(s.appels.filter(a => a.startsWith('GET fichiers/'))).toEqual([])
   })
   it('un brouillon dont le dessin ne vient pas : null', async () => {
     const { s, c } = monter()

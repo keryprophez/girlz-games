@@ -1,4 +1,4 @@
-/* @version 2026-11-26 16:53 */
+/* @version 2026-11-26 17:47 */
 // LE COURRIER EN LIGNE (26/11, choisi par le père : troisième exception de la
 // règle 3) : les lettres que Jade et Joyce s'envoient, gardées sur le compte
 // Cloudflare `tld83` — le texte dans D1 (`girlz-games-courrier`, lisible dans
@@ -7,7 +7,9 @@
 //
 // - Une lettre ne recule jamais : sa `version` doit avancer, son état aussi
 //   (brouillon < cachetée < postée < ouverte < gardée), ses prénoms ne changent
-//   pas, une lettre jetée ne s'écrit plus.
+//   pas, une lettre jetée ne s'écrit plus. Une fois cachetée, son contenu
+//   (objets, papier, dessin) est figé : seuls l'enveloppe et le trajet changent
+//   — un vieux brouillon resté sur un autre appareil ne la remplace pas.
 // - Les fichiers d'abord, la lettre ensuite : une lettre qui désigne un
 //   fichier absent de R2 est refusée (422). Un fichier ne s'écrit que pour une
 //   lettre absente ou encore brouillon : une lettre postée ne change plus.
@@ -70,13 +72,14 @@ async function ecrire(request: Request, db: D1Database, r2: R2Bucket, id: string
   if (lu instanceof Response) return lu
   const l = lireLettre(lu.v, id)
   if (!l) return vide(400)
-  const avant = await db.prepare('SELECT de, a, etat, version, jetee FROM lettres WHERE id = ?1').bind(id)
-    .first<{ de: string; a: string; etat: EtatFil; version: number; jetee: number }>()
+  const avant = await db.prepare('SELECT de, a, etat, version, jetee, objets, papier, peinture FROM lettres WHERE id = ?1').bind(id)
+    .first<{ de: string; a: string; etat: EtatFil; version: number; jetee: number; objets: string; papier: string; peinture: string | null }>()
   if (avant) {
     if (avant.jetee) return refus('jetee')
     if (avant.de !== l.de || avant.a !== l.a) return refus('qui')
     if (l.version <= avant.version) return refus('version')
     if (rang(l.etat) < rang(avant.etat)) return refus('etat')
+    if (avant.etat !== 'brouillon' && (avant.objets !== JSON.stringify(l.objets) || avant.papier !== l.papier || avant.peinture !== l.peinture)) return refus('fige')
   }
   for (const cle of fichiersDe(l)) if (!(await r2.head(cle))) return refus('fichier', 422)
   const fait = await db.prepare(`INSERT INTO lettres (id, de, a, etat, cree, postee, tour, papier, env, objets, peinture, texte, jetee, version, maj)

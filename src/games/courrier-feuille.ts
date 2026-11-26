@@ -1,4 +1,4 @@
-/* @version 2026-11-26 17:23 */
+/* @version 2026-11-26 17:47 */
 import { sfx } from '../core/sfx'
 import { FARM, FARM_MORE } from '../core/critters'
 import { critterPortraits } from '../core/portraits'
@@ -105,7 +105,9 @@ async function peindre(cv: HTMLCanvasElement, p: Blob | null): Promise<boolean> 
   if (!p) return false
   try { const b = await createImageBitmap(p); cv.getContext('2d')!.drawImage(b, 0, 0, cv.width, cv.height); b.close(); return true } catch { return false /* dessin illisible : la feuille sans lui */ }
 }
-const versBlob = (cv: HTMLCanvasElement) => new Promise<Blob | null>(r => cv.toBlob(r, 'image/png'))
+/** Les dessins encodés depuis le chargement (le bot vérifie qu'un dessin inchangé ne l'est pas deux fois). */
+export let encodages = 0
+const versBlob = (cv: HTMLCanvasElement) => { encodages++; return new Promise<Blob | null>(r => cv.toBlob(r, 'image/png')) }
 
 /* ---------- La feuille qu'on écrit ---------- */
 
@@ -162,13 +164,21 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
 
   /* --- Le brouillon --- */
   let garde = 0, enAttente = false
-  const plusTard = () => { enAttente = true; c.cancel(garde); garde = c.after(500, () => void garder()) }
+  // Le dernier dessin encodé, gardé tant que rien n'a bougé : un dessin inchangé n'est ni réencodé
+  // ni renvoyé en ligne (un nouveau Blob repartirait à chaque sortie, jusqu'à 8 Mo)
+  let encode: Blob | null = l0.peinture, toileBouge = false
+  const plusTard = () => { toileBouge = true; enAttente = true; c.cancel(garde); garde = c.after(500, () => void garder()) }
+  const dessin = async () => {
+    if (!toileBouge && encode) return encode
+    toileBouge = false
+    return (encode = await versBlob(cv))
+  }
   // À chaque geste, gardé sur l'appareil seulement ; à la sortie et à « Envoyer » (`sortie`), en ligne aussi
   const garder = (sortie = false) => suivre((async () => {
     c.cancel(garde)
     if (!enAttente) return
     enAttente = false
-    l.peinture = peint ? await versBlob(cv) : charge ? null : l0.peinture
+    l.peinture = peint ? await dessin() : charge ? null : l0.peinture
     if (await x.coffre.garderLettre(l, sortie ? {} : { ici: true })) o.garde({ ...l })
   })())
 
@@ -198,6 +208,7 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     try { sheet.setPointerCapture(e.pointerId) } catch { /* doigt déjà levé */ }
     const p = surFeuille(e)
     traits.set(e.pointerId, newStroke(p.x, p.y))
+    toileBouge = true
     dab(trait(), p.x, p.y)
     if (!st.eraser) peint = true
     o.geste('dessiner')
@@ -521,8 +532,10 @@ export function ecrire(hote: HTMLElement, x: Contexte, l0: Lettre, o: { envoyer(
     vivant = false
     if (sel && vide(sel.t)) { const i = l.objets.indexOf(sel); if (i >= 0) l.objets.splice(i, 1) }
     sel = null
-    // Ce qui a été dit est gardé (ajouter() sait qu'on est parti), puis le brouillon : suivis jusqu'au bout
-    void suivre((async () => { await finirPrise(); enAttente = true; await garder(true) })())
+    // Ce qui a été dit est gardé (ajouter() sait qu'on est parti), puis le brouillon : suivis jusqu'au bout.
+    // Après « Envoyer », la feuille vient d'être gardée : la regarder une deuxième fois repartirait en
+    // ligne pendant la cérémonie, et sa réponse tardive remettrait un brouillon dans la liste
+    void suivre((async () => { await finirPrise(); if (!parti) enAttente = true; await garder(true) })())
     effacer.disarm()
     kb.detruire()
     taire()

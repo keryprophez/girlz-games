@@ -1,4 +1,4 @@
-/* @version 2026-11-26 16:53 */
+/* @version 2026-11-26 17:47 */
 // Les routes du Courrier en ligne, sur une VRAIE base D1 et un VRAI
 // compartiment R2, locaux et en mémoire (getPlatformProxy de wrangler,
 // `worker/banc.jsonc`). La migration est celle que la CI applique.
@@ -110,6 +110,16 @@ describe('le Courrier en ligne : les lettres', () => {
     expect(r.status).toBe(409)
     expect(await r.json()).toEqual({ refus: 'etat' })
     expect((await ecrire(lettre('rec-1', { etat: 'ouverte', env: ENV, postee: 5, tour: 6, version: 3 }))).status).toBe(200)
+  })
+  it('une lettre cachetée ne change plus de contenu : 409 fige', async () => {
+    const k = lettre('fige-1', { etat: 'cachetee', env: ENV, objets: [texte('Coucou', 100)] })
+    expect((await ecrire(k)).status).toBe(200)
+    const r = await ecrire({ ...k, version: 2, objets: [texte('Autre chose', 100)] })
+    expect(r.status).toBe(409)
+    expect(await r.json()).toEqual({ refus: 'fige' })
+    expect((await ecrire({ ...k, version: 2, papier: '#000000' })).status).toBe(409)
+    expect((await ecrire({ ...k, version: 2, etat: 'postee', postee: 9, tour: 9 })).status).toBe(200)
+    expect((await liste()).find(x => x.id === 'fige-1')?.objets).toEqual(k.objets)
   })
   it('de ou a changés : 409 qui', async () => {
     expect((await ecrire(lettre('qui-1'))).status).toBe(200)

@@ -190,10 +190,10 @@ cachée pour elle (`jetee = 1`).
 - **Le texte** : tableau de bord → Storage & Databases → D1 →
   `girlz-games-courrier` → Console, puis :
   ```sql
-  SELECT de, a, etat, datetime(postee/1000,'unixepoch') AS quand, texte FROM lettres ORDER BY postee DESC
+  SELECT id, de, a, etat, datetime(postee/1000,'unixepoch') AS quand, texte FROM lettres ORDER BY postee DESC
   ```
 - **Un dessin ou une voix** : R2 → `girlz-games-courrier` → dossier
-  `lettres/<id de la lettre>/` (`peinture.png`, `voix-….webm`), « Download ».
+  `lettres/<id>/` (l'`id` de la requête ci-dessus) (`peinture.png`, `voix-….webm`), « Download ».
 
 ## 🗺 Documents
 

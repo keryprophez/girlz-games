@@ -1,4 +1,4 @@
-/* @version 2026-11-26 16:58 */
+/* @version 2026-11-26 17:47 */
 import type { Who } from './mine'
 import type { Lettre, Objet, Prefs, Vocal } from './courrier'
 import type { Coffre } from './courrierdb'
@@ -121,6 +121,7 @@ export function coffreEnLigne(local: Coffre, o: { fetch?: Fetch; marque?: Marque
     const r = await ecrire(`/api/courrier/fichiers/${cle}`, { method: 'PUT', body: b, headers: { 'content-type': type } }, delai * 3)
     if (r !== 'ok') return r === 'refus' ? 'refus' : 'panne'
     connus.set(b, cle)
+    recus.set(cle, b)
     return cle
   }
   const estIssue = (x: string): x is Issue => x === 'ok' || x === 'refus' || x === 'panne'
@@ -210,18 +211,18 @@ export function coffreEnLigne(local: Coffre, o: { fetch?: Fetch; marque?: Marque
 
     async garderLettre(l, opt = {}) {
       if (l.aCharger && l.etat === 'brouillon') return false
+      // Notée avant d'écrire : une écriture faite mais dont la réponse s'est perdue ne bloque pas
+      // les suivantes (une version n'a pas à se suivre, seulement à avancer)
       const version = Math.max(versions.get(l.id) ?? 0, l.version ?? 0) + 1
+      noter(l.id, version)
       const x = { ...l, version }
       if (l.etat === 'brouillon') {
         const ici = await local.garderLettre(x)
-        if (ici) noter(l.id, version)
         if (opt.ici) return ici
         const loin = (await pousser(x)) === 'ok'
-        if (loin) noter(l.id, version)
         return ici || loin
       }
       if ((await pousser(x)) !== 'ok') return false
-      noter(l.id, version)
       // La copie de l'appareil (un ancien brouillon) n'a plus lieu d'être
       void local.jeterLettre(l.id)
       return true
@@ -249,7 +250,9 @@ export function coffreEnLigne(local: Coffre, o: { fetch?: Fetch; marque?: Marque
       }))
       // Un brouillon sans son dessin : la sauvegarde suivante l'effacerait
       if (manque && l.etat === 'brouillon') return null
-      const x: Lettre = { ...l, peinture, objets }
+      // Le dessin arrivé ne garde pas sa clé : effacé ensuite dans le brouillon, il ne revient pas à
+      // la cire (la clé ne sert qu'à une lettre reçue dont le dessin n'a pas pu venir)
+      const x: Lettre = { ...l, peinture, peintureCle: peinture ? null : l.peintureCle, objets }
       delete x.aCharger
       return x
     },
