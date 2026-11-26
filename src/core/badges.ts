@@ -1,4 +1,4 @@
-/* @version 2026-11-25 00:20 */
+/* @version 2026-11-26 11:23 */
 /* Les vignettes des jeux — une illustration SVG par jeu, à la place des emoji.
 
    Pourquoi : l'emoji change de dessin selon la tablette, ne respecte aucune
@@ -177,6 +177,13 @@ export const BADGE: Record<string, string> = {
     <rect x="33" y="10" width="9" height="16" rx="4.5" fill="${C.lilac}"/><path d="M35.800 25h3.4l1 15a2.7 2.7 0 0 1-5.4 0z" fill="${C.lilac}"/>
     <path d="M37.500 13.200l1.200 2.600 2.800.3-2.100 1.900.6 2.800-2.5-1.400-2.5 1.400.6-2.800-2.100-1.900 2.800-.3z" fill="${C.sun}"/>`),
   // L'Aquarium : le bac de verre, le sable, une algue, un poisson-peluche et ses bulles
+  /* Le Courrier (26/11) : une enveloppe et son cachet de cire en cœur */
+  courrier: svg(`
+    <rect x="5" y="12" width="38" height="26" rx="3.5" fill="${C.sun}"/>
+    <path d="M5 37l15-12M43 37L28 25" stroke="${C.mangoDark}" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>
+    <path d="M6.5 14.5L24 29l17.5-14.5" fill="none" stroke="${C.mangoDark}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="24" cy="29" r="7" fill="${C.coralDark}"/>
+    <path d="M24 32.6c-3.2-2-4.6-3.6-4.6-5.3a2.3 2.3 0 0 1 4.6-.7 2.3 2.3 0 0 1 4.6.7c0 1.7-1.4 3.3-4.6 5.3z" fill="#9C1724"/>`),
   aquarium: svg(`
     <rect x="5" y="9" width="38" height="31" rx="4" fill="${C.ice}"/>
     <rect x="5" y="13" width="38" height="27" rx="3" fill="${C.sky}"/>

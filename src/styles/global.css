@@ -1,4 +1,4 @@
-/* @version 2026-11-26 11:16 */
+/* @version 2026-11-26 11:23 */
 /* ============================================================
    DESIGN SYSTEM — "Verger du matin"
    Base papier chaud, halos doux, squircles pastel,
@@ -2399,3 +2399,25 @@ body.playing .po-card{max-width:880px;}
 .clav-e:active{background:#FFE9C4;transform:scale(1.2);}
 .clav-bas{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;}
 .clav-bas .clav-t{grid-column:span 4;}
+
+/* ============================================================
+   LE COURRIER (games/courrier.ts, 26/11) : la ferme et ses deux
+   boîtes en fond ; la feuille, l'enveloppe, la lecture par-dessus
+   ============================================================ */
+.co-wrap{overflow:hidden;}
+.co-3d,.co-ecran{position:absolute;inset:0;}
+.co-ecran{pointer-events:none;z-index:5;}
+.co-ecran>*{pointer-events:auto;}
+.co-bas{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:34px;z-index:6;pointer-events:none;}
+.co-bas>*{pointer-events:auto;}
+.co-bas.duo{gap:clamp(40px,15vw,240px);}
+.co-bas .tool-cap{font-size:15px;padding:4px 12px;}
+.co-gros{width:96px;height:96px;}
+.co-gros svg{width:62px;height:62px;}
+.co-plaque{display:flex;align-items:center;gap:10px;background:#FFFDF6;border:5px solid var(--c);border-radius:26px;padding:4px 24px 4px 12px;
+  font:800 30px 'Baloo 2',sans-serif;color:var(--ink);box-shadow:var(--e2);cursor:pointer;transition:transform .2s var(--spring);}
+.co-plaque.last{box-shadow:0 0 0 5px #fff,0 0 0 10px var(--mango),var(--e2);}
+.co-plaque:active{transform:scale(.95);}
+.co-ret{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:84px;z-index:7;}
+.co-ret:empty{display:none;}
+.co-ret .sn-tool{width:60px;height:60px;}
