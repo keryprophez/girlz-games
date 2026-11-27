@@ -39,6 +39,15 @@
     // c'est déjà beaucoup pour une enfant ; un robot, lui, est freiné)
     { "name": "DEVINE_LIMITER", "namespace_id": "8304", "simple": { "limit": 12, "period": 60 } }
   ],
+  // Les lettres du Courrier (26/11, troisième exception de la règle 3) : le
+  // texte dans D1, les dessins et les voix dans R2 (privé), lus seulement par
+  // le Worker (worker/courrier.ts). Créés par le père dans le tableau de bord ;
+  // les tables viennent des migrations de worker/migrations/, appliquées par la
+  // CI avant chaque déploiement (deploy.yml). L'id n'est pas un secret.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "girlz-games-courrier", "database_id": "a867e473-62bf-4cfd-9960-cc36ad56efb1", "migrations_dir": "worker/migrations" }
+  ],
+  "r2_buckets": [{ "binding": "COURRIER", "bucket_name": "girlz-games-courrier" }],
   "observability": {
     "enabled": true
   }

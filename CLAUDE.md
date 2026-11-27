@@ -352,8 +352,13 @@ quand on en paie un nouveau.
   git checkout <branche>
   ```
 - CI : `npm ci` → `npm run lint` → `npm test` → `npm run build` (tsc de l'app
-  ET du Worker) → `wrangler deploy`. Un seul secret GitHub :
-  `CLOUDFLARE_API_TOKEN`. Run annulé ou échec réseau : `workflow_dispatch`.
+  ET du Worker) → les migrations D1 du Courrier (`worker/migrations/`, une
+  qui échoue arrête tout) → `wrangler deploy`. Un seul secret GitHub :
+  `CLOUDFLARE_API_TOKEN` (le jeton `girlz-game` : Workers Scripts, Account
+  Settings, Memberships, et depuis le Courrier en ligne D1 · Edit et Workers
+  R2 Storage · Edit). Run annulé ou échec réseau : `workflow_dispatch`.
+- **La base du Courrier** : D1 et R2 `girlz-games-courrier`, liaisons `DB` et
+  `COURRIER` de `wrangler.jsonc` (l'id de la base n'est pas un secret).
 - **Les secrets du Worker** se posent dans le tableau de bord Cloudflare
   (Workers & Pages → `girlz-games` → Settings → Variables and secrets, type
   Secret), jamais dans le dépôt : `ACCESS_CODE` (le code de la famille),
@@ -361,5 +366,9 @@ quand on en paie un nouveau.
   fermée), `ANTHROPIC_API_KEY` (absente = le cadenas de Devine mon dessin).
   Variable facultative : `ACCESS_MAX_AGE_DAYS` (400 par défaut).
 - En local : `npm run build && npm run worker:dev` sert le vrai Worker (port
-  8787, secrets dans `.dev.vars`, ignoré par git). Le smoke et les bots
-  tournent sous `vite preview`, sans portail.
+  8787, secrets dans `.dev.vars`, ignoré par git ; `--var DEV_SKIP_ACCESS:1`
+  saute le portail). Sa base du Courrier se crée une fois :
+  `npx wrangler d1 migrations apply girlz-games-courrier --local` (même
+  `--persist-to` que `wrangler dev` s'il en a un). Le smoke et les bots
+  tournent sous `vite preview`, sans portail ni Worker : le Courrier y est
+  hors ligne (nuage), ses bots gardent le coffre de l'appareil.

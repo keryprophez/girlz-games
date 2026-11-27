@@ -178,9 +178,10 @@ le timbre), la boîte aux lettres de sa sœur, son drapeau. Conception et plan :
    Moderne (SIL OFL), embarquées et créditées.
 4. 🔧 **Garder les lettres d'un appareil à l'autre** : le coffre en ligne
    (D1 et R2 sur Cloudflare, troisième exception de la règle 3 ; conception
-   et plan dans `docs/superpowers/`). Codé et testé ; restent le branchement
-   (la base et le compartiment créés par le père, le jeton élargi) et l'essai
-   sur deux appareils.
+   et plan dans `docs/superpowers/`). Codé, testé, relu, essayé à deux
+   appareils sous `wrangler dev` ; la base, le compartiment et le jeton sont
+   prêts. Restent la mise en ligne et une lettre de test lue par le père dans
+   la console D1 et dans R2.
 
 ## À mesurer sur la tablette (`?fps`)
 
