@@ -1,8 +1,9 @@
 /* La mémoire des calculs — phase 4, « la Ferme des calculs » (23/09).
 
    Le Potager pose des calculs des quatre opérations (+ − × ÷, choisies à
-   l'ouverture, 27/09) ; ce module retient, calcul par calcul, ce que l'enfant sait déjà, et compose
-   chaque récolte en conséquence. Logique pure : aucun DOM, aucune 3D, un
+   l'ouverture, 27/09), sur les tables qu'elle a choisies (28/11) ; ce module
+   retient, calcul par calcul et pour chaque fille, ce qu'elle sait déjà, et
+   compose chaque récolte en conséquence. Logique pure : aucun DOM, aucune 3D, un
    hasard injectable — tout est testé dans `facts.test.ts`.
 
    Cinq niveaux, qui sont aussi cinq niveaux d'AIDE (l'aide s'efface) :
@@ -130,6 +131,14 @@ export function mulPool(tables: number[]): Fact[] {
   return out
 }
 
+/** La table où ranger un calcul, pour répartir une récolte entre les tables
+    choisies (`PlanOpts.group`) : la plus grande des tables choisies qu'il
+    contient. 2 × 5, avec les tables 2 et 5, va dans celle de 5 ; 56 ÷ 7, avec
+    la table de 7 seule, dans celle de 7. Vaut pour les quatre opérations. */
+export function tableOf(tables: number[]): (f: Fact) => number {
+  return f => Math.max(...[f.a, f.b].filter(n => tables.includes(n)), 0)
+}
+
 /** Facilité d'un calcul jamais vu, pour sonder d'abord les faciles :
     ×1 et ×10, puis ×2 et ×5, puis les carrés, puis le reste. */
 export function mulEase(f: Fact): number {
@@ -251,6 +260,12 @@ export interface PlanOpts<F extends Keyed> {
       (le Potager, par défaut) ; sinon, en ouvrir de nouveaux (une série
       sans remise). */
   repeat?: boolean
+  /** Le tas d'un élément (le Potager : sa table, `tableOf`). Donné, les
+      jamais vus se prennent dans chaque tas à tour de rôle, au hasard dans
+      un tas, les plus faciles (facilité 0 : × 1, × 10, + 1, + 10) en
+      dernier : une récolte sur les tables 2 à 5 ne se remplit plus de × 10
+      (28/11, « elle n'a que la table de 8 et de 10 »). */
+  group?: (f: F) => string | number
 }
 
 /** Les douze questions d'une récolte, dans l'ordre où on les pose :
@@ -279,10 +294,11 @@ function choose<F extends Keyed>(mem: Memory, pool: F[], opts: PlanOpts<F>, ease
   const known = pool.filter(f => rec(f).seen > 0 && rec(f).lv >= 3)
   const overdue = (f: F) => mem.games - rec(f).last - rec(f).gap
   const due = known.filter(f => isDue(mem, rec(f))).sort((x, y) => overdue(y) - overdue(x))
-  const unseen = pool.filter(f => rec(f).seen === 0)
-    .map(f => ({ f, k: ease(f) + rng() * 1.5 }))
-    .sort((x, y) => x.k - y.k)
-    .map(x => x.f)
+  const fresh = pool.filter(f => rec(f).seen === 0)
+  const unseen = opts.group ? byGroups(fresh, opts.group, ease, rng)
+    : fresh.map(f => ({ f, k: ease(f) + rng() * 1.5 }))
+      .sort((x, y) => x.k - y.k)
+      .map(x => x.f)
 
   const out: Item<F>[] = []
   const take = (fs: F[], kind: Kind, max: number) => {
@@ -313,6 +329,22 @@ function choose<F extends Keyed>(mem: Memory, pool: F[], opts: PlanOpts<F>, ease
     // Une série sans remise : plutôt du neuf que deux fois la même question
     take(unseen, 'probe', n)
   }
+  return out
+}
+
+/** Les jamais vus, un de chaque tas à tour de rôle (les tas dans un ordre
+    au hasard) ; dans un tas, au hasard, les faciles (facilité 0) en dernier. */
+function byGroups<F extends Keyed>(fs: F[], group: (f: F) => string | number, ease: (f: F) => number, rng: Rng): F[] {
+  const piles = new Map<string | number, { f: F; k: number }[]>()
+  for (const f of fs) {
+    const g = group(f)
+    const pile = piles.get(g) ?? []
+    pile.push({ f, k: (ease(f) === 0 ? 1 : 0) + rng() })
+    piles.set(g, pile)
+  }
+  const lists = shuffled([...piles.values()], rng).map(p => p.sort((x, y) => x.k - y.k).map(x => x.f))
+  const out: F[] = []
+  for (let i = 0; out.length < fs.length; i++) for (const l of lists) if (i < l.length) out.push(l[i])
   return out
 }
 
@@ -506,9 +538,13 @@ export function nearMiss(r: number, c: number, v: number): { r: number; c: numbe
 
 const KEY = (game: string) => `ferme:faits:${game}`
 
-export function loadMemory(game: string): Memory {
+/** La mémoire des calculs d'un jeu (`ferme:faits:<jeu>`). `inherit` : celle
+    à reprendre quand elle n'existe pas encore. Le Potager a une mémoire par
+    fille depuis le 28/11 (`potager:jade`, `potager:joyce`) : chacune part
+    d'une copie de l'ancienne mémoire commune, qui reste en place. */
+export function loadMemory(game: string, inherit?: string): Memory {
   try {
-    const raw = localStorage.getItem(KEY(game))
+    const raw = localStorage.getItem(KEY(game)) ?? (inherit ? localStorage.getItem(KEY(inherit)) : null)
     if (!raw) return emptyMemory()
     const m = JSON.parse(raw) as Partial<Memory>
     if (m.v !== 1 || typeof m.games !== 'number' || !m.facts || typeof m.facts !== 'object') return emptyMemory()

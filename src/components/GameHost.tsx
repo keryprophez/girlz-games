@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { familyDoll, useFerme } from '../core/store'
 import { gameById } from '../games'
 import type { FinishPayload, GameContext, Op, Tier } from '../core/types'
@@ -15,6 +15,7 @@ import { Session, isPaused, onPause, setPaused } from '../core/session'
 import { dollPortraits } from '../core/portraits'
 import type { Look } from '../core/character'
 import { coachHand } from '../core/hand'
+import { WHO, girl, whoOf, type Who } from '../core/mine'
 
 /* L'hôte d'un jeu : plein écran, carton titre, pause, outro, cérémonie de fin.
    Le jeu ne voit que `ctx` ; tout ce qui est commun à 30 jeux vit ici. */
@@ -28,13 +29,32 @@ const TIERS: Tier[] = ['easy', 'med', 'exp']
 const TIER_ICON: Record<Tier, string> = { easy: ICON.flower, med: ICON.bolt, exp: ICON.flame }
 /** Le petit nom sous chaque niveau (30/09 : « un label en plus du symbole ») */
 const TIER_CAP: Record<Tier, string> = { easy: 'Facile', med: 'Moyen', exp: 'Difficile' }
-const tierKey = (gameId: string) => `ferme:niveau:${gameId}`
-function lastTier(gameId: string): Tier | null {
+
+/* Qui joue (jeux `who`, le Potager, 28/11) : retenue par jeu. Le niveau, les
+   opérations et les tables sont alors rangés sous son prénom
+   (`ferme:niveau:potager:joyce`…), avec pour repli le réglage commun
+   d'avant : rien n'est perdu au passage. */
+const whoKey = (gameId: string) => `ferme:qui:${gameId}`
+function lastWho(gameId: string): Who | '' {
   try {
-    const v = localStorage.getItem(tierKey(gameId))
-    if (v === 'easy' || v === 'med' || v === 'exp') return v
-  } catch { /* stockage refusé : tant pis */ }
-  return null
+    const v = localStorage.getItem(whoKey(gameId))
+    if (v === 'jade' || v === 'joyce') return v
+  } catch { /* stockage refusé : on demande */ }
+  return ''
+}
+/** La clé d'un réglage : sous son prénom quand le jeu suit chaque fille. */
+const forWho = (key: string, who: Who | '') => (who ? `${key}:${who}` : key)
+function readPref(key: string, who: Who | ''): string | null {
+  try { return localStorage.getItem(forWho(key, who)) ?? (who ? localStorage.getItem(key) : null) } catch { return null }
+}
+function writePref(key: string, who: Who | '', v: string) {
+  try { localStorage.setItem(forWho(key, who), v) } catch { /* stockage refusé */ }
+}
+
+const tierKey = (gameId: string) => `ferme:niveau:${gameId}`
+function lastTier(gameId: string, who: Who | '' = ''): Tier | null {
+  const v = readPref(tierKey(gameId), who)
+  return v === 'easy' || v === 'med' || v === 'exp' ? v : null
 }
 /* À deux (jeux `duo`) : retenu par jeu, comme le niveau */
 const duoKey = (gameId: string) => `ferme:duo:${gameId}`
@@ -53,15 +73,31 @@ function lastVariant(gameId: string): string {
 const OPS: Op[] = ['add', 'sub', 'mul', 'div']
 const OP_SYM: Record<Op, string> = { add: '+', sub: '−', mul: '×', div: '÷' }
 const opsKey = (gameId: string) => `ferme:ops:${gameId}`
-function lastOps(gameId: string): Op[] {
+function lastOps(gameId: string, who: Who | ''): Op[] {
   try {
-    const v = JSON.parse(localStorage.getItem(opsKey(gameId)) || 'null') as unknown
+    const v = JSON.parse(readPref(opsKey(gameId), who) || 'null') as unknown
     if (Array.isArray(v)) {
       const ok = OPS.filter(o => v.includes(o))
       if (ok.length) return ok
     }
-  } catch { /* stockage refusé ou illisible : le + par défaut */ }
+  } catch { /* illisible : le + par défaut */ }
   return ['add']
+}
+
+/* Les tables (jeux `tables`, le Potager, 28/11) : sous les opérations, dix
+   pastilles de 1 à 10, plusieurs à la fois, la dernière allumée ne s'éteint
+   pas. Les tables 1 à 5 par défaut. Retenues (pour elle, avec `who`). */
+const TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+const tablesKey = (gameId: string) => `ferme:tables:${gameId}`
+function lastTables(gameId: string, who: Who | ''): number[] {
+  try {
+    const v = JSON.parse(readPref(tablesKey(gameId), who) || 'null') as unknown
+    if (Array.isArray(v)) {
+      const ok = TABLES.filter(t => v.includes(t))
+      if (ok.length) return ok
+    }
+  } catch { /* illisible : les tables 1 à 5 */ }
+  return [1, 2, 3, 4, 5]
 }
 
 const Svg = ({ html, className }: { html: string; className?: string }) =>
@@ -123,9 +159,15 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
   // Lu au montage du jeu (l'effet ne dépend pas de `duo` : changer se fait
   // dans le choix du niveau, qui relance de toute façon la partie)
   const duoRef = useRef(duo)
+  // Qui joue (jeux `who`) : ses opérations, ses tables et son niveau suivent
+  const [who, setWho] = useState<Who | ''>(() => (game.who ? lastWho(gameId) : ''))
+  const whoRef = useRef(who)
   // Les opérations (jeux `ops`) : l'étape 1 de l'ouverture, avant la difficulté
-  const [ops, setOps] = useState<Op[]>(() => lastOps(gameId))
+  const [ops, setOps] = useState<Op[]>(() => lastOps(gameId, who))
   const opsRef = useRef(ops)
+  // Les tables (jeux `tables`), sur le même écran que les opérations
+  const [tables, setTables] = useState<number[]>(() => lastTables(gameId, who))
+  const tablesRef = useRef(tables)
   // La variante (jeux `variants`) : choisie à l'ouverture, gardée au rejouer
   const variantRef = useRef(lastVariant(gameId))
   const [step, setStep] = useState<1 | 2>(1)
@@ -236,6 +278,8 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
       byTier: (e, m, x) => (tier === 'easy' ? e : tier === 'med' ? m : x),
       duo: !!game.duo && duoRef.current,
       ops: game.ops ? opsRef.current : [],
+      who: game.who ? whoRef.current : '',
+      tables: game.tables ? tablesRef.current : [],
       variant: game.variants ? (game.variants.find(v => v.id === variantRef.current) ?? game.variants[0]).id : '',
       toast,
       say,
@@ -309,7 +353,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
 
   /** Choisir (ou changer) la difficulté : le jeu repart de zéro à ce niveau. */
   const pickTier = (t: Tier) => {
-    if (!game.noTier) try { localStorage.setItem(tierKey(gameId), t) } catch { /* stockage refusé */ }
+    if (!game.noTier) writePref(tierKey(gameId), whoRef.current, t)
     tone(520, 0.12, 'sine', 0.1)
     setPaused(false)
     setResult(null)
@@ -324,10 +368,30 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
     const on = ops.includes(o)
     if (on && ops.length === 1) { tone(220, 0.12, 'sine', 0.08); return }
     const next = OPS.filter(x => x === o ? !on : ops.includes(x))
-    try { localStorage.setItem(opsKey(gameId), JSON.stringify(next)) } catch { /* stockage refusé */ }
+    writePref(opsKey(gameId), whoRef.current, JSON.stringify(next))
     opsRef.current = next
     setOps(next)
     tone(on ? 440 : 660, 0.1, 'sine', 0.09)
+  }
+  /** Allume ou éteint une table ; la dernière allumée reste allumée. */
+  const toggleTable = (t: number) => {
+    const on = tables.includes(t)
+    if (on && tables.length === 1) { tone(220, 0.12, 'sine', 0.08); return }
+    const next = TABLES.filter(x => x === t ? !on : tables.includes(x))
+    writePref(tablesKey(gameId), whoRef.current, JSON.stringify(next))
+    tablesRef.current = next
+    setTables(next)
+    tone(on ? 440 : 520 + t * 28, 0.1, 'sine', 0.09)
+  }
+  /** Elle se choisit : ses opérations et ses tables à elle reviennent. */
+  const pickWho = (w: Who) => {
+    try { localStorage.setItem(whoKey(gameId), w) } catch { /* stockage refusé */ }
+    whoRef.current = w
+    setWho(w)
+    const o = lastOps(gameId, w), t = lastTables(gameId, w)
+    opsRef.current = o; setOps(o)
+    tablesRef.current = t; setTables(t)
+    tone(w === 'jade' ? 587 : 698, 0.12, 'sine', 0.1)
   }
   const pickVariant = (v: string) => {
     try { localStorage.setItem(variantKey(gameId), v) } catch { /* stockage refusé */ }
@@ -373,20 +437,38 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
           <span className={'titlecard-sq ' + game.sq}>{BADGE[game.id] ? <Svg html={BADGE[game.id]} /> : game.icon}</span>
           <span className="titlecard-name">{game.name}</span>
           {game.ops && step === 1 && (<>
-            <div className="opsrow">
+            {/* Qui joue (jeux `who`) : tant qu'aucune ne s'est choisie, rien d'autre */}
+            {game.who && <div className="whorow">
+              {WHO.map(w => (
+                <span key={w.id} className="tool-item tier-item">
+                  <button className={'whobtn' + (who === w.id ? ' sel' : '')} data-who={w.id} style={{ '--c': w.color } as CSSProperties}
+                    onClick={() => pickWho(w.id)} aria-label={w.name}><Svg html={girl(w.color, 64)} /></button>
+                  <i className="tool-cap">{w.name}</i>
+                </span>
+              ))}
+            </div>}
+            {(!game.who || who) && <div className={'opsrow' + (game.tables ? ' small' : '')}>
               {OPS.map(o => (
                 <button key={o} className={'opsbtn' + (ops.includes(o) ? ' sel' : '')} data-op={o}
                   onClick={() => toggleOp(o)} aria-label={OP_SYM[o]}>
                   {OP_SYM[o]}<Svg className="ok" html={ICON.check} />
                 </button>
               ))}
-            </div>
-            <button className="opsgo" onClick={() => { tone(520, 0.1, 'sine', 0.1); setStep(2) }} aria-label="Suivant"><Svg html={ICON.play} /></button>
+            </div>}
+            {game.tables && (!game.who || who) && <div className="tablesrow">
+              {TABLES.map(t => (
+                <button key={t} className={'tablebtn' + (tables.includes(t) ? ' sel' : '')} data-t={t}
+                  onClick={() => toggleTable(t)} aria-label={String(t)}>{t}</button>
+              ))}
+            </div>}
+            <button className="opsgo" disabled={!!game.who && !who} onClick={() => { tone(520, 0.1, 'sine', 0.1); setStep(2) }} aria-label="Suivant"><Svg html={ICON.play} /></button>
             <div className="opssteps"><i className="on" /><i /></div>
           </>)}
           {game.ops && step === 2 && (
             <button className="opsrecap" onClick={() => setStep(1)} aria-label="Opérations">
+              {game.who && who && <Svg className="who" html={girl(whoOf(who).color, 40)} />}
               {ops.map(o => <b key={o}>{OP_SYM[o]}</b>)}
+              {game.tables && <span className="tabs">{tables.map(t => <em key={t}>{t}</em>)}</span>}
             </button>
           )}
           {game.duo && (
@@ -421,7 +503,7 @@ export function GameHost({ gameId, onHome }: { gameId: string; onHome: () => voi
           {!game.noTier && (!(game.ops || game.variants) || step === 2) && <div className="tierrow">
             {TIERS.map(t => (
               <span key={t} className="tier-item">
-                <button className={'tierbtn tier-' + t + (lastTier(gameId) === t ? ' last' : '')}
+                <button className={'tierbtn tier-' + t + (lastTier(gameId, who) === t ? ' last' : '')}
                   onClick={() => pickTier(t)} aria-label={TIER_CAP[t]}>
                   <Svg html={TIER_ICON[t]} />
                   <span className="tierdots">{TIERS.slice(0, TIERS.indexOf(t) + 1).map((_, i) => <i key={i} />)}</span>

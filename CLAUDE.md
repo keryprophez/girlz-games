@@ -109,7 +109,7 @@ scripts/        smoke.mjs (tous les jeux s'ouvrent) · play.mjs (un bot par jeu)
 | `tracteur.ts` · `geoplan.ts` | le pré quadrillé et le programme du Tracteur ; les figures du Géoplan — testés |
 | `chess.ts` + `chess3d.ts` | les Échecs (21/11) : les règles (coups permis, échec, mat, roque, prise en passant) et le tirage des exercices — testés ; l'échiquier et les pièces Staunton tournées |
 | `pottery.ts` + `pottery3d.ts` · `sand.ts` + `beach3d.ts` · `fishtank.ts` + `aquarium3d.ts` | la Poterie, le Château de sable, l'Aquarium : la logique (testée) et la scène |
-| `facts.ts` | la mémoire d'Apprendre : celle des calculs du Potager (aides, révisions espacées, « presque ») et, depuis le 27/10, les séries sans remise de l'Horloge, du Tour du Monde, des Lettres et du Marché (`recall(jeu)`, `ferme:memoire:<jeu>` ; un raté revient trois questions plus loin) — testé |
+| `facts.ts` | la mémoire d'Apprendre : celle des calculs du Potager (aides, révisions espacées, « presque », une mémoire par fille et la récolte répartie entre ses tables depuis le 28/11) et, depuis le 27/10, les séries sans remise de l'Horloge, du Tour du Monde, des Lettres et du Marché (`recall(jeu)`, `ferme:memoire:<jeu>` ; un raté revient trois questions plus loin) — testé |
 | `plants.ts` | les dix plantes illustrées du Potager |
 | `cosmos.ts` · `rocket3d.ts` | le système solaire de l'Espace (rendu HDR à part) et sa fusée |
 | `winter.ts` | le paysage d'hiver de la Tour de Glace, l'heure qui suit la hauteur |
@@ -208,6 +208,12 @@ fige sa boucle dessus tout seul.
   deux ») ;
 - `ops: true` (le Potager) : d'abord les étiquettes + − × ÷, plusieurs à la
   fois, le + par défaut, retenues (`ferme:ops:<id>`), `ctx.ops` ;
+- `who: true` et `tables: true` (le Potager, 28/11) : Jade / Joyce d'abord
+  (sa silhouette, son prénom ; rien d'autre tant qu'aucune n'est choisie),
+  puis sous les étiquettes dix pastilles 1 à 10 (`ctx.tables`). Les
+  opérations, les tables et le niveau sont retenus pour ELLE
+  (`ferme:tables:potager:joyce`…, repli sur la clé commune d'avant),
+  `ctx.who` ;
 - `duo: true` (Ninja) : « seule / à deux », `ctx.duo` = deux sœurs EN
   ÉQUIPE sur la même tablette, un seul score, jamais qui a fait quoi ;
 - `variants` (la Cuisine : pizza ou gâteau ; le Memory : son thème) : de

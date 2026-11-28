@@ -36,12 +36,12 @@ hasard, et à la flamme, cachées derrière la grange) ; le Labyrinthe à bille
 le plateau suit le doigt).
 
 **Apprendre** — sans sanction, la voix ne lit que le contenu : Quelle heure ?,
-le Potager (LE jeu des calculs : on choisit ses opérations, + − × ÷, puis la
-difficulté ; 7 × 8 pousse en rectangle de plantes compté par rangées, 7 + 4
-en bande qui compte 8, 9, 10, 11 ; un Parcours de dix cases découvertes puis
-redemandées trois fois, de plus en plus dur ; Découvre, où chaque résultat
-reste écrit jusqu'à allumer toute la grille ; une récolte de douze questions
-qui retient ce qui est déjà su), le Marché (vrais euros), l'Intrus, le Tour du Monde
+le Potager (LE jeu des calculs : Jade ou Joyce, ses opérations + − × ÷ et
+ses tables, puis l'aide ; 7 × 8 pousse en rectangle de plantes compté par
+rangées, 7 + 4 en bande qui compte 8, 9, 10, 11 ; d'abord Découvre, en libre
+dans ses tables, où chaque résultat reste écrit et où une table touchée dans
+la marge chante 7, 14, 21… ; puis la Récolte, douze questions sur ses tables
+qui retiennent, pour chacune des filles, ce qui est déjà su), le Marché (vrais euros), l'Intrus, le Tour du Monde
 (vrai globe NASA, vrais pays, la France avec ses régions et ses villes),
 Voyage dans l'Espace (le vrai système solaire du jour : le Soleil qui bout,
 la Terre et ses villes la nuit, les anneaux de Saturne, les lunes de Jupiter ;

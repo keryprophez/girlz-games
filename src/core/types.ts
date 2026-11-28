@@ -19,6 +19,7 @@ export interface FinishPayload {
 }
 
 import type { HandSpec } from './hand'
+import type { Who } from './mine'
 
 export interface GameContext {
   root: HTMLElement
@@ -31,6 +32,13 @@ export interface GameContext {
   /** Les opérations choisies à l'ouverture (étiquettes + − × ÷, au moins
       une). Vide pour un jeu qui ne déclare pas `ops`. */
   ops: Op[]
+  /** Qui joue (jeux `who`, le Potager, 28/11) : choisie à l'ouverture ; ses
+      réglages et sa mémoire sont à elle. '' pour un jeu qui ne déclare pas
+      `who`. */
+  who: Who | ''
+  /** Les tables choisies à l'ouverture (jeux `tables`, de 1 à 10, au moins
+      une). Vide pour un jeu qui ne déclare pas `tables`. */
+  tables: number[]
   /** La variante choisie à l'ouverture (la Cuisine : 'pizza' ou 'gateau').
       Vide pour un jeu qui ne déclare pas `variants`. */
   variant: string
@@ -70,6 +78,14 @@ export interface GameDef {
       propose les étiquettes + − × ÷ (plusieurs à la fois, + par défaut,
       le dernier choix retenu) et `ctx.ops` suit (27/09). */
   ops?: boolean
+  /** Le jeu suit chaque fille (le Potager, 28/11) : l'ouverture commence par
+      Jade / Joyce (sa silhouette et son prénom), puis ses opérations, ses
+      tables et son niveau, retenus pour elle ; `ctx.who` suit. Avec `ops`. */
+  who?: boolean
+  /** Le jeu porte sur des tables (28/11) : sous les étiquettes + − × ÷, dix
+      pastilles de 1 à 10, plusieurs à la fois, la dernière allumée ne
+      s'éteint pas, retenues ; `ctx.tables` suit. Avec `ops`. */
+  tables?: boolean
   /** Pas de niveau (30/09 : « retire les niveaux de ce qui n'en a pas ») :
       le jeu démarre tout de suite, sans fleur / éclair / flamme. S'il se joue
       aussi à deux (`duo`), l'ouverture ne garde que « seule / à deux » et

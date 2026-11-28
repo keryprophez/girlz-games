@@ -77,6 +77,8 @@ for (let i = 0; i < games.length; i++) {
     games[i].v = vs[0]
   }
   if (games[i].v) await page.locator(`.varbtn[data-v="${games[i].v}"]`).click()
+  // Un jeu qui suit chaque fille (le Potager, 28/11) : l'une d'elles se choisit d'abord
+  if (await page.locator('.whobtn').count()) await page.locator('.whobtn[data-who="joyce"]').click()
   if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
   // La difficulté se choisit dans le jeu : on prend la douce (comme Jade)
   if (await page.locator('.tierbtn').count()) await page.locator('.tierbtn.tier-easy').click()

@@ -1,5 +1,5 @@
 import type { GameContext, GameDef, Op } from '../core/types'
-import { $, pick } from '../core/utils'
+import { $ } from '../core/utils'
 import { ICON } from '../core/icons'
 import { sfx, preloadSfx } from '../core/sfx'
 import { tone } from '../core/audio'
@@ -7,8 +7,8 @@ import { setMusicIntensity } from '../core/music'
 import { onPause } from '../core/session'
 import { plantUrl, rowPlant, preloadPlants, type Plant } from '../core/plants'
 import {
-  addChoices, addKey, addPool, beginGame, divChoices, divFact, divPool, factEase, isFast, loadMemory, mulChoices, mulKey,
-  mulPool, nearMiss, nearMissAdd, orient, planHarvest, record, requeue, saveMemory, subChoices, subFact, subPool, viewLevel,
+  addChoices, addPool, beginGame, divChoices, divPool, factEase, isFast, loadMemory, mulChoices, mulPool, nearMiss,
+  nearMissAdd, orient, planHarvest, record, requeue, saveMemory, subChoices, subPool, tableOf, viewLevel,
   LV, type Fact, type Item, type Level, type Memory
 } from '../core/facts'
 import { some, visible } from '../core/hand'
@@ -31,18 +31,25 @@ import { some, visible } from '../core/hand'
    Le résultat éclate en pastille VERTE (le vert dit « juste », le rouge
    « faux »). Chaque rangée — ou chaque case — sonne une note plus haute.
 
-   Trois modes :
-   - Parcours (il s'ouvre en premier) : découvrir 10 cases au choix (dans
-     les tables du niveau), puis ces 10 cases reviennent trois fois, de plus
-     en plus dur : 4 réponses au choix (avec le contour), le pavé (le « ? »
-     seul), puis « trouve la case » (un nombre, la grille vide : toute case
-     qui le vaut est juste). Les étoiles comptent les 30 réponses justes ;
-   - Découvre : on touche une case, la forme pousse et se compte ; puis les
-     plantes s'en vont et le RÉSULTAT RESTE, en gros, sans plante dessous
-     (retour de Joyce, 27/09) — jusqu'à allumer toute la grille, et le
-     potager fleurit. « Tourne » : 7 × 8 = 8 × 7, 7 + 4 = 4 + 7 ;
-   - Récolte : douze questions composées par la mémoire des calculs
-     (`core/facts.ts`), l'aide qui s'efface calcul par calcul.
+   À l'ouverture (28/11) : Jade ou Joyce, puis SES opérations et SES tables
+   (dix pastilles, `ctx.tables`), retenues pour elle, comme sa mémoire des
+   calculs (`potager:jade`, `potager:joyce`). Rien ne porte sur une autre
+   table que les siennes. Le niveau ne règle plus que l'aide : la fleur
+   plante chaque calcul (trois réponses), l'éclair laisse la mémoire décider
+   calcul par calcul, la flamme demande tout au pavé, sans aide.
+
+   Deux temps, dans cet ordre (28/11 : « la découverte en libre, et après on
+   t'interroge » ; le Parcours, qu'on ne comprenait pas, est sorti) :
+   - Découvre, à l'ouverture : seules ses tables sont ouvertes. On tire une
+     forme du doigt, elle pousse et se compte ; puis les plantes s'en vont
+     et le RÉSULTAT RESTE, en gros, sans plante dessous (Joyce, 27/09).
+     Toucher le numéro d'une de ses tables dans la marge la fait chanter :
+     4, 8, 12… 40 poussent l'un après l'autre et restent. « Tourne » :
+     7 × 8 = 8 × 7, 7 + 4 = 4 + 7. Ni compteur ni but ;
+   - Récolte, le panier (il appelle après quelques découvertes) : douze
+     questions sur ses tables, composées par la mémoire des calculs
+     (`core/facts.ts`), réparties entre ses tables, l'aide qui s'efface
+     calcul par calcul.
    **La réponse n'apparaît JAMAIS avant qu'elle choisisse** (25/09).
 
    Apprendre, donc AUCUNE sanction : ni vies, ni chrono, ni bonus de vitesse.
@@ -52,7 +59,7 @@ import { some, visible } from '../core/hand'
    manque pousse en or, la bonne réponse s'écrit en vert, puis on passe à la
    suite. La voix ne dit que le contenu (« sept fois huit », « 56 »). */
 
-type Mode = 'path' | 'discover' | 'harvest'
+type Mode = 'discover' | 'harvest'
 /** Le tableau montré : celui des × (pour × et ÷) ou celui des + (pour + et −). */
 type Fam = 'mul' | 'add'
 
@@ -60,11 +67,11 @@ const N = 10
 const ALL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 const STEP = 380            // un temps de la mélodie des rangées (ms)
 const STEP_ADD = 300        // un pas de la bande de l'addition (ms)
-const PATH_N = 10           // cases du Parcours
+const STEP_SING = 800       // un temps de la table qui chante : la voix dit chaque nombre
+const CALL_AT = 3           // découvertes avant que le panier de la Récolte appelle
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760]
 const MARKS = ['pl', 'tot', 'res', 'her', 'gold', 'over', 'dig', 'q', 'num', 'bump'] as const
 const SYM: Record<Op, string> = { add: '+', sub: '−', mul: '×', div: '÷' }
-const STAGE_ICON = [ICON.tap, ICON.choices, ICON.digits, ICON.target]
 
 const famOf = (op: Op): Fam => (op === 'mul' || op === 'div' ? 'mul' : 'add')
 const direct = (op: Op) => op === 'mul' || op === 'add'
@@ -86,12 +93,6 @@ function cellColor(fam: Fam, v: number): string {
   const t = fam === 'mul' ? Math.min(1, Math.max(0, (v - 1) / 99)) : Math.min(1, Math.max(0, (v - 2) / 18))
   const a = [255, 224, 138], b = [255, 123, 107]
   return `rgb(${a.map((x, i) => Math.round(x + (b[i] - x) * t)).join(',')})`
-}
-
-function factOf(op: Op, r: number, c: number): Fact {
-  if (op === 'mul') return { key: mulKey(r, c), a: Math.min(r, c), b: Math.max(r, c), op }
-  if (op === 'add') return { key: addKey(r, c), a: Math.min(r, c), b: Math.max(r, c), op }
-  return op === 'div' ? divFact(r, c) : subFact(r, c)
 }
 
 interface Cell {
@@ -122,21 +123,6 @@ interface Q {
   pad: boolean
   typed: string
   opts: number[]
-  /** Parcours, « trouve la case » : le nombre à chercher dans la grille (0 sinon). */
-  find: number
-}
-
-interface Tile { fam: Fam; r: number; c: number }
-
-interface Path {
-  /** 0 découvrir, 1 quatre choix, 2 le pavé, 3 trouve la case. */
-  stage: number
-  tiles: Tile[]
-  list: { fam: Fam; op: Op; r: number; c: number }[]
-  i: number
-  /** Réponses justes du premier coup (étapes 1 à 3) : les étoiles. */
-  good: number
-  kept: Record<Fam, Map<string, number>>
 }
 
 interface State {
@@ -162,6 +148,10 @@ interface State {
   lastC: number
   /** Les cases découvertes dans Découvre, par tableau (pour cette partie). */
   found: Record<Fam, Map<string, number>>
+  /** Découvertes de la partie (formes et tables chantées) : le panier appelle à CALL_AT. */
+  tried: number
+  /** Sa mémoire des calculs (`potager:<elle>`). */
+  memKey: string
   mem: Memory
   queue: Item[]
   qi: number
@@ -172,7 +162,6 @@ interface State {
   drag: number | null
   pausedMs: number
   pauseAt: number
-  path: Path | null
 }
 
 let pg: State | null = null
@@ -180,12 +169,19 @@ let ctx: GameContext
 
 const cellAt = (me: State, r: number, c: number) => me.cells[(r - 1) * N + (c - 1)]
 const emptyKept = (): Record<Fam, Map<string, number>> => ({ mul: new Map(), add: new Map() })
-// Décalé d'un cran le 30/09 : la fleur a les tables de l'ancien normal, l'éclair
-// toutes les tables, la flamme toutes les tables ET la réponse toujours au pavé,
-// sans plante ni contour pour aider (`sansAide`)
-const tables = () => ctx.byTier([1, 2, 3, 4, 5], ALL, ALL)
-const addRows = () => ctx.byTier([1, 2, 3, 4, 5, 6, 7, 8], ALL, ALL)
-const sansAide = () => ctx.tier === 'exp'
+// Ses tables, choisies à l'ouverture (28/11) : les mêmes pastilles pour × ÷
+// (la table de 4) et pour + − (la table de + 4)
+const tables = () => (ctx.tables.length ? ctx.tables : ALL.slice(0, 5))
+
+/** L'aide d'une question selon le niveau (28/11 : il ne choisit plus les
+    tables) : la fleur plante chaque calcul et propose trois réponses (un
+    calcul raté garde son comptage), l'éclair suit la mémoire calcul par
+    calcul, la flamme demande tout au pavé, sans plante ni contour. */
+function helpOf(me: State, item: Item): Level {
+  if (ctx.tier === 'exp') return LV.heart
+  const lv = viewLevel(me.mem, item)
+  return ctx.tier === 'easy' ? (Math.min(lv, LV.plants) as Level) : lv
+}
 
 /** Un rappel de partie qui ne tire que si la partie ET la question n'ont pas changé. */
 function later(me: State, ms: number, fn: () => void) {
@@ -197,15 +193,6 @@ function later(me: State, ms: number, fn: () => void) {
     est venue de mémoire ou d'un recomptage. */
 function now(me: State) {
   return performance.now() - me.pausedMs - (me.pauseAt ? performance.now() - me.pauseAt : 0)
-}
-
-function shuffle<T>(a: T[]): T[] {
-  const out = [...a]
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[out[i], out[j]] = [out[j], out[i]]
-  }
-  return out
 }
 
 /* ---------- La grille ---------- */
@@ -224,6 +211,7 @@ function buildGrid(me: State) {
   me.cells = []
   for (let r = 1; r <= N; r++) {
     const h = Object.assign(document.createElement('div'), { className: 'pg-h row', textContent: String(r) })
+    h.dataset.r = String(r)
     g.appendChild(h); me.rows.push(h)
     for (let c = 1; c <= N; c++) {
       const el = document.createElement('div')
@@ -265,25 +253,19 @@ function layout(me: State) {
 /** Le coin se touche pour changer de tableau (+ ↔ ×) : seulement quand les
     deux familles sont choisies, et là où l'on découvre. */
 function cornerLive(me: State) {
-  return me.fams.length > 1 && !me.lock && (me.mode === 'discover' || (me.mode === 'path' && me.path?.stage === 0))
+  return me.fams.length > 1 && !me.lock && me.mode === 'discover'
 }
 
-/** Les résultats gardés à montrer : ceux de Découvre, ou les 10 cases du Parcours. */
-function keptOf(me: State): Map<string, number> | null {
-  if (me.mode === 'discover') return me.found[me.fam]
-  if (me.mode === 'path' && me.path && (me.path.stage === 0 || me.over)) return me.path.kept[me.fam]
-  return null
-}
-
-/** La zone du Parcours : les tables du niveau (le reste de la grille est grisé). */
+/** La zone de Découvre : ses tables, en rangée ou en colonne (7 × 4 est
+    dans la table de 4) ; le reste de la grille est grisé. */
 function inZone(me: State, r: number, c: number) {
-  if (me.mode !== 'path' || !me.path || me.path.stage !== 0) return true
-  const t = me.fam === 'mul' ? tables() : addRows()
+  if (me.mode !== 'discover') return true
+  const t = tables()
   return t.includes(r) || t.includes(c)
 }
 
 function paintGrid(me: State) {
-  const kept = keptOf(me)
+  const kept = me.mode === 'discover' ? me.found[me.fam] : null
   for (const cell of me.cells) {
     cell.el.style.setProperty('--cc', cellColor(me.fam, val(me.fam, cell.r, cell.c)))
     const v = kept?.get(`${cell.r}:${cell.c}`)
@@ -291,6 +273,10 @@ function paintGrid(me: State) {
     cell.el.classList.toggle('kp', v !== undefined)
     cell.el.classList.toggle('out', !inZone(me, cell.r, cell.c))
   }
+  // Dans Découvre, les numéros de ses tables chantent ; les autres s'estompent
+  const mine = (n: number) => me.mode !== 'discover' || tables().includes(n)
+  me.rows.forEach((h, i) => { h.classList.toggle('sing', me.mode === 'discover' && mine(i + 1)); h.classList.toggle('off', !mine(i + 1)) })
+  me.cols.forEach((h, i) => h.classList.toggle('off', !mine(i + 1)))
   me.corner.textContent = me.fam === 'mul' ? '×' : '+'
   me.corner.classList.toggle('sw', cornerLive(me))
 }
@@ -433,11 +419,6 @@ function paintPivot(me: State) {
   if (pv) pv.disabled = me.counting || !me.lastR || me.lastR === me.lastC
 }
 
-function paintCount(me: State) {
-  const el = document.getElementById('pgCount')
-  if (el) el.innerHTML = `<b>${me.found[me.fam].size}</b><i>/ ${N * N}</i>`
-}
-
 /** La forme suit le doigt. `fresh` : un nouveau toucher repart toujours de
     zéro, même sur la case déjà plantée (sinon l'effacement programmé de la
     découverte précédente tomberait en plein comptage). */
@@ -468,25 +449,62 @@ function discovered(me: State, R: number, C: number) {
   paintDiscover(me, true)
   ctx.say(`${phrase(fam === 'mul' ? 'mul' : 'add', R, C)}, ${v}`)
   me.lastR = R; me.lastC = C
-  if (me.mode === 'discover') {
-    me.found[fam].set(`${R}:${C}`, v)
-    paintCount(me)
-  } else if (me.path) {
-    const p = me.path
-    if (!p.tiles.some(t => t.fam === fam && t.r === R && t.c === C)) p.tiles.push({ fam, r: R, c: C })
-    p.kept[fam].set(`${R}:${C}`, v)
-    paintPathDots(me)
-    if (p.tiles.length >= PATH_N) me.lock = true
-  }
+  me.found[fam].set(`${R}:${C}`, v)
+  me.tried++
   paintPivot(me)
   later(me, 1300, () => {
     clearMarks(me)
     setShape(me, 0, 0)
     lightHeads(me, 0, 0)
     paintGrid(me)
-    if (me.mode === 'discover' && me.found[fam].size >= N * N) allLit(me)
-    else if (me.mode === 'path' && me.path && me.path.tiles.length >= PATH_N) later(me, 500, () => nextStage(me))
+    callHarvest(me)
   })
+}
+
+/** La table qui chante (28/11) : toucher le numéro d'une de ses tables dans
+    la marge la fait pousser case après case. × : la forme gagne une colonne
+    à chaque temps (4, 8, 12… 40) ; + : la bande avance d'une case (5, 6…
+    14). Chaque nombre s'écrit au bout de la rangée, la voix le dit (le
+    contenu, jamais une consigne), puis la rangée entière reste écrite,
+    comme les cases découvertes. */
+function sing(me: State, r: number) {
+  if (me.mode !== 'discover' || me.lock || me.over || !tables().includes(r)) return
+  me.gen++
+  me.counting = true
+  clearMarks(me)
+  setShape(me, 0, 0)
+  lightHeads(me, r, 0)
+  $('pgQ').innerHTML = ''
+  paintPivot(me)
+  const fam = me.fam
+  for (let c = 1; c <= N; c++) {
+    later(me, 250 + (c - 1) * STEP_SING, () => {
+      setShape(me, r, c)
+      lightHeads(me, r, c)
+      const v = val(fam, r, c)
+      mark(cellAt(me, r, c), 'tot', v)
+      me.found[fam].set(`${r}:${c}`, v)
+      tone(PENTA[c - 1], 0.32, 'triangle', 0.11)
+      tone(PENTA[c - 1] * 2, 0.18, 'sine', 0.035, 0.02)
+      ctx.say(String(v))
+    })
+  }
+  later(me, 250 + N * STEP_SING + 500, () => {
+    me.counting = false
+    me.tried++
+    clearMarks(me)
+    setShape(me, 0, 0)
+    lightHeads(me, 0, 0)
+    paintGrid(me)
+    paintPivot(me)
+    sfx('pluck', { vol: 0.5, rate: 1.2 })
+    callHarvest(me)
+  })
+}
+
+/** Le panier de la Récolte appelle (il pulse) une fois quelques découvertes faites. */
+function callHarvest(me: State) {
+  document.querySelector('.pg-tool[data-m="harvest"]')?.classList.toggle('call', me.mode === 'discover' && me.tried >= CALL_AT)
 }
 
 /** « Tourne » : 7 × 8 = 8 × 7 (chaque plante saute sur sa case miroir),
@@ -550,23 +568,7 @@ function pivot(me: State) {
   })
 }
 
-/** Toute la grille est allumée : le potager fleurit, fin de la partie. */
-function allLit(me: State) {
-  me.over = true
-  me.lock = true
-  bloomAll(me)
-  sfx('confirm', { vol: 0.8, rate: 1.12 })
-  ctx.finish({
-    title: 'Tout le potager est découvert !',
-    msg: `Les ${N * N} cases du tableau`,
-    stars: 3,
-    score: N * N,
-    scoreIcon: ICON.flower,
-    outroMs: 2200
-  })
-}
-
-/* ---------- Les questions (Récolte et Parcours) ---------- */
+/* ---------- Les questions de la Récolte ---------- */
 
 function paintDots(me: State) {
   $('pgDots').innerHTML = Array.from({ length: me.queue.length }, (_, i) => `<i class="pg-dot${i < me.done ? ' on' : ''}"></i>`).join('')
@@ -575,10 +577,6 @@ function paintDots(me: State) {
 function paintQuestion(me: State, withAnswer = false) {
   const q = me.q
   if (!q) return
-  if (q.find) {
-    $('pgQ').innerHTML = `<span class="pg-find">${ICON.target}</span><span class="v">${q.find}</span>`
-    return
-  }
   const tail = withAnswer ? `<span class="x">=</span><span class="ok">${q.ans}</span>`
     : q.pad ? `<span class="x">=</span><span class="v pg-typed" id="pgTyped">${q.typed || '…'}</span>` : ''
   $('pgQ').innerHTML = direct(q.op)
@@ -586,9 +584,9 @@ function paintQuestion(me: State, withAnswer = false) {
     : `<span class="v">${val(q.fam, q.r, q.c)}</span><span class="x">${SYM[q.op]}</span><span class="r">${q.r}</span>${tail}`
 }
 
-/** Toutes les questions de la récolte, dans les opérations choisies. */
+/** Toutes les questions de la récolte : ses tables, ses opérations. */
 function harvestPool(me: State): Fact[] {
-  const mul = mulPool(tables()), add = addPool(addRows())
+  const mul = mulPool(tables()), add = addPool(tables())
   const out: Fact[] = []
   if (me.ops.includes('add')) out.push(...add)
   if (me.ops.includes('sub')) out.push(...subPool(add))
@@ -602,22 +600,23 @@ function startHarvest(me: State) {
   me.lock = false
   me.over = false
   beginGame(me.mem)
-  saveMemory('potager', me.mem)
-  me.queue = planHarvest(me.mem, harvestPool(me), { ease: factEase })
+  saveMemory(me.memKey, me.mem)
+  // Réparties entre ses tables : chacune sa part (28/11)
+  me.queue = planHarvest(me.mem, harvestPool(me), { ease: factEase, group: tableOf(tables()) })
   me.qi = 0; me.done = 0; me.firstTry = 0; me.streak = 0
   setMusicIntensity(0)
   paintDots(me)
   later(me, 400, () => ask(me))
 }
 
-function newQ(me: State, item: Item, op: Op, r: number, c: number, view: Level, find = 0): Q {
+function newQ(me: State, item: Item, op: Op, r: number, c: number, view: Level): Q {
   const fam = famOf(op)
   me.gen++
   clearMarks(me)
   setFam(me, fam)
   setShape(me, 0, 0)
-  me.q = { item, op, fam, r, c, ans: direct(op) ? val(fam, r, c) : c, view, tries: 0, ready: false, t0: 0, pad: view === LV.heart, typed: '', opts: [], find }
-  lightHeads(me, find ? 0 : r, find || !direct(op) ? 0 : c)
+  me.q = { item, op, fam, r, c, ans: direct(op) ? val(fam, r, c) : c, view, tries: 0, ready: false, t0: 0, pad: view === LV.heart, typed: '', opts: [] }
+  lightHeads(me, r, direct(op) ? c : 0)
   paintQuestion(me)
   $('pgOpts').innerHTML = ''
   $('pgOpts').className = 'pg-opts'
@@ -628,7 +627,7 @@ function ask(me: State) {
   if (me.qi >= me.queue.length) { outro(me); return }
   const item = me.queue[me.qi]
   const [r, c] = orient(item.fact)
-  showHelp(me, newQ(me, item, item.fact.op, r, c, sansAide() ? LV.heart : viewLevel(me.mem, item)))
+  showHelp(me, newQ(me, item, item.fact.op, r, c, helpOf(me, item)))
 }
 
 /** L'aide du champ selon le niveau de la question, puis les réponses. */
@@ -730,9 +729,8 @@ function answer(me: State, v: number, btn: HTMLButtonElement | null) {
   if (v === q.ans) {
     if (q.tries === 0) {
       record(me.mem, q.item, { ok: true, fast: isFast(now(me) - q.t0, q.pad) })
-      saveMemory('potager', me.mem)
-      if (me.path) me.path.good++
-      else me.firstTry++
+      saveMemory(me.memKey, me.mem)
+      me.firstTry++
       me.streak++
       setMusicIntensity(me.streak >= 10 ? 3 : me.streak >= 6 ? 2 : me.streak >= 3 ? 1 : 0)
     }
@@ -748,8 +746,8 @@ function answer(me: State, v: number, btn: HTMLButtonElement | null) {
   sfx('drop', { vol: 0.35, rate: 0.8 })
   if (btn) btn.classList.add('bad')
   record(me.mem, q.item, { ok: false, fast: false })
-  saveMemory('potager', me.mem)
-  if (me.mode === 'harvest' && q.item.kind !== 'again') requeue(me.queue, me.qi, q.item.fact)
+  saveMemory(me.memKey, me.mem)
+  if (q.item.kind !== 'again') requeue(me.queue, me.qi, q.item.fact)
   showMiss(me, v)
 }
 
@@ -839,12 +837,13 @@ function moveOn(me: State, ms: number) {
     clearMarks(me)
     setShape(me, 0, 0)
     sfx('pluck', { vol: 0.45, rate: 0.9 })
-    if (me.path) { me.path.i++; paintPathDots(me) } else { me.done++; paintDots(me) }
+    me.done++
+    paintDots(me)
   })
   later(me, ms + 550, () => {
     me.lock = false
-    if (me.path) pathAsk(me)
-    else { me.qi++; ask(me) }
+    me.qi++
+    ask(me)
   })
 }
 
@@ -870,151 +869,6 @@ function outro(me: State) {
   })
 }
 
-/* ---------- Le Parcours ---------- */
-
-function paintStages(me: State) {
-  const p = me.path
-  const el = $('pgStages')
-  if (!p) { el.innerHTML = ''; return }
-  // À la flamme, l'étape des quatre choix se répond aussi au pavé : son icône le dit
-  el.innerHTML = STAGE_ICON.map((ic, i) => `<i class="${i < p.stage ? 'done' : i === p.stage ? 'now' : ''}">${i === 1 && sansAide() ? ICON.digits : ic}</i>`).join('')
-}
-
-function paintPathDots(me: State) {
-  const p = me.path
-  if (!p) return
-  const n = p.stage === 0 ? p.tiles.length : p.i
-  $('pgDots').innerHTML = Array.from({ length: PATH_N }, (_, i) => `<i class="pg-dot${i < n ? ' on' : ''}"></i>`).join('')
-}
-
-function startPath(me: State) {
-  me.gen++
-  me.lock = false
-  me.over = false
-  beginGame(me.mem)
-  saveMemory('potager', me.mem)
-  me.path = { stage: 0, tiles: [], list: [], i: 0, good: 0, kept: emptyKept() }
-  me.streak = 0
-  setMusicIntensity(0)
-  setFam(me, me.fams[0])
-  paintStages(me)
-  paintPathDots(me)
-}
-
-/** Une case du Parcours, posée avec l'une des opérations choisies de son
-    tableau : 7 + 4 peut revenir en 11 − 7 (ou 11 − 4). */
-function pathQuestion(me: State, t: Tile) {
-  const ops = me.ops.filter(o => famOf(o) === t.fam)
-  let op = pick(ops.length ? ops : [t.fam])
-  let r = t.r, c = t.c
-  if (!direct(op) && Math.random() < 0.5) [r, c] = [c, r]
-  // Pas de « ÷ 1 », qui n'apprend rien, quand on peut l'éviter
-  if (op === 'div' && r === 1) {
-    if (c > 1) [r, c] = [c, r]
-    else if (ops.includes('mul')) op = 'mul'
-  }
-  return { fam: t.fam, op, r, c }
-}
-
-function nextStage(me: State) {
-  const p = me.path
-  if (!p) return
-  p.stage++
-  me.gen++
-  me.lock = true
-  clearMarks(me)
-  setShape(me, 0, 0)
-  lightHeads(me, 0, 0)
-  $('pgQ').innerHTML = ''
-  $('pgOpts').innerHTML = ''
-  if (p.stage > 3) { pathOutro(me); return }
-  p.i = 0
-  p.list = shuffle(p.tiles).map(t => pathQuestion(me, t))
-  paintGrid(me)
-  paintStages(me)
-  paintPathDots(me)
-  sfx('confirm', { vol: 0.6, rate: 0.9 + p.stage * 0.1 })
-  later(me, 900, () => { me.lock = false; pathAsk(me) })
-}
-
-function pathAsk(me: State) {
-  const p = me.path
-  if (!p) return
-  if (p.i >= p.list.length) { nextStage(me); return }
-  const t = p.list[p.i]
-  const item: Item = { fact: factOf(t.op, t.r, t.c), kind: 'probe' }
-  if (p.stage === 3) {
-    // Trouve la case : le nombre, la grille vide ; toute case qui le vaut est juste
-    const q = newQ(me, item, t.op, t.r, t.c, LV.numbers, val(t.fam, t.r, t.c))
-    ctx.say(String(q.find))
-    q.ready = true
-    return
-  }
-  // 1 : quatre réponses, avec le contour ; 2 : le pavé, le « ? » seul
-  showHelp(me, newQ(me, item, t.op, t.r, t.c, p.stage === 1 && !sansAide() ? LV.outline : LV.heart))
-}
-
-/** « Trouve la case » : elle touche une case de la grille. */
-function findTap(me: State, cell: Cell) {
-  const q = me.q, p = me.path
-  if (!q || !p || !q.ready || me.lock) return
-  q.ready = false
-  me.gen++
-  me.lock = true
-  const v = val(q.fam, cell.r, cell.c)
-  const op = q.fam === 'mul' ? 'mul' : 'add'
-  if (v === q.find) {
-    p.good++
-    me.streak++
-    setMusicIntensity(me.streak >= 10 ? 3 : me.streak >= 6 ? 2 : me.streak >= 3 ? 1 : 0)
-    setShape(me, cell.r, cell.c, true)
-    mark(cell, 'res', v)
-    lightHeads(me, cell.r, cell.c)
-    sfx('confirm', { vol: 0.65 })
-    ctx.say(`${phrase(op, cell.r, cell.c)}, ${v}`)
-    moveOn(me, 1500)
-    return
-  }
-  // Une case fausse montre son nombre, barré ; puis SA case pousse, en vert
-  me.streak = 0
-  setMusicIntensity(0)
-  mark(cell, 'her', v)
-  sfx('drop', { vol: 0.35, rate: 0.8 })
-  later(me, 900, () => {
-    setShape(me, q.r, q.c, true)
-    later(me, growMs(me, q.r, q.c), () => {
-      const t = cellAt(me, q.r, q.c)
-      mark(t, 'res', q.find)
-      lightHeads(me, q.r, q.c)
-      sfx('pluck', { vol: 0.5, rate: 1.1 })
-      ctx.say(`${phrase(op, q.r, q.c)}, ${q.find}`)
-      moveOn(me, 2200)
-    })
-  })
-}
-
-function pathOutro(me: State) {
-  const p = me.path!
-  me.over = true
-  me.lock = true
-  me.q = null
-  $('pgDots').classList.add('wave')
-  // Ses dix cases reviennent, et tout le potager fleurit
-  setFam(me, p.tiles[0]?.fam ?? me.fam)
-  bloomAll(me)
-  setMusicIntensity(0)
-  const n = PATH_N * 3
-  const stars = p.good >= n - 3 ? 3 : p.good >= 20 ? 2 : 1
-  ctx.finish({
-    title: 'Le parcours est fini !',
-    msg: p.good === n ? 'Tout juste du premier coup' : `${p.good} sur ${n} du premier coup`,
-    stars,
-    score: p.good,
-    scoreIcon: ICON.check,
-    outroMs: 2000
-  })
-}
-
 /* ---------- Les modes ---------- */
 
 function setMode(me: State, mode: Mode) {
@@ -1025,7 +879,6 @@ function setMode(me: State, mode: Mode) {
   me.over = false
   me.q = null
   me.drag = null
-  me.path = null
   me.lastR = 0; me.lastC = 0
   clearMarks(me)
   setShape(me, 0, 0)
@@ -1041,17 +894,13 @@ function setMode(me: State, mode: Mode) {
   $('pgOpts').className = 'pg-opts'
   $('pgDots').innerHTML = ''
   $('pgDots').classList.remove('wave')
-  $('pgStages').innerHTML = ''
   const extra = $('pgExtra')
   extra.innerHTML = ''
+  callHarvest(me)
   if (mode === 'discover') {
-    extra.innerHTML = `<div class="pg-count" id="pgCount"></div>
-      <span class="tool-item"><button class="sn-tool pg-big" id="pgPivot" aria-label="Tourne" disabled>${ICON.rotate}</button><i class="tool-cap">Tourne</i></span>`
+    extra.innerHTML = `<span class="tool-item"><button class="sn-tool pg-big" id="pgPivot" aria-label="Tourne" disabled>${ICON.rotate}</button><i class="tool-cap">Tourne</i></span>`
     ;($('pgPivot') as HTMLButtonElement).onclick = () => { if (pg === me) pivot(me) }
     setFam(me, me.fam)
-    paintCount(me)
-  } else if (mode === 'path') {
-    startPath(me)
   } else {
     paintGrid(me)
     startHarvest(me)
@@ -1064,14 +913,19 @@ export const potager: GameDef = {
   id: 'potager', name: 'Le Potager', icon: '🥕', sq: 'sq-mint', cat: 'reflexion',
   music: 'meadow',
   ops: true,
+  who: true,
+  tables: true,
   subtitle: 'Les tables qui poussent : + − × ÷',
-  // La main : Découvre, on dessine une bande de cases ; sinon « l'une de
-  // celles-là » (réponses, touches, cases) — jamais la réponse
+  // La main : Découvre, on dessine une forme dans ses tables, puis (quelques
+  // découvertes faites) le panier de la Récolte ; dans la Récolte, « l'une de
+  // celles-là » (réponses, touches) — jamais la réponse
   hand: root => {
     const me = pg
     if (!me || me.lock || me.over || me.counting || me.drag !== null) return null
     const cells = visible(root, '#pgGrid .pg-cell:not(.out)')
-    if (me.mode === 'discover' || (me.mode === 'path' && me.path?.stage === 0)) {
+    if (me.mode === 'discover') {
+      const basket = me.tried >= CALL_AT ? visible(root, '.pg-tool[data-m="harvest"]')[0] : undefined
+      if (basket) return { tap: basket }
       const a = some(cells, 1)[0]
       if (!a) return null
       const b = root.querySelector<HTMLElement>(`#pgGrid .pg-cell[data-r="${Number(a.dataset.r) + 1}"][data-c="${Number(a.dataset.c) + 2}"]:not(.out)`)
@@ -1081,8 +935,7 @@ export const potager: GameDef = {
     const opts = visible(root, '#pgOpts .pg-opt')
     if (opts.length) return { choose: opts }
     const keys = visible(root, '.pg-pad .pg-key')
-    if (keys.length) return { choose: some(keys, 4) }
-    return cells.length ? { choose: some(cells, 4) } : null
+    return keys.length ? { choose: some(keys, 4) } : null
   },
   mount(c) {
     ctx = c
@@ -1090,12 +943,10 @@ export const potager: GameDef = {
       <div class="arena pg-arena" id="pgArea">
         <div class="pg-grid" id="pgGrid"></div>
         <div class="tq-tools pg-tools">
-          <span class="tool-item sel"><button class="sn-tool pg-tool sel" data-m="path" aria-label="Parcours">${ICON.flag}</button><i class="tool-cap">Parcours</i></span>
-          <span class="tool-item"><button class="sn-tool pg-tool" data-m="discover" aria-label="Découvre">${ICON.tap}</button><i class="tool-cap">Découvre</i></span>
+          <span class="tool-item sel"><button class="sn-tool pg-tool sel" data-m="discover" aria-label="Découvre">${ICON.tap}</button><i class="tool-cap">Découvre</i></span>
           <span class="tool-item"><button class="sn-tool pg-tool" data-m="harvest" aria-label="Récolte">${ICON.basket}</button><i class="tool-cap">Récolte</i></span>
         </div>
         <div class="tq-side pg-side">
-          <div class="pg-stages" id="pgStages"></div>
           <div class="pg-q" id="pgQ"></div>
           <div class="pg-opts" id="pgOpts"></div>
           <div class="pg-dots" id="pgDots"></div>
@@ -1106,12 +957,15 @@ export const potager: GameDef = {
     preloadPlants()
     const ops: Op[] = c.ops.length ? c.ops : ['mul']
     const fams = (['add', 'mul'] as Fam[]).filter(f => ops.some(o => famOf(o) === f))
+    // Sa mémoire à elle (28/11) ; la première fois, une copie de l'ancienne
+    // mémoire commune
+    const memKey = c.who ? `potager:${c.who}` : 'potager'
     const me: State = {
-      mode: 'path', ops, fams, fam: fams[0], gen: 0, lock: false, over: false, counting: false,
+      mode: 'discover', ops, fams, fam: fams[0], gen: 0, lock: false, over: false, counting: false,
       cells: [], rows: [], cols: [], corner: document.createElement('div'), grid: $('pgGrid'), frame: document.createElement('div'),
-      R: 0, C: 0, lastR: 0, lastC: 0, found: emptyKept(),
-      mem: loadMemory('potager'), queue: [], qi: 0, q: null, firstTry: 0, streak: 0, done: 0,
-      drag: null, pausedMs: 0, pauseAt: 0, path: null
+      R: 0, C: 0, lastR: 0, lastC: 0, found: emptyKept(), tried: 0,
+      memKey, mem: loadMemory(memKey, 'potager'), queue: [], qi: 0, q: null, firstTry: 0, streak: 0, done: 0,
+      drag: null, pausedMs: 0, pauseAt: 0
     }
     pg = me
     buildGrid(me)
@@ -1129,25 +983,33 @@ export const potager: GameDef = {
       if (!el || !me.grid.contains(el)) return null
       return cellAt(me, Number(el.dataset.r), Number(el.dataset.c))
     }
-    const drawing = () => !me.lock && !me.over && (me.mode === 'discover' || (me.mode === 'path' && me.path?.stage === 0))
+    const drawing = () => !me.lock && !me.over && me.mode === 'discover'
+    // Le doigt peut partir de n'importe où dans la grille (le coin, une case
+    // grisée) : la forme naît dès qu'il entre dans ses tables (28/11)
+    let grew = false
     const onDown = (ev: PointerEvent) => {
       if (pg !== me) return
-      const cell = cellFrom(ev.clientX, ev.clientY)
-      if (!cell) return
-      if (me.mode === 'path' && me.path?.stage === 3) { findTap(me, cell); return }
-      if (!drawing() || me.drag !== null || !inZone(me, cell.r, cell.c)) return
+      const head = (ev.target as HTMLElement | null)?.closest<HTMLElement>('.pg-h')
+      if (head) {
+        // Le numéro d'une de ses tables, dans la marge : la table chante
+        if (head.classList.contains('sing') && me.drag === null) sing(me, Number(head.dataset.r))
+        return
+      }
+      if (!drawing() || me.drag !== null) return
       me.drag = ev.pointerId
-      dragTo(me, cell.r, cell.c, true)
+      grew = false
+      const cell = cellFrom(ev.clientX, ev.clientY)
+      if (cell && inZone(me, cell.r, cell.c)) { dragTo(me, cell.r, cell.c, true); grew = true }
     }
     const onMove = (ev: PointerEvent) => {
       if (pg !== me || me.drag !== ev.pointerId) return
       const cell = cellFrom(ev.clientX, ev.clientY)
-      if (cell && inZone(me, cell.r, cell.c)) dragTo(me, cell.r, cell.c)
+      if (cell && inZone(me, cell.r, cell.c)) { dragTo(me, cell.r, cell.c, !grew); grew = true }
     }
     const onUp = (ev: PointerEvent) => {
       if (pg !== me || me.drag !== ev.pointerId) return
       me.drag = null
-      if (drawing()) release(me)
+      if (grew && drawing()) release(me)
     }
     me.grid.addEventListener('pointerdown', onDown)
     window.addEventListener('pointermove', onMove)
@@ -1164,7 +1026,6 @@ export const potager: GameDef = {
       me.lastR = 0; me.lastC = 0
       $('pgQ').innerHTML = ''
       setFam(me, me.fam === 'mul' ? 'add' : 'mul')
-      paintCount(me)
       paintPivot(me)
       sfx('whoosh', { vol: 0.4 })
     })
@@ -1191,15 +1052,15 @@ export const potager: GameDef = {
         get opts() { return me.q ? [...me.q.opts] : [] }, get over() { return me.over },
         get rect() { return [me.R, me.C] }, get counting() { return me.counting }, get lock() { return me.lock },
         get found() { return me.found[me.fam].size }, get kept() { return me.cells.filter(x => x.k.textContent).length },
-        get stage() { return me.path ? me.path.stage : -1 }, get tiles() { return me.path ? me.path.tiles.length : 0 },
-        get pathI() { return me.path ? me.path.i : 0 }, get good() { return me.path ? me.path.good : 0 },
-        get find() { return me.q ? me.q.find : 0 },
-        /** La case est-elle ouverte (zone du niveau, dans le Parcours) ? */
+        get who() { return ctx.who }, get tables() { return tables() }, get tried() { return me.tried },
+        get memKey() { return me.memKey }, get first() { return me.queue.map(it => it.fact) },
+        get calling() { return !!document.querySelector('.pg-tool.call') },
+        /** La case est-elle ouverte (dans ses tables, dans Découvre) ? */
         open(r: number, c: number) { return inZone(me, r, c) },
-        /** Une case qui vaut v dans le tableau montré (pour « trouve la case »). */
-        where(v: number) { const x = me.cells.find(k => val(me.fam, k.r, k.c) === v); return x ? [x.r, x.c] : null },
         /** Le centre d'une case à l'écran, pour poser un vrai doigt dessus. */
         cell(r: number, c: number) { const b = cellAt(me, r, c).el.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 } },
+        /** Le centre du numéro d'une rangée, dans la marge. */
+        head(r: number) { const b = me.rows[r - 1].getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 } },
         corner() { const b = me.corner.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 } },
         /** Touche la réponse v comme un doigt : le bouton, ou le pavé chiffre par chiffre. */
         pick(v: number) {
@@ -1215,7 +1076,7 @@ export const potager: GameDef = {
       }
     }
 
-    setMode(me, 'path')
+    setMode(me, 'discover')
     return () => {
       if (pg === me) pg = null
       me.gen++

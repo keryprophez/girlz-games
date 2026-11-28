@@ -1036,6 +1036,32 @@ body.playing #cpCanvas{max-height:calc(100vh - 160px);}
 .opsrecap{display:flex;gap:8px;padding:6px 10px;border-radius:99px;border:none;background:rgba(255,255,255,.85);box-shadow:var(--e1);cursor:pointer;}
 .opsrecap b{min-width:48px;height:44px;border-radius:99px;background:linear-gradient(135deg,#B197FC,#8F74E0);color:#fff;
   font-family:'Baloo 2';font-weight:800;font-size:32px;line-height:1;display:grid;place-items:center;}
+/* Qui joue (jeux `who`, le Potager, 28/11) : deux silhouettes à leurs
+   couleurs, leur prénom dessous ; ses réglages n'apparaissent qu'une fois
+   choisie. Avec les tables, les étiquettes rapetissent : tout tient. */
+.whorow{display:flex;gap:26px;}
+.whobtn{width:clamp(72px,12vmin,94px);height:clamp(72px,12vmin,94px);border-radius:50%;border:3px solid #fff;cursor:pointer;
+  background:rgba(255,255,255,.9);box-shadow:var(--e1);display:grid;place-items:center;padding:0;
+  transition:transform .2s var(--spring),background .2s,box-shadow .2s;}
+.whobtn svg{width:82%;height:82%;display:block;}
+.whobtn.sel{background:color-mix(in srgb,var(--c) 32%,#fff);box-shadow:0 0 0 4px var(--c),var(--e2);transform:scale(1.08);}
+.whobtn:active{transform:scale(.9);}
+.opsrow.small{gap:14px;margin-top:0;}
+.opsrow.small .opsbtn{width:clamp(70px,11vmin,92px);height:clamp(70px,11vmin,92px);border-radius:24px;font-size:clamp(46px,7.5vmin,60px);}
+.opsrow.small .opsbtn .ok{width:28px;height:28px;font-size:14px;}
+.tablesrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:94vw;}
+.tablebtn{width:clamp(50px,7.8vmin,66px);height:clamp(50px,7.8vmin,66px);border-radius:50%;border:3px solid #fff;cursor:pointer;
+  background:rgba(255,255,255,.9);box-shadow:var(--e1);color:rgba(69,54,42,.4);padding:0;
+  font-family:'Baloo 2';font-weight:800;font-size:clamp(24px,4vmin,32px);line-height:1;display:grid;place-items:center;
+  transition:transform .2s var(--spring),background .2s,color .2s;}
+.tablebtn.sel{background:linear-gradient(135deg,#B197FC,#8F74E0);color:#fff;box-shadow:var(--e2);transform:scale(1.06);}
+.tablebtn:active{transform:scale(.9);}
+.opsgo:disabled{opacity:.3;cursor:default;}
+.opsrecap{align-items:center;}
+.opsrecap .who{display:grid;width:44px;height:44px;place-items:center;}
+.opsrecap .tabs{display:flex;gap:4px;margin-left:4px;}
+.opsrecap em{min-width:30px;height:30px;padding:0 4px;border-radius:99px;background:#EDE6FF;color:#6E55C8;font-style:normal;
+  font-family:'Baloo 2';font-weight:800;font-size:19px;line-height:1;display:grid;place-items:center;}
 .pbtn-tier{color:#fff;border-color:#fff;}
 .pbtn-tier.tier-easy{background:#5EC97B;}
 .pbtn-tier.tier-med{background:#FF9E5C;}
@@ -1734,25 +1760,21 @@ body.playing .po-card{max-width:880px;}
 .pg-n:not(:empty)~.pg-k{display:none;}
 .pg-cell.kp{opacity:1;background:color-mix(in srgb,var(--cc) 62%,#fff);box-shadow:inset 0 0 0 2px rgba(255,255,255,.75);}
 .pg-cell.pl .pg-k{opacity:.3;}
-/* Parcours, étape 1 : hors des tables du niveau, la grille est grisée — sauf
-   là où pousse la forme d'une case choisie (un rectangle peut la traverser) */
+/* Découvre (28/11) : hors de ses tables, la grille est grisée, sauf là où
+   pousse la forme d'une case choisie (un rectangle peut la traverser) */
 .pg-cell.out{pointer-events:none;}
 .pg-cell.out:not(.pl):not(.tot):not(.res):not(.kp){opacity:.1;}
 /* Le coin qui change de tableau (+ ↔ ×) quand les deux sont choisis */
 .pg-corner.sw{cursor:pointer;color:#fff;background:linear-gradient(135deg,#B197FC,#8F74E0);box-shadow:0 0 0 3px #fff,var(--e1);
   font-size:1.2em;animation:pgq 1.6s ease-in-out infinite;}
-.pg-count{display:flex;align-items:baseline;gap:6px;font-family:'Baloo 2';font-weight:800;padding:6px 20px;border-radius:99px;
-  background:rgba(255,255,255,.88);box-shadow:var(--e1);}
-.pg-count b{font-size:38px;line-height:1;color:#3FA45E;}
-.pg-count i{font-style:normal;font-size:22px;color:var(--ink-soft);}
-/* Les quatre étapes du Parcours : découvrir, 4 choix, le pavé, trouve la case */
-.pg-stages{display:flex;gap:10px;}
-.pg-stages:empty{display:none;}
-.pg-stages i{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;font-size:30px;
-  background:rgba(255,255,255,.75);color:rgba(69,54,42,.28);box-shadow:var(--e1);transition:transform .3s var(--spring),background .3s;}
-.pg-stages i.done{background:#E3F7E8;color:#3FA45E;}
-.pg-stages i.now{background:linear-gradient(135deg,#B197FC,#8F74E0);color:#fff;transform:scale(1.14);animation:pgres .5s var(--spring);}
-.pg-q .pg-find{color:#E8574C;font-size:.72em;display:inline-flex;align-self:center;margin-right:.1em;}
+/* Les numéros de ses tables, dans la marge : ils se touchent et la table
+   chante ; les autres numéros s'estompent avec leur zone */
+.pg-h.off{opacity:.3;}
+.pg-h.row.sing{cursor:pointer;background:#FFE3DD;color:#E8574C;box-shadow:0 0 0 2px #fff,var(--e1);}
+.pg-h.row.sing.on{background:#E8574C;color:#fff;}
+/* Le panier de la Récolte appelle, une fois quelques cases découvertes */
+.pg-arena .sn-tool.pg-tool.call{animation:pgcall 1.5s ease-in-out infinite;}
+@keyframes pgcall{0%,100%{transform:scale(1);box-shadow:var(--e1);}50%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(255,184,77,.55),var(--e2);}}
 
 /* ============================================================
    LES BIJOUX (30/09) : l'établi, la vitrine, la princesse

@@ -108,7 +108,7 @@ const clickTile = async name => {
   throw new Error(`tuile introuvable : ${name}`)
 }
 
-const openGame = async (name, hook, tier = 'easy', ops = null, variant = null) => {
+const openGame = async (name, hook, tier = 'easy', ops = null, variant = null, tables = null, who = 'joyce') => {
   errors.length = 0
   await page.goto(URL, { waitUntil: 'networkidle' })
   await clickTile(name)
@@ -118,6 +118,13 @@ const openGame = async (name, hook, tier = 'easy', ops = null, variant = null) =
   // on allume exactement celles voulues (sinon celles par défaut), on passe
   // (un jeu sans niveau, 30/09, démarre directement : on attend le jeu lui-même)
   await page.locator('.opsgo, .tierbtn, .gameroot > *').first().waitFor()
+  // Un jeu qui suit chaque fille (le Potager, 28/11) : elle se choisit d'abord
+  if (await page.locator('.whobtn').count()) await page.locator(`.whobtn[data-who="${who}"]`).click()
+  // Ses tables (28/11) : on allume exactement celles voulues, comme les opérations
+  if (tables && await page.locator('.tablebtn').count()) {
+    for (const t of tables) if (!(await page.locator(`.tablebtn[data-t="${t}"].sel`).count())) await page.locator(`.tablebtn[data-t="${t}"]`).click()
+    for (let t = 1; t <= 10; t++) if (!tables.includes(t) && await page.locator(`.tablebtn[data-t="${t}"].sel`).count()) await page.locator(`.tablebtn[data-t="${t}"]`).click()
+  }
   if (await page.locator('.opsgo').count()) {
     if (ops) {
       // Allumer d'abord (la dernière allumée ne s'éteint pas), puis éteindre
@@ -446,36 +453,32 @@ await scenario('horloge-huit-heures', async () => {
   if (!fini) throw new Error('l\'écran de fin de l\'horloge n\'est pas apparu')
 })
 
-/* 🥕 Le Potager (× seul), Récolte : douze caisses jusqu'à l'écran de fin.
-   La mémoire est préparée avec deux calculs ratés (niveau « découverte »,
-   l'aide la plus forte) : à AUCUN moment la réponse ne doit être écrite
-   avant qu'elle choisisse (25/09 : elle l'était, le comptage des rangées
-   allait jusqu'au bout). Une mauvaise réponse exprès : la bonne s'écrit en
-   vert, puis on passe au calcul suivant, sans nouvel essai. */
-await scenario('potager-recolte-douze-caisses', async () => {
-  await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.evaluate(() => localStorage.setItem('ferme:faits:potager', JSON.stringify({
-    v: 1, games: 3, facts: { '2x5': { lv: 0, last: 2, gap: 0, seen: 1 }, '5x10': { lv: 0, last: 2, gap: 0, seen: 1 } }
-  })))
-  await openGame('Le Potager', '__pg', 'easy', ['mul'])
-  await page.locator('.pg-tool[data-m="harvest"]').click()
-  let wrongDone = false, decouverte = 0
+/* 🥕 Le Potager : les mémoires de Jade et de Joyce (28/11), l'ancienne commune */
+const PG_KEYS = ['ferme:faits:potager', 'ferme:faits:potager:jade', 'ferme:faits:potager:joyce']
+const pgForget = () => page.evaluate(k => k.forEach(x => localStorage.removeItem(x)), PG_KEYS)
+/** La Récolte jusqu'au bout : `check(s)` sur chaque question, une erreur exprès à la deuxième (`wrong`). */
+const pgHarvest = async (check, wrong = false) => {
+  let wrongDone = false
+  const ops = new Set(), fams = new Set()
   for (let i = 0; i < 40; i++) {
     await page.waitForFunction(() => window.__pg.ready || window.__pg.over, null, { timeout: 30000 })
     const s = await page.evaluate(() => ({
       over: window.__pg.over, ans: window.__pg.answer, opts: window.__pg.opts, qi: window.__pg.qi,
-      tries: window.__pg.tries, view: window.__pg.view, op: window.__pg.op,
+      view: window.__pg.view, op: window.__pg.op, fam: window.__pg.fam, r: window.__pg.r, c: window.__pg.c,
+      tables: window.__pg.tables, corner: document.querySelector('.pg-corner')?.textContent,
       res: !!document.querySelector('.pg-cell.res'), ask: !!document.querySelector('.pg-cell.q'),
       nums: [...document.querySelectorAll('.pg-cell .pg-n')].map(n => n.textContent)
     }))
     if (s.over) break
+    // La réponse n'est jamais écrite avant le choix (25/09)
     if (s.res) throw new Error(`question ${s.qi} : un résultat est déjà affiché avant le choix`)
     if (s.op === 'mul' && s.nums.includes(String(s.ans))) throw new Error(`question ${s.qi} : la réponse ${s.ans} est écrite avant le choix`)
-    if (s.view === 0 && s.op === 'mul') {
-      decouverte++
-      if (!s.ask) throw new Error(`question ${s.qi} : le comptage n'a pas laissé son « ? »`)
-    }
-    if (!wrongDone && s.qi === 1 && s.opts.length) {
+    // Rien hors de ses tables (28/11)
+    if (!s.tables.includes(s.r) && !s.tables.includes(s.c)) throw new Error(`question ${s.qi} : ${s.r} ${s.op} ${s.c} hors de ses tables ${s.tables}`)
+    if (s.corner !== (s.fam === 'mul' ? '×' : '+')) throw new Error(`question ${s.qi} (${s.op}) : le coin dit ${s.corner}`)
+    ops.add(s.op); fams.add(s.fam)
+    check?.(s)
+    if (wrong && !wrongDone && s.qi === 1 && s.opts.length) {
       wrongDone = true
       const ok = await page.evaluate(v => window.__pg.pick(v), s.opts.find(v => v !== s.ans))
       if (!ok) throw new Error('mauvaise réponse introuvable')
@@ -489,19 +492,47 @@ await scenario('potager-recolte-douze-caisses', async () => {
     if (!ok) throw new Error(`réponse ${s.ans} introuvable`)
     await page.waitForFunction(q => window.__pg.qi !== q || window.__pg.over, s.qi, { timeout: 30000 })
   }
-  if (!wrongDone) throw new Error('le presque n\'a pas été joué')
-  if (!decouverte) throw new Error('aucune question à l\'aide « découverte » : la mémoire préparée n\'a pas pris')
+  if (wrong && !wrongDone) throw new Error('le presque n\'a pas été joué')
   await page.waitForFunction(() => document.body.innerText.includes('La récolte est rentrée'), null, { timeout: 15000 })
-  await page.evaluate(() => localStorage.removeItem('ferme:faits:potager'))
+  return { ops, fams }
+}
+
+/* 🥕 Le Potager (× seul, les tables 2 et 5), Récolte : douze caisses jusqu'à
+   l'écran de fin. La mémoire de Joyce est préparée avec deux calculs ratés
+   (niveau « découverte », l'aide la plus forte, que la fleur garde) : à
+   AUCUN moment la réponse ne doit être écrite avant qu'elle choisisse
+   (25/09). Une mauvaise réponse exprès : la bonne s'écrit en vert, puis on
+   passe au calcul suivant, sans nouvel essai. */
+await scenario('potager-recolte-douze-caisses', async () => {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await pgForget()
+  await page.evaluate(() => localStorage.setItem('ferme:faits:potager:joyce', JSON.stringify({
+    v: 1, games: 3, facts: { '2x5': { lv: 0, last: 2, gap: 0, seen: 1 }, '5x10': { lv: 0, last: 2, gap: 0, seen: 1 } }
+  })))
+  await openGame('Le Potager', '__pg', 'easy', ['mul'], null, [2, 5])
+  await page.locator('.pg-tool[data-m="harvest"]').click({ force: true })
+  let decouverte = 0
+  await pgHarvest(s => {
+    if (s.view === 0 && s.op === 'mul') {
+      decouverte++
+      if (!s.ask) throw new Error(`question ${s.qi} : le comptage n'a pas laissé son « ? »`)
+    }
+    // La fleur : les plantes à chaque calcul, jamais le pavé
+    if (s.view > 1) throw new Error(`question ${s.qi} : aide ${s.view} à la fleur`)
+  }, true)
+  if (!decouverte) throw new Error('aucune question à l\'aide « découverte » : la mémoire préparée n\'a pas pris')
+  await pgForget()
 })
 
-/* 🥕 Le Potager (× seul), Découvre : un vrai glissé du coin jusqu'à la case
-   7 × 8, le comptage par rangées jusqu'à 56 ; puis les plantes s'en vont et
-   56 RESTE écrit dans sa case (retour de Joyce, 27/09) ; « Tourne » : 8 × 7,
-   toujours 56, et deux résultats gardés. */
-await scenario('potager-decouvre-et-pivot', async () => {
-  await openGame('Le Potager', '__pg', 'easy', ['mul'])
-  await page.locator('.pg-tool[data-m="discover"]').click()
+/* 🥕 Le Potager (× seul, la table de 7), Découvre : un vrai glissé du coin
+   jusqu'à la case 7 × 8, le comptage par rangées jusqu'à 56 ; puis les
+   plantes s'en vont et 56 RESTE écrit (Joyce, 27/09) ; « Tourne » : 8 × 7.
+   Puis le 7 de la marge : la table chante, ses dix résultats restent écrits
+   (28/11) ; le panier appelle, et la Récolte ne porte que sur la table de 7. */
+await scenario('potager-decouvre-chante-recolte', async () => {
+  await openGame('Le Potager', '__pg', 'med', ['mul'], null, [7])
+  if (await page.evaluate(() => window.__pg.mode) !== 'discover') throw new Error('le Potager ne s\'ouvre pas sur Découvre')
+  if (await page.locator('.pg-h.row.sing').count() !== 1) throw new Error('un seul numéro doit chanter : celui du 7')
   const cell = (r, c) => page.evaluate(([r, c]) => window.__pg.cell(r, c), [r, c])
   const a = await cell(1, 1), b = await cell(7, 8)
   await page.mouse.move(a.x, a.y)
@@ -520,85 +551,47 @@ await scenario('potager-decouvre-et-pivot', async () => {
     return r === 8 && c === 7 && !window.__pg.counting && document.querySelector('.pg-cell.res')?.textContent === '56'
   }, null, { timeout: 20000 })
   await page.waitForFunction(() => window.__pg.found === 2 && window.__pg.kept === 2, null, { timeout: 10000 })
+  // La table de 7 chante : 7, 14… 70 restent écrits sur sa rangée
+  const h = await page.evaluate(() => window.__pg.head(7))
+  await page.mouse.click(h.x, h.y)
+  await page.waitForFunction(() => window.__pg.counting, null, { timeout: 5000 })
+  await page.waitForFunction(() => !window.__pg.counting && window.__pg.found === 11, null, { timeout: 20000 })
+  const row = await page.evaluate(() => [...Array(10)].map((_, i) => document.querySelector(`.pg-cell[data-r="7"][data-c="${i + 1}"] .pg-k`)?.textContent))
+  if (row.join(' ') !== '7 14 21 28 35 42 49 56 63 70') throw new Error(`la rangée du 7 garde ${row.join(' ')}`)
+  if (!(await page.evaluate(() => window.__pg.calling))) throw new Error('le panier de la Récolte n\'appelle pas après trois découvertes')
+  await page.locator('.pg-tool[data-m="harvest"]').click({ force: true })
+  await page.waitForFunction(() => window.__pg.ready, null, { timeout: 15000 })
+  const first = await page.evaluate(() => window.__pg.first)
+  if (first.length !== 10 || first.some(f => f.a !== 7 && f.b !== 7)) throw new Error(`la récolte sort de la table de 7 : ${first.map(f => f.a + 'x' + f.b).join(' ')}`)
 })
 
-/* 🥕 Le Potager (+ seul), le PARCOURS complet (27/09) : 10 cases découvertes
-   au doigt (dans les tables du niveau ; chacune garde son résultat), puis
-   10 questions à 4 choix, 10 au pavé, 10 « trouve la case », jusqu'à l'écran
-   de fin. Une erreur exprès à l'étape des 4 choix : la bonne réponse, puis
-   la suite. La réponse n'est jamais écrite avant le choix. */
-await scenario('potager-parcours-plus', async () => {
-  await openGame('Le Potager', '__pg', 'easy', ['add'])
-  const st = () => page.evaluate(() => ({
-    stage: window.__pg.stage, tiles: window.__pg.tiles, ready: window.__pg.ready, over: window.__pg.over,
-    ans: window.__pg.answer, opts: window.__pg.opts, find: window.__pg.find, i: window.__pg.pathI, op: window.__pg.op,
-    res: !!document.querySelector('.pg-cell.res'), fam: window.__pg.fam
-  }))
-  if ((await st()).fam !== 'add') throw new Error('la grille n\'est pas celle des additions')
-  // Étape 1 : dix cases ouvertes, touchées une à une
-  const picks = await page.evaluate(() => {
-    const out = []
-    for (let r = 1; r <= 10 && out.length < 10; r++) for (let c = 1; c <= 10 && out.length < 10; c += 3) if (window.__pg.open(r, c)) out.push([r, c])
-    return out
-  })
-  for (let k = 0; k < picks.length; k++) {
-    const p = await page.evaluate(([r, c]) => window.__pg.cell(r, c), picks[k])
-    await page.mouse.click(p.x, p.y)
-    await page.waitForFunction(n => window.__pg.tiles > n, k, { timeout: 20000 })
-  }
-  await page.waitForFunction(() => window.__pg.kept >= 10 || window.__pg.stage > 0, null, { timeout: 15000 })
-  let wrong = false
-  for (let n = 0; n < 60; n++) {
-    await page.waitForFunction(() => window.__pg.ready || window.__pg.over, null, { timeout: 30000 })
-    const s = await st()
-    if (s.over) break
-    if (s.stage < 1) throw new Error(`toujours à l'étape de découverte (${s.tiles} cases)`)
-    if (s.res) throw new Error(`étape ${s.stage}, question ${s.i} : un résultat est affiché avant le choix`)
-    if (s.stage === 3) {
-      const rc = await page.evaluate(v => window.__pg.where(v), s.find)
-      if (!rc) throw new Error(`le nombre ${s.find} n'est nulle part dans la grille`)
-      const p = await page.evaluate(([r, c]) => window.__pg.cell(r, c), rc)
-      await page.mouse.click(p.x, p.y)
-    } else if (!wrong && s.stage === 1 && s.opts.length) {
-      wrong = true
-      await page.evaluate(v => window.__pg.pick(v), s.opts.find(v => v !== s.ans))
-      await page.waitForFunction(a => document.querySelector('#pgQ .ok')?.textContent === String(a), s.ans, { timeout: 20000 })
-    } else {
-      const ok = await page.evaluate(v => window.__pg.pick(v), s.ans)
-      if (!ok) throw new Error(`étape ${s.stage} : réponse ${s.ans} introuvable`)
-    }
-    await page.waitForFunction(([stage, i]) => window.__pg.over || window.__pg.stage !== stage || window.__pg.pathI !== i, [s.stage, s.i], { timeout: 30000 })
-  }
-  await page.waitForFunction(() => document.body.innerText.includes('Le parcours est fini'), null, { timeout: 15000 })
-  const good = await page.evaluate(() => window.__pg.good)
-  if (good !== 29) throw new Error(`${good} bonnes réponses sur 30 au lieu de 29`)
+/* 🥕 Le Potager, chaque fille (28/11) : Jade, + seul, les tables 3 et 4, à
+   l'éclair, une Récolte entière (les deux tables y ont leur part) dans SA
+   mémoire ; puis Joyce retrouve ses réglages à elle (× et la table de 7). */
+await scenario('potager-chaque-fille', async () => {
+  await openGame('Le Potager', '__pg', 'med', ['add'], null, [3, 4], 'jade')
+  const st = await page.evaluate(() => ({ who: window.__pg.who, key: window.__pg.memKey, fam: window.__pg.fam }))
+  if (st.who !== 'jade' || st.key !== 'potager:jade' || st.fam !== 'add') throw new Error(`ouverture de Jade : ${JSON.stringify(st)}`)
+  await page.locator('.pg-tool[data-m="harvest"]').click({ force: true })
+  const parts = new Set()
+  await pgHarvest(s => { for (const t of [3, 4]) if (s.r === t || s.c === t) parts.add(t) })
+  if (parts.size !== 2) throw new Error(`une seule table dans la récolte de Jade : ${[...parts]}`)
+  if (!(await page.evaluate(() => localStorage.getItem('ferme:faits:potager:jade')))) throw new Error('la mémoire de Jade n\'est pas gardée à son nom')
+  await openGame('Le Potager', '__pg', 'med')
+  const jo = await page.evaluate(() => ({ who: window.__pg.who, tables: window.__pg.tables, ops: window.__pg.ops }))
+  if (jo.who !== 'joyce' || jo.tables.join() !== '7' || jo.ops.join() !== 'mul') throw new Error(`Joyce n'a pas retrouvé ses réglages : ${JSON.stringify(jo)}`)
 })
 
-/* 🥕 Le Potager, les QUATRE opérations en flamme : la Récolte mêle + − × ÷,
-   la grille passe d'un tableau à l'autre, douze caisses jusqu'à la fin. */
+/* 🥕 Le Potager, les QUATRE opérations en flamme, les tables 6 à 9 : la
+   Récolte mêle + − × ÷ au pavé, la grille passe d'un tableau à l'autre,
+   douze caisses jusqu'à la fin. */
 await scenario('potager-recolte-quatre-operations', async () => {
-  await page.goto(URL, { waitUntil: 'networkidle' })
-  await page.evaluate(() => localStorage.removeItem('ferme:faits:potager'))
-  await openGame('Le Potager', '__pg', 'exp', ['add', 'sub', 'mul', 'div'])
-  await page.locator('.pg-tool[data-m="harvest"]').click()
-  const seen = new Set(), fams = new Set()
-  for (let i = 0; i < 30; i++) {
-    await page.waitForFunction(() => window.__pg.ready || window.__pg.over, null, { timeout: 30000 })
-    const s = await page.evaluate(() => ({
-      over: window.__pg.over, ans: window.__pg.answer, qi: window.__pg.qi, op: window.__pg.op, fam: window.__pg.fam,
-      corner: document.querySelector('.pg-corner')?.textContent, res: !!document.querySelector('.pg-cell.res')
-    }))
-    if (s.over) break
-    if (s.res) throw new Error(`question ${s.qi} : un résultat est déjà affiché avant le choix`)
-    if (s.corner !== (s.fam === 'mul' ? '×' : '+')) throw new Error(`question ${s.qi} (${s.op}) : le coin dit ${s.corner}`)
-    seen.add(s.op); fams.add(s.fam)
-    const ok = await page.evaluate(v => window.__pg.pick(v), s.ans)
-    if (!ok) throw new Error(`réponse ${s.ans} introuvable`)
-    await page.waitForFunction(q => window.__pg.qi !== q || window.__pg.over, s.qi, { timeout: 30000 })
-  }
-  if (fams.size < 2) throw new Error(`une seule grille pendant la récolte (${[...seen].join(', ')})`)
-  await page.waitForFunction(() => document.body.innerText.includes('La récolte est rentrée'), null, { timeout: 15000 })
-  await page.evaluate(() => localStorage.removeItem('ferme:faits:potager'))
+  await pgForget()
+  await openGame('Le Potager', '__pg', 'exp', ['add', 'sub', 'mul', 'div'], null, [6, 7, 8, 9])
+  await page.locator('.pg-tool[data-m="harvest"]').click({ force: true })
+  const { ops, fams } = await pgHarvest(s => { if (s.view !== 4) throw new Error(`question ${s.qi} : la flamme n'est pas au pavé`) })
+  if (fams.size < 2) throw new Error(`une seule grille pendant la récolte (${[...ops].join(', ')})`)
+  await pgForget()
 })
 
 /* 🔍 L'Intrus : six manches, l'intrus lu sur le crochet. */

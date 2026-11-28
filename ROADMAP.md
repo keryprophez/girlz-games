@@ -183,6 +183,27 @@ le timbre), la boîte aux lettres de sa sœur, son drapeau. Conception et plan :
    l'autre, poubelle. À voir sur la tablette : ses anciennes lettres partent
    en ligne à sa première ouverture du Courrier.
 
+## Le Potager, la progression (28/11) — plan validé : « je valide tes 3 reco »
+
+Retour du père : Joyce en Moyen n'avait que la table de 8 et de 10 ; Parcours
+et Découvre, on ne comprenait pas ce qu'on faisait.
+
+1. ✅ **Ses tables et sa mémoire** : Jade / Joyce à l'ouverture, ses
+   opérations, ses tables (dix pastilles) et son niveau retenus pour elle ;
+   une mémoire des calculs par fille (copie de l'ancienne mémoire commune).
+2. ✅ **Le niveau ne règle plus que l'aide** : fleur = les plantes et trois
+   réponses, éclair = la mémoire décide, flamme = le pavé sans aide.
+3. ✅ **Découvre puis Récolte** : Découvre en libre à l'ouverture (ses tables
+   seules, la table qui chante dans la marge, ni compteur ni but), le panier
+   de la Récolte qui appelle après trois découvertes. Le Parcours sort.
+4. ✅ **La récolte répartie entre ses tables** (`PlanOpts.group`) : la cause
+   du « 8 et 10 » était les × 1 et × 10 sondés d'abord, puis les six calculs
+   ratés reposés deux fois chacun.
+
+À voir sur la tablette : Joyce sur ses tables à l'éclair, deux ou trois
+parties de suite (la table qu'elle apprend doit revenir souvent, les autres
+en révision) ; Jade sur ses additions.
+
 ## À mesurer sur la tablette (`?fps`)
 
 Rien n'a encore été relevé sur la Tab A9+ : la Tour de Glace (une cinquantaine
@@ -224,6 +245,8 @@ dessin prend vie (puis régler les consignes sur de vrais dessins).
 - **23/09** : le Potager en 2D illustré (planche Canva) plutôt qu'en 3D Kenney ;
   la mémoire des calculs est silencieuse, rien ne fane, rien ne se débloque.
 - **27/09** : UN seul jeu de calcul, le Potager (+ − × ÷).
+- **28/11** : dans le Potager, chaque fille a ses tables et sa mémoire ; le
+  niveau ne règle que l'aide ; la découverte en libre, puis les questions.
 - **30/09** : les niveaux décalés d'un cran (« le plus facile dégage ») ; un
   petit nom sous chaque bouton ; la main qui montre ; `noTier` là où il n'y a
   pas de niveau.
@@ -255,6 +278,7 @@ dessin prend vie (puis régler les consignes sur de vrais dessins).
 | Le Chien de berger | 19/10 | « les filles trouvent ça nul » |
 | Les bougies animées, le souffle au micro, la chanson de la Pâtisserie | 19/10 | « vire toute l'animation des bougies » |
 | Le choix de joueuse, la Pizzeria et la Pâtisserie séparées | 27/10 | coupes proposées et validées |
+| Le Parcours du Potager (dix cases choisies, puis trois tours de questions, dont « trouve la case ») | 28/11 | « on comprend pas trop ce qu'on fait » : Découvre en libre, puis la Récolte |
 | Le téléphone du Courrier (petits messages, deux téléphones côte à côte) | à la maquette du Courrier | « en vrai vire le telephone, la lettre c'est parfait » |
 
 **Allers-retours** : la Chenille et Poussin Volant en 2D illustrée (25/09),

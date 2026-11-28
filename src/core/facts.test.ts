@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addChoices, addEase, addKey, addPool, nearMissAdd, subChoices, subFact, subPool,
   beginGame, divChoices, divFact, divPool, emptyMemory, factEase, HARVEST, isFast, LV, mulChoices, mulEase, mulKey, mulPool,
-  nearMiss, orient, planHarvest, record, recOf, requeue, viewLevel, WORK_MAX, type Fact, type Item, type Memory
+  nearMiss, orient, planHarvest, record, recOf, requeue, tableOf, viewLevel, WORK_MAX, type Fact, type Item, type Memory
 } from './facts'
 
 /** Hasard reproductible (mulberry32). */
@@ -140,6 +140,33 @@ describe('composer une récolte', () => {
     const plan = planHarvest(m, pool, { ease: mulEase, rng: seeded(4) })
     const it = plan.find(x => x.fact.key === mulKey(3, 4))
     expect(it?.kind).not.toBe('review')
+  })
+
+  it('ses tables (28/11) : chacune a sa part, et les × 1 et × 10 ne remplissent pas la récolte', () => {
+    const tables = [2, 3, 4, 5]
+    for (let seed = 1; seed <= 20; seed++) {
+      const m = emptyMemory(); beginGame(m)
+      const plan = planHarvest(m, mulPool(tables), { ease: factEase, group: tableOf(tables), rng: seeded(seed) })
+      expect(plan.length).toBe(HARVEST)
+      expect(new Set(plan.map(it => it.fact.key)).size).toBe(HARVEST)
+      const by = tableOf(tables)
+      for (const t of tables) expect(plan.filter(it => by(it.fact) === t).length).toBe(3)
+      expect(plan.filter(it => mulEase(it.fact) === 0).length).toBe(0)
+    }
+  })
+
+  it('sans tas, rien ne change pour les autres jeux : les faciles d\'abord', () => {
+    const m = emptyMemory(); beginGame(m)
+    const plan = planHarvest(m, mulPool([2, 3, 4, 5]), { ease: factEase, rng: seeded(7) })
+    expect(plan.filter(it => mulEase(it.fact) === 0).length).toBeGreaterThan(2)
+  })
+
+  it('la table d\'un calcul : la plus grande des tables choisies qu\'il contient', () => {
+    const by = tableOf([2, 5, 7])
+    expect(by(fact(2, 5))).toBe(5)
+    expect(by(fact(1, 7))).toBe(7)
+    expect(by(divFact(7, 8))).toBe(7)
+    expect(by(subFact(2, 9))).toBe(2)
   })
 
   it('tout est su : la récolte se complète avec les plus anciens', () => {

@@ -233,11 +233,11 @@ const STAGE = {
   },
   // Apprendre
   clock: { wait: 4000 },
-  // Découvre : un rectangle 4 × 6 tiré du doigt, les plantes poussent dedans
+  // Découvre (le mode d'ouverture) : un rectangle 4 × 6 tiré du doigt dans
+  // les tables 1 à 5 (celles par défaut), les plantes poussent dedans
   potager: {
     wait: 4000,
     act: async p => {
-      await p.locator('.pg-tool[data-m="discover"]').click({ force: true }).catch(() => {})
       const a = await p.evaluate(() => window.__pg.cell(1, 1)), b = await p.evaluate(() => window.__pg.cell(4, 6))
       await p.mouse.move(a.x, a.y); await p.mouse.down()
       for (let i = 1; i <= 8; i++) { await p.mouse.move(a.x + (b.x - a.x) * i / 8, a.y + (b.y - a.y) * i / 8); await p.waitForTimeout(20) }
@@ -489,6 +489,7 @@ for (const g of jobs) {
     await page.locator(`.gc[data-id="${g.id}"]`).click({ force: true })
     await page.locator('.opsgo, .tierbtn, .varbtn, .gameroot > *').first().waitFor()
     if (g.v) await page.locator(`.varbtn[data-v="${g.v}"]`).click({ force: true })
+    if (await page.locator('.whobtn').count()) await page.locator('.whobtn[data-who="joyce"]').click({ force: true })
     if (await page.locator('.opsgo').count()) await page.locator('.opsgo').click()
     if (await page.locator('.duobtn').count()) await page.locator('.duobtn').first().click({ force: true })
     if (await page.locator('.tierbtn').count()) await page.locator('.tierbtn.tier-' + (st.tier || 'easy')).click({ force: true })
